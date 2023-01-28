@@ -20,9 +20,10 @@ typedef struct pntr_image {
 extern "C" {
 #endif
 
-PNTR_API pntr_image* pntr_new_image(int width, int height, pntr_color color);
+PNTR_API pntr_image* pntr_new_image(int width, int height);
+pntr_image* pntr_gen_image_color(int width, int height, pntr_color color);
 PNTR_API void pntr_unload_image(pntr_image* image);
-PNTR_API void pntr_clear(pntr_image* image, pntr_color color);
+PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
@@ -35,6 +36,7 @@ PNTR_API pntr_color pntr_color_set_r(pntr_color color, unsigned char r);
 PNTR_API pntr_color pntr_color_set_g(pntr_color color, unsigned char g);
 PNTR_API pntr_color pntr_color_set_b(pntr_color color, unsigned char b);
 PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
+PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 
 #ifdef __cplusplus
 }
@@ -92,7 +94,7 @@ PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
 extern "C" {
 #endif
 
-pntr_image* pntr_new_image(int width, int height, pntr_color color) {
+pntr_image* pntr_new_image(int width, int height) {
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
     if (image == NULL) {
         return NULL;
@@ -103,8 +105,12 @@ pntr_image* pntr_new_image(int width, int height, pntr_color color) {
     image->height = height;
     image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
 
-    pntr_clear(image, color);
+    return image;
+}
 
+pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
+    pntr_image* image = pntr_new_image(width, height);
+    pntr_clear_background(image, color);
     return image;
 }
 
@@ -121,7 +127,7 @@ void pntr_unload_image(pntr_image* image) {
     PNTR_FREE(image);
 }
 
-void pntr_clear(pntr_image* image, pntr_color color) {
+void pntr_clear_background(pntr_image* image, pntr_color color) {
     if (image == NULL || image->data == NULL) {
         return;
     }
@@ -226,6 +232,13 @@ void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int hei
     for (int y = posY; y < posY + height; y++) {
         pntr_draw_horizontal_line_unsafe(dst, posX, y, width, color);
     }
+}
+
+pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
+    if (image == NULL || image->data == NULL) {
+        return 0;
+    }
+    return image->data[y * (image->pitch >> 2) + x];
 }
 
 #ifdef __cplusplus

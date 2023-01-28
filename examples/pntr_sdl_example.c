@@ -6,7 +6,7 @@
 
 int main() {
     // Create an image to display
-    pntr_image* image = pntr_new_image(400, 225, PNTR_RAYWHITE);
+    pntr_image* image = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
     pntr_draw_rectangle(image, 10, 10, 80, 200, PNTR_RED);
     pntr_draw_rectangle(image, 100, 10, 80, 200, PNTR_GREEN);
     pntr_draw_rectangle(image, 200, 10, 80, 200, PNTR_BLUE);
