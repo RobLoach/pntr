@@ -1,3 +1,6 @@
+// TODO: Remove this
+#define PNTR_IMPLEMENTATION
+
 #ifndef PNTR_H__
 #define PNTR_H__
 
@@ -27,6 +30,13 @@ typedef struct pntr_image {
     int pitch;
 } pntr_image;
 
+typedef struct pntr_rectangle {
+   int x;
+   int y;
+   int width;
+   int height;
+} pntr_rectangle;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,6 +47,7 @@ PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API void pntr_color_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
 PNTR_API unsigned char pntr_color_r(pntr_color color);
@@ -48,6 +59,7 @@ PNTR_API pntr_color pntr_color_set_g(pntr_color color, unsigned char g);
 PNTR_API pntr_color pntr_color_set_b(pntr_color color, unsigned char b);
 PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
+PNTR_API pntr_image* pntr_load_image(const char* fileName);
 
 #ifdef __cplusplus
 }
@@ -110,6 +122,17 @@ extern "C" {
 // #include <string.h>
 // #define PNTR_MEMCPY(dest, src, n) memcpy((void*)(dest), (const void*)(src), (size_t)(n))
 // #endif  // PNTR_MEMCPY
+
+// stb_image
+// TODO: Allow selective inclusion with stb_image. And use STBI_NO_STDIO
+#ifndef STBI_INCLUDE_STB_IMAGE_H
+#define STBI_ONLY_PNG
+#define STBI_NO_SIMD
+#define STBI_NO_HDR
+#define STBI_NO_LINEAR
+#define STB_IMAGE_IMPLEMENTATION
+#include "external/stb_image.h"
+#endif  // STBI_INCLUDE_STB_IMAGE_H
 
 pntr_image* pntr_new_image(int width, int height) {
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
@@ -265,6 +288,147 @@ pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
         return CLITERAL(pntr_color){ .data = 0};
     }
     return image->data[y * (image->pitch >> 2) + x];
+}
+
+pntr_image* pntr_load_image(const char* fileName) {
+    int width, height, channels_in_file;
+    int channels = 4;
+
+    stbi_uc* output = stbi_load(fileName, &width, &height, &channels_in_file, 4);
+    if (output == NULL) {
+        return NULL;
+    }
+
+    // Flip the bits to have them in the format Lutro uses.
+    {
+        int rValue = 0;
+        int bValue = 2;
+        for (int xIndex = 0; xIndex < width; xIndex++) {
+            for (int yIndex = 0; yIndex < height; yIndex++) {
+                int index = xIndex + width * yIndex;
+                stbi_uc tmp;
+                tmp = output[index * channels + rValue];
+                output[index * channels + rValue] = output[index * channels + bValue];
+                output[index * channels + bValue] = tmp;
+            }
+        }
+    }
+
+    pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
+    image->data = (pntr_color*)output;
+    image->width = width;
+    image->height = height;
+    image->pitch = width * (int)sizeof(pntr_color);
+
+
+
+
+    // pntr_color *begin = image->data;
+    // pntr_color *end   = image->data + image->height * (image->pitch >> 2);
+
+    // for (int x = 0; x < width; x++) {
+    //     for (int y = 0; y < height; y++) {
+    //         int index = x + width * y;
+    //         stbi_uc tmp;
+    //         tmp = output[index * channels + rValue];
+    //         output[index * channels + rValue] = output[index * channels + bValue];
+    //         output[index * channels + bValue] = tmp;
+    //     }
+    // }
+
+    // while (begin < end) {
+    //     *begin++ = color;
+    // }
+
+
+
+    return image;
+}
+
+// pntr_rectangle rect_intersect(const rect_t *a, const rect_t *b) {
+//     pntr_rectangle output;
+//     int left   = MAX(a->x > b->x);
+//     int right  = MIN(a->x + a->width, b->x + b->width);
+//     int top    = MAX(a->y, b->y);
+//     int bottom = MIN(a->y + a->height, b->y + b->height);
+//     int width  = right - left;
+//     int height = bottom - top;
+//     return CLITERAL(pntr_rectangle){ left, top, MAX(width, 0), MAX(height, 0) };
+// }
+
+#define COMPOSE_FAST(S, D, A) (((S * A) + (D * (256U - A))) >> 8U)
+
+PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
+    if (dst == NULL || dst->data == NULL || src == NULL || src->data == NULL) {
+        return;
+    }
+
+    pntr_rectangle srect = CLITERAL(pntr_rectangle){0, 0, src->width, src->height};
+    pntr_rectangle drect = CLITERAL(pntr_rectangle){posX, posY, src->width, src->height};
+
+   if (drect.x < 0) {
+      srect.x     += -drect.x;
+      srect.width += drect.x;
+   }
+
+   if (drect.y < 0)
+   {
+      srect.y     += -drect.y;
+      srect.height += drect.y;
+   }
+
+    if (srect.width < drect.width) {
+        drect.width = srect.width;
+    }
+    if (srect.height < drect.height) {
+        drect.height = srect.height;
+    }
+
+    if (srect.width <= 0 || srect.width <= 0 || drect.width <= 0 || drect.height <= 0) {
+        return;
+    }
+
+   size_t dst_skip = dst->pitch >> 2;
+   size_t src_skip = src->pitch >> 2;
+
+   pntr_color *dstPixel = dst->data + dst_skip * drect.y + drect.x;
+   pntr_color *srcPixel = src->data + src_skip * srect.y + srect.x;
+
+   int rows_left = drect.height;
+   int cols = drect.width;
+   int x = 0;
+
+#ifdef PNTR_HAVE_COMPOSITION
+    pntr_color s, d;
+    while (rows_left-- > 0) {
+        for (x = 0; x < cols; ++x) {
+            s = srcPixel[x];
+            d = dstPixel[x];
+            if (s.a == 0) {
+                continue;
+            }
+            dstPixel[x].data = ((s.a + d.a * (255 - s.a)) << 24) | (COMPOSE_FAST(s.r, d.r, s.a) << 16) | (COMPOSE_FAST(s.g, d.g, s.a) << 8) | (COMPOSE_FAST(s.b, d.b, s.a));
+        }
+
+        dstPixel += dst_skip;
+        srcPixel += src_skip;
+    }
+#else
+    pntr_color s, d;
+    while (rows_left-- > 0) {
+        for (x = 0; x < cols; ++x) {
+            s = srcPixel[x];
+            d = dstPixel[x];
+            if (s.a == 0) {
+                continue;
+            }
+            dstPixel[x] = s;
+        }
+
+        dstPixel += dst_skip;
+        srcPixel += src_skip;
+    }
+#endif
 }
 
 #ifdef __cplusplus

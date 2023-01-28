@@ -2,8 +2,15 @@
 add_executable(pntr_test pntr_test.c)
 target_compile_options(pntr_test PRIVATE -Wall -Wextra -Wconversion -Wsign-conversion)
 target_link_libraries(pntr_test PUBLIC
+    m
     pntr
 )
+
+# Resources
+file(GLOB resources resources/*)
+set(examples_resources)
+list(APPEND examples_resources ${resources})
+file(COPY ${examples_resources} DESTINATION "resources/")
 
 # Set up the test
 list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")

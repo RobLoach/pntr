@@ -18,5 +18,6 @@ add_executable(pntr_sdl_example pntr_sdl_example.c)
 target_link_libraries(pntr_sdl_example PRIVATE
     SDL2::SDL2
     SDL2::SDL2main
+    m
     pntr
 )

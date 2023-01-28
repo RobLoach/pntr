@@ -32,5 +32,13 @@ int main() {
         pntr_unload_image(image);
     }
 
+    // pntr_load_image
+    {
+        pntr_image* image = pntr_load_image("resources/image.png");
+        assert(image->width == 128);
+        assert(image->height == 108);
+        pntr_unload_image(image);
+    }
+
     return 0;
 }
