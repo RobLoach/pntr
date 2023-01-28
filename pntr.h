@@ -60,6 +60,8 @@ PNTR_API pntr_color pntr_color_set_b(pntr_color color, unsigned char b);
 PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
+PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
+PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 
 #ifdef __cplusplus
 }
@@ -130,6 +132,8 @@ extern "C" {
 #define STBI_NO_SIMD
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
+#define STBI_NO_GIF
+#define STBI_NO_THREAD_LOCALS
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 #endif  // STBI_INCLUDE_STB_IMAGE_H
@@ -320,88 +324,68 @@ pntr_image* pntr_load_image(const char* fileName) {
     image->height = height;
     image->pitch = width * (int)sizeof(pntr_color);
 
-
-
-
-    // pntr_color *begin = image->data;
-    // pntr_color *end   = image->data + image->height * (image->pitch >> 2);
-
-    // for (int x = 0; x < width; x++) {
-    //     for (int y = 0; y < height; y++) {
-    //         int index = x + width * y;
-    //         stbi_uc tmp;
-    //         tmp = output[index * channels + rValue];
-    //         output[index * channels + rValue] = output[index * channels + bValue];
-    //         output[index * channels + bValue] = tmp;
-    //     }
-    // }
-
-    // while (begin < end) {
-    //     *begin++ = color;
-    // }
-
-
-
     return image;
 }
 
-// pntr_rectangle rect_intersect(const rect_t *a, const rect_t *b) {
-//     pntr_rectangle output;
-//     int left   = MAX(a->x > b->x);
-//     int right  = MIN(a->x + a->width, b->x + b->width);
-//     int top    = MAX(a->y, b->y);
-//     int bottom = MIN(a->y + a->height, b->y + b->height);
-//     int width  = right - left;
-//     int height = bottom - top;
-//     return CLITERAL(pntr_rectangle){ left, top, MAX(width, 0), MAX(height, 0) };
-// }
-
 #define COMPOSE_FAST(S, D, A) (((S * A) + (D * (256U - A))) >> 8U)
 
-PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
+void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
+    pntr_draw_image_rec(dst, src, CLITERAL(pntr_rectangle){0, 0, src->width, src->height}, posX, posY);
+}
+
+void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     if (dst == NULL || dst->data == NULL || src == NULL || src->data == NULL) {
         return;
     }
 
-    pntr_rectangle srect = CLITERAL(pntr_rectangle){0, 0, src->width, src->height};
-    pntr_rectangle drect = CLITERAL(pntr_rectangle){posX, posY, src->width, src->height};
+    pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, srcRect.width, srcRect.height};
 
-   if (drect.x < 0) {
-      srect.x     += -drect.x;
-      srect.width += drect.x;
+    if (srcRect.width <= 0 || srcRect.height <= 0) {
+        srcRect.width = src->width;
+        srcRect.height = src->height;
+    }
+
+   if (dstRect.x < 0) {
+      srcRect.x     += -dstRect.x;
+      srcRect.width += dstRect.x;
    }
-
-   if (drect.y < 0)
+   if (dstRect.y < 0)
    {
-      srect.y     += -drect.y;
-      srect.height += drect.y;
+      srcRect.y     += -dstRect.y;
+      srcRect.height += dstRect.y;
    }
 
-    if (srect.width < drect.width) {
-        drect.width = srect.width;
+    if (srcRect.width < dstRect.width) {
+        dstRect.width = srcRect.width;
     }
-    if (srect.height < drect.height) {
-        drect.height = srect.height;
+    if (srcRect.height < dstRect.height) {
+        dstRect.height = srcRect.height;
     }
 
-    if (srect.width <= 0 || srect.width <= 0 || drect.width <= 0 || drect.height <= 0) {
+    if (dstRect.x + dstRect.width > dst->width) {
+        dstRect.width = dst->width - dstRect.x;
+    }
+    if (dstRect.y + dstRect.height > dst->height) {
+        dstRect.height = dst->height - dstRect.y;
+    }
+
+    if (srcRect.width <= 0 || srcRect.width <= 0 || dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= dst->width || dstRect.y >= dst->height) {
         return;
     }
 
    size_t dst_skip = dst->pitch >> 2;
    size_t src_skip = src->pitch >> 2;
 
-   pntr_color *dstPixel = dst->data + dst_skip * drect.y + drect.x;
-   pntr_color *srcPixel = src->data + src_skip * srect.y + srect.x;
+   pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
+   pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-   int rows_left = drect.height;
-   int cols = drect.width;
-   int x = 0;
+   int rows_left = dstRect.height;
+   int cols = dstRect.width;
 
 #ifdef PNTR_HAVE_COMPOSITION
     pntr_color s, d;
     while (rows_left-- > 0) {
-        for (x = 0; x < cols; ++x) {
+        for (int x = 0; x < cols; ++x) {
             s = srcPixel[x];
             d = dstPixel[x];
             if (s.a == 0) {
@@ -414,15 +398,13 @@ PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int po
         srcPixel += src_skip;
     }
 #else
-    pntr_color s, d;
     while (rows_left-- > 0) {
-        for (x = 0; x < cols; ++x) {
-            s = srcPixel[x];
-            d = dstPixel[x];
-            if (s.a == 0) {
+        for (int x = 0; x < cols; ++x) {
+            // Alpha transparency threshold
+            if (srcPixel[x].a <= 100) {
                 continue;
             }
-            dstPixel[x] = s;
+            dstPixel[x] = srcPixel[x];
         }
 
         dstPixel += dst_skip;
