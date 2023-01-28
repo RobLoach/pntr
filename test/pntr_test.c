@@ -24,10 +24,10 @@ int main() {
         assert(image->height == 480);
 
         pntr_color color = pntr_image_get_color(image, 10, 10);
-        assert(color == PNTR_SKYBLUE);
+        assert(color.data == PNTR_SKYBLUE.data);
         pntr_draw_pixel(image, 10, 10, PNTR_PURPLE);
         color = pntr_image_get_color(image, 10, 10);
-        assert(color == PNTR_PURPLE);
+        assert(color.data == PNTR_PURPLE.data);
 
         pntr_unload_image(image);
     }

@@ -7,7 +7,18 @@
 #define PNTR_API
 #endif
 
-typedef uint32_t pntr_color;
+typedef union pntr_color_t {
+    uint32_t data;
+    struct {
+        // TODO: Verify the order here. What about big endian?
+        unsigned char b;
+        unsigned char g;
+        unsigned char r;
+        unsigned char a;
+    };
+} pntr_color_t;
+
+typedef union pntr_color_t pntr_color;
 
 typedef struct pntr_image {
     pntr_color* data;
@@ -42,38 +53,48 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 }
 #endif
 
-#define PNTR_LIGHTGRAY  pntr_new_color(200, 200, 200, 255)   // Light Gray
-#define PNTR_GRAY       pntr_new_color(130, 130, 130, 255)   // Gray
-#define PNTR_DARKGRAY   pntr_new_color(80, 80, 80, 255)      // Dark Gray
-#define PNTR_YELLOW     pntr_new_color(253, 249, 0, 255)     // Yellow
-#define PNTR_GOLD       pntr_new_color(255, 203, 0, 255)     // Gold
-#define PNTR_ORANGE     pntr_new_color(255, 161, 0, 255)     // Orange
-#define PNTR_PINK       pntr_new_color(255, 109, 194, 255)   // Pink
-#define PNTR_RED        pntr_new_color(230, 41, 55, 255)     // Red
-#define PNTR_MAROON     pntr_new_color(190, 33, 55, 255)     // Maroon
-#define PNTR_GREEN      pntr_new_color(0, 228, 48, 255)      // Green
-#define PNTR_LIME       pntr_new_color(0, 158, 47, 255)      // Lime
-#define PNTR_DARKGREEN  pntr_new_color(0, 117, 44, 255)      // Dark Green
-#define PNTR_SKYBLUE    pntr_new_color(102, 191, 255, 255)   // Sky Blue
-#define PNTR_BLUE       pntr_new_color(0, 121, 241, 255)     // Blue
-#define PNTR_DARKBLUE   pntr_new_color(0, 82, 172, 255)      // Dark Blue
-#define PNTR_PURPLE     pntr_new_color(200, 122, 255, 255)   // Purple
-#define PNTR_VIOLET     pntr_new_color(135, 60, 190, 255)    // Violet
-#define PNTR_DARKPURPLE pntr_new_color(112, 31, 126, 255)    // Dark Purple
-#define PNTR_BEIGE      pntr_new_color(211, 176, 131, 255)   // Beige
-#define PNTR_BROWN      pntr_new_color(127, 106, 79, 255)    // Brown
-#define PNTR_DARKBROWN  pntr_new_color(76, 63, 47, 255)      // Dark Brown
-#define PNTR_WHITE      pntr_new_color(255, 255, 255, 255)   // White
-#define PNTR_BLACK      pntr_new_color(0, 0, 0, 255)         // Black
-#define PNTR_BLANK      pntr_new_color(0, 0, 0, 0)           // Blank (Transparent)
-#define PNTR_MAGENTA    pntr_new_color(255, 0, 255, 255)     // Magenta
-#define PNTR_RAYWHITE   pntr_new_color(245, 245, 245, 255)   // raylib logo
+#if defined(__cplusplus)
+    #define CLITERAL(type)      type
+#else
+    #define CLITERAL(type)      (type)
+#endif
+
+#define PNTR_LIGHTGRAY  CLITERAL(pntr_color){ .r = 200, .g = 200, .b = 200, .a = 255 }
+#define PNTR_GRAY       CLITERAL(pntr_color){ .r = 130, .g = 130, .b = 130, .a = 255 }
+#define PNTR_DARKGRAY   CLITERAL(pntr_color){ .r = 80,  .g = 80,  .b = 80,  .a = 255 }
+#define PNTR_YELLOW     CLITERAL(pntr_color){ .r = 253, .g = 249, .b = 0,   .a =255  }
+#define PNTR_GOLD       CLITERAL(pntr_color){ .r = 255, .g = 203, .b = 0,   .a =255  }
+#define PNTR_ORANGE     CLITERAL(pntr_color){ .r = 255, .g = 161, .b = 0,   .a =255  }
+#define PNTR_PINK       CLITERAL(pntr_color){ .r = 255, .g = 109, .b = 194, .a = 255 }
+#define PNTR_RED        CLITERAL(pntr_color){ .r = 230, .g = 41,  .b = 55,  .a = 255 }
+#define PNTR_MAROON     CLITERAL(pntr_color){ .r = 190, .g = 33,  .b = 55,  .a = 255 }
+#define PNTR_GREEN      CLITERAL(pntr_color){ .r = 0,   .g = 228, .b = 48,  .a = 255 }
+#define PNTR_LIME       CLITERAL(pntr_color){ .r = 0,   .g = 158, .b = 47,  .a = 255 }
+#define PNTR_DARKGREEN  CLITERAL(pntr_color){ .r = 0,   .g = 117, .b = 44,  .a = 255 }
+#define PNTR_SKYBLUE    CLITERAL(pntr_color){ .r = 102, .g = 191, .b = 255, .a = 255 }
+#define PNTR_BLUE       CLITERAL(pntr_color){ .r = 0,   .g = 121, .b = 241, .a = 255 }
+#define PNTR_DARKBLUE   CLITERAL(pntr_color){ .r = 0,   .g = 82,  .b = 172, .a = 255 }
+#define PNTR_PURPLE     CLITERAL(pntr_color){ .r = 200, .g = 122, .b = 255, .a = 255 }
+#define PNTR_VIOLET     CLITERAL(pntr_color){ .r = 135, .g = 60,  .b = 190, .a = 255 }
+#define PNTR_DARKPURPLE CLITERAL(pntr_color){ .r = 112, .g = 31,  .b = 126, .a = 255 }
+#define PNTR_BEIGE      CLITERAL(pntr_color){ .r = 211, .g = 176, .b = 131, .a = 255 }
+#define PNTR_BROWN      CLITERAL(pntr_color){ .r = 127, .g = 106, .b = 79,  .a = 255 }
+#define PNTR_DARKBROWN  CLITERAL(pntr_color){ .r = 76,  .g = 63,  .b = 47,  .a = 255 }
+#define PNTR_WHITE      CLITERAL(pntr_color){ .r = 255, .g = 255, .b = 255, .a = 255 }
+#define PNTR_BLACK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 255 }
+#define PNTR_BLANK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 0   }
+#define PNTR_MAGENTA    CLITERAL(pntr_color){ .r = 255, .g = 0,   .b = 255, .a = 255 }
+#define PNTR_RAYWHITE   CLITERAL(pntr_color){ .r = 245, .g = 245, .b = 245, .a = 255 }
 
 #endif  // PNTR_H__
 
 #ifdef PNTR_IMPLEMENTATION
 #ifndef PNTR_IMPLEMENTATION_ONCE
 #define PNTR_IMPLEMENTATION_ONCE
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifndef PNTR_MALLOC
 #include <stdlib.h>
@@ -89,10 +110,6 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 // #include <string.h>
 // #define PNTR_MEMCPY(dest, src, n) memcpy((void*)(dest), (const void*)(src), (size_t)(n))
 // #endif  // PNTR_MEMCPY
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 pntr_image* pntr_new_image(int width, int height) {
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
@@ -141,46 +158,55 @@ void pntr_clear_background(pntr_image* image, pntr_color color) {
 }
 
 pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
-    return (((pntr_color)a << 24) | ((pntr_color)r << 16) | ((pntr_color)g << 8) | (pntr_color)b);
+    return CLITERAL(pntr_color){
+        .r = r,
+        .g = g,
+        .b = b,
+        .a = a
+    };
 }
 
 unsigned char pntr_color_r(pntr_color color) {
-    return (unsigned char)(color >> 16) & 0xFF;
+    return color.r;
 }
 
 unsigned char pntr_color_g(pntr_color color) {
-    return (unsigned char)(color >> 8) & 0xFF;
+    return color.g;
 }
 
 unsigned char pntr_color_b(pntr_color color) {
-    return (unsigned char)color & 0xFF;
+    return color.b;
 }
 
 unsigned char pntr_color_a(pntr_color color) {
-    return (unsigned char)(color >> 24) & 0xFF;
+    return color.a;
 }
 
 pntr_color pntr_color_set_r(pntr_color color, unsigned char r) {
-    return pntr_new_color(r, pntr_color_g(color), pntr_color_b(color), pntr_color_a(color));
+    color.r = r;
+    return color;
 }
 
 pntr_color pntr_color_set_g(pntr_color color, unsigned char g) {
-    return pntr_new_color(pntr_color_r(color), g, pntr_color_b(color), pntr_color_a(color));
+    color.g = g;
+    return color;
 }
 
 pntr_color pntr_color_set_b(pntr_color color, unsigned char b) {
-    return pntr_new_color(pntr_color_r(color), pntr_color_g(color), b, pntr_color_a(color));
+    color.b = b;
+    return color;
 }
 
 pntr_color pntr_color_set_a(pntr_color color, unsigned char a) {
-    return pntr_new_color(pntr_color_r(color), pntr_color_g(color), pntr_color_b(color), a);
+    color.a = a;
+    return color;
 }
 
 void pntr_color_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a) {
-    *r = pntr_color_r(color);
-    *g = pntr_color_g(color);
-    *b = pntr_color_b(color);
-    *a = pntr_color_a(color);
+    *r = color.r;
+    *g = color.g;
+    *b = color.b;
+    *a = color.a;
 }
 
 void pntr_draw_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
@@ -236,7 +262,7 @@ void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int hei
 
 pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     if (image == NULL || image->data == NULL) {
-        return 0;
+        return CLITERAL(pntr_color){ .data = 0};
     }
     return image->data[y * (image->pitch >> 2) + x];
 }
