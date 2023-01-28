@@ -12,6 +12,9 @@ int main() {
     pntr_draw_rectangle(image, 200, 10, 80, 200, PNTR_BLUE);
     pntr_draw_pixel(image, 300, 80, PNTR_BLUE);
 
+    pntr_color color;
+    color.r = 200;
+
     // Render the image to an SDL screen.
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 	SDL_Window* window = SDL_CreateWindow("pntr: SDL Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, image->width, image->height, SDL_WINDOW_SHOWN);
