@@ -50,19 +50,21 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
-PNTR_API void pntr_color_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
-PNTR_API unsigned char pntr_color_r(pntr_color color);
-PNTR_API unsigned char pntr_color_g(pntr_color color);
-PNTR_API unsigned char pntr_color_b(pntr_color color);
-PNTR_API unsigned char pntr_color_a(pntr_color color);
+PNTR_API void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
+PNTR_API unsigned char pntr_color_get_r(pntr_color color);
+PNTR_API unsigned char pntr_color_get_g(pntr_color color);
+PNTR_API unsigned char pntr_color_get_b(pntr_color color);
+PNTR_API unsigned char pntr_color_get_a(pntr_color color);
 PNTR_API pntr_color pntr_color_set_r(pntr_color color, unsigned char r);
 PNTR_API pntr_color pntr_color_set_g(pntr_color color, unsigned char g);
 PNTR_API pntr_color pntr_color_set_b(pntr_color color, unsigned char b);
 PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
+PNTR_API pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
+PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, int pixelFormat);
 
 #ifdef __cplusplus
 }
@@ -100,6 +102,10 @@ PNTR_API void* pntr_set_error(const char* error);
 #define PNTR_BLANK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 0   }
 #define PNTR_MAGENTA    CLITERAL(pntr_color){ .r = 255, .g = 0,   .b = 255, .a = 255 }
 #define PNTR_RAYWHITE   CLITERAL(pntr_color){ .r = 245, .g = 245, .b = 245, .a = 255 }
+
+#define PNTR_PIXELFORMAT_ARGB8888 0
+#define PNTR_PIXELFORMAT_RGBA8888 1
+#define PNTR_PIXELFORMAT_LAST PNTR_PIXELFORMAT_RGBA8888
 
 #endif  // PNTR_H__
 
@@ -251,7 +257,7 @@ void pntr_unload_image(pntr_image* image) {
 }
 
 void pntr_draw_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    pntr_color *row  = dst->data + posY * (dst->pitch >> 2);
+    pntr_color *row  = pntr_image_get_color_pointer(dst, 0, posY);
     for (int x = posX; x < posX + width; ++x) {
         row[x] = color;
     }
@@ -266,9 +272,8 @@ void pntr_clear_background(pntr_image* image, pntr_color color) {
     pntr_draw_horizontal_line_unsafe(image, 0, 0, image->width, color);
 
     // Copy the line for the rest of the screen
-    int pitchShift = image->pitch >> 2;
     for (int y = 1; y < image->height; y++) {
-        PNTR_MEMCPY(image->data + y * pitchShift, image->data, image->pitch);
+        PNTR_MEMCPY(pntr_image_get_color_pointer(image, 0, y), image->data, image->pitch);
     }
 }
 
@@ -281,43 +286,43 @@ pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, uns
     };
 }
 
-unsigned char pntr_color_r(pntr_color color) {
+inline unsigned char pntr_color_get_r(pntr_color color) {
     return color.r;
 }
 
-unsigned char pntr_color_g(pntr_color color) {
+inline unsigned char pntr_color_get_g(pntr_color color) {
     return color.g;
 }
 
-unsigned char pntr_color_b(pntr_color color) {
+inline unsigned char pntr_color_get_b(pntr_color color) {
     return color.b;
 }
 
-unsigned char pntr_color_a(pntr_color color) {
+inline unsigned char pntr_color_get_a(pntr_color color) {
     return color.a;
 }
 
-pntr_color pntr_color_set_r(pntr_color color, unsigned char r) {
+inline pntr_color pntr_color_set_r(pntr_color color, unsigned char r) {
     color.r = r;
     return color;
 }
 
-pntr_color pntr_color_set_g(pntr_color color, unsigned char g) {
+inline pntr_color pntr_color_set_g(pntr_color color, unsigned char g) {
     color.g = g;
     return color;
 }
 
-pntr_color pntr_color_set_b(pntr_color color, unsigned char b) {
+inline pntr_color pntr_color_set_b(pntr_color color, unsigned char b) {
     color.b = b;
     return color;
 }
 
-pntr_color pntr_color_set_a(pntr_color color, unsigned char a) {
+inline pntr_color pntr_color_set_a(pntr_color color, unsigned char a) {
     color.a = a;
     return color;
 }
 
-void pntr_color_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a) {
+inline void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a) {
     *r = color.r;
     *g = color.g;
     *b = color.b;
@@ -351,10 +356,9 @@ void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int hei
 
     pntr_draw_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
-    int pitchShift = dst->pitch >> 2;
-    pntr_color* srcPixel = dst->data + rect.y * pitchShift + rect.x;
+    pntr_color* srcPixel = pntr_image_get_color_pointer(dst, rect.x, rect.y);
     for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
-        PNTR_MEMCPY(dst->data + y * pitchShift + rect.x, srcPixel, (size_t)rect.width * sizeof(pntr_color));
+        PNTR_MEMCPY(pntr_image_get_color_pointer(dst, rect.x, y), srcPixel, (size_t)rect.width * sizeof(pntr_color));
     }
 }
 
@@ -386,87 +390,37 @@ pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     return image->data[y * (image->pitch >> 2) + x];
 }
 
-pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, int dataSize) {
-    pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
-    if (image == NULL) {
-        return NULL;
-    }
+inline pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y) {
+    return image->data + y * (image->pitch >> 2) + x;
+}
 
+pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, int dataSize) {
     if (fileData == NULL || dataSize <= 0) {
         return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
     }
 
-    int channels = 4;
     int width, height, channels_in_file;
     stbi_uc* output = stbi_load_from_memory(fileData, dataSize, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
-        PNTR_FREE(image);
-        return pntr_set_error("Failed to load image from memory");
+        return pntr_set_error("pntr_load_image_from_memory() failed to load image from memory");
     }
 
-    // Flip the bits from RGBA to ARGB.
-    {
-        int rValue = 0;
-        int bValue = 2;
-        for (int xIndex = 0; xIndex < width; xIndex++) {
-            for (int yIndex = 0; yIndex < height; yIndex++) {
-                int index = xIndex + width * yIndex;
-                stbi_uc tmp;
-                tmp = output[index * channels + rValue];
-                output[index * channels + rValue] = output[index * channels + bValue];
-                output[index * channels + bValue] = tmp;
-            }
-        }
-    }
-
-    image->data = (pntr_color*)output;
-    image->width = width;
-    image->height = height;
-    image->pitch = width * (int)sizeof(pntr_color);
-
-    return image;
+    return pntr_image_from_pixelformat((void*)output, width, height, PNTR_PIXELFORMAT_RGBA8888);
 }
 
 pntr_image* pntr_load_image(const char* fileName) {
-    int width, height, channels_in_file;
-    int channels = 4;
-
     if (fileName == NULL) {
         return pntr_set_error("pntr_load_image() requires a valid fileName");
     }
 
+    int width, height, channels_in_file;
+    // TODO: Implement an abstracted file system and use pntr_load_image_from_memory() instead.
     stbi_uc* output = stbi_load(fileName, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
         return pntr_set_error("pntr_load_image() failed to load image with stbi_load");
     }
 
-    // Flip the bits from RGBA to ARGB.
-    {
-        int rValue = 0;
-        int bValue = 2;
-        for (int xIndex = 0; xIndex < width; xIndex++) {
-            for (int yIndex = 0; yIndex < height; yIndex++) {
-                int index = xIndex + width * yIndex;
-                stbi_uc tmp;
-                tmp = output[index * channels + rValue];
-                output[index * channels + rValue] = output[index * channels + bValue];
-                output[index * channels + bValue] = tmp;
-            }
-        }
-    }
-
-    pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
-    if (image == NULL) {
-        PNTR_FREE(output);
-        return pntr_set_error("pntr_load_image() failed to allocate image memory");
-    }
-
-    image->data = (pntr_color*)output;
-    image->width = width;
-    image->height = height;
-    image->pitch = width * (int)sizeof(pntr_color);
-
-    return image;
+    return pntr_image_from_pixelformat((void*)output, width, height, PNTR_PIXELFORMAT_RGBA8888);
 }
 
 #define COMPOSE_FAST(S, D, A) (((S * A) + (D * (256U - A))) >> 8U)
@@ -543,7 +497,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     while (rows_left-- > 0) {
         for (int x = 0; x < cols; ++x) {
             // Alpha transparency threshold
-            if (srcPixel[x].a == 0) {
+            if (srcPixel[x].a <= 128) {
                 continue;
             }
             dstPixel[x] = srcPixel[x];
@@ -553,6 +507,40 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
         srcPixel += src_skip;
     }
 #endif
+}
+
+/**
+ * Converts the given data to a pntr_image.
+ *
+ * This will free the original data, when needed.
+ */
+pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, int pixelFormat) {
+    if (data == NULL || width <= 0 || height <= 0 || pixelFormat < 0 || pixelFormat > PNTR_PIXELFORMAT_LAST) {
+        return pntr_set_error("pntr_image_from_data() requires valid data");
+    }
+
+    pntr_image* output = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
+    if (output == NULL) {
+        return pntr_set_error("pntr_image_from_pixelformat() failed to allocate memory");
+    }
+
+    output->width = width;
+    output->height = height;
+    output->pitch = width * (int)sizeof(pntr_color);
+    output->data = (pntr_color*)data;
+
+    switch (pixelFormat) {
+        case PNTR_PIXELFORMAT_RGBA8888: {
+            pntr_color color;
+            for (int i = 0; i < width * height; i++) {
+                color = output->data[i];
+                output->data[i].r = color.b;
+                output->data[i].b = color.r;
+            }
+        } break;
+    }
+
+    return output;
 }
 
 #ifdef __cplusplus

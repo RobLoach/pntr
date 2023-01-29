@@ -4,6 +4,7 @@ target_compile_options(pntr_test PRIVATE -Wall -Wextra -Wconversion -Wsign-conve
 target_link_libraries(pntr_test PUBLIC
     pntr
 )
+set_property(TARGET pntr_test PROPERTY C_STANDARD 99)
 
 # Resources
 file(GLOB resources resources/*)
