@@ -1,13 +1,13 @@
 #ifndef PNTR_H__
 #define PNTR_H__
 
-#include <stdint.h> // pntr_color
+#include <stdint.h> // uint32_t
 
 #ifndef PNTR_API
 #define PNTR_API
 #endif
 
-typedef union pntr_color_t {
+typedef union {
     uint32_t data;
     struct {
         // TODO: Verify the order here. What about big endian?
@@ -16,9 +16,7 @@ typedef union pntr_color_t {
         unsigned char r;
         unsigned char a;
     };
-} pntr_color_t;
-
-typedef union pntr_color_t pntr_color;
+} pntr_color;
 
 typedef struct pntr_image {
     pntr_color* data;
@@ -33,6 +31,17 @@ typedef struct pntr_rectangle {
    int width;
    int height;
 } pntr_rectangle;
+
+typedef enum {
+    PNTR_PIXELFORMAT_ARGB8888 = 0,
+    PNTR_PIXELFORMAT_RGBA8888,
+    PNTR_PIXELFORMAT_LAST
+} pntr_pixelformat;
+
+typedef enum {
+    PNTR_FILTER_NEARESTNEIGHBOR = 0,
+    PNTR_FILTER_LAST
+} pntr_filter;
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,8 +74,8 @@ PNTR_API pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int 
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
-PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, int pixelFormat);
-PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int width, int height, int filter);
+PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
+PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_filter filter);
 
 #ifdef __cplusplus
 }
@@ -104,12 +113,6 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int width, int height,
 #define PNTR_BLANK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 0   }
 #define PNTR_MAGENTA    CLITERAL(pntr_color){ .r = 255, .g = 0,   .b = 255, .a = 255 }
 #define PNTR_RAYWHITE   CLITERAL(pntr_color){ .r = 245, .g = 245, .b = 245, .a = 255 }
-
-#define PNTR_PIXELFORMAT_ARGB8888 0
-#define PNTR_PIXELFORMAT_RGBA8888 1
-#define PNTR_PIXELFORMAT_LAST PNTR_PIXELFORMAT_RGBA8888
-
-#define PNTR_FILTER_NEARESTNEIGHBOR 0
 
 #endif  // PNTR_H__
 
@@ -531,8 +534,8 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
  *
  * This will free the original data, when needed.
  */
-pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, int pixelFormat) {
-    if (data == NULL || width <= 0 || height <= 0 || pixelFormat < 0 || pixelFormat > PNTR_PIXELFORMAT_LAST) {
+pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat) {
+    if (data == NULL || width <= 0 || height <= 0 || pixelFormat < 0 || pixelFormat >= PNTR_PIXELFORMAT_LAST) {
         return pntr_set_error("pntr_image_from_data() requires valid data");
     }
 
@@ -555,13 +558,16 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, int p
                 output->data[i].b = color.r;
             }
         } break;
+        default:
+            // Nothing
+        break;
     }
 
     return output;
 }
 
-pntr_image* pntr_image_resize(pntr_image* image, int width, int height, int filter) {
-    if (image == NULL || width <= 0 || height <= 0 || filter < PNTR_FILTER_NEARESTNEIGHBOR) {
+pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_filter filter) {
+    if (image == NULL || width <= 0 || height <= 0 || filter < 0 || filter >= PNTR_FILTER_LAST) {
         return pntr_set_error("pntr_image_resize() requires a valid image and width/height");
     }
 
