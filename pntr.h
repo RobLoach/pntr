@@ -334,6 +334,24 @@ void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int hei
         PNTR_MEMCPY(dst->data + y * pitchShift + rect.x, srcPixel, rect.width * sizeof(pntr_color));
     }
 }
+    
+void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+  int largestX = radius;
+  int r2 = radius * radius;
+  for (int y = 0; y <= radius; ++y) {
+    int y2 = y * y;
+    for (int x = largestX; x >= 0; --x) {
+      if ((x * x) + (y2) <= (r2)) {
+        pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY + y, x, color);
+        pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY - y, x, color);
+        pntr_draw_horizontal_line_unsafe(dst, centerX, centerY + y, x, color);
+        pntr_draw_horizontal_line_unsafe(dst, centerX, centerY - y, x, color);
+        largestX = x;
+        break;
+      }
+    }
+  }
+}
 
 pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     if (image == NULL || image->data == NULL) {
