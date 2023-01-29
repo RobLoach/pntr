@@ -46,7 +46,9 @@ PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
+PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API void pntr_color_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
 PNTR_API unsigned char pntr_color_r(pntr_color color);
@@ -59,8 +61,6 @@ PNTR_API pntr_color pntr_color_set_b(pntr_color color, unsigned char b);
 PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
-PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
-PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 
 #ifdef __cplusplus
 }
@@ -333,6 +333,24 @@ void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int hei
     for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
         PNTR_MEMCPY(dst->data + y * pitchShift + rect.x, srcPixel, rect.width * sizeof(pntr_color));
     }
+}
+    
+void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+  int largestX = radius;
+  int r2 = radius * radius;
+  for (int y = 0; y <= radius; ++y) {
+    int y2 = y * y;
+    for (int x = largestX; x >= 0; --x) {
+      if ((x * x) + (y2) <= (r2)) {
+        pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY + y, x, color);
+        pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY - y, x, color);
+        pntr_draw_horizontal_line_unsafe(dst, centerX, centerY + y, x, color);
+        pntr_draw_horizontal_line_unsafe(dst, centerX, centerY - y, x, color);
+        largestX = x;
+        break;
+      }
+    }
+  }
 }
 
 pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
