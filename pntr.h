@@ -50,6 +50,7 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
 PNTR_API unsigned char pntr_color_get_r(pntr_color color);
 PNTR_API unsigned char pntr_color_get_g(pntr_color color);
@@ -277,12 +278,26 @@ void pntr_clear_background(pntr_image* image, pntr_color color) {
     }
 }
 
-pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
+inline pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
     return CLITERAL(pntr_color){
         .r = r,
         .g = g,
         .b = b,
         .a = a
+    };
+}
+
+/**
+ * Get a pntr_color from a RGBA hexadecimal value
+ *
+ * Example: 0x052c46ff
+ */
+inline pntr_color pntr_get_color(unsigned int hexValue) {
+    return CLITERAL(pntr_color){
+        .r = (unsigned char)(hexValue >> 24) & 0xFF,
+        .g = (unsigned char)(hexValue >> 16) & 0xFF,
+        .b = (unsigned char)(hexValue >> 8) & 0xFF,
+        .a = (unsigned char)hexValue & 0xFF
     };
 }
 
@@ -458,10 +473,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
         dstRect.height = srcRect.height;
     }
 
-    if (dstRect.x + dstRect.width > dst->width) {
-        dstRect.width = dst->width - dstRect.x;
-    }
-    if (dstRect.y + dstRect.height > dst->height) {
+    if (dstRect.x + dstRect.width > dst->width) {pntr_image_get_color_pointer
         dstRect.height = dst->height - dstRect.y;
     }
 

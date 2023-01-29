@@ -15,7 +15,7 @@ int main() {
         pntr_set_error(NULL);
     }
 
-    // pntr_color, pntr_color_get_r(), pntr_color_get_g(), pntr_color_get_b(), pntr_color_get_a(), pntr_color_get_rgba()
+    // pntr_color, pntr_color_get_r(), pntr_color_get_g(), pntr_color_get_b(), pntr_color_get_a()
     {
         pntr_color color = PNTR_RED;
         assert(pntr_color_get_r(color) == 230);
@@ -26,13 +26,25 @@ int main() {
         assert(color.g == 41);
         assert(color.b == 55);
         assert(color.a == 255);
+    }
 
+    // pntr_color_get_rgba()
+    {
         unsigned char color_r, color_g, color_b, color_a;
-        pntr_color_get_rgba(color, &color_r, &color_g, &color_b, &color_a);
+        pntr_color_get_rgba(PNTR_RED, &color_r, &color_g, &color_b, &color_a);
         assert(color_r == 230);
         assert(color_g == 41);
         assert(color_b == 55);
         assert(color_a == 255);
+    }
+
+    // pntr_get_color()
+    {
+        pntr_color color = pntr_get_color(0x052c46ff);
+        assert(color.r == 5);
+        assert(color.g == 44);
+        assert(color.b == 70);
+        assert(color.a == 255);
     }
 
     // pntr_gen_image_color(), pntr_image_get_color(), pntr_image_get_color_pointer(), pntr_draw_pixel()
@@ -43,6 +55,7 @@ int main() {
 
         pntr_color color = pntr_image_get_color(image, 10, 10);
         assert(color.data == PNTR_SKYBLUE.data);
+        
         pntr_draw_pixel(image, 10, 10, PNTR_PURPLE);
         color = pntr_image_get_color(image, 10, 10);
         assert(color.data == PNTR_PURPLE.data);
