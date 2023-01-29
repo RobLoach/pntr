@@ -66,6 +66,7 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, int pixelFormat);
+PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int width, int height, int filter);
 
 #ifdef __cplusplus
 }
@@ -107,6 +108,8 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int heig
 #define PNTR_PIXELFORMAT_ARGB8888 0
 #define PNTR_PIXELFORMAT_RGBA8888 1
 #define PNTR_PIXELFORMAT_LAST PNTR_PIXELFORMAT_RGBA8888
+
+#define PNTR_FILTER_NEARESTNEIGHBOR 0
 
 #endif  // PNTR_H__
 
@@ -460,8 +463,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
         srcRect.x     += -dstRect.x;
         srcRect.width += dstRect.x;
     }
-    if (dstRect.y < 0)
-    {
+    if (dstRect.y < 0) {
         srcRect.y     += -dstRect.y;
         srcRect.height += dstRect.y;
     }
@@ -473,7 +475,10 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
         dstRect.height = srcRect.height;
     }
 
-    if (dstRect.x + dstRect.width > dst->width) {pntr_image_get_color_pointer
+    if (dstRect.x + dstRect.width > dst->width) {
+        dstRect.width = dst->width - dstRect.x;
+    }
+    if (dstRect.x + dstRect.width > dst->width) {
         dstRect.height = dst->height - dstRect.y;
     }
 
@@ -481,14 +486,14 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
         return;
     }
 
-   int dst_skip = dst->pitch >> 2;
-   int src_skip = src->pitch >> 2;
+    int dst_skip = dst->pitch >> 2;
+    int src_skip = src->pitch >> 2;
 
-   pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
-   pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
+    pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
+    pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-   int rows_left = dstRect.height;
-   int cols = dstRect.width;
+    int rows_left = dstRect.height;
+    int cols = dstRect.width;
 
 #ifdef PNTR_HAVE_COMPOSITION
     pntr_color s, d;
@@ -550,6 +555,34 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, int p
                 output->data[i].b = color.r;
             }
         } break;
+    }
+
+    return output;
+}
+
+pntr_image* pntr_image_resize(pntr_image* image, int width, int height, int filter) {
+    if (image == NULL || width <= 0 || height <= 0 || filter < PNTR_FILTER_NEARESTNEIGHBOR) {
+        return pntr_set_error("pntr_image_resize() requires a valid image and width/height");
+    }
+
+    pntr_image* output = pntr_new_image(width, height);
+
+    switch (filter) {
+        case PNTR_FILTER_NEARESTNEIGHBOR:
+        default:
+            int xRatio = (image->width << 16) / width + 1;
+            int yRatio = (image->height << 16) / height + 1;
+
+            int x2, y2;
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    x2 = (x * xRatio) >> 16;
+                    y2 = (y * yRatio) >> 16;
+
+                    output->data[(y * width) + x] = image->data[(y2 * image->width) + x2];
+                }
+            }
+        break;
     }
 
     return output;

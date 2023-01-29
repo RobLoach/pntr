@@ -8,6 +8,7 @@ int main() {
     // pntr: Create an image to display
     pntr_image* canvas = pntr_new_image(400, 225);
     pntr_image* image = pntr_load_image("resources/image.png");
+    pntr_image* resized = pntr_image_resize(image, image->width * 1.2f, image->height / 2, 0);
 
     // SDL
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -45,7 +46,7 @@ int main() {
         pntr_draw_pixel(canvas, 300, 80, PNTR_BLUE);
         pntr_draw_image(canvas, image, 200, 50);
         pntr_draw_image(canvas, d, 100, 100);
-
+        pntr_draw_image(canvas, resized, 10, 10);
 
         pntr_unload_image(d);
 
@@ -57,6 +58,7 @@ int main() {
     SDL_FreeSurface(surface);
 
     // Unload
+    pntr_unload_image(resized);
     pntr_unload_image(canvas);
     pntr_unload_image(image);
 
