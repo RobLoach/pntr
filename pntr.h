@@ -61,6 +61,8 @@ PNTR_API pntr_color pntr_color_set_b(pntr_color color, unsigned char b);
 PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
+PNTR_API const char* pntr_get_error();
+PNTR_API void* pntr_set_error(const char* error);
 
 #ifdef __cplusplus
 }
@@ -144,16 +146,35 @@ extern "C" {
 #include "external/stb_image.h"
 #endif  // STBI_INCLUDE_STB_IMAGE_H
 
+const char* pntr_error;
+
+const char* pntr_get_error() {
+    return pntr_error;
+}
+
+void* pntr_set_error(const char* error) {
+    pntr_error = error;
+    return NULL;
+}
+
 pntr_image* pntr_new_image(int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return pntr_set_error("pntr_new_image() requires a width or height > 0");
+    }
+
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
     if (image == NULL) {
-        return NULL;
+        return pntr_set_error("pntr_new_image() failed to allocate memory for pntr_image");
     }
 
     image->pitch = width * (int)sizeof(pntr_color);
     image->width = width;
     image->height = height;
     image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
+    if (image->data == NULL) {
+        PNTR_FREE(image);
+        return pntr_set_error("pntr_new_image() failed to allocate memory for pntr_image data");
+    }
 
     return image;
 }
@@ -166,7 +187,7 @@ pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
 
 pntr_image* pntr_image_copy(pntr_image* image) {
     if (image == NULL || image->data == NULL) {
-        return NULL;
+        return pntr_set_error("pntr_image_copy() requires valid image data");
     }
 
     pntr_image* newImage = pntr_new_image(image->width, image->height);
@@ -191,7 +212,7 @@ pntr_rectangle pntr_rectangle_intersect(pntr_rectangle *a, pntr_rectangle *b) {
 
 pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL || image->data == NULL) {
-        return NULL;
+        return pntr_set_error("pntr_image_from_image() requires valid source image");
     }
 
     pntr_rectangle srcRect = CLITERAL(pntr_rectangle){x, y, width, height};
@@ -202,13 +223,15 @@ pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, in
         return NULL;
     }
 
-    pntr_image* result = pntr_new_image(width, height);
+    pntr_image* result = pntr_new_image(srcRect.width, srcRect.height);
     if (result == NULL) {
         return NULL;
     }
 
-    for (int y = 0; y < (int)srcRect.height; y++) {
-        PNTR_MEMCPY(((unsigned char *)result->data) + y*(int)srcRect.width*sizeof(pntr_color), ((unsigned char *)image->data) + ((y + (int)srcRect.y)*image->width + (int)srcRect.x)*sizeof(pntr_color), (int)srcRect.width*sizeof(pntr_color));
+    for (int y = 0; y < srcRect.height; y++) {
+        PNTR_MEMCPY(((unsigned char *)result->data) + y * srcRect.width * (int)sizeof(pntr_color),
+            ((unsigned char *)image->data) + ((y + srcRect.y) * image->width + srcRect.x) * (int)sizeof(pntr_color),
+            srcRect.width * (int)sizeof(pntr_color));
     }
 
     return result;
@@ -245,7 +268,7 @@ void pntr_clear_background(pntr_image* image, pntr_color color) {
     // Copy the line for the rest of the screen
     int pitchShift = image->pitch >> 2;
     for (int y = 1; y < image->height; y++) {
-        PNTR_MEMCPY(image->data + y * pitchShift, image->data, image->width * sizeof(pntr_color));
+        PNTR_MEMCPY(image->data + y * pitchShift, image->data, image->pitch);
     }
 }
 
@@ -331,31 +354,34 @@ void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int hei
     int pitchShift = dst->pitch >> 2;
     pntr_color* srcPixel = dst->data + rect.y * pitchShift + rect.x;
     for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
-        PNTR_MEMCPY(dst->data + y * pitchShift + rect.x, srcPixel, rect.width * sizeof(pntr_color));
+        PNTR_MEMCPY(dst->data + y * pitchShift + rect.x, srcPixel, (size_t)rect.width * sizeof(pntr_color));
     }
 }
-    
+
 void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-  int largestX = radius;
-  int r2 = radius * radius;
-  for (int y = 0; y <= radius; ++y) {
-    int y2 = y * y;
-    for (int x = largestX; x >= 0; --x) {
-      if ((x * x) + (y2) <= (r2)) {
-        pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY + y, x, color);
-        pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY - y, x, color);
-        pntr_draw_horizontal_line_unsafe(dst, centerX, centerY + y, x, color);
-        pntr_draw_horizontal_line_unsafe(dst, centerX, centerY - y, x, color);
-        largestX = x;
-        break;
-      }
+    int largestX = radius;
+    int r2 = radius * radius;
+    for (int y = 0; y <= radius; ++y) {
+        int y2 = y * y;
+        for (int x = largestX; x >= 0; --x) {
+            if (x * x + y2 <= r2) {
+                pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY + y, x, color);
+                pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY - y, x, color);
+                pntr_draw_horizontal_line_unsafe(dst, centerX, centerY + y, x, color);
+                pntr_draw_horizontal_line_unsafe(dst, centerX, centerY - y, x, color);
+                largestX = x;
+                break;
+            }
+        }
     }
-  }
 }
 
 pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     if (image == NULL || image->data == NULL) {
-        return CLITERAL(pntr_color){ .data = 0};
+        return PNTR_BLANK;
+    }
+    if (x < 0 || y < 0 || x >= image->width || y >= image->height) {
+        return PNTR_BLANK;
     }
     return image->data[y * (image->pitch >> 2) + x];
 }
@@ -366,12 +392,16 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, int dataS
         return NULL;
     }
 
+    if (fileData == NULL || dataSize <= 0) {
+        return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
+    }
+
     int channels = 4;
     int width, height, channels_in_file;
     stbi_uc* output = stbi_load_from_memory(fileData, dataSize, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
         PNTR_FREE(image);
-        return NULL;
+        return pntr_set_error("Failed to load image from memory");
     }
 
     // Flip the bits from RGBA to ARGB.
@@ -401,9 +431,13 @@ pntr_image* pntr_load_image(const char* fileName) {
     int width, height, channels_in_file;
     int channels = 4;
 
+    if (fileName == NULL) {
+        return pntr_set_error("pntr_load_image() requires a valid fileName");
+    }
+
     stbi_uc* output = stbi_load(fileName, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
-        return NULL;
+        return pntr_set_error("pntr_load_image() failed to load image with stbi_load");
     }
 
     // Flip the bits from RGBA to ARGB.
@@ -422,6 +456,11 @@ pntr_image* pntr_load_image(const char* fileName) {
     }
 
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
+    if (image == NULL) {
+        PNTR_FREE(output);
+        return pntr_set_error("pntr_load_image() failed to allocate image memory");
+    }
+
     image->data = (pntr_color*)output;
     image->width = width;
     image->height = height;
@@ -504,7 +543,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     while (rows_left-- > 0) {
         for (int x = 0; x < cols; ++x) {
             // Alpha transparency threshold
-            if (srcPixel[x].a <= 100) {
+            if (srcPixel[x].a == 0) {
                 continue;
             }
             dstPixel[x] = srcPixel[x];
