@@ -19,14 +19,14 @@ else()
     set(PNTR_IS_MAIN FALSE)
 endif()
 option(PNTR_BUILD_EXAMPLES "Examples" ${PNTR_IS_MAIN})
+option(PNTR_BUILD_EXAMPLES_SDL "Examples: SDL" ${PNTR_IS_MAIN})
+option(PNTR_BUILD_EXAMPLES_RAYLIB "Examples: raylib" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_TESTS "TESTS" ${PNTR_IS_MAIN})
 
 # Examples
 if (PNTR_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
-
-
 
 # Tests
 if (PNTR_BUILD_TESTS)

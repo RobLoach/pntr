@@ -5,7 +5,6 @@ pntr_font* ttyFont;
 pntr_font* bmFont;
 
 void example_fonts_init() {
-
     // Default Font
     defaultFont = pntr_load_default_font();
 

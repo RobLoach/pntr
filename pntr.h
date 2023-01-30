@@ -3,7 +3,8 @@
  *
  * Configuration:
  *
- * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font.
+ * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
+ * PNTR_PIXELFORMAT_FLIPPED: Reverse the RGB pixel format
  */
 #ifndef PNTR_H__
 #define PNTR_H__
@@ -35,11 +36,17 @@ typedef enum {
 typedef union {
     uint32_t data;
     struct {
-        // TODO: Verify the order here. What about big endian?
+        #ifndef PNTR_PIXELFORMAT_FLIPPED
         unsigned char b;
         unsigned char g;
         unsigned char r;
         unsigned char a;
+        #else
+        unsigned char r;
+        unsigned char g;
+        unsigned char b;
+        unsigned char a;
+        #endif
     };
 } pntr_color;
 
@@ -254,7 +261,9 @@ extern "C" {
 #define STBI_NO_LINEAR
 #define STBI_NO_GIF
 #define STBI_NO_THREAD_LOCALS
+#ifndef PNTR_NO_STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
+#endif  // PNTR_NO_STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 #endif  // STBI_INCLUDE_STB_IMAGE_H
 
@@ -522,12 +531,12 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, int dataS
     }
 
     int width, height, channels_in_file;
-    stbi_uc* output = stbi_load_from_memory(fileData, dataSize, &width, &height, &channels_in_file, 4);
+    void* output = (void*)stbi_load_from_memory(fileData, dataSize, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
         return pntr_set_error("pntr_load_image_from_memory() failed to load image from memory");
     }
 
-    return pntr_image_from_pixelformat((void*)output, width, height, PNTR_PIXELFORMAT_RGBA8888);
+    return pntr_image_from_pixelformat(output, width, height, PNTR_PIXELFORMAT_RGBA8888);
 }
 
 pntr_image* pntr_load_image(const char* fileName) {
@@ -537,12 +546,12 @@ pntr_image* pntr_load_image(const char* fileName) {
 
     int width, height, channels_in_file;
     // TODO: Implement an abstracted file system and use pntr_load_image_from_memory() instead.
-    stbi_uc* output = stbi_load(fileName, &width, &height, &channels_in_file, 4);
+    void* output = (void*)stbi_load(fileName, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
         return pntr_set_error("pntr_load_image() failed to load image with stbi_load");
     }
 
-    return pntr_image_from_pixelformat((void*)output, width, height, PNTR_PIXELFORMAT_RGBA8888);
+    return pntr_image_from_pixelformat(output, width, height, PNTR_PIXELFORMAT_RGBA8888);
 }
 
 #define COMPOSE_FAST(S, D, A) (((S * A) + (D * (256U - A))) >> 8U)
@@ -643,7 +652,11 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
     output->data = (pntr_color*)data;
 
     switch (pixelFormat) {
+        #ifdef PNTR_PIXELFORMAT_FLIPPED
+        case PNTR_PIXELFORMAT_ARGB8888: {
+        #else
         case PNTR_PIXELFORMAT_RGBA8888: {
+        #endif
             pntr_color color;
             for (int i = 0; i < width * height; i++) {
                 color = output->data[i];
@@ -894,15 +907,16 @@ pntr_font* pntr_load_default_font() {
     // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
     #include "external/font8x8.h"
 
+    // Port the font8x8 data to a pntr_image
     pntr_image* sourceImage = pntr_image_from_pixelformat((void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
     if (sourceImage == NULL) {
         return pntr_set_error("pntr_load_default_font() failed to convert default image");
     }
 
-    // Create a copy since the original source data is held locally.
+    // Create a copy since the original source data is held locally
     pntr_image* newImage = pntr_image_copy(sourceImage);
 
-    // Since the source data is defined locally, don't free() it.
+    // Since the source data is defined locally, don't free() it
     sourceImage->data = NULL;
     pntr_unload_image(sourceImage);
 

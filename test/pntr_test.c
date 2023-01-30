@@ -143,6 +143,26 @@ int main() {
         pntr_unload_font(font);
     }
 
+    // pntr_image_resize()
+    {
+        pntr_image* image = pntr_load_image("resources/image.png");
+        assert(image != NULL);
+
+        pntr_image* resized = pntr_image_resize(image, 640, 480, PNTR_FILTER_NEARESTNEIGHBOR);
+        assert(resized != NULL);
+        assert(resized->width == 640);
+        assert(resized->height == 480);
+        pntr_unload_image(resized);
+
+        resized = pntr_image_resize(image, 100, 100, PNTR_FILTER_NEARESTNEIGHBOR);
+        assert(resized != NULL);
+        assert(resized->width == 100);
+        assert(resized->height == 100);
+        pntr_unload_image(resized);
+
+        pntr_unload_image(image);
+    }
+
     // Ensure there were no errors.
     assert(pntr_get_error() == NULL);
 
