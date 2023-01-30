@@ -104,7 +104,7 @@ PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, 
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
-PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_filter filter);
+PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
@@ -552,47 +552,39 @@ void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
 }
 
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
-    if (dst == NULL || dst->data == NULL || src == NULL || src->data == NULL) {
+    if (dst == NULL || dst->data == NULL || src == NULL || src->data == NULL || posX >= dst->width || posY >= dst->height) {
         return;
     }
 
+    // Scaling is not supported.
     pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, srcRect.width, srcRect.height};
+    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
 
-    if (srcRect.width <= 0 || srcRect.height <= 0) {
-        srcRect.width = src->width;
-        srcRect.height = src->height;
-    }
-
+    // Update the source coordinates based on the destination.
     if (dstRect.x < 0) {
-        srcRect.x     += -dstRect.x;
+        srcRect.x -= dstRect.x;
         srcRect.width += dstRect.x;
     }
     if (dstRect.y < 0) {
-        srcRect.y     += -dstRect.y;
+        srcRect.y -= dstRect.y;
         srcRect.height += dstRect.y;
     }
 
-    if (srcRect.width < dstRect.width) {
-        dstRect.width = srcRect.width;
-    }
-    if (srcRect.height < dstRect.height) {
-        dstRect.height = srcRect.height;
-    }
+    // Figure out the final desintation
+    dstRect = pntr_rectangle_intersect(&dstRect, &dstCanvas);
+    dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
+    dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
 
-    if (dstRect.x + dstRect.width > dst->width) {
-        dstRect.width = dst->width - dstRect.x;
-    }
-    if (dstRect.x + dstRect.width > dst->width) {
-        dstRect.height = dst->height - dstRect.y;
-    }
-
-    if (srcRect.width <= 0 || srcRect.width <= 0 || dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= dst->width || dstRect.y >= dst->height) {
+    // Final sanity checks
+    if (srcRect.width <= 0 || srcRect.height <= 0 || dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= dst->width || dstRect.y >= dst->height) {
         return;
     }
 
+    // Determine how many bits to skip for each line.
     int dst_skip = dst->pitch >> 2;
     int src_skip = src->pitch >> 2;
 
+    // Find the first pixel to render.
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
@@ -667,25 +659,25 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
     return output;
 }
 
-pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_filter filter) {
-    if (image == NULL || width <= 0 || height <= 0 || filter < 0 || filter >= PNTR_FILTER_LAST) {
+pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
+    if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0 || filter >= PNTR_FILTER_LAST) {
         return pntr_set_error("pntr_image_resize() requires a valid image and width/height");
     }
 
-    pntr_image* output = pntr_new_image(width, height);
+    pntr_image* output = pntr_new_image(newWidth, newHeight);
 
     switch (filter) {
         case PNTR_FILTER_NEARESTNEIGHBOR:
         default: {
-            int xRatio = (image->width << 16) / width + 1;
-            int yRatio = (image->height << 16) / height + 1;
+            int xRatio = (image->width << 16) / newWidth + 1;
+            int yRatio = (image->height << 16) / newHeight + 1;
 
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
+            for (int y = 0; y < newHeight; y++) {
+                for (int x = 0; x < newWidth; x++) {
                     int x2 = (x * xRatio) >> 16;
                     int y2 = (y * yRatio) >> 16;
 
-                    output->data[(y * width) + x] = image->data[(y2 * image->width) + x2];
+                    output->data[(y * newWidth) + x] = image->data[(y2 * image->width) + x2];
                 }
             }
         }
