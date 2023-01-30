@@ -20,6 +20,6 @@ const char* example_images_update(pntr_image* canvas) {
     return "Images";
 }
 
-void example_images_close() {
+void example_images_unload() {
     pntr_unload_image(image);
 }

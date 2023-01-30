@@ -38,7 +38,7 @@ const char* example_fonts_update(pntr_image* canvas) {
     return "Fonts";
 }
 
-void example_fonts_close() {
+void example_fonts_unload() {
     pntr_unload_font(defaultFont);
     pntr_unload_font(ttyFont);
     pntr_unload_font(bmFont);

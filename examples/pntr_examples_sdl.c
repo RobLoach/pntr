@@ -70,9 +70,8 @@ int main() {
 
     // Unload
     pntr_unload_image(canvas);
+    examples_unload();
 
     SDL_DestroyWindow(window);
     SDL_Quit();
-
-    SDL_Log("Error: %s", pntr_get_error());
 }

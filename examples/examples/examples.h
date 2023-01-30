@@ -25,8 +25,8 @@ const char* examples_update(int i, pntr_image* canvas) {
     }
 }
 
-void examples_close() {
-    example_shapes_close();
-    example_fonts_close();
-    example_images_close();
+void examples_unload() {
+    example_shapes_unload();
+    example_fonts_unload();
+    example_images_unload();
 }

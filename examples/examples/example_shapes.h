@@ -13,6 +13,6 @@ const char* example_shapes_update(pntr_image* canvas) {
     return "Shapes";
 }
 
-void example_shapes_close() {
+void example_shapes_unload() {
     // Nothing
 }
