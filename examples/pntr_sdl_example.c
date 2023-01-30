@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"

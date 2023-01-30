@@ -601,14 +601,16 @@ pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_fil
     }
 
     pntr_image* output = pntr_new_image(width, height);
+    int xRatio, yRatio;
+    int x2, y2;
 
     switch (filter) {
         case PNTR_FILTER_NEARESTNEIGHBOR:
         default:
-            int xRatio = (image->width << 16) / width + 1;
-            int yRatio = (image->height << 16) / height + 1;
+            xRatio = (image->width << 16) / width + 1;
+            yRatio = (image->height << 16) / height + 1;
 
-            int x2, y2;
+
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
                     x2 = (x * xRatio) >> 16;
