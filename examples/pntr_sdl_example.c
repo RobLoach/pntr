@@ -71,6 +71,4 @@ int main() {
 
     SDL_DestroyWindow(window);
     SDL_Quit();
-
-    SDL_Log("Error: %s", pntr_get_error());
 }
