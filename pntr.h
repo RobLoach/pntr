@@ -104,7 +104,7 @@ PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, 
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
-PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_filter filter);
+PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
@@ -128,32 +128,84 @@ PNTR_API pntr_font* pntr_load_default_font();
     #define CLITERAL(type)      (type)
 #endif
 
+#ifndef PNTR_LIGHTGRAY
 #define PNTR_LIGHTGRAY  CLITERAL(pntr_color){ .r = 200, .g = 200, .b = 200, .a = 255 }
+#endif
+#ifndef PNTR_GRAY
 #define PNTR_GRAY       CLITERAL(pntr_color){ .r = 130, .g = 130, .b = 130, .a = 255 }
+#endif
+#ifndef PNTR_DARKGRAY
 #define PNTR_DARKGRAY   CLITERAL(pntr_color){ .r = 80,  .g = 80,  .b = 80,  .a = 255 }
+#endif
+#ifndef PNTR_YELLOW
 #define PNTR_YELLOW     CLITERAL(pntr_color){ .r = 253, .g = 249, .b = 0,   .a =255  }
+#endif
+#ifndef PNTR_GOLD
 #define PNTR_GOLD       CLITERAL(pntr_color){ .r = 255, .g = 203, .b = 0,   .a =255  }
+#endif
+#ifndef PNTR_ORANGE
 #define PNTR_ORANGE     CLITERAL(pntr_color){ .r = 255, .g = 161, .b = 0,   .a =255  }
+#endif
+#ifndef PNTR_PINK
 #define PNTR_PINK       CLITERAL(pntr_color){ .r = 255, .g = 109, .b = 194, .a = 255 }
+#endif
+#ifndef PNTR_RED
 #define PNTR_RED        CLITERAL(pntr_color){ .r = 230, .g = 41,  .b = 55,  .a = 255 }
+#endif
+#ifndef PNTR_MAROON
 #define PNTR_MAROON     CLITERAL(pntr_color){ .r = 190, .g = 33,  .b = 55,  .a = 255 }
+#endif
+#ifndef PNTR_GREEN
 #define PNTR_GREEN      CLITERAL(pntr_color){ .r = 0,   .g = 228, .b = 48,  .a = 255 }
+#endif
+#ifndef PNTR_LIME
 #define PNTR_LIME       CLITERAL(pntr_color){ .r = 0,   .g = 158, .b = 47,  .a = 255 }
+#endif
+#ifndef PNTR_DARKGREEN
 #define PNTR_DARKGREEN  CLITERAL(pntr_color){ .r = 0,   .g = 117, .b = 44,  .a = 255 }
+#endif
+#ifndef PNTR_SKYBLUE
 #define PNTR_SKYBLUE    CLITERAL(pntr_color){ .r = 102, .g = 191, .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_BLUE
 #define PNTR_BLUE       CLITERAL(pntr_color){ .r = 0,   .g = 121, .b = 241, .a = 255 }
+#endif
+#ifndef PNTR_DARKBLUE
 #define PNTR_DARKBLUE   CLITERAL(pntr_color){ .r = 0,   .g = 82,  .b = 172, .a = 255 }
+#endif
+#ifndef PNTR_PURPLE
 #define PNTR_PURPLE     CLITERAL(pntr_color){ .r = 200, .g = 122, .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_VIOLET
 #define PNTR_VIOLET     CLITERAL(pntr_color){ .r = 135, .g = 60,  .b = 190, .a = 255 }
+#endif
+#ifndef PNTR_DARKPURPLE
 #define PNTR_DARKPURPLE CLITERAL(pntr_color){ .r = 112, .g = 31,  .b = 126, .a = 255 }
+#endif
+#ifndef PNTR_BEIGE
 #define PNTR_BEIGE      CLITERAL(pntr_color){ .r = 211, .g = 176, .b = 131, .a = 255 }
+#endif
+#ifndef PNTR_BROWN
 #define PNTR_BROWN      CLITERAL(pntr_color){ .r = 127, .g = 106, .b = 79,  .a = 255 }
+#endif
+#ifndef PNTR_DARKBROWN
 #define PNTR_DARKBROWN  CLITERAL(pntr_color){ .r = 76,  .g = 63,  .b = 47,  .a = 255 }
+#endif
+#ifndef PNTR_WHITE
 #define PNTR_WHITE      CLITERAL(pntr_color){ .r = 255, .g = 255, .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_BLACK
 #define PNTR_BLACK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 255 }
+#endif
+#ifndef PNTR_BLANK
 #define PNTR_BLANK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 0   }
+#endif
+#ifndef PNTR_MAGENTA
 #define PNTR_MAGENTA    CLITERAL(pntr_color){ .r = 255, .g = 0,   .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_RAYWHITE
 #define PNTR_RAYWHITE   CLITERAL(pntr_color){ .r = 245, .g = 245, .b = 245, .a = 255 }
+#endif
 
 #endif  // PNTR_H__
 
@@ -500,47 +552,39 @@ void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
 }
 
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
-    if (dst == NULL || dst->data == NULL || src == NULL || src->data == NULL) {
+    if (dst == NULL || dst->data == NULL || src == NULL || src->data == NULL || posX >= dst->width || posY >= dst->height) {
         return;
     }
 
+    // Scaling is not supported.
     pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, srcRect.width, srcRect.height};
+    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
 
-    if (srcRect.width <= 0 || srcRect.height <= 0) {
-        srcRect.width = src->width;
-        srcRect.height = src->height;
-    }
-
+    // Update the source coordinates based on the destination.
     if (dstRect.x < 0) {
-        srcRect.x     += -dstRect.x;
+        srcRect.x -= dstRect.x;
         srcRect.width += dstRect.x;
     }
     if (dstRect.y < 0) {
-        srcRect.y     += -dstRect.y;
+        srcRect.y -= dstRect.y;
         srcRect.height += dstRect.y;
     }
 
-    if (srcRect.width < dstRect.width) {
-        dstRect.width = srcRect.width;
-    }
-    if (srcRect.height < dstRect.height) {
-        dstRect.height = srcRect.height;
-    }
+    // Figure out the final desintation
+    dstRect = pntr_rectangle_intersect(&dstRect, &dstCanvas);
+    dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
+    dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
 
-    if (dstRect.x + dstRect.width > dst->width) {
-        dstRect.width = dst->width - dstRect.x;
-    }
-    if (dstRect.x + dstRect.width > dst->width) {
-        dstRect.height = dst->height - dstRect.y;
-    }
-
-    if (srcRect.width <= 0 || srcRect.width <= 0 || dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= dst->width || dstRect.y >= dst->height) {
+    // Final sanity checks
+    if (srcRect.width <= 0 || srcRect.height <= 0 || dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= dst->width || dstRect.y >= dst->height) {
         return;
     }
 
+    // Determine how many bits to skip for each line.
     int dst_skip = dst->pitch >> 2;
     int src_skip = src->pitch >> 2;
 
+    // Find the first pixel to render.
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
@@ -615,25 +659,25 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
     return output;
 }
 
-pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_filter filter) {
-    if (image == NULL || width <= 0 || height <= 0 || filter < 0 || filter >= PNTR_FILTER_LAST) {
+pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
+    if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0 || filter >= PNTR_FILTER_LAST) {
         return pntr_set_error("pntr_image_resize() requires a valid image and width/height");
     }
 
-    pntr_image* output = pntr_new_image(width, height);
+    pntr_image* output = pntr_new_image(newWidth, newHeight);
 
     switch (filter) {
         case PNTR_FILTER_NEARESTNEIGHBOR:
         default: {
-            int xRatio = (image->width << 16) / width + 1;
-            int yRatio = (image->height << 16) / height + 1;
+            int xRatio = (image->width << 16) / newWidth + 1;
+            int yRatio = (image->height << 16) / newHeight + 1;
 
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
+            for (int y = 0; y < newHeight; y++) {
+                for (int x = 0; x < newWidth; x++) {
                     int x2 = (x * xRatio) >> 16;
                     int y2 = (y * yRatio) >> 16;
 
-                    output->data[(y * width) + x] = image->data[(y2 * image->width) + x2];
+                    output->data[(y * newWidth) + x] = image->data[(y2 * image->width) + x2];
                 }
             }
         }

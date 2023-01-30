@@ -5,16 +5,14 @@
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
+#include "examples/examples.h"
+
 int main() {
     // pntr: Create an image to display
     pntr_image* canvas = pntr_new_image(400, 225);
-    pntr_image* image = pntr_load_image("resources/image.png");
-    pntr_image* resized = pntr_image_resize(image, image->width * 1.2f, image->height / 2, 0);
-
-    // pntr: Fonts
-    pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
-    pntr_font* font88 = pntr_load_ttyfont("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
-    pntr_font* defaultFont = pntr_load_default_font();
+    pntr_font* font = pntr_load_default_font();
+    int currentExample = 0;
+    examples_init();
 
     // SDL
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -31,28 +29,37 @@ int main() {
                 case SDL_QUIT:
                     shouldClose = true;
                     break;
+                case SDL_MOUSEBUTTONUP:
+                    if (++currentExample >= examples_count()) {
+                        currentExample = 0;
+                    }
+                    break;
                 case SDL_KEYUP:
                     switch (event.key.keysym.sym) {
                         case SDLK_ESCAPE:
                             shouldClose = true;
+                            break;
+                        case SDLK_LEFT:
+                            if (--currentExample < 0) {
+                                currentExample = examples_count() - 1;
+                            }
+                            break;
+                        case SDLK_RIGHT:
+                        case SDLK_SPACE:
+                            if (++currentExample >= examples_count()) {
+                                currentExample = 0;
+                            }
                             break;
                     }
                     break;
             }
         }
 
-        // pntr: Render to the canvas
-        pntr_clear_background(canvas, PNTR_DARKBROWN);
-        pntr_draw_rectangle(canvas, 10, 50, 80, 200, PNTR_RED);
-        pntr_draw_rectangle(canvas, 100, 50, 80, 200, PNTR_GREEN);
-        pntr_draw_rectangle(canvas, 200, 50, 80, 200, PNTR_BLUE);
-        pntr_draw_pixel(canvas, 300, 80, PNTR_BLUE);
-        pntr_draw_image(canvas, image, 200, 50);
-        pntr_draw_image(canvas, resized, 200, 10);
-
-        pntr_draw_text(canvas, font, "Hello World!", 10, 10);
-        pntr_draw_text(canvas, font88, "Hello World!", 10, 30);
-        pntr_draw_text(canvas, defaultFont, "Hello World!", 10, 50);
+        pntr_clear_background(canvas, PNTR_RAYWHITE);
+        const char* exampleTitle = examples_update(currentExample, canvas);
+        pntr_draw_text(canvas, font, "Example:", 10, 10);
+        pntr_draw_text(canvas, font, exampleTitle, 80, 10);
+        pntr_draw_text(canvas, font, "Press left and right or click to switch", 10, canvas->height - 18);
 
         // SDL: Push to the screen
         SDL_BlitSurface(surface, NULL, screen, NULL);
@@ -62,12 +69,8 @@ int main() {
     SDL_FreeSurface(surface);
 
     // Unload
-    pntr_unload_font(font);
-    pntr_unload_font(font88);
-    pntr_unload_font(defaultFont);
-    pntr_unload_image(resized);
     pntr_unload_image(canvas);
-    pntr_unload_image(image);
+    examples_unload();
 
     SDL_DestroyWindow(window);
     SDL_Quit();
