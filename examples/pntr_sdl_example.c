@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_IMPLEMENTATION
