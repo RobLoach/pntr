@@ -116,7 +116,7 @@ int main() {
         size = pntr_measure_text_ex(font, "On\nNew\nLines");
         assert(size.y == font->atlas->height * 3);
 
-        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!", PNTR_RED);
+        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!");
         assert(textImage != NULL);
         pntr_unload_image(textImage);
 

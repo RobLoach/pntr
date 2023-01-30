@@ -104,7 +104,7 @@ PNTR_API void pntr_unload_font(pntr_font* font);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
-pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color background);
+pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
 
 #ifdef __cplusplus
 }
@@ -754,13 +754,13 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
     return output;
 }
 
-pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color background) {
+pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
     pntr_vector size = pntr_measure_text_ex(font, text);
     if (size.x <= 0 || size.y <= 0) {
         return NULL;
     }
 
-    pntr_image* output = pntr_gen_image_color(size.x, size.y, background);
+    pntr_image* output = pntr_gen_image_color(size.x, size.y, PNTR_BLANK);
     if (output == NULL) {
         return NULL;
     }
