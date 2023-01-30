@@ -55,7 +55,7 @@ int main() {
 
         pntr_color color = pntr_image_get_color(image, 10, 10);
         assert(color.data == PNTR_SKYBLUE.data);
-        
+
         pntr_draw_pixel(image, 10, 10, PNTR_PURPLE);
         color = pntr_image_get_color(image, 10, 10);
         assert(color.data == PNTR_PURPLE.data);
@@ -90,6 +90,37 @@ int main() {
         assert(image->height == 108);
         assert(image->data != NULL);
         pntr_unload_image(image);
+    }
+
+    // pntr_load_bmfont(), pntr_unload_font(), pntr_draw_text()
+    {
+        pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+        assert(font != NULL);
+        assert(font->charactersFound > 10);
+
+        pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
+        pntr_draw_text(image, font, "Hello World!", 10, 10);
+
+        pntr_unload_font(font);
+        pntr_unload_image(image);
+    }
+
+    // pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()
+    {
+        pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+        assert(pntr_measure_text(font, "Hello World!") > 50);
+        pntr_vector size = pntr_measure_text_ex(font, "pntr_measure_text_ex()");
+        assert(size.x > 50);
+        assert(size.y == font->atlas->height);
+
+        size = pntr_measure_text_ex(font, "On\nNew\nLines");
+        assert(size.y == font->atlas->height * 3);
+
+        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!", PNTR_RED);
+        assert(textImage != NULL);
+        pntr_unload_image(textImage);
+
+        pntr_unload_font(font);
     }
 
     // Ensure there were no errors.

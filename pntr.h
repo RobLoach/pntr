@@ -7,6 +7,23 @@
 #define PNTR_API
 #endif
 
+typedef enum {
+    PNTR_PIXELFORMAT_ARGB8888 = 0,
+    PNTR_PIXELFORMAT_RGBA8888,
+    PNTR_PIXELFORMAT_LAST
+} pntr_pixelformat;
+
+typedef enum {
+    PNTR_FILTER_NEARESTNEIGHBOR = 0,
+    PNTR_FILTER_LAST
+} pntr_filter;
+
+typedef enum {
+    PNTR_FONTTYPE_UNKNOWN = 0,
+    PNTR_FONTTYPE_BMFONT,
+    PNTR_FONTTYPE_LAST
+} pntr_fonttype;
+
 typedef union {
     uint32_t data;
     struct {
@@ -32,16 +49,19 @@ typedef struct pntr_rectangle {
    int height;
 } pntr_rectangle;
 
-typedef enum {
-    PNTR_PIXELFORMAT_ARGB8888 = 0,
-    PNTR_PIXELFORMAT_RGBA8888,
-    PNTR_PIXELFORMAT_LAST
-} pntr_pixelformat;
+typedef struct pntr_vector {
+    int x;
+    int y;
+} pntr_vector;
 
-typedef enum {
-    PNTR_FILTER_NEARESTNEIGHBOR = 0,
-    PNTR_FILTER_LAST
-} pntr_filter;
+#define PNTR_MAX_FONTS 256
+typedef struct pntr_font {
+    pntr_image* atlas;
+    pntr_rectangle rectangles[PNTR_MAX_FONTS];
+    char characters[PNTR_MAX_FONTS];
+    int charactersFound;
+    pntr_fonttype fontType;
+} pntr_font ;
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,10 +92,19 @@ PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
+PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, int dataSize);
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_filter filter);
+PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
+PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
+PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
+PNTR_API void pntr_unload_font(pntr_font* font);
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
+PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
+PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
+pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color background);
 
 #ifdef __cplusplus
 }
@@ -591,6 +620,152 @@ pntr_image* pntr_image_resize(pntr_image* image, int width, int height, pntr_fil
         break;
     }
 
+    return output;
+}
+
+pntr_font* pntr_load_bmfont(const char* fileName, const char* characters) {
+    pntr_image* image = pntr_load_image(fileName);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    return pntr_load_bmfont_from_image(image, characters);
+}
+
+pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters) {
+    pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    return pntr_load_bmfont_from_image(image, characters);
+}
+
+pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters) {
+    if (image == NULL || characters == NULL) {
+        return pntr_set_error("pntr_load_bmfont_from_image() requires a valid image and characters");
+    }
+
+    pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
+    if (font == NULL) {
+        return pntr_set_error("pntr_load_bmfont_from_image() failed to allocate pntr_font memory");
+    }
+
+    pntr_color seperator = pntr_image_get_color(image, 0, 0);
+    pntr_rectangle currentRectangle = CLITERAL(pntr_rectangle){1,0,0, image->height};
+    int currentCharacter = 0;
+
+    for (int i = 1; i < image->width && currentCharacter < PNTR_MAX_FONTS; i++) {
+        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
+            font->characters[currentCharacter] = characters[currentCharacter];
+            font->rectangles[currentCharacter] = currentRectangle;
+            currentRectangle.width = 0;
+            currentRectangle.x = i + 1;
+            currentCharacter++;
+        }
+        else {
+            currentRectangle.width++;
+        }
+    }
+
+    font->fontType = PNTR_FONTTYPE_BMFONT;
+    font->atlas = image;
+    font->charactersFound = currentCharacter;
+
+    return font;
+}
+
+void pntr_unload_font(pntr_font* font) {
+    if (font == NULL) {
+        return;
+    }
+
+    if (font->atlas != NULL) {
+        pntr_unload_image(font->atlas);
+        font->atlas = NULL;
+    }
+
+    PNTR_FREE(font);
+}
+
+void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY) {
+    if (dst == NULL || font == NULL || text == NULL) {
+        return;
+    }
+
+    int x = posX;
+    int y = posY;
+
+    const char * currentChar = text;
+    while (currentChar != NULL && *currentChar != '\0') {
+        if (*currentChar == '\n') {
+            // TODO: pntr_draw_text(): Allow for center/right alignment
+            x = posX;
+            y += font->atlas->height;
+        }
+        else {
+            for (int i = 0; i < font->charactersFound; i++) {
+                if (font->characters[i] == *currentChar) {
+                    pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x, y);
+                    x += font->rectangles[i].width;
+                    break;
+                }
+            }
+        }
+
+        currentChar++;
+    }
+}
+
+inline int pntr_measure_text(pntr_font* font, const char* text) {
+    return pntr_measure_text_ex(font, text).x;
+}
+
+pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
+    if (font == NULL || text == NULL) {
+        return CLITERAL(pntr_vector){0, 0};
+    }
+
+    pntr_vector output;
+    output.x = 0;
+    output.y = font->atlas->height;
+    int x = 0;
+    const char * currentChar = text;
+
+    while (currentChar != NULL && *currentChar != '\0') {
+        if (*currentChar == '\n') {
+            output.y += font->atlas->height;
+            x = 0;
+        }
+        else {
+            for (int i = 0; i < font->charactersFound; i++) {
+                if (font->characters[i] == *currentChar) {
+                    x += font->rectangles[i].width;
+                    if (output.x < x) {
+                        output.x = x;
+                    }
+                    break;
+                }
+            }
+        }
+        currentChar++;
+    }
+
+    return output;
+}
+
+pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color background) {
+    pntr_vector size = pntr_measure_text_ex(font, text);
+    if (size.x <= 0 || size.y <= 0) {
+        return NULL;
+    }
+
+    pntr_image* output = pntr_gen_image_color(size.x, size.y, background);
+    if (output == NULL) {
+        return NULL;
+    }
+
+    pntr_draw_text(output, font, text, 0, 0);
     return output;
 }
 

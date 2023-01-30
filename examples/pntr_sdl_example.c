@@ -10,6 +10,8 @@ int main() {
     pntr_image* image = pntr_load_image("resources/image.png");
     pntr_image* resized = pntr_image_resize(image, image->width * 1.2f, image->height / 2, 0);
 
+    pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+
     // SDL
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     SDL_Window* window = SDL_CreateWindow("pntr: SDL Example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, canvas->width, canvas->height, SDL_WINDOW_SHOWN);
@@ -35,20 +37,16 @@ int main() {
             }
         }
 
-        pntr_image* d = pntr_image_from_image(image, 50, 50, 100, 100);
-
-
         // pntr: Render to the canvas
-        pntr_clear_background(canvas, PNTR_RAYWHITE);
-        pntr_draw_rectangle(canvas, 10, 10, 80, 200, PNTR_RED);
-        pntr_draw_rectangle(canvas, 100, 10, 80, 200, PNTR_GREEN);
-        pntr_draw_rectangle(canvas, 200, 10, 80, 200, PNTR_BLUE);
+        pntr_clear_background(canvas, PNTR_DARKBROWN);
+        pntr_draw_rectangle(canvas, 10, 50, 80, 200, PNTR_RED);
+        pntr_draw_rectangle(canvas, 100, 50, 80, 200, PNTR_GREEN);
+        pntr_draw_rectangle(canvas, 200, 50, 80, 200, PNTR_BLUE);
         pntr_draw_pixel(canvas, 300, 80, PNTR_BLUE);
         pntr_draw_image(canvas, image, 200, 50);
-        pntr_draw_image(canvas, d, 100, 100);
-        pntr_draw_image(canvas, resized, 10, 10);
+        pntr_draw_image(canvas, resized, 200, 10);
 
-        pntr_unload_image(d);
+        pntr_draw_text(canvas, font, "Hello World!", 10, 10);
 
         // SDL: Push to the screen
         SDL_BlitSurface(surface, NULL, screen, NULL);
@@ -58,6 +56,7 @@ int main() {
     SDL_FreeSurface(surface);
 
     // Unload
+    pntr_unload_font(font);
     pntr_unload_image(resized);
     pntr_unload_image(canvas);
     pntr_unload_image(image);
