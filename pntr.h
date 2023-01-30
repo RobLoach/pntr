@@ -104,7 +104,7 @@ PNTR_API void pntr_unload_font(pntr_font* font);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
-pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
+PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
 
 #ifdef __cplusplus
 }
