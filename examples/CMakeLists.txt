@@ -1,9 +1,3 @@
-# CMAKE Modules
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
-
-set(SDL_SHARED FALSE)
-set(SDL2_DISABLE_UNINSTALL TRUE)
-
 # Dependencies
 find_package(SDL2 REQUIRED)
 
