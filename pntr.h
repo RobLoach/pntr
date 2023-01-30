@@ -128,32 +128,84 @@ PNTR_API pntr_font* pntr_load_default_font();
     #define CLITERAL(type)      (type)
 #endif
 
+#ifndef PNTR_LIGHTGRAY
 #define PNTR_LIGHTGRAY  CLITERAL(pntr_color){ .r = 200, .g = 200, .b = 200, .a = 255 }
+#endif
+#ifndef PNTR_GRAY
 #define PNTR_GRAY       CLITERAL(pntr_color){ .r = 130, .g = 130, .b = 130, .a = 255 }
+#endif
+#ifndef PNTR_DARKGRAY
 #define PNTR_DARKGRAY   CLITERAL(pntr_color){ .r = 80,  .g = 80,  .b = 80,  .a = 255 }
+#endif
+#ifndef PNTR_YELLOW
 #define PNTR_YELLOW     CLITERAL(pntr_color){ .r = 253, .g = 249, .b = 0,   .a =255  }
+#endif
+#ifndef PNTR_GOLD
 #define PNTR_GOLD       CLITERAL(pntr_color){ .r = 255, .g = 203, .b = 0,   .a =255  }
+#endif
+#ifndef PNTR_ORANGE
 #define PNTR_ORANGE     CLITERAL(pntr_color){ .r = 255, .g = 161, .b = 0,   .a =255  }
+#endif
+#ifndef PNTR_PINK
 #define PNTR_PINK       CLITERAL(pntr_color){ .r = 255, .g = 109, .b = 194, .a = 255 }
+#endif
+#ifndef PNTR_RED
 #define PNTR_RED        CLITERAL(pntr_color){ .r = 230, .g = 41,  .b = 55,  .a = 255 }
+#endif
+#ifndef PNTR_MAROON
 #define PNTR_MAROON     CLITERAL(pntr_color){ .r = 190, .g = 33,  .b = 55,  .a = 255 }
+#endif
+#ifndef PNTR_GREEN
 #define PNTR_GREEN      CLITERAL(pntr_color){ .r = 0,   .g = 228, .b = 48,  .a = 255 }
+#endif
+#ifndef PNTR_LIME
 #define PNTR_LIME       CLITERAL(pntr_color){ .r = 0,   .g = 158, .b = 47,  .a = 255 }
+#endif
+#ifndef PNTR_DARKGREEN
 #define PNTR_DARKGREEN  CLITERAL(pntr_color){ .r = 0,   .g = 117, .b = 44,  .a = 255 }
+#endif
+#ifndef PNTR_SKYBLUE
 #define PNTR_SKYBLUE    CLITERAL(pntr_color){ .r = 102, .g = 191, .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_BLUE
 #define PNTR_BLUE       CLITERAL(pntr_color){ .r = 0,   .g = 121, .b = 241, .a = 255 }
+#endif
+#ifndef PNTR_DARKBLUE
 #define PNTR_DARKBLUE   CLITERAL(pntr_color){ .r = 0,   .g = 82,  .b = 172, .a = 255 }
+#endif
+#ifndef PNTR_PURPLE
 #define PNTR_PURPLE     CLITERAL(pntr_color){ .r = 200, .g = 122, .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_VIOLET
 #define PNTR_VIOLET     CLITERAL(pntr_color){ .r = 135, .g = 60,  .b = 190, .a = 255 }
+#endif
+#ifndef PNTR_DARKPURPLE
 #define PNTR_DARKPURPLE CLITERAL(pntr_color){ .r = 112, .g = 31,  .b = 126, .a = 255 }
+#endif
+#ifndef PNTR_BEIGE
 #define PNTR_BEIGE      CLITERAL(pntr_color){ .r = 211, .g = 176, .b = 131, .a = 255 }
+#endif
+#ifndef PNTR_BROWN
 #define PNTR_BROWN      CLITERAL(pntr_color){ .r = 127, .g = 106, .b = 79,  .a = 255 }
+#endif
+#ifndef PNTR_DARKBROWN
 #define PNTR_DARKBROWN  CLITERAL(pntr_color){ .r = 76,  .g = 63,  .b = 47,  .a = 255 }
+#endif
+#ifndef PNTR_WHITE
 #define PNTR_WHITE      CLITERAL(pntr_color){ .r = 255, .g = 255, .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_BLACK
 #define PNTR_BLACK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 255 }
+#endif
+#ifndef PNTR_BLANK
 #define PNTR_BLANK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 0   }
+#endif
+#ifndef PNTR_MAGENTA
 #define PNTR_MAGENTA    CLITERAL(pntr_color){ .r = 255, .g = 0,   .b = 255, .a = 255 }
+#endif
+#ifndef PNTR_RAYWHITE
 #define PNTR_RAYWHITE   CLITERAL(pntr_color){ .r = 245, .g = 245, .b = 245, .a = 255 }
+#endif
 
 #endif  // PNTR_H__
 
