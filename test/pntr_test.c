@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
@@ -97,6 +98,7 @@ int main() {
         pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         assert(font != NULL);
         assert(font->charactersFound > 10);
+        assert(font->fontType == PNTR_FONTTYPE_BMFONT);
 
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
         pntr_draw_text(image, font, "Hello World!", 10, 10);
@@ -120,6 +122,24 @@ int main() {
         assert(textImage != NULL);
         pntr_unload_image(textImage);
 
+        pntr_unload_font(font);
+    }
+
+    // pntr_load_ttyfont()
+    {
+        pntr_font* font = pntr_load_ttyfont("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+        assert(font != NULL);
+        assert(font->charactersFound > 20);
+        assert(font->fontType == PNTR_FONTTYPE_TTYFONT);
+        pntr_unload_font(font);
+    }
+
+    // pntr_load_default_font()
+    {
+        pntr_font* font = pntr_load_default_font();
+        assert(font != NULL);
+        assert(font->charactersFound > 10);
+        assert(font->fontType == PNTR_FONTTYPE_TTYFONT);
         pntr_unload_font(font);
     }
 
