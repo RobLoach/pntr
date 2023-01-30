@@ -1,3 +1,10 @@
+/**
+ * pntr.
+ *
+ * Configuration:
+ *
+ * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font.
+ */
 #ifndef PNTR_H__
 #define PNTR_H__
 
@@ -21,6 +28,7 @@ typedef enum {
 typedef enum {
     PNTR_FONTTYPE_UNKNOWN = 0,
     PNTR_FONTTYPE_BMFONT,
+    PNTR_FONTTYPE_TTYFONT,
     PNTR_FONTTYPE_LAST
 } pntr_fonttype;
 
@@ -105,6 +113,10 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
+PNTR_API pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, int dataSize, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API pntr_font* pntr_load_default_font();
 
 #ifdef __cplusplus
 }
@@ -675,6 +687,57 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
     return font;
 }
 
+pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
+    pntr_image* image = pntr_load_image(fileName);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    return pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+}
+
+pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
+    pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    return pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+}
+
+pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
+    if (image == NULL || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
+        return pntr_set_error("pntr_load_ttyfont_from_image() requires a valid image and characters");
+    }
+
+    pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
+    if (font == NULL) {
+        return pntr_set_error("pntr_load_ttyfont_from_image() failed to allocate pntr_font memory");
+    }
+
+    int currentCharIndex = 0;
+    const char * currentChar = characters;
+    while (currentChar != NULL && *currentChar != '\0' && currentCharIndex < PNTR_MAX_FONTS) {
+        pntr_rectangle rect;
+        rect.x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth;
+        rect.y = (currentCharIndex / (image->width / glyphWidth)) * glyphHeight;
+
+        rect.width = glyphWidth;
+        rect.height = glyphHeight;
+
+        font->rectangles[currentCharIndex] = rect;
+        font->characters[currentCharIndex] = characters[currentCharIndex];
+
+        currentCharIndex++;
+    }
+
+    font->fontType = PNTR_FONTTYPE_TTYFONT;
+    font->atlas = image;
+    font->charactersFound = currentCharIndex;
+
+    return font;
+}
+
 void pntr_unload_font(pntr_font* font) {
     if (font == NULL) {
         return;
@@ -767,6 +830,45 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
 
     pntr_draw_text(output, font, text, 0, 0);
     return output;
+}
+
+/**
+ * Load the default font.
+ *
+ * This must be unloaded manually afterwards with pntr_unload_font().
+ */
+pntr_font* pntr_load_default_font() {
+#ifdef PNTR_SUPPORT_DEFAULT_FONT
+    // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
+    #include "external/font8x8.h"
+
+    pntr_image* sourceImage = pntr_image_from_pixelformat((void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
+    if (sourceImage == NULL) {
+        return pntr_set_error("pntr_load_default_font() failed to convert default image");
+    }
+
+    // Create a copy since the original source data is held locally.
+    pntr_image* newImage = pntr_image_copy(sourceImage);
+
+    // Since the source data is defined locally, don't free() it.
+    sourceImage->data = NULL;
+    pntr_unload_image(sourceImage);
+
+    if (newImage == NULL) {
+        return pntr_set_error("pntr_load_default_font() failed to copy the source image");
+    }
+
+    // Load the font from the new image.
+    pntr_font* font = pntr_load_ttyfont_from_image(newImage, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
+    if (font == NULL) {
+        pntr_unload_image(newImage);
+        return pntr_set_error("Failed to load default font from image");
+    }
+
+    return font;
+#else
+    return pntr_set_error("pntr_load_default_font() requires PNTR_SUPPORT_DEFAULT_FONT");
+#endif
 }
 
 #ifdef __cplusplus

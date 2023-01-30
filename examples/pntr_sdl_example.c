@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 
+#define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
@@ -10,7 +11,10 @@ int main() {
     pntr_image* image = pntr_load_image("resources/image.png");
     pntr_image* resized = pntr_image_resize(image, image->width * 1.2f, image->height / 2, 0);
 
+    // pntr: Fonts
     pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+    pntr_font* font88 = pntr_load_ttyfont("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    pntr_font* defaultFont = pntr_load_default_font();
 
     // SDL
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -47,6 +51,8 @@ int main() {
         pntr_draw_image(canvas, resized, 200, 10);
 
         pntr_draw_text(canvas, font, "Hello World!", 10, 10);
+        pntr_draw_text(canvas, font88, "Hello World!", 10, 30);
+        pntr_draw_text(canvas, defaultFont, "Hello World!", 10, 50);
 
         // SDL: Push to the screen
         SDL_BlitSurface(surface, NULL, screen, NULL);
@@ -57,10 +63,14 @@ int main() {
 
     // Unload
     pntr_unload_font(font);
+    pntr_unload_font(font88);
+    pntr_unload_font(defaultFont);
     pntr_unload_image(resized);
     pntr_unload_image(canvas);
     pntr_unload_image(image);
 
     SDL_DestroyWindow(window);
     SDL_Quit();
+
+    SDL_Log("Error: %s", pntr_get_error());
 }
