@@ -175,6 +175,12 @@ extern "C" {
 #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+
 // stb_image
 // TODO: Allow selective inclusion with stb_image. And use STBI_NO_STDIO
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -187,6 +193,8 @@ extern "C" {
 #define STB_IMAGE_IMPLEMENTATION
 #include "external/stb_image.h"
 #endif  // STBI_INCLUDE_STB_IMAGE_H
+
+#pragma GCC diagnostic pop
 
 const char* pntr_error;
 

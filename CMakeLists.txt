@@ -6,6 +6,8 @@ project(pntr
     LANGUAGES C
 )
 
+set(C_STANDARD 99)
+
 # pntr
 add_library(pntr INTERFACE)
 target_include_directories(pntr INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -23,6 +25,8 @@ option(PNTR_BUILD_TESTS "TESTS" ${PNTR_IS_MAIN})
 if (PNTR_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+
 
 # Tests
 if (PNTR_BUILD_TESTS)
