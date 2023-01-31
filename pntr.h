@@ -24,12 +24,6 @@ typedef enum {
     PNTR_FILTER_NEARESTNEIGHBOR = 0
 } pntr_filter;
 
-typedef enum {
-    PNTR_FONTTYPE_UNKNOWN = 0,
-    PNTR_FONTTYPE_BMFONT,
-    PNTR_FONTTYPE_TTYFONT
-} pntr_fonttype;
-
 typedef union {
     uint32_t data;
     struct {
@@ -72,7 +66,6 @@ typedef struct pntr_font {
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
     char characters[PNTR_MAX_FONTS];
     int charactersFound;
-    pntr_fonttype fontType;
 } pntr_font ;
 
 #ifdef __cplusplus
@@ -742,7 +735,6 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
         }
     }
 
-    font->fontType = PNTR_FONTTYPE_BMFONT;
     font->atlas = image;
     font->charactersFound = currentCharacter;
 
@@ -793,7 +785,6 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         currentCharIndex++;
     }
 
-    font->fontType = PNTR_FONTTYPE_TTYFONT;
     font->atlas = image;
     font->charactersFound = currentCharIndex;
 
