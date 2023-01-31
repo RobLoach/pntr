@@ -1,8 +1,12 @@
 # pntr
 
-Low-level image manipulation using the ARGB8888 pixel format in C99.
+Low-level image manipulation using the RGBA or ARGB pixel data in C99.
 
-Work in progress.
+``` c
+#define PNTR_PIXELFORMAT_RGBA
+#define PNTR_IMPLEMENTATION
+#include "pntr.h"
+```
 
 ## Screenshots
 

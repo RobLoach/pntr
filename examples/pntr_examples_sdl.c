@@ -1,6 +1,9 @@
 #include <stdbool.h>
 #include <SDL.h>
 
+// Use the ARGB pixel format
+#define PNTR_PIXELFORMAT_ARGB
+
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
 
@@ -16,7 +19,7 @@
 #endif
 
 SDL_Window *window;
-SDL_Renderer *screen;
+SDL_Surface *screen;
 SDL_Surface *surface;
 
 bool shouldClose = false;

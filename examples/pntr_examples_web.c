@@ -2,14 +2,14 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
+// Use RGBA pixel format
+#define PNTR_PIXELFORMAT_RGBA
+
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
 
 // Tell Emscripten to export the pntr API
 #define PNTR_API EMSCRIPTEN_KEEPALIVE
-
-// Use RGBA pixel format
-#define PNTR_PIXELFORMAT_FLIPPED
 
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
