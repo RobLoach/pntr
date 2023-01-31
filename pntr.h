@@ -17,20 +17,17 @@
 
 typedef enum {
     PNTR_PIXELFORMAT_ARGB8888 = 0,
-    PNTR_PIXELFORMAT_RGBA8888,
-    PNTR_PIXELFORMAT_LAST
+    PNTR_PIXELFORMAT_RGBA8888
 } pntr_pixelformat;
 
 typedef enum {
-    PNTR_FILTER_NEARESTNEIGHBOR = 0,
-    PNTR_FILTER_LAST
+    PNTR_FILTER_NEARESTNEIGHBOR = 0
 } pntr_filter;
 
 typedef enum {
     PNTR_FONTTYPE_UNKNOWN = 0,
     PNTR_FONTTYPE_BMFONT,
-    PNTR_FONTTYPE_TTYFONT,
-    PNTR_FONTTYPE_LAST
+    PNTR_FONTTYPE_TTYFONT
 } pntr_fonttype;
 
 typedef union {
@@ -637,7 +634,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
  * This will free the original data, when needed.
  */
 pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat) {
-    if (data == NULL || width <= 0 || height <= 0 || pixelFormat < 0 || pixelFormat >= PNTR_PIXELFORMAT_LAST) {
+    if (data == NULL || width <= 0 || height <= 0 || pixelFormat < 0) {
         return pntr_set_error("pntr_image_from_data() requires valid data");
     }
 
@@ -673,7 +670,7 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
 }
 
 pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
-    if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0 || filter >= PNTR_FILTER_LAST) {
+    if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0) {
         return pntr_set_error("pntr_image_resize() requires a valid image and width/height");
     }
 
