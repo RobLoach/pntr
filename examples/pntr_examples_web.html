@@ -3,63 +3,70 @@
       <title>pntr: Examples</title>
       <style>
         html, body {
-          width:  100vw;
-          height: 100vh;
-          margin: 0;
-          overflow: hidden;
-          font-family: null0;
+            width:  100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
 
         body {
-          background: #F3F3F3;
-          color: #1a1c2c;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-direction: column;
-          text-align: center;
+            background: rgb(245, 245, 245);
+            color: #1a1c2c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
         }
 
         canvas {
-          image-rendering: -moz-crisp-edges;
-          image-rendering: -webkit-crisp-edges;
-          image-rendering: pixelated;
-          image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-crisp-edges;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
-        canvas.landscape {
-          height: 100vh;
+        .container {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        canvas.portrait {
-          width: 100vw;
+
+        .container canvas {
+            object-fit: contain;
+            max-height: 100%;
+            max-width: 100%;
+            width: 100%;
+            height: 100%;
         }
+
       </style>
     </head>
     <body>
-        <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
-            <script type='text/javascript'>
-const canvas = document.getElementById('canvas')
+        <div class="container">
+            <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+        </div>
+        <script type='text/javascript'>
+            const canvas = document.getElementById('canvas')
 
-canvas.addEventListener('webglcontextlost', e => {
-  window.alert('WebGL context lost. You will need to reload the page.')
-  e.preventDefault()
-}, false)
+            canvas.addEventListener('webglcontextlost', e => {
+                window.alert('WebGL context lost. You will need to reload the page.')
+                e.preventDefault()
+            }, false)
 
-const onResize = () => {
-  window.removeEventListener('resize', onResize)
-  setTimeout(() => { window.addEventListener('resize', onResize) }, 100)
-  const { clientWidth, clientHeight } = document.body
-  canvas.className = clientWidth > clientHeight ? 'landscape' : 'portrait'
-}
-onResize()
-
-window.Module = {
-  preRun: [],
-  postRun: [],
-  print: console.log,
-  canvas
-}
-</script>
-{{{ SCRIPT }}}
-</body>
+            window.Module = {
+                preRun: [],
+                postRun: [],
+                print: console.log,
+                canvas
+            }
+        </script>
+        {{{ SCRIPT }}}
+    </body>
 </html>
