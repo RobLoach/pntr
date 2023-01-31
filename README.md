@@ -18,7 +18,7 @@ cmake -B build
 cmake --build build
 
 # build web-demo
-emcc examples/pntr_examples_sdl.c -DPLATFORM_WEB -sUSE_SDL=2 -o build/index.html --preload-file examples/resources@/resources
+emcc examples/pntr_examples_sdl.c -DPLATFORM_WEB -sUSE_SDL=2 -o web/pntr_demo.js --preload-file examples/resources@/resources
 ```
 
 
