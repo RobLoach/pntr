@@ -114,6 +114,8 @@ PNTR_API void* pntr_set_error(const char* error);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
+PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint);
+PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color color);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
@@ -711,6 +713,30 @@ void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color re
         if (image->data[i].data == color.data) {
             image->data[i].data = replace.data;
         }
+    }
+}
+
+pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
+    float cR = (float)tint.r / 255.0f;
+    float cG = (float)tint.g / 255.0f;
+    float cB = (float)tint.b / 255.0f;
+    float cA = (float)tint.a / 255.0f;
+
+    return CLITERAL(pntr_color) {
+        .r = (unsigned char)(((float)color.r / 255 * cR) * 255.0f),
+        .g = (unsigned char)(((float)color.g / 255 * cG) * 255.0f),
+        .b = (unsigned char)(((float)color.b / 255 * cB) * 255.0f),
+        .a = (unsigned char)(((float)color.a / 255 * cA) * 255.0f)
+    };
+}
+
+void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
+    if (image == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < image->width * image->height; i++) {
+        image->data[i] = pntr_color_tint(image->data[i], tint);
     }
 }
 
