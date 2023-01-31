@@ -378,7 +378,7 @@ void pntr_unload_image(pntr_image* image) {
 }
 
 void pntr_draw_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    pntr_color *row  = pntr_image_get_color_pointer(dst, 0, posY);
+    pntr_color *row  = dst->data + posY * (dst->pitch >> 2);
     for (int x = posX; x < posX + width; ++x) {
         row[x] = color;
     }
@@ -464,17 +464,17 @@ inline void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned cha
     *a = color.a;
 }
 
-void pntr_draw_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
-    dst->data[y * (dst->pitch >> 2) + x] = color;
-}
-
 void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
-    if ((dst->data == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
+    if ((dst == NULL) || (dst->data == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
         return;
     }
 
     // TODO: Allow drawing Alpha-Transparency pixels
-    pntr_draw_pixel_unsafe(dst, x, y, color);
+    if (color.a == 0) {
+        return;
+    }
+
+    dst->data[y * (dst->pitch >> 2) + x] = color;
 }
 
 void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
@@ -560,7 +560,7 @@ pntr_image* pntr_load_image(const char* fileName) {
 
 #define COMPOSE_FAST(S, D, A) (((S * A) + (D * (256U - A))) >> 8U)
 
-void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
+inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
     pntr_draw_image_rec(dst, src, CLITERAL(pntr_rectangle){0, 0, src->width, src->height}, posX, posY);
 }
 
