@@ -1,6 +1,12 @@
 #include <stdbool.h>
 #include <SDL.h>
 
+// Support the default font
+#define PNTR_SUPPORT_DEFAULT_FONT
+
+#define PNTR_IMPLEMENTATION
+#include "../pntr.h"
+
 // Load pntr and the examples
 #include "examples/examples.h"
 

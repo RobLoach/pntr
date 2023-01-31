@@ -1,5 +1,3 @@
-#define PNTR_SUPPORT_DEFAULT_FONT
-#define PNTR_IMPLEMENTATION
 #include "../../pntr.h"
 
 #include "example_shapes.h"
@@ -67,6 +65,10 @@ int examples_pitch() {
 
 int examples_height() {
     return canvas->height;
+}
+
+int examples_size() {
+    return canvas->pitch * canvas->height;
 }
 
 void examples_previous() {
