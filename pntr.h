@@ -113,6 +113,7 @@ PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
+PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
@@ -699,6 +700,18 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
     }
 
     return output;
+}
+
+void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace) {
+    if (image == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < image->width * image->height; i++) {
+        if (image->data[i].data == color.data) {
+            image->data[i].data = replace.data;
+        }
+    }
 }
 
 pntr_font* pntr_load_bmfont(const char* fileName, const char* characters) {

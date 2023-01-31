@@ -160,6 +160,17 @@ int main() {
         pntr_unload_image(image);
     }
 
+    // pntr_image_color_replace()
+    {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_BLUE);
+        pntr_color color = pntr_image_get_color(image, 10, 10);
+        assert(color.data == PNTR_BLUE.data);
+        pntr_image_color_replace(image, PNTR_BLUE, PNTR_RED);
+        color = pntr_image_get_color(image, 10, 10);
+        assert(color.data == PNTR_RED.data);
+        pntr_unload_image(image);
+    }
+
     // Ensure there were no errors.
     assert(pntr_get_error() == NULL);
 
