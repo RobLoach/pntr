@@ -1,13 +1,13 @@
 #include "raylib.h"
 
 // raylib can display RGBA, so tell pntr to reverse the pixels
-#define PNTR_PIXELFORMAT_FLIPPED
-
-// raylib already uses stb_image, so we skip its implementation
-#define PNTR_NO_STB_IMAGE_IMPLEMENTATION
+#define PNTR_PIXELFORMAT_RGBA
 
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
+
+// raylib already uses stb_image, so we skip its implementation
+#define PNTR_NO_STB_IMAGE_IMPLEMENTATION
 
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"

@@ -4,7 +4,9 @@
  * Configuration:
  *
  * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
- * PNTR_PIXELFORMAT_FLIPPED: Reverse the RGB pixel format
+ * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
+ * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
+ * PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips implementing STB_IMAGE
  */
 #ifndef PNTR_H__
 #define PNTR_H__
@@ -15,27 +17,24 @@
 #define PNTR_API
 #endif
 
-typedef enum {
-    PNTR_PIXELFORMAT_ARGB8888 = 0,
-    PNTR_PIXELFORMAT_RGBA8888
-} pntr_pixelformat;
-
-typedef enum {
-    PNTR_FILTER_NEARESTNEIGHBOR = 0
-} pntr_filter;
+// Pixel Format
+#if !defined(PNTR_PIXELFORMAT_RGBA) && !defined(PNTR_PIXELFORMAT_ARGB)
+// Default to the RGBA pixel format
+#define PNTR_PIXELFORMAT_RGBA
+#endif
 
 typedef union {
     uint32_t data;
     struct {
-        #ifndef PNTR_PIXELFORMAT_FLIPPED
-        unsigned char b;
-        unsigned char g;
+        #if defined(PNTR_PIXELFORMAT_RGBA)
         unsigned char r;
+        unsigned char g;
+        unsigned char b;
         unsigned char a;
-        #else
-        unsigned char r;
-        unsigned char g;
+        #elif defined(PNTR_PIXELFORMAT_ARGB)
         unsigned char b;
+        unsigned char g;
+        unsigned char r;
         unsigned char a;
         #endif
     };
@@ -60,13 +59,25 @@ typedef struct pntr_vector {
     int y;
 } pntr_vector;
 
+#ifndef PNTR_MAX_FONTS
 #define PNTR_MAX_FONTS 256
+#endif
+
 typedef struct pntr_font {
     pntr_image* atlas;
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
     char characters[PNTR_MAX_FONTS];
     int charactersFound;
-} pntr_font ;
+} pntr_font;
+
+typedef enum {
+    PNTR_PIXELFORMAT_RGBA8888 = 0,
+    PNTR_PIXELFORMAT_ARGB8888
+} pntr_pixelformat;
+
+typedef enum {
+    PNTR_FILTER_NEARESTNEIGHBOR = 0
+} pntr_filter;
 
 #ifdef __cplusplus
 extern "C" {
@@ -642,9 +653,9 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
     output->data = (pntr_color*)data;
 
     switch (pixelFormat) {
-        #ifdef PNTR_PIXELFORMAT_FLIPPED
+        #if defined(PNTR_PIXELFORMAT_RGBA)
         case PNTR_PIXELFORMAT_ARGB8888: {
-        #else
+        #elif defined(PNTR_PIXELFORMAT_ARGB)
         case PNTR_PIXELFORMAT_RGBA8888: {
         #endif
             pntr_color color;
