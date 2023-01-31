@@ -16,11 +16,17 @@ cmake -B build
 
 # build library and native demos
 cmake --build build
-
-# build web-demo
-emcc examples/pntr_examples_sdl.c -DPLATFORM_WEB -sUSE_SDL=2 -o build/index.html --preload-file examples/resources@/resources
 ```
 
+## Web Assembly
+
+```
+# WASM Standalone
+emcc examples/pntr_examples_wasm.c -o build/index.html --preload-file examples/resources@/resources
+
+# SDL Web
+emcc examples/pntr_examples_sdl.c -DPLATFORM_WEB -sUSE_SDL=2 -o build/index.html --preload-file examples/resources@/resources
+```
 
 ## License
 
