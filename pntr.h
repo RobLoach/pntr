@@ -91,6 +91,7 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
@@ -329,7 +330,7 @@ pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
 }
 
 pntr_image* pntr_image_copy(pntr_image* image) {
-    if (image == NULL || image->data == NULL) {
+    if (image == NULL) {
         return pntr_set_error("pntr_image_copy() requires valid image data");
     }
 
@@ -354,7 +355,7 @@ pntr_rectangle pntr_rectangle_intersect(pntr_rectangle *a, pntr_rectangle *b) {
 }
 
 pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height) {
-    if (image == NULL || image->data == NULL) {
+    if (image == NULL) {
         return pntr_set_error("pntr_image_from_image() requires valid source image");
     }
 
@@ -401,7 +402,7 @@ void pntr_draw_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int w
 }
 
 void pntr_clear_background(pntr_image* image, pntr_color color) {
-    if (image == NULL || image->data == NULL) {
+    if (image == NULL) {
         return;
     }
 
@@ -481,12 +482,8 @@ inline void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned cha
 }
 
 void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
-    if ((dst == NULL) || (dst->data == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
-        return;
-    }
-
     // TODO: Allow drawing Alpha-Transparency pixels
-    if (color.a == 0) {
+    if ((color.a == 0) || (dst == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
         return;
     }
 
@@ -571,12 +568,15 @@ void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, 
     }
 }
 
-void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
-    if (dst == NULL || dst->data == NULL) {
+inline void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
+    pntr_draw_rectangle_rec(dst, CLITERAL(pntr_rectangle){posX, posY, width, height}, color);
+}
+
+void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
+    if (dst == NULL) {
         return;
     }
 
-    pntr_rectangle rect = CLITERAL(pntr_rectangle){posX, posY, width, height};
     pntr_rectangle dstRect = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
     rect = pntr_rectangle_intersect(&rect, &dstRect);
     if (rect.width <= 0 || rect.height <= 0) {
@@ -610,7 +610,7 @@ void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pnt
 }
 
 pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
-    if (image == NULL || image->data == NULL) {
+    if (image == NULL) {
         return PNTR_BLANK;
     }
     if (x < 0 || y < 0 || x >= image->width || y >= image->height) {
@@ -659,7 +659,7 @@ inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY
 }
 
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
-    if (dst == NULL || dst->data == NULL || src == NULL || src->data == NULL || posX >= dst->width || posY >= dst->height) {
+    if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
         return;
     }
 
@@ -751,7 +751,6 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
 
     // Check if we have to convert the pixel format.
     if (pixelFormat != PNTR_PIXELFORMAT) {
-        // Check which one we actually want to convert to.
         switch (pixelFormat) {
             case PNTR_PIXELFORMAT_ARGB8888:
             case PNTR_PIXELFORMAT_RGBA8888:
@@ -774,6 +773,7 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
     pntr_image* output = pntr_new_image(newWidth, newHeight);
 
     switch (filter) {
+        // TODO: pntr_image_resize: Add more filters to resize using. stb_image_resize?
         case PNTR_FILTER_NEARESTNEIGHBOR:
         default: {
             int xRatio = (image->width << 16) / newWidth + 1;
@@ -995,7 +995,7 @@ void pntr_unload_font(pntr_font* font) {
 }
 
 void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY) {
-    if (dst == NULL || font == NULL || text == NULL) {
+    if (dst == NULL || font == NULL || font->atlas == NULL || text == NULL) {
         return;
     }
 
