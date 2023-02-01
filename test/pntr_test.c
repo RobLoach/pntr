@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_IMPLEMENTATION
@@ -27,6 +28,19 @@ int main() {
         assert(color.g == 41);
         assert(color.b == 55);
         assert(color.a == 255);
+    }
+
+    // pntr_color_set_r(), pntr_color_set_g(), pntr_color_set_b(), pntr_color_set_a()
+    {
+        pntr_color color = PNTR_BLANK;
+        pntr_color_set_r(&color, 10);
+        pntr_color_set_g(&color, 20);
+        pntr_color_set_b(&color, 30);
+        pntr_color_set_a(&color, 40);
+        assert(color.r == 10);
+        assert(color.g == 20);
+        assert(color.b == 30);
+        assert(color.a == 40);
     }
 
     // pntr_color_get_rgba()
@@ -142,7 +156,7 @@ int main() {
 
     // pntr_image_resize()
     {
-        pntr_image* image = pntr_load_image("resources/image.png");
+        pntr_image* image = pntr_new_image(300, 100);
         assert(image != NULL);
 
         pntr_image* resized = pntr_image_resize(image, 640, 480, PNTR_FILTER_NEARESTNEIGHBOR);
@@ -169,6 +183,16 @@ int main() {
         color = pntr_image_get_color(image, 10, 10);
         assert(color.data == PNTR_RED.data);
         pntr_unload_image(image);
+    }
+
+    // pntr_color_fade()
+    {
+        pntr_color color = PNTR_RED;
+        assert(color.a == 255);
+        assert(color.r == 230);
+        pntr_color faded = pntr_color_fade(color, 0.5f);
+        assert(faded.a == 127);
+        assert(faded.r == 230);
     }
 
     // Ensure there were no errors.

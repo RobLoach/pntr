@@ -46,17 +46,17 @@ typedef struct pntr_image {
     int pitch;
 } pntr_image;
 
-typedef struct pntr_rectangle {
-   int x;
-   int y;
-   int width;
-   int height;
-} pntr_rectangle;
-
 typedef struct pntr_vector {
     int x;
     int y;
 } pntr_vector;
+
+typedef struct pntr_rectangle {
+    int x;
+    int y;
+    int width;
+    int height;
+} pntr_rectangle;
 
 #ifndef PNTR_MAX_FONTS
 #define PNTR_MAX_FONTS 256
@@ -95,6 +95,7 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
@@ -102,36 +103,35 @@ PNTR_API unsigned char pntr_color_get_r(pntr_color color);
 PNTR_API unsigned char pntr_color_get_g(pntr_color color);
 PNTR_API unsigned char pntr_color_get_b(pntr_color color);
 PNTR_API unsigned char pntr_color_get_a(pntr_color color);
-PNTR_API pntr_color pntr_color_set_r(pntr_color color, unsigned char r);
-PNTR_API pntr_color pntr_color_set_g(pntr_color color, unsigned char g);
-PNTR_API pntr_color pntr_color_set_b(pntr_color color, unsigned char b);
-PNTR_API pntr_color pntr_color_set_a(pntr_color color, unsigned char a);
+PNTR_API void pntr_color_set_r(pntr_color* color, unsigned char r);
+PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g);
+PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b);
+PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, int dataSize);
+PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
-PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
 PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint);
 PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color color);
 PNTR_API pntr_color pntr_color_fade(pntr_color, float alpha);
-PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
+PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
+PNTR_API pntr_font* pntr_load_default_font();
+PNTR_API void pntr_unload_font(pntr_font* font);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
-PNTR_API void pntr_unload_font(pntr_font* font);
-PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
 PNTR_API pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, int dataSize, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
-PNTR_API pntr_font* pntr_load_default_font();
 
 #ifdef __cplusplus
 }
@@ -248,10 +248,18 @@ extern "C" {
 #endif  // PNTR_MEMCPY
 
 #ifndef PNTR_MAX
+#ifdef MAX
+#define PNTR_MAX MAX
+#else
 #define PNTR_MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
+#endif
 #ifndef PNTR_MIN
+#ifdef MIN
+#define PNTR_MIN MIN
+#else
 #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 #endif
 
 #ifndef PNTR_PIXELFORMAT
@@ -267,12 +275,6 @@ extern "C" {
  */
 #define pntr_draw_pixel_unsafe(dst, x, y, color) dst->data[(y) * (dst->pitch >> 2) + x] = color
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wconversion"
-
 // stb_image
 // TODO: Allow selective inclusion with stb_image. And use STBI_NO_STDIO
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -282,14 +284,26 @@ extern "C" {
 #define STBI_NO_LINEAR
 #define STBI_NO_GIF
 #define STBI_NO_THREAD_LOCALS
+
 #ifndef PNTR_NO_STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #endif  // PNTR_NO_STB_IMAGE_IMPLEMENTATION
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "external/stb_image.h"
+#pragma GCC diagnostic pop
 #endif  // STBI_INCLUDE_STB_IMAGE_H
 
-#pragma GCC diagnostic pop
-
+/**
+ * The last error that was reported from pntr.
+ *
+ * @see pntr_get_error
+ * @see pntr_set_error
+ */
 const char* pntr_error;
 
 const char* pntr_get_error() {
@@ -303,7 +317,7 @@ void* pntr_set_error(const char* error) {
 
 pntr_image* pntr_new_image(int width, int height) {
     if (width <= 0 || height <= 0) {
-        return pntr_set_error("pntr_new_image() requires a width or height > 0");
+        return pntr_set_error("pntr_new_image() requires a valid width and height");
     }
 
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
@@ -454,24 +468,20 @@ inline unsigned char pntr_color_get_a(pntr_color color) {
     return color.a;
 }
 
-inline pntr_color pntr_color_set_r(pntr_color color, unsigned char r) {
-    color.r = r;
-    return color;
+inline void pntr_color_set_r(pntr_color* color, unsigned char r) {
+    color->r = r;
 }
 
-inline pntr_color pntr_color_set_g(pntr_color color, unsigned char g) {
-    color.g = g;
-    return color;
+inline void pntr_color_set_g(pntr_color* color, unsigned char g) {
+    color->g = g;
 }
 
-inline pntr_color pntr_color_set_b(pntr_color color, unsigned char b) {
-    color.b = b;
-    return color;
+inline void pntr_color_set_b(pntr_color* color, unsigned char b) {
+    color->b = b;
 }
 
-inline pntr_color pntr_color_set_a(pntr_color color, unsigned char a) {
-    color.a = a;
-    return color;
+inline void pntr_color_set_a(pntr_color* color, unsigned char a) {
+    color->a = a;
 }
 
 inline void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a) {
@@ -491,6 +501,9 @@ void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
 }
 
 void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
+    if (dst == NULL) {
+        return;
+    }
     int changeInX = (endPosX - startPosX);
     int absChangeInX = (changeInX < 0) ? -changeInX : changeInX;
     int changeInY = (endPosY - startPosY);
@@ -592,6 +605,10 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
 }
 
 void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+    if (dst == NULL) {
+        return;
+    }
+
     int largestX = radius;
     int r2 = radius * radius;
     for (int y = 0; y <= radius; ++y) {
@@ -663,11 +680,11 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
         return;
     }
 
-    // Scaling is not supported.
+    // Scaling is not supported
     pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, srcRect.width, srcRect.height};
     pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
 
-    // Update the source coordinates based on the destination.
+    // Update the source coordinates based on the destination
     if (dstRect.x < 0) {
         srcRect.x -= dstRect.x;
         srcRect.width += dstRect.x;
@@ -1079,6 +1096,12 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  * Load the default font.
  *
  * This must be unloaded manually afterwards with pntr_unload_font().
+ *
+ * Define PNTR_SUPPORT_DEFAULT_FONT to allow using the default 8x8 font.
+ *
+ * You can change this by defining your own PNTR_DEFAULT_FONT.
+ *
+ * #define PNTR_DEFAULT_FONT pntr_load_ttyfont("myfont.png", 10, 10, "abc")
  */
 pntr_font* pntr_load_default_font() {
 #ifdef PNTR_SUPPORT_DEFAULT_FONT
@@ -1110,6 +1133,8 @@ pntr_font* pntr_load_default_font() {
     }
 
     return font;
+#elif defined(PNTR_DEFAULT_FONT)
+    return PNTR_DEFAULT_FONT;
 #else
     return pntr_set_error("pntr_load_default_font() requires PNTR_SUPPORT_DEFAULT_FONT");
 #endif
