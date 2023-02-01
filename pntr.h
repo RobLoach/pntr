@@ -17,9 +17,8 @@
 #define PNTR_API
 #endif
 
-// Pixel Format
+// Pixel Format. Default to PNTR_PIXELFORMAT_RGBA
 #if !defined(PNTR_PIXELFORMAT_RGBA) && !defined(PNTR_PIXELFORMAT_ARGB)
-// Default to the RGBA pixel format
 #define PNTR_PIXELFORMAT_RGBA
 #endif
 
@@ -90,6 +89,7 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
 PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
+PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
@@ -116,6 +116,9 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
 PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint);
 PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color color);
+PNTR_API pntr_color pntr_color_fade(pntr_color, float alpha);
+PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
+PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
@@ -249,6 +252,19 @@ extern "C" {
 #ifndef PNTR_MIN
 #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
+
+#ifndef PNTR_PIXELFORMAT
+#if defined(PNTR_PIXELFORMAT_RGBA)
+#define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
+#elif defined(PNTR_PIXELFORMAT_ARGB)
+#define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
+#endif
+#endif
+
+/**
+ * Draws a pixel on the canvas, ignoring sanity checks.
+ */
+#define pntr_draw_pixel_unsafe(dst, x, y, color) dst->data[(y) * (dst->pitch >> 2) + x] = color
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
@@ -474,7 +490,85 @@ void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
         return;
     }
 
-    dst->data[y * (dst->pitch >> 2) + x] = color;
+    pntr_draw_pixel_unsafe(dst, x, y, color);
+}
+
+void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
+    int changeInX = (endPosX - startPosX);
+    int absChangeInX = (changeInX < 0) ? -changeInX : changeInX;
+    int changeInY = (endPosY - startPosY);
+    int absChangeInY = (changeInY < 0) ? -changeInY : changeInY;
+
+    int startU, startV, endU, stepV;
+    int A, B, P;
+    int reversedXY = (absChangeInY < absChangeInX);
+
+    if (reversedXY) {
+        A = 2 * absChangeInY;
+        B = A - 2 * absChangeInX;
+        P = A - absChangeInX;
+
+        if (changeInX > 0) {
+            startU = startPosX;
+            startV = startPosY;
+            endU = endPosX;
+            //endV = endPosY;
+        }
+        else {
+            startU = endPosX;
+            startV = endPosY;
+            endU = startPosX;
+            //endV = startPosY;
+
+            // Since start and end are reversed
+            changeInX = -changeInX;
+            changeInY = -changeInY;
+        }
+
+        stepV = (changeInY < 0) ? -1 : 1;
+
+        pntr_draw_pixel(dst, startU, startV, color);
+    }
+    else {
+        A = 2 * absChangeInX;
+        B = A - 2 * absChangeInY;
+        P = A - absChangeInY;
+
+        if (changeInY > 0) {
+            startU = startPosY;
+            startV = startPosX;
+            endU = endPosY;
+        }
+        else {
+            startU = endPosY;
+            startV = endPosX;
+            endU = startPosY;
+
+            changeInX = -changeInX;
+            changeInY = -changeInY;
+        }
+
+        stepV = (changeInX < 0) ? -1 : 1;
+
+        pntr_draw_pixel(dst, startV, startU, color);
+    }
+
+    for (int u = startU + 1, v = startV; u <= endU; u++) {
+        if (P >= 0) {
+            v += stepV;
+            P += B;
+        }
+        else {
+            P += A;
+        }
+
+        if (reversedXY) {
+            pntr_draw_pixel(dst, u, v, color);
+        }
+        else {
+            pntr_draw_pixel(dst, v, u, color);
+        }
+    }
 }
 
 void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
@@ -655,22 +749,18 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
     output->pitch = width * (int)sizeof(pntr_color);
     output->data = (pntr_color*)data;
 
-    switch (pixelFormat) {
-        #if defined(PNTR_PIXELFORMAT_RGBA)
-        case PNTR_PIXELFORMAT_ARGB8888: {
-        #elif defined(PNTR_PIXELFORMAT_ARGB)
-        case PNTR_PIXELFORMAT_RGBA8888: {
-        #endif
-            pntr_color color;
+    // Check if we have to convert the pixel format.
+    if (pixelFormat != PNTR_PIXELFORMAT) {
+        // Check which one we actually want to convert to.
+        switch (pixelFormat) {
+            case PNTR_PIXELFORMAT_ARGB8888:
+            case PNTR_PIXELFORMAT_RGBA8888:
+            default:
             for (int i = 0; i < width * height; i++) {
-                color = output->data[i];
-                output->data[i].r = color.b;
-                output->data[i].b = color.r;
+                output->data[i] = pntr_get_pixel_color((void*)(output->data + i), pixelFormat);
             }
-        } break;
-        default:
-            // Nothing
-        break;
+            break;
+        }
     }
 
     return output;
@@ -728,6 +818,56 @@ pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
         .b = (unsigned char)(((float)color.b / 255 * cB) * 255.0f),
         .a = (unsigned char)(((float)color.a / 255 * cA) * 255.0f)
     };
+}
+
+pntr_color pntr_color_fade(pntr_color color, float alpha) {
+    if (alpha < 0.0f) {
+        alpha = 0;
+    }
+    if (alpha > 1.0f) {
+        alpha = 1.0f;
+    }
+
+    return CLITERAL(pntr_color){
+        .r = color.r,
+        .g = color.g,
+        .b = color.b,
+        .a = (unsigned char)(255.0f * alpha)
+    };
+}
+
+void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat) {
+    switch (dstPixelFormat) {
+        case PNTR_PIXELFORMAT_RGBA8888:
+            ((uint32_t*)(dstPtr))[0] = ((int)color.r << 24) | ((int)color.g << 16) | ((int)color.b << 8) | (int)color.a;
+            break;
+        case PNTR_PIXELFORMAT_ARGB8888:
+            ((uint32_t*)(dstPtr))[0] = ((int)color.a << 24) | ((int)color.r << 16) | ((int)color.g << 8) | (int)color.b;
+            break;
+    }
+}
+
+pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
+    switch (srcPixelFormat) {
+        case PNTR_PIXELFORMAT_RGBA8888:
+            return CLITERAL(pntr_color) {
+                .r = ((unsigned char *)srcPtr)[0],
+                .g = ((unsigned char *)srcPtr)[1],
+                .b = ((unsigned char *)srcPtr)[2],
+                .a = ((unsigned char *)srcPtr)[3]
+            };
+        break;
+        case PNTR_PIXELFORMAT_ARGB8888:
+            return CLITERAL(pntr_color) {
+                .a = ((unsigned char *)srcPtr)[0],
+                .r = ((unsigned char *)srcPtr)[1],
+                .g = ((unsigned char *)srcPtr)[2],
+                .b = ((unsigned char *)srcPtr)[3]
+            };
+        break;
+    }
+
+    return PNTR_BLANK;
 }
 
 void pntr_image_color_tint(pntr_image* image, pntr_color tint) {

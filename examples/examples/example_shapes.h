@@ -14,6 +14,9 @@ const char* example_shapes_update(pntr_image* canvas) {
     // Pixel
     pntr_draw_pixel(canvas, 50, 50, PNTR_PURPLE);
 
+    // Line
+    pntr_draw_line(canvas, 200, 50, 250, 80, PNTR_DARKGREEN);
+
     return "Shapes";
 }
 
