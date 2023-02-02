@@ -62,6 +62,12 @@ typedef struct pntr_rectangle {
 #define PNTR_MAX_FONTS 256
 #endif
 
+typedef enum {
+    PNTR_FONTTYPE_BM = 0,
+    PNTR_FONTTYPE_TTY,
+    PNTR_FONTTYPE_BDF
+} pntr_fontType;
+
 typedef struct pntr_font {
     pntr_image* atlas;
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
@@ -95,7 +101,7 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
-PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
@@ -942,6 +948,7 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
         }
     }
 
+    font->type = PNTR_FONTTYPE_BMFONT;
     font->atlas = image;
     font->charactersFound = currentCharacter;
 
@@ -992,10 +999,76 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         currentCharIndex++;
     }
 
+    font->type = PNTR_FONTTYPE_TTY;
     font->atlas = image;
     font->charactersFound = currentCharIndex;
 
     return font;
+}
+
+#ifdef PNTR_SUPPORT_BDF
+#define AL_BDF_IMPLEMENTATION
+#define AL_BDF_CANVAS_TYPE pntr_image*
+#define AL_BDF_COLOR_TYPE pntr_color
+#define AL_BDF_PUT_PIXEL pntr_bdf_put_pixel
+#define AL_BDF_MALLOC PNTR_MALLOC
+#define Al_BDF_FREE PNTR_FREE
+#ifndef PNTR_REALLOC
+#include <stdlib.h>
+#define PNTR_REALLOC realloc
+#endif
+#define AL_BDF_REALLOC PNTR_REALLOC
+
+#include "external/al_bdf.h"
+
+void pntr_bdf_put_pixel(const pntr_image* canvas, const int x, const int y, pntr_color color) {
+    pntr_draw_pixel(canvas, x, y, color);
+}
+
+typedef struct pntr_bdf_reader {
+    unsigned char* fileData;
+    int dataSize;
+    int current;
+} pntr_bdf_reader;
+
+int pntr_bdf_read(const void* userdata, const void* buffer, const size_t count) {
+    pntr_bdf_reader* bdfReader = (pntr_bdf_reader*)userdata;
+    *buffer = (void*)(bdfReader->fileData + bdfReader->current);
+    int readAmount = count;
+    if (bdfReader->current + readAmount > bdfReader->dataSize) {
+        readAmount = dataSize - bdfReader->current;
+    }
+    return readAmount;
+}
+#endif
+
+pntr_font* pntr_load_bdffont_from_memory(const unsigned char* fileData, int dataSize) {
+    #ifdef PNTR_SUPPORT_BDF
+
+    al_bdf_Font* bdfFont = PNTR_MALLOC(sizeof(al_bdf_Font));
+    if (bdfFont == NULL) {
+        return pntr_set_error("Failed to allocate al_bdf_Font");
+    }
+
+    // pntr_bdf_reader* bdfReader = PNTR_MALLOC(sizeof(pntr_bdf_reader));
+    // bdfReader->dataSize = dataSize;
+    // bdfReader->fileData = fileData;
+    // bdfReader->current = 0;
+
+    pntr_bdf_reader bdfReader;
+    bdfReader.fileData = fileData;
+    bdfReader.dataSize = dataSize;
+    bdfReader.current = 0;
+
+    al_bdf_Result result = al_bdf_load(&bdfFont, pntr_bdf_read, &al_bdf_load);
+    if (result != AL_BDF_OK) {
+        PNTR_FREE(bdfFont);
+        return pntr_set_error("Failed to load BDF");
+    }
+
+    #else
+    return pntr_set_error("pntr_load_bdf() requires PNTR_SUPPORT_BDF");
+    #endif
 }
 
 void pntr_unload_font(pntr_font* font) {
@@ -1011,7 +1084,7 @@ void pntr_unload_font(pntr_font* font) {
     PNTR_FREE(font);
 }
 
-void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY) {
+void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color) {
     if (dst == NULL || font == NULL || font->atlas == NULL || text == NULL) {
         return;
     }
