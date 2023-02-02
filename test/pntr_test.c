@@ -195,6 +195,20 @@ int main() {
         assert(faded.r == 230);
     }
 
+    // pntr_load_file(), pntr_unload_file()
+    {
+        unsigned int bytesRead;
+        unsigned char* fileData = pntr_load_file("resources/text.txt", &bytesRead);
+
+        assert(bytesRead > 5);
+        assert(fileData[0] == 'H');
+        assert(fileData[1] == 'e');
+        assert(fileData[2] == 'l');
+        assert(fileData[3] == 'l');
+        assert(fileData[4] == 'o');
+        pntr_unload_file(fileData);
+    }
+
     // Ensure there were no errors.
     assert(pntr_get_error() == NULL);
 
