@@ -6,6 +6,7 @@
  * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
+ * PNTR_NO_STB_IMAGE: Avoids using stb_image
  * PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips implementing STB_IMAGE
  * PNTR_SUPPORT_BDFFONT
  * PNTR_LOAD_FILE Macro to load a file. Matching unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead)
@@ -146,7 +147,7 @@ PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWid
 PNTR_API unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API pntr_font* pntr_load_bdffont(const char* fileName, pntr_color defaultColor);
 PNTR_API pntr_font* pntr_load_bdffont_from_memory(const unsigned char* fileData, unsigned int dataSize, pntr_color defaultColor);
-
+PNTR_API void pntr_unload_file(unsigned char* fileData);
 
 #ifdef __cplusplus
 }
@@ -286,7 +287,7 @@ extern "C" {
 #endif  // PNTR_PIXELFORMAT
 
 #ifndef PNTR_LOAD_FILE
-#include <stdio.h>
+#include <stdio.h> // FILE, fopen, fread
 #endif  // PNTR_LOAD_FILE
 
 /**
@@ -296,16 +297,17 @@ extern "C" {
 
 // stb_image
 // TODO: Allow selective inclusion with stb_image. And use STBI_NO_STDIO
-#ifndef STBI_INCLUDE_STB_IMAGE_H
+#ifndef PNTR_NO_STB_IMAGE
+#ifndef PNTR_NO_STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
 #define STBI_NO_SIMD
 #define STBI_NO_HDR
 #define STBI_NO_LINEAR
 #define STBI_NO_GIF
 #define STBI_NO_THREAD_LOCALS
-
-#ifndef PNTR_NO_STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
+#define STBI_NO_STDIO
+#define STBI_NO_LINEAR
 #endif  // PNTR_NO_STB_IMAGE_IMPLEMENTATION
 
 #pragma GCC diagnostic push
@@ -315,7 +317,7 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wconversion"
 #include "external/stb_image.h"
 #pragma GCC diagnostic pop
-#endif  // STBI_INCLUDE_STB_IMAGE_H
+#endif  // PNTR_NO_STB_IMAGE
 
 /**
  * The last error that was reported from pntr.
@@ -664,6 +666,9 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned 
         return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
     }
 
+#ifdef PNTR_NO_STB_IMAGE
+    return pntr_set_error("pntr_load_image_from_memory() requires STB_IMAGE. PNTR_NO_STB_IMAGE was defined.");
+#else
     int width, height, channels_in_file;
     void* output = (void*)stbi_load_from_memory(fileData, (int)dataSize, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
@@ -671,6 +676,7 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned 
     }
 
     return pntr_image_from_pixelformat(output, width, height, PNTR_PIXELFORMAT_RGBA8888);
+#endif
 }
 
 pntr_image* pntr_load_image(const char* fileName) {
@@ -678,14 +684,13 @@ pntr_image* pntr_load_image(const char* fileName) {
         return pntr_set_error("pntr_load_image() requires a valid fileName");
     }
 
-    int width, height, channels_in_file;
-    // TODO: Implement an abstracted file system and use pntr_load_image_from_memory() instead.
-    void* output = (void*)stbi_load(fileName, &width, &height, &channels_in_file, 4);
-    if (output == NULL) {
-        return pntr_set_error("pntr_load_image() failed to load image with stbi_load");
+    unsigned int bytesRead;
+    const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
+    if (fileData == NULL) {
+        return pntr_set_error("Failed to load file");
     }
 
-    return pntr_image_from_pixelformat(output, width, height, PNTR_PIXELFORMAT_RGBA8888);
+    return pntr_load_image_from_memory(fileData, bytesRead);
 }
 
 #define COMPOSE_FAST(S, D, A) (((S * A) + (D * (256U - A))) >> 8U)
@@ -1085,43 +1090,6 @@ void pntr_bdf_render(al_bdf_Font* const font, char const* text, int posX, int po
 }
 #endif
 
-unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
-    *bytesRead = 0;
-    if (fileName == NULL) {
-        return pntr_set_error("pntr_load_file() requires a valid fileName");
-    }
-
-    #ifdef PNTR_LOAD_FILE
-    return PNTR_LOAD_FILE(fileName, bytesRead);
-    #endif
-
-    FILE *file = fopen(fileName, "rb");
-    if (file == NULL) {
-        return pntr_set_error("Failed to open file");
-    }
-
-    fseek(file, 0, SEEK_END);
-    unsigned int size = (unsigned int)ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    if (size <= 0) {
-        fclose(file);
-        return pntr_set_error("Failed to read file");
-    }
-
-    unsigned char *data = (unsigned char *)PNTR_MALLOC((size_t)size * sizeof(unsigned char));
-    unsigned int count = (unsigned int)fread(data, sizeof(unsigned char), (size_t)size, file);
-    *bytesRead = count;
-
-    if (count != size) {
-        pntr_set_error("File only partially loaded.");
-    }
-
-    fclose(file);
-
-    return data;
-}
-
 pntr_font* pntr_load_bdffont(const char* fileName, pntr_color defaultColor) {
     unsigned int bytesRead;
     const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
@@ -1165,7 +1133,7 @@ pntr_font* pntr_load_bdffont_from_memory(const unsigned char* fileData, unsigned
     return font;
 
     #else
-    (void*)fileData;
+    (void)fileData;
     (void)dataSize;
     (void)defaultColor;
     return pntr_set_error("pntr_load_bdf() requires PNTR_SUPPORT_BDF");
@@ -1290,12 +1258,14 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  *
  * Define PNTR_SUPPORT_DEFAULT_FONT to allow using the default 8x8 font.
  *
- * You can change this by defining your own PNTR_DEFAULT_FONT.
+ * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_default_font()
  *
- * #define PNTR_DEFAULT_FONT pntr_load_ttyfont("myfont.png", 10, 10, "abc")
+ * #define PNTR_DEFAULT_FONT load_my_font
  */
 pntr_font* pntr_load_default_font() {
-#ifdef PNTR_SUPPORT_DEFAULT_FONT
+#ifdef PNTR_DEFAULT_FONT
+    return PNTR_DEFAULT_FONT();
+#elif defined(PNTR_SUPPORT_DEFAULT_FONT)
     // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
     #include "external/font8x8.h"
 
@@ -1324,11 +1294,50 @@ pntr_font* pntr_load_default_font() {
     }
 
     return font;
-#elif defined(PNTR_DEFAULT_FONT)
-    return PNTR_DEFAULT_FONT;
 #else
     return pntr_set_error("pntr_load_default_font() requires PNTR_SUPPORT_DEFAULT_FONT");
 #endif
+}
+
+unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
+    if (fileName == NULL) {
+        return pntr_set_error("pntr_load_file() requires a valid fileName");
+    }
+
+#ifdef PNTR_LOAD_FILE
+    return PNTR_LOAD_FILE(fileName, bytesRead);
+#else
+    FILE *file = fopen(fileName, "rb");
+    if (file == NULL) {
+        return pntr_set_error("Failed to open file");
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = (size_t)ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    if (size <= 0) {
+        fclose(file);
+        return pntr_set_error("Failed to read file");
+    }
+
+    unsigned char *data = (unsigned char *)PNTR_MALLOC(size * sizeof(unsigned char));
+    if (data == NULL) {
+        fclose(file);
+        return pntr_set_error("Failed to allocate data for file");
+    }
+    if (bytesRead != NULL) {
+        *bytesRead = (unsigned int)fread(data, sizeof(unsigned char), size, file);
+    }
+
+    fclose(file);
+
+    return data;
+#endif
+}
+
+inline void pntr_unload_file(unsigned char* fileData) {
+    PNTR_FREE(fileData);
 }
 
 #ifdef __cplusplus
