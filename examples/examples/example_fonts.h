@@ -28,7 +28,7 @@ const char* example_fonts_update(pntr_image* canvas) {
     pntr_draw_text(canvas, defaultFont, "Default Font Example", 20, 50);
 
     // BMFont
-    pntr_draw_rectangle(canvas, 0, 80, 200, bmFont->atlas->height, PNTR_BLACK);
+    pntr_draw_rectangle(canvas, 0, 80, 200, 20, PNTR_BLACK);
     pntr_draw_text(canvas, bmFont, "BM Font Example", 20, 80);
 
     // TTY Font styling
