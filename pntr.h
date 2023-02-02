@@ -7,6 +7,8 @@
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
  * PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips implementing STB_IMAGE
+ * PNTR_SUPPORT_BDFFONT
+ * PNTR_LOAD_FILE Macro to load a file. Matching unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead)
  */
 #ifndef PNTR_H__
 #define PNTR_H__
@@ -58,21 +60,24 @@ typedef struct pntr_rectangle {
     int height;
 } pntr_rectangle;
 
-#ifndef PNTR_MAX_FONTS
-#define PNTR_MAX_FONTS 256
-#endif
-
 typedef enum {
     PNTR_FONTTYPE_BM = 0,
     PNTR_FONTTYPE_TTY,
     PNTR_FONTTYPE_BDF
 } pntr_fontType;
 
+#ifndef PNTR_MAX_FONTS
+#define PNTR_MAX_FONTS 256
+#endif
+
 typedef struct pntr_font {
     pntr_image* atlas;
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
     char characters[PNTR_MAX_FONTS];
     int charactersFound;
+    pntr_color color;
+    void* userdata;
+    pntr_fontType type;
 } pntr_font;
 
 typedef enum {
@@ -101,7 +106,7 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
-PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
@@ -116,7 +121,7 @@ PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
-PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, int dataSize);
+PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API const char* pntr_get_error();
 PNTR_API void* pntr_set_error(const char* error);
@@ -131,13 +136,17 @@ PNTR_API pntr_font* pntr_load_default_font();
 PNTR_API void pntr_unload_font(pntr_font* font);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
-PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters);
+PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
 PNTR_API pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
-PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, int dataSize, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead);
+PNTR_API pntr_font* pntr_load_bdffont(const char* fileName, pntr_color defaultColor);
+PNTR_API pntr_font* pntr_load_bdffont_from_memory(const unsigned char* fileData, unsigned int dataSize, pntr_color defaultColor);
+
 
 #ifdef __cplusplus
 }
@@ -274,7 +283,11 @@ extern "C" {
 #elif defined(PNTR_PIXELFORMAT_ARGB)
 #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
 #endif
-#endif
+#endif  // PNTR_PIXELFORMAT
+
+#ifndef PNTR_LOAD_FILE
+#include <stdio.h>
+#endif  // PNTR_LOAD_FILE
 
 /**
  * Draws a pixel on the canvas, ignoring sanity checks.
@@ -646,13 +659,13 @@ inline pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y)
     return image->data + y * (image->pitch >> 2) + x;
 }
 
-pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, int dataSize) {
+pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
     if (fileData == NULL || dataSize <= 0) {
         return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
     }
 
     int width, height, channels_in_file;
-    void* output = (void*)stbi_load_from_memory(fileData, dataSize, &width, &height, &channels_in_file, 4);
+    void* output = (void*)stbi_load_from_memory(fileData, (int)dataSize, &width, &height, &channels_in_file, 4);
     if (output == NULL) {
         return pntr_set_error("pntr_load_image_from_memory() failed to load image from memory");
     }
@@ -912,7 +925,7 @@ pntr_font* pntr_load_bmfont(const char* fileName, const char* characters) {
     return pntr_load_bmfont_from_image(image, characters);
 }
 
-pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, int dataSize, const char* characters) {
+pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
     if (image == NULL) {
         return NULL;
@@ -948,7 +961,7 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
         }
     }
 
-    font->type = PNTR_FONTTYPE_BMFONT;
+    font->type = PNTR_FONTTYPE_BM;
     font->atlas = image;
     font->charactersFound = currentCharacter;
 
@@ -964,7 +977,7 @@ pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeig
     return pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
 }
 
-pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
+pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
     if (image == NULL) {
         return NULL;
@@ -1007,12 +1020,18 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
 }
 
 #ifdef PNTR_SUPPORT_BDF
+
+void pntr_bdf_put_pixel(const pntr_image* canvas, const int x, const int y, pntr_color color) {
+    printf("FSDAFASDSDFAAFSD\n");
+    pntr_draw_pixel((pntr_image*)canvas, (int)x, (int)y, color);
+}
+
 #define AL_BDF_IMPLEMENTATION
 #define AL_BDF_CANVAS_TYPE pntr_image*
 #define AL_BDF_COLOR_TYPE pntr_color
 #define AL_BDF_PUT_PIXEL pntr_bdf_put_pixel
 #define AL_BDF_MALLOC PNTR_MALLOC
-#define Al_BDF_FREE PNTR_FREE
+#define AL_BDF_FREE PNTR_FREE
 #ifndef PNTR_REALLOC
 #include <stdlib.h>
 #define PNTR_REALLOC realloc
@@ -1021,52 +1040,134 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
 
 #include "external/al_bdf.h"
 
-void pntr_bdf_put_pixel(const pntr_image* canvas, const int x, const int y, pntr_color color) {
-    pntr_draw_pixel(canvas, x, y, color);
-}
-
 typedef struct pntr_bdf_reader {
     unsigned char* fileData;
-    int dataSize;
+    unsigned int dataSize;
     int current;
 } pntr_bdf_reader;
 
-int pntr_bdf_read(const void* userdata, const void* buffer, const size_t count) {
+int pntr_bdf_read(void* const userdata, void* const buffer, size_t const count) {
     pntr_bdf_reader* bdfReader = (pntr_bdf_reader*)userdata;
-    *buffer = (void*)(bdfReader->fileData + bdfReader->current);
+
+    unsigned char* buf = (unsigned char*)buffer;
+    buf = bdfReader->fileData + bdfReader->current;
     int readAmount = count;
-    if (bdfReader->current + readAmount > bdfReader->dataSize) {
+    int dataSize = bdfReader->dataSize;
+    if (bdfReader->current + readAmount > dataSize) {
         readAmount = dataSize - bdfReader->current;
     }
     return readAmount;
 }
+
+void pntr_bdf_render(al_bdf_Font* const font, char const* text, int posX, int posY, AL_BDF_CANVAS_TYPE const canvas, AL_BDF_COLOR_TYPE const color) {
+
+    int x = 0, y = font->baseline;
+
+    for (;;) {
+        int const code = AL_BDF_UTF8_DECODE(&text);
+
+        if (code == 0) {
+            return;
+        }
+
+        al_bdf_Char const* const chr = al_bdf_find_char(font, code);
+
+        if (chr != NULL) {
+            int const dx = x + chr->bbxoff0x;
+            int const dy = y - (chr->bbyoff0y + chr->bbh);
+
+            al_bdf_draw_char(font, chr, canvas, posX + dx, posY + dy, color);
+
+            x += chr->dwx0;
+            y += chr->dwy0;
+        }
+    }
+}
 #endif
 
-pntr_font* pntr_load_bdffont_from_memory(const unsigned char* fileData, int dataSize) {
-    #ifdef PNTR_SUPPORT_BDF
+unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
+    *bytesRead = 0;
+    if (fileName == NULL) {
+        return pntr_set_error("pntr_load_file() requires a valid fileName");
+    }
 
+    #ifdef PNTR_LOAD_FILE
+    return PNTR_LOAD_FILE(fileName, bytesRead);
+    #endif
+
+    FILE *file = fopen(fileName, "rb");
+    if (file == NULL) {
+        return pntr_set_error("Failed to open file");
+    }
+
+    fseek(file, 0, SEEK_END);
+    unsigned int size = (unsigned int)ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    if (size <= 0) {
+        fclose(file);
+        return pntr_set_error("Failed to read file");
+    }
+
+    unsigned char *data = (unsigned char *)PNTR_MALLOC((size_t)size * sizeof(unsigned char));
+    unsigned int count = (unsigned int)fread(data, sizeof(unsigned char), (size_t)size, file);
+    *bytesRead = count;
+
+    if (count != size) {
+        pntr_set_error("File only partially loaded.");
+    }
+
+    fclose(file);
+
+    return data;
+}
+
+pntr_font* pntr_load_bdffont(const char* fileName, pntr_color defaultColor) {
+    unsigned int bytesRead;
+    const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
+    if (fileData == NULL || bytesRead <= 0) {
+        return NULL;
+    }
+
+    return pntr_load_bdffont_from_memory(fileData, bytesRead, defaultColor);
+}
+
+pntr_font* pntr_load_bdffont_from_memory(const unsigned char* fileData, unsigned int dataSize, pntr_color defaultColor) {
+    #ifdef PNTR_SUPPORT_BDF
+    if (fileData == NULL || dataSize <= 0) {
+        return pntr_set_error("Loading BDFFont requires valid fileData and dataSize");
+    }
     al_bdf_Font* bdfFont = PNTR_MALLOC(sizeof(al_bdf_Font));
     if (bdfFont == NULL) {
         return pntr_set_error("Failed to allocate al_bdf_Font");
     }
 
-    // pntr_bdf_reader* bdfReader = PNTR_MALLOC(sizeof(pntr_bdf_reader));
-    // bdfReader->dataSize = dataSize;
-    // bdfReader->fileData = fileData;
-    // bdfReader->current = 0;
-
     pntr_bdf_reader bdfReader;
-    bdfReader.fileData = fileData;
+    bdfReader.fileData = (unsigned char*)fileData;
     bdfReader.dataSize = dataSize;
     bdfReader.current = 0;
 
-    al_bdf_Result result = al_bdf_load(&bdfFont, pntr_bdf_read, &al_bdf_load);
+    al_bdf_Result result = al_bdf_load(bdfFont, pntr_bdf_read, &bdfReader);
     if (result != AL_BDF_OK) {
         PNTR_FREE(bdfFont);
+        printf("%i %i\n", result, dataSize);
         return pntr_set_error("Failed to load BDF");
     }
 
+    pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
+    if (font == NULL) {
+        al_bdf_unload(bdfFont);
+        return pntr_set_error("Failed to allocate font memory");
+    }
+    font->color = defaultColor;
+    font->userdata = bdfFont;
+    font->type = PNTR_FONTTYPE_BDF;
+    return font;
+
     #else
+    (void*)fileData;
+    (void)dataSize;
+    (void)defaultColor;
     return pntr_set_error("pntr_load_bdf() requires PNTR_SUPPORT_BDF");
     #endif
 }
@@ -1076,18 +1177,35 @@ void pntr_unload_font(pntr_font* font) {
         return;
     }
 
+    // Atlas
     if (font->atlas != NULL) {
         pntr_unload_image(font->atlas);
         font->atlas = NULL;
     }
 
+    // BDF UserData
+    #ifdef PNTR_SUPPORT_BDF
+    if (font->type == PNTR_FONTTYPE_BDF) {
+        al_bdf_unload((al_bdf_Font*)font->userdata);
+        font->userdata = NULL;
+    }
+    #endif
+
     PNTR_FREE(font);
 }
 
-void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color) {
+void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY) {
     if (dst == NULL || font == NULL || font->atlas == NULL || text == NULL) {
         return;
     }
+
+    #ifdef PNTR_SUPPORT_BDF
+    if (font->type == PNTR_FONTTYPE_BDF) {
+        al_bdf_Font* bdfFont = (al_bdf_Font*)font->userdata;
+        pntr_bdf_render(bdfFont, text, posX, posY, dst, font->color);
+        return;
+    }
+    #endif
 
     int x = posX;
     int y = posY;

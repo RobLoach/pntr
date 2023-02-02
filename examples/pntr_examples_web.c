@@ -8,6 +8,8 @@
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
 
+#define PNTR_SUPPORT_BDFFONT
+
 // Tell Emscripten to export the pntr API
 #define PNTR_API EMSCRIPTEN_KEEPALIVE
 

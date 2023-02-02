@@ -3,6 +3,7 @@
 pntr_font* defaultFont;
 pntr_font* bmFont;
 pntr_font* ttyFont;
+pntr_font* bdfFont;
 
 #include <stdio.h>
 
@@ -16,11 +17,15 @@ void example_fonts_init() {
     // TTY Font
     ttyFont = pntr_load_ttyfont("resources/ttyfont-16x16.png", 16, 16,
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+
+    // BDF Font
+    bdfFont = pntr_load_bdffont("resources/bdfont.bdf", PNTR_BLACK);
+    printf("%s\n", pntr_get_error());
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
     // Only display the fonts if they loaded correctly.
-    if (defaultFont == NULL || bmFont == NULL || ttyFont == NULL) {
+    if (defaultFont == NULL || bmFont == NULL || ttyFont == NULL || bdfFont == NULL) {
         return "Fonts - Failed to load fonts";
     }
 
@@ -40,6 +45,8 @@ const char* example_fonts_update(pntr_image* canvas) {
     const char* text = "*** TTY Font Example ***";
     int textWidth = pntr_measure_text(ttyFont, text);
     pntr_draw_text(canvas, ttyFont, text, canvas->width / 2 - textWidth / 2, 140);
+
+    pntr_draw_text(canvas, bdfFont, "Hello World!", 50, 10);
 
     return "Fonts";
 }
