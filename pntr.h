@@ -66,6 +66,7 @@ typedef struct pntr_rectangle {
 
 typedef struct pntr_font {
     pntr_image* atlas;
+    // TODO: pntr_font: Port rectangles and characters to a pointer array instead
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
     char characters[PNTR_MAX_FONTS];
     int charactersFound;
@@ -608,7 +609,7 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
     pntr_draw_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
     pntr_color* srcPixel = pntr_image_get_color_pointer(dst, rect.x, rect.y);
-    for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
+    for (int y = rect.y + 1; y <= rect.y + rect.height; y++) {
         PNTR_MEMCPY(pntr_image_get_color_pointer(dst, rect.x, y), srcPixel, (size_t)rect.width * sizeof(pntr_color));
     }
 }

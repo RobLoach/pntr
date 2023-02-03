@@ -21,6 +21,7 @@ endif()
 option(PNTR_BUILD_EXAMPLES "Examples" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_EXAMPLES_SDL "Examples: SDL" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_EXAMPLES_RAYLIB "Examples: raylib" ${PNTR_IS_MAIN})
+option(PNTR_BUILD_EXAMPLES_LIBRETRO "Examples: libretro" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_TESTS "TESTS" ${PNTR_IS_MAIN})
 
 # Examples

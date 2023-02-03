@@ -30,11 +30,12 @@ if (PNTR_BUILD_EXAMPLES_RAYLIB)
             GIT_TAG 4.2.0
         )
         FetchContent_GetProperties(raylib)
-        if (NOT raylib_POPULATED) # Have we downloaded raylib yet?
+        if (NOT raylib_POPULATED)
             set(FETCHCONTENT_QUIET NO)
             FetchContent_Populate(raylib)
             set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
             set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
+
             add_subdirectory(${raylib_SOURCE_DIR} ${raylib_BINARY_DIR})
         endif()
     endif()
@@ -49,4 +50,31 @@ if (PNTR_BUILD_EXAMPLES_RAYLIB)
             pntr
         )
     endif()
+endif()
+
+# libretro
+if (PNTR_BUILD_EXAMPLES_LIBRETRO)
+    include(FetchContent)
+    FetchContent_Declare(
+        libretro
+        GIT_REPOSITORY https://github.com/libretro/libretro-common.git
+        GIT_TAG 458bcd842bc48f730e12732fe8b3280e834d45ff
+    )
+    FetchContent_GetProperties(libretro)
+    if (NOT libretro_POPULATED)
+        set(FETCHCONTENT_QUIET NO)
+        FetchContent_Populate(libretro)
+
+        add_library(libretro INTERFACE)
+        target_include_directories(pntr INTERFACE ${libretro_SOURCE_DIR}/include)
+    endif()
+
+    add_library(pntr_examples_libretro SHARED
+        pntr_examples_libretro.c
+    )
+    target_link_libraries(pntr_examples_libretro PUBLIC
+        pntr
+        libretro
+    )
+    set_target_properties(pntr_examples_libretro PROPERTIES PREFIX "")
 endif()
