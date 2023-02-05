@@ -5,6 +5,10 @@
 
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
+#define PNTR_SUPPORT_TTF
+
+#define STB_NO_RECT_PACK_IMPLEMENTATION
+//#define STB_NO_TRUETYPE_IMPLEMENTATION
 
 // raylib already uses stb_image, so we skip its implementation
 #define PNTR_NO_STB_IMAGE_IMPLEMENTATION

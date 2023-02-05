@@ -4,6 +4,7 @@
  * Configuration:
  *
  * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
+ * PNTR_SUPPORT_TTF: Enables TTF font loading
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
  * PNTR_NO_STB_IMAGE: Avoids using stb_image
@@ -74,7 +75,8 @@ typedef struct pntr_font {
 
 typedef enum {
     PNTR_PIXELFORMAT_RGBA8888 = 0,
-    PNTR_PIXELFORMAT_ARGB8888
+    PNTR_PIXELFORMAT_ARGB8888,
+    PNTR_PIXELFORMAT_GRAYSCALE
 } pntr_pixelformat;
 
 typedef enum {
@@ -137,6 +139,8 @@ PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData,
 PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API void pntr_unload_file(unsigned char* fileData);
+PNTR_API pntr_font* pntr_load_ttffont(const char* fileName, int fontSize);
+PNTR_API pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int fontSize);
 
 #ifdef __cplusplus
 }
@@ -307,6 +311,18 @@ extern "C" {
 #include "external/stb_image.h"
 #pragma GCC diagnostic pop
 #endif  // PNTR_NO_STB_IMAGE
+
+#ifdef PNTR_SUPPORT_TTF
+#ifndef STB_NO_RECT_PACK_IMPLEMENTATION
+#define STB_RECT_PACK_IMPLEMENTATION
+#endif
+#include "external/stb_rect_pack.h" // optional, used for better bitmap packing
+
+#ifndef STB_NO_TRUETYPE_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
+#endif
+#include "external/stb_truetype.h"
+#endif  // PNTR_SUPPORT_TTF
 
 /**
  * The last error that was reported from pntr.
@@ -769,30 +785,39 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
         return pntr_set_error("pntr_image_from_data() requires valid data");
     }
 
-    pntr_image* output = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
-    if (output == NULL) {
-        return pntr_set_error("pntr_image_from_pixelformat() failed to allocate memory");
-    }
-
-    output->width = width;
-    output->height = height;
-    output->pitch = width * (int)sizeof(pntr_color);
-    output->data = (pntr_color*)data;
-
-    // Check if we have to convert the pixel format.
-    if (pixelFormat != PNTR_PIXELFORMAT) {
-        switch (pixelFormat) {
-            case PNTR_PIXELFORMAT_ARGB8888:
-            case PNTR_PIXELFORMAT_RGBA8888:
-            default:
+    // Check how we are to convert the pixel format.
+    switch (pixelFormat) {
+        case PNTR_PIXELFORMAT_GRAYSCALE: {
+            pntr_image* image = pntr_new_image(width, height);
+            unsigned char* source = (unsigned char*)data;
             for (int i = 0; i < width * height; i++) {
-                output->data[i] = pntr_get_pixel_color((void*)(output->data + i), pixelFormat);
+                image->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
             }
-            break;
+            PNTR_FREE(data);
+            return image;
+        }
+
+        case PNTR_PIXELFORMAT_ARGB8888:
+        case PNTR_PIXELFORMAT_RGBA8888:
+        default: {
+            pntr_image* output = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
+            if (output == NULL) {
+                return pntr_set_error("pntr_image_from_pixelformat() failed to allocate memory");
+            }
+
+            output->width = width;
+            output->height = height;
+            output->pitch = width * (int)sizeof(pntr_color);
+            output->data = (pntr_color*)data;
+
+            if (pixelFormat != PNTR_PIXELFORMAT) {
+                for (int i = 0; i < width * height; i++) {
+                    output->data[i] = pntr_get_pixel_color((void*)(output->data + i), pixelFormat);
+                }
+            }
+            return output;
         }
     }
-
-    return output;
 }
 
 pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
@@ -894,6 +919,13 @@ pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
                 .g = ((unsigned char *)srcPtr)[2],
                 .b = ((unsigned char *)srcPtr)[3]
             };
+        case PNTR_PIXELFORMAT_GRAYSCALE:
+            if (((unsigned char *)srcPtr)[0]) {
+                return PNTR_BLACK;
+            }
+            else {
+                return PNTR_BLANK;
+            }
         break;
     }
 
@@ -1151,6 +1183,79 @@ pntr_font* pntr_load_default_font() {
 #else
     return pntr_set_error("pntr_load_default_font() requires PNTR_SUPPORT_DEFAULT_FONT");
 #endif
+}
+
+pntr_font* pntr_load_ttffont(const char* fileName, int fontSize) {
+#   ifndef PNTR_SUPPORT_TTF
+        return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
+#   else
+        unsigned int bytesRead;
+        unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
+
+        if (fileData == NULL) {
+            return NULL;
+        }
+
+        return pntr_load_ttffont_from_memory(fileData, bytesRead, fontSize);
+#   endif
+}
+
+#include <stdio.h>
+pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int fontSize) {
+#   ifndef PNTR_SUPPORT_TTF
+        return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
+#   else
+        int width = 256;
+        int height = 256;
+        unsigned char *bitmap = (unsigned char*)malloc(width * height);
+
+        #define NUM_GLYPHS 95
+        stbtt_packedchar glyph_metrics[NUM_GLYPHS];
+        stbtt_pack_range ranges[32] = {
+            {(float)fontSize, 32, NULL, NUM_GLYPHS, glyph_metrics,  0, 0}
+        };
+
+        stbtt_pack_context pc;
+        stbtt_PackBegin(&pc, bitmap, width, height, 0, 1, NULL);
+        stbtt_PackSetOversampling(&pc, 1, 1); // say, choose 3x1 oversampling for subpixel positioning
+        stbtt_PackFontRanges(&pc, fileData, 0, ranges, 1);
+        stbtt_PackEnd(&pc);
+
+        stbtt_fontinfo info;
+        stbtt_InitFont(&info, fileData, stbtt_GetFontOffsetForIndex(fileData,0));
+
+        pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
+        if (font == NULL) {
+            return NULL;
+        }
+
+        for (int i = 0; i < NUM_GLYPHS; i++) {
+            stbtt_packedchar m = glyph_metrics[i];
+            font->rectangles[i] = CLITERAL(pntr_rectangle){
+                .x = m.x0,
+                .y = m.y0,
+                .width = m.x1 - m.x0,
+                .height = m.y1 - m.y0,
+            };
+
+            font->characters[i] = 32 + i;
+            font->charactersFound++;
+
+            // TODO: Add character spacing.
+            // 	float size = ranges[i].font_size;
+            //     float scale = stbtt_ScaleForPixelHeight(&info, ranges[i].font_size);
+            //     int a, d, l;
+            //     stbtt_GetFontVMetrics(&info, &a, &d, &l);
+
+            //     ascents[i]  = a*scale;
+            //     descents[i] = d*scale;
+            //     linegaps[i] = l*scale;
+            // }
+        }
+
+        pntr_image* atlas = pntr_image_from_pixelformat((void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
+        font->atlas = atlas;
+#   endif
 }
 
 unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {

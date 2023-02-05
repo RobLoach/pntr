@@ -3,6 +3,7 @@
 pntr_font* defaultFont;
 pntr_font* bmFont;
 pntr_font* ttyFont;
+pntr_font* ttfFont;
 
 #include <stdio.h>
 
@@ -16,6 +17,8 @@ void example_fonts_init() {
     // TTY Font
     ttyFont = pntr_load_ttyfont("resources/ttyfont-16x16.png", 16, 16,
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+
+    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 25);
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
@@ -41,6 +44,11 @@ const char* example_fonts_update(pntr_image* canvas) {
     int textWidth = pntr_measure_text(ttyFont, text);
     pntr_draw_text(canvas, ttyFont, text, canvas->width / 2 - textWidth / 2, 140);
 
+    //pntr_draw_rectangle(canvas, 300, 50, 100, 12, PNTR_RED);
+    pntr_draw_text(canvas, ttfFont, "Hello World", 300, 50);
+
+    //pntr_draw_image(canvas, ttfFont->atlas, 0, 0);
+
     return "Fonts";
 }
 
@@ -48,4 +56,5 @@ void example_fonts_unload() {
     pntr_unload_font(defaultFont);
     pntr_unload_font(ttyFont);
     pntr_unload_font(bmFont);
+    pntr_unload_font(ttfFont);
 }

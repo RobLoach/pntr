@@ -9,6 +9,7 @@
 
 // libretro uses ARGB8888
 #define PNTR_PIXELFORMAT_ARGB
+#define PNTR_SUPPORT_TTF
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_IMPLEMENTATION
 #include "pntr.h"

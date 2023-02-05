@@ -13,6 +13,7 @@ if (PNTR_BUILD_EXAMPLES_SDL)
             SDL2::SDL2
             SDL2::SDL2main
             pntr
+            m
         )
     else()
         message(WARNING "SDL not found")
@@ -48,6 +49,7 @@ if (PNTR_BUILD_EXAMPLES_RAYLIB)
         target_link_libraries(pntr_examples_raylib PUBLIC
             raylib
             pntr
+            m
         )
     endif()
 endif()
@@ -75,6 +77,7 @@ if (PNTR_BUILD_EXAMPLES_LIBRETRO)
     target_link_libraries(pntr_examples_libretro PUBLIC
         pntr
         libretro
+        m
     )
     set_target_properties(pntr_examples_libretro PROPERTIES PREFIX "")
 endif()
