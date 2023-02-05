@@ -1272,9 +1272,12 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
             };
         }
 
+
+
         // Port the bitmap to a pntr_image as the atlas.
         pntr_image* atlas = pntr_image_from_pixelformat((void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         font->atlas = atlas;
+        return font;
 #   endif
 }
 
