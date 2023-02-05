@@ -930,7 +930,7 @@ pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
             };
         case PNTR_PIXELFORMAT_GRAYSCALE:
             if (((unsigned char *)srcPtr)[0]) {
-                return PNTR_BLACK;
+                return PNTR_BLACK; // TODO: Grayscale
             }
             else {
                 return PNTR_BLANK;

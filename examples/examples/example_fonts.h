@@ -49,8 +49,8 @@ const char* example_fonts_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 230, 50, 100, 12, PNTR_PINK);
     pntr_draw_text(canvas, ttfFont, "TTF Font Example", 230, 50);
 
-    //pntr_draw_rectangle(canvas, 0, 0, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
-    //pntr_draw_image(canvas, ttfFont->atlas, 0, 0);
+    pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
+    pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
 
     return "Fonts";
 }
