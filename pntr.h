@@ -71,6 +71,12 @@ typedef struct pntr_font {
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
     char characters[PNTR_MAX_FONTS];
     int charactersFound;
+
+    int ascents[PNTR_MAX_FONTS];
+    int descents[PNTR_MAX_FONTS];
+    int linegaps[PNTR_MAX_FONTS];
+
+    pntr_rectangle glyphBox[PNTR_MAX_FONTS];
 } pntr_font;
 
 typedef enum {
@@ -789,6 +795,9 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
     switch (pixelFormat) {
         case PNTR_PIXELFORMAT_GRAYSCALE: {
             pntr_image* image = pntr_new_image(width, height);
+            if (image == NULL) {
+                return NULL;
+            }
             unsigned char* source = (unsigned char*)data;
             for (int i = 0; i < width * height; i++) {
                 image->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
@@ -978,6 +987,12 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
         if (pntr_image_get_color(image, i, 0).data == seperator.data) {
             font->characters[currentCharacter] = characters[currentCharacter];
             font->rectangles[currentCharacter] = currentRectangle;
+            font->glyphBox[currentCharacter] = CLITERAL(pntr_rectangle) {
+                .x = 0,
+                .y = 0,
+                .width = currentRectangle.width,
+                .height = currentRectangle.height,
+            };
             currentRectangle.width = 0;
             currentRectangle.x = i + 1;
             currentCharacter++;
@@ -1031,6 +1046,14 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         rect.width = glyphWidth;
         rect.height = glyphHeight;
 
+
+        font->glyphBox[currentCharIndex] = CLITERAL(pntr_rectangle) {
+            .x = 0,
+            .y = 0,
+            .width = glyphWidth,
+            .height = glyphHeight,
+        };
+
         font->rectangles[currentCharIndex] = rect;
         font->characters[currentCharIndex] = characters[currentCharIndex];
 
@@ -1074,7 +1097,7 @@ void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX
         else {
             for (int i = 0; i < font->charactersFound; i++) {
                 if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x, y);
+                    pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x + font->glyphBox[i].x, y + font->glyphBox[i].y);
                     x += font->rectangles[i].width;
                     break;
                 }
@@ -1205,54 +1228,51 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
 #   ifndef PNTR_SUPPORT_TTF
         return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
 #   else
+        // Create the font data
+        pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
+        if (font == NULL) {
+            return pntr_set_error("Failed to allocate memory for font");
+        }
+
+        // Create the bitmap data
         int width = 256;
         int height = 256;
         unsigned char *bitmap = (unsigned char*)malloc(width * height);
+        if (bitmap == NULL) {
+            PNTR_FREE(font);
+            return pntr_set_error("Failed to allocate memory for bitmap");
+        }
 
         #define NUM_GLYPHS 95
-        stbtt_packedchar glyph_metrics[NUM_GLYPHS];
-        stbtt_pack_range ranges[32] = {
-            {(float)fontSize, 32, NULL, NUM_GLYPHS, glyph_metrics,  0, 0}
-        };
+        stbtt_bakedchar characterData[NUM_GLYPHS];
+        stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, NUM_GLYPHS, characterData);
 
-        stbtt_pack_context pc;
-        stbtt_PackBegin(&pc, bitmap, width, height, 0, 1, NULL);
-        stbtt_PackSetOversampling(&pc, 1, 1); // say, choose 3x1 oversampling for subpixel positioning
-        stbtt_PackFontRanges(&pc, fileData, 0, ranges, 1);
-        stbtt_PackEnd(&pc);
+        float ascent, descent, lineGap;
+        stbtt_GetScaledFontVMetrics(fileData, 0, (float)fontSize, &ascent, &descent, &lineGap);
+        //int baseLine = ascent /* * scale */;
 
-        stbtt_fontinfo info;
-        stbtt_InitFont(&info, fileData, stbtt_GetFontOffsetForIndex(fileData,0));
+        // Don't need the fileData anymore, so clear it up
+        PNTR_FREE(fileData);
 
-        pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
-        if (font == NULL) {
-            return NULL;
-        }
-
+        // Capture each glyph data
         for (int i = 0; i < NUM_GLYPHS; i++) {
-            stbtt_packedchar m = glyph_metrics[i];
-            font->rectangles[i] = CLITERAL(pntr_rectangle){
-                .x = m.x0,
-                .y = m.y0,
-                .width = m.x1 - m.x0,
-                .height = m.y1 - m.y0,
+            font->rectangles[i] = CLITERAL(pntr_rectangle) {
+                .x = characterData[i].x0,
+                .y = characterData[i].y0,
+                .width = characterData[i].x1 - characterData[i].x0,
+                .height = characterData[i].y1 - characterData[i].y0
             };
-
             font->characters[i] = 32 + i;
             font->charactersFound++;
-
-            // TODO: Add character spacing.
-            // 	float size = ranges[i].font_size;
-            //     float scale = stbtt_ScaleForPixelHeight(&info, ranges[i].font_size);
-            //     int a, d, l;
-            //     stbtt_GetFontVMetrics(&info, &a, &d, &l);
-
-            //     ascents[i]  = a*scale;
-            //     descents[i] = d*scale;
-            //     linegaps[i] = l*scale;
-            // }
+            font->glyphBox[i] = CLITERAL(pntr_rectangle) {
+                .x = (int)characterData[i].xoff,
+                .y = (int)characterData[i].yoff + fontSize,
+                .width = (int)characterData[i].xadvance,
+                .height = fontSize //font->rectangles[i].height
+            };
         }
 
+        // Port the bitmap to a pntr_image as the atlas.
         pntr_image* atlas = pntr_image_from_pixelformat((void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         font->atlas = atlas;
 #   endif

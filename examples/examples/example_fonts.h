@@ -18,7 +18,8 @@ void example_fonts_init() {
     ttyFont = pntr_load_ttyfont("resources/ttyfont-16x16.png", 16, 16,
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
 
-    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 25);
+    // TTF Font
+    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 24);
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
@@ -44,9 +45,11 @@ const char* example_fonts_update(pntr_image* canvas) {
     int textWidth = pntr_measure_text(ttyFont, text);
     pntr_draw_text(canvas, ttyFont, text, canvas->width / 2 - textWidth / 2, 140);
 
-    //pntr_draw_rectangle(canvas, 300, 50, 100, 12, PNTR_RED);
-    pntr_draw_text(canvas, ttfFont, "Hello World", 300, 50);
+    // TTF Font
+    pntr_draw_rectangle(canvas, 230, 50, 100, 12, PNTR_PINK);
+    pntr_draw_text(canvas, ttfFont, "TTF Font Example", 230, 50);
 
+    //pntr_draw_rectangle(canvas, 0, 0, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
     //pntr_draw_image(canvas, ttfFont->atlas, 0, 0);
 
     return "Fonts";
