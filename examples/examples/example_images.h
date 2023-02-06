@@ -33,7 +33,7 @@ const char* example_images_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 290, 50, 65, 58, faceColor);
 
     // Draw the resized image
-    pntr_draw_image(canvas, image, 200, 130);
+    pntr_draw_image(canvas, resized, 200, 130);
 
     return "Images";
 }
