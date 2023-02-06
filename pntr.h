@@ -1098,7 +1098,7 @@ void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX
             for (int i = 0; i < font->charactersFound; i++) {
                 if (font->characters[i] == *currentChar) {
                     pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x + font->glyphBox[i].x, y + font->glyphBox[i].y);
-                    x += font->rectangles[i].width;
+                    x += font->glyphBox[i].width;
                     break;
                 }
             }
@@ -1270,11 +1270,14 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
                 .width = (int)characterData[i].xadvance,
                 .height = fontSize //font->rectangles[i].height
             };
+            // break
+            // asm("int $3");
         }
 
         // Port the bitmap to a pntr_image as the atlas.
         pntr_image* atlas = pntr_image_from_pixelformat((void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         font->atlas = atlas;
+        return font;
 #   endif
 }
 
