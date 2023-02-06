@@ -7,6 +7,11 @@ void example_images_init() {
     // Load an image
     image = pntr_load_image("resources/image.png");
 
+    if (image == NULL) {
+        printf("resources/image.png not loaded!\n");
+        return;
+    }
+
     // Resize the image
     resized = pntr_image_resize(image, image->width / 2, image->height / 2, PNTR_FILTER_NEARESTNEIGHBOR);
 }
@@ -28,7 +33,7 @@ const char* example_images_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 290, 50, 65, 58, faceColor);
 
     // Draw the resized image
-    pntr_draw_image(canvas, resized, 200, 130);
+    pntr_draw_image(canvas, image, 200, 130);
 
     return "Images";
 }

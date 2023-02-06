@@ -13,9 +13,21 @@ void example_fonts_init() {
     // BM Font
     bmFont = pntr_load_bmfont("resources/bmfont.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
 
+    if (bmFont == NULL) {
+        printf("resources/bmfont.png not loaded!\n");
+        return;
+    }
+
     // TTY Font
     ttyFont = pntr_load_ttyfont("resources/ttyfont-16x16.png", 16, 16,
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+
+    if (ttyFont == NULL) {
+        printf("resources/ttyfont-16x16.png not loaded!\n");
+        return;
+    }
+
+
 }
 
 const char* example_fonts_update(pntr_image* canvas) {

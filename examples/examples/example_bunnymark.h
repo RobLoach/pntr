@@ -26,6 +26,11 @@ void example_bunnymark_init() {
     // Load an image
     bunnyImage = pntr_load_image("resources/bunny.png");
 
+    if (bunnyImage == NULL) {
+        printf("bunnyImage not loaded!\n");
+        return;
+    }
+
     bunnies = (Bunny *)malloc(MAX_BUNNIES * sizeof(Bunny));
     bunniesCount = 0;
     frameCount = 0;
