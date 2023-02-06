@@ -319,14 +319,9 @@ extern "C" {
 #endif  // PNTR_NO_STB_IMAGE
 
 #ifdef PNTR_SUPPORT_TTF
-#ifndef STB_NO_RECT_PACK_IMPLEMENTATION
-#define STB_RECT_PACK_IMPLEMENTATION
-#endif
-#include "external/stb_rect_pack.h" // optional, used for better bitmap packing
-
-#ifndef STB_NO_TRUETYPE_IMPLEMENTATION
+#ifndef PNTR_STB_NO_TRUETYPE_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
-#endif
+#endif  // PNTR_STB_NO_TRUETYPE_IMPLEMENTATION
 #include "external/stb_truetype.h"
 #endif  // PNTR_SUPPORT_TTF
 
@@ -1125,13 +1120,14 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
 
     while (currentChar != NULL && *currentChar != '\0') {
         if (*currentChar == '\n') {
+            // TODO: Calculate the height based on Glyph Height
             output.y += font->atlas->height;
             x = 0;
         }
         else {
             for (int i = 0; i < font->charactersFound; i++) {
                 if (font->characters[i] == *currentChar) {
-                    x += font->rectangles[i].width;
+                    x += font->glyphBox[i].width;
                     if (output.x < x) {
                         output.x = x;
                     }
@@ -1223,7 +1219,6 @@ pntr_font* pntr_load_ttffont(const char* fileName, int fontSize) {
 #   endif
 }
 
-#include <stdio.h>
 pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int fontSize) {
 #   ifndef PNTR_SUPPORT_TTF
         return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
@@ -1245,14 +1240,23 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
 
         #define NUM_GLYPHS 95
         stbtt_bakedchar characterData[NUM_GLYPHS];
-        stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, NUM_GLYPHS, characterData);
+        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, NUM_GLYPHS, characterData);
 
-        float ascent, descent, lineGap;
-        stbtt_GetScaledFontVMetrics(fileData, 0, (float)fontSize, &ascent, &descent, &lineGap);
+
+        // TODO: Do we need to use ScaledFontVMetrics for th glyph sizes?
+        //float ascent, descent, lineGap;
+        //stbtt_GetScaledFontVMetrics(fileData, 0, (float)fontSize, &ascent, &descent, &lineGap);
         //int baseLine = ascent /* * scale */;
 
         // Don't need the fileData anymore, so clear it up
         PNTR_FREE(fileData);
+
+        // Check to make sure the font was baked correctly
+        if (result == 0) {
+            PNTR_FREE(font);
+            PNTR_FREE(bitmap);
+            return pntr_set_error("When baking font, no rows were created");
+        }
 
         // Capture each glyph data
         for (int i = 0; i < NUM_GLYPHS; i++) {
@@ -1270,13 +1274,17 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
                 .width = (int)characterData[i].xadvance,
                 .height = fontSize //font->rectangles[i].height
             };
-            // break
-            // asm("int $3");
         }
 
         // Port the bitmap to a pntr_image as the atlas.
         pntr_image* atlas = pntr_image_from_pixelformat((void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
+        if (atlas == NULL) {
+            PNTR_FREE(font);
+            return pntr_set_error("Failed to convert pixel format for font");
+        }
+
         font->atlas = atlas;
+
         return font;
 #   endif
 }

@@ -209,7 +209,18 @@ int main() {
         pntr_unload_file(fileData);
     }
 
+    // pntr_load_ttffont()
+    {
+        pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20);
+        assert(font != NULL);
+        pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
+        assert(canvas != NULL);
+    }
+
     // Ensure there were no errors.
+    if (pntr_get_error() != NULL) {
+        printf("%s", pntr_get_error());
+    }
     assert(pntr_get_error() == NULL);
 
     return 0;

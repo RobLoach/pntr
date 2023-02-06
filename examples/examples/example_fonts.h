@@ -13,13 +13,22 @@ void example_fonts_init() {
 
     // BM Font
     bmFont = pntr_load_bmfont("resources/bmfont.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+    if (bmFont == NULL) {
+        printf("resources/bmfont.png not loaded!\n");
+    }
 
     // TTY Font
     ttyFont = pntr_load_ttyfont("resources/ttyfont-16x16.png", 16, 16,
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    if (ttyFont == NULL) {
+        printf("resources/ttyfonFailed to load ttyFontt-16x16.png not loaded");
+    }
 
     // TTF Font
     ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 24);
+    if (ttyFont == NULL) {
+        printf("resources/ttyfont-16x16.png not loaded!\n");
+    }
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
@@ -49,8 +58,8 @@ const char* example_fonts_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 230, 50, 100, 12, PNTR_PINK);
     pntr_draw_text(canvas, ttfFont, "TTF Font Example", 230, 50);
 
-    pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
-    pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
+    //pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
+    //pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
 
     return "Fonts";
 }

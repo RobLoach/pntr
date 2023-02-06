@@ -7,6 +7,11 @@ void example_images_init() {
     // Load an image
     image = pntr_load_image("resources/image.png");
 
+    if (image == NULL) {
+        printf("resources/image.png not loaded!\n");
+        return;
+    }
+
     // Resize the image
     resized = pntr_image_resize(image, image->width / 2, image->height / 2, PNTR_FILTER_NEARESTNEIGHBOR);
 }
