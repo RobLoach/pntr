@@ -146,7 +146,7 @@ PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWid
 PNTR_API unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API void pntr_unload_file(unsigned char* fileData);
 PNTR_API pntr_font* pntr_load_ttffont(const char* fileName, int fontSize);
-PNTR_API pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int fontSize);
+PNTR_API pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize);
 
 #ifdef __cplusplus
 }
@@ -322,7 +322,14 @@ extern "C" {
 #ifndef PNTR_STB_NO_TRUETYPE_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
 #endif  // PNTR_STB_NO_TRUETYPE_IMPLEMENTATION
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "external/stb_truetype.h"
+#pragma GCC diagnostic pop
 #endif  // PNTR_SUPPORT_TTF
 
 /**
@@ -903,6 +910,12 @@ void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPi
         case PNTR_PIXELFORMAT_ARGB8888:
             ((uint32_t*)(dstPtr))[0] = ((int)color.a << 24) | ((int)color.r << 16) | ((int)color.g << 8) | (int)color.b;
             break;
+        case PNTR_PIXELFORMAT_GRAYSCALE: {
+            float r = (float)color.r / 255.0f;
+            float g = (float)color.g / 255.0f;
+            float b = (float)color.b / 255.0f;
+            ((unsigned char *)dstPtr)[0] = (unsigned char)((r * 0.299f + g * 0.587f + b * 0.114f) * 255.0f);
+        } break;
     }
 }
 
@@ -1219,10 +1232,20 @@ pntr_font* pntr_load_ttffont(const char* fileName, int fontSize) {
 #   endif
 }
 
-pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int fontSize) {
+#include <stdio.h>
+pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize) {
 #   ifndef PNTR_SUPPORT_TTF
+        // Unused
+        (void)fileData;
+        (void)dataSize;
+        (void)fontSize;
+
         return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
 #   else
+        if (fontSize <= 0) {
+            return pntr_set_error("TTF Fonts require a fontSize > 0");
+        }
+
         // Create the font data
         pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
         if (font == NULL) {
@@ -1232,7 +1255,7 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
         // Create the bitmap data
         int width = 256;
         int height = 256;
-        unsigned char *bitmap = (unsigned char*)malloc(width * height);
+        unsigned char *bitmap = (unsigned char*)malloc((size_t)(width * height));
         if (bitmap == NULL) {
             PNTR_FREE(font);
             return pntr_set_error("Failed to allocate memory for bitmap");
@@ -1266,7 +1289,7 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
                 .width = characterData[i].x1 - characterData[i].x0,
                 .height = characterData[i].y1 - characterData[i].y0
             };
-            font->characters[i] = 32 + i;
+            font->characters[i] = (char)(32 + i);
             font->charactersFound++;
             font->glyphBox[i] = CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
@@ -1284,6 +1307,7 @@ pntr_font* pntr_load_ttffont_from_memory(const char* fileData, int dataSize, int
         }
 
         font->atlas = atlas;
+        (void)dataSize;
 
         return font;
 #   endif
@@ -1316,6 +1340,7 @@ unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
         fclose(file);
         return pntr_set_error("Failed to allocate data for file");
     }
+
     if (bytesRead != NULL) {
         *bytesRead = (unsigned int)fread(data, sizeof(unsigned char), size, file);
     }

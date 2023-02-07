@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #define PNTR_SUPPORT_DEFAULT_FONT
+#define PNTR_SUPPORT_TTF
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
@@ -213,8 +214,13 @@ int main() {
     {
         pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20);
         assert(font != NULL);
+        assert(font->charactersFound > 20);
         pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
         assert(canvas != NULL);
+        assert(canvas->width > 10);
+        assert(canvas->height > 10);
+        pntr_unload_image(canvas);
+        pntr_unload_font(font);
     }
 
     // Ensure there were no errors.
