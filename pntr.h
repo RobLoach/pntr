@@ -1054,7 +1054,6 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         rect.width = glyphWidth;
         rect.height = glyphHeight;
 
-
         font->glyphBox[currentCharIndex] = CLITERAL(pntr_rectangle) {
             .x = 0,
             .y = 0,
@@ -1094,19 +1093,24 @@ void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX
 
     int x = posX;
     int y = posY;
+    int tallestCharacter;
 
     const char * currentChar = text;
     while (currentChar != NULL && *currentChar != '\0') {
         if (*currentChar == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
             x = posX;
-            y += font->atlas->height;
+            y += tallestCharacter;
+            tallestCharacter = 0;
         }
         else {
             for (int i = 0; i < font->charactersFound; i++) {
                 if (font->characters[i] == *currentChar) {
                     pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x + font->glyphBox[i].x, y + font->glyphBox[i].y);
                     x += font->glyphBox[i].width;
+                    if (tallestCharacter < font->glyphBox[i].y + font->glyphBox[i].height) {
+                        tallestCharacter = font->glyphBox[i].y + font->glyphBox[i].height;
+                    }
                     break;
                 }
             }
@@ -1125,24 +1129,28 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
         return CLITERAL(pntr_vector){0, 0};
     }
 
-    pntr_vector output;
-    output.x = 0;
-    output.y = font->atlas->height;
-    int x = 0;
+    pntr_vector output = CLITERAL(pntr_vector) {.x = 0, .y = 0};
+    int currentX = 0;
+    int currentY = 0;
     const char * currentChar = text;
 
     while (currentChar != NULL && *currentChar != '\0') {
         if (*currentChar == '\n') {
-            // TODO: Calculate the height based on Glyph Height
-            output.y += font->atlas->height;
-            x = 0;
+            output.y += currentY;
+            currentX = 0;
+            currentY = 0;
         }
         else {
             for (int i = 0; i < font->charactersFound; i++) {
                 if (font->characters[i] == *currentChar) {
-                    x += font->glyphBox[i].width;
-                    if (output.x < x) {
-                        output.x = x;
+                    currentX += font->glyphBox[i].width;
+                    if (currentX > output.x) {
+                        output.x = currentX;
+                    }
+
+                    // Find the tallest character
+                    if (font->glyphBox[i].y + font->glyphBox[i].height > currentY) {
+                        currentY = font->glyphBox[i].y + font->glyphBox[i].height;
                     }
                     break;
                 }
@@ -1150,6 +1158,9 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
         }
         currentChar++;
     }
+
+    // Has at least one line.
+    output.y += currentY;
 
     return output;
 }
@@ -1291,11 +1302,12 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
             };
             font->characters[i] = (char)(32 + i);
             font->charactersFound++;
+
             font->glyphBox[i] = CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
-                .y = (int)characterData[i].yoff + fontSize,
+                .y = (int)characterData[i].yoff + fontSize, // TODO: Determine the correct baseline for the font
                 .width = (int)characterData[i].xadvance,
-                .height = fontSize //font->rectangles[i].height
+                .height = fontSize // TODO: Determine the correct glyph height
             };
         }
 

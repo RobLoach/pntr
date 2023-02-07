@@ -125,16 +125,18 @@ int main() {
     {
         pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         assert(pntr_measure_text(font, "Hello World!") > 50);
-        pntr_vector size = pntr_measure_text_ex(font, "pntr_measure_text_ex()");
+        pntr_vector size = pntr_measure_text_ex(font, "Hello World!");
         assert(size.x > 50);
         assert(size.y == font->atlas->height);
 
-        size = pntr_measure_text_ex(font, "On\nNew\nLines");
-        assert(size.y == font->atlas->height * 3);
-
         pntr_image* textImage = pntr_gen_image_text(font, "Hello World!");
         assert(textImage != NULL);
+        assert(textImage->width == size.x);
+        assert(textImage->height == size.y);
         pntr_unload_image(textImage);
+
+        size = pntr_measure_text_ex(font, "On\nNew\nLines");
+        assert(size.y == font->atlas->height * 3);
 
         pntr_unload_font(font);
     }
