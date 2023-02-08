@@ -115,6 +115,10 @@ PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b);
 PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y);
+PNTR_API bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite);
+PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize);
+PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
+PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
 PNTR_API pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_pixelformat pixelFormat);
@@ -140,7 +144,6 @@ PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData,
 PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API void pntr_unload_file(unsigned char* fileData);
-PNTR_API bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite);
 
 #ifdef __cplusplus
 }
@@ -1208,7 +1211,7 @@ unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
 }
 
 bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite) {
-    if (fileName == NULL) {
+    if (fileName == NULL || data == NULL) {
         return pntr_set_error("pntr_load_file() requires a valid fileName");
     }
 
@@ -1234,6 +1237,55 @@ bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite)
 
     return fclose(file) == 0;
 #endif
+}
+
+int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat) {
+    if (width <= 0 || height <= 0) {
+        return 0;
+    }
+
+    int bitsPerPixel = 0;
+
+    switch (pixelFormat) {
+        case PNTR_PIXELFORMAT_GRAYSCALE: bitsPerPixel = 8; break;
+        case PNTR_PIXELFORMAT_RGBA8888:
+        case PNTR_PIXELFORMAT_ARGB8888: bitsPerPixel = 32; break;
+    }
+
+    return bitsPerPixel * width * height / 8; // Bytes
+}
+
+void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat) {
+    if (image == NULL) {
+        return pntr_set_error("requires a valid image");
+    }
+
+    int imageSize = pntr_get_pixel_data_size(image->width, image->height, pixelFormat);
+    void* data = PNTR_MALLOC(imageSize);
+    for (int i = 0; i < width * height; i++) {
+        void* dstPtr;
+        switch (pixelFormat) {
+            case PNTR_PIXELFORMAT_GRAYSCALE:
+                dstPtr = (void*)((unsigned char*)data + i);
+            break;
+            case PNTR_PIXELFORMAT_RGBA8888:
+            case PNTR_PIXELFORMAT_ARGB8888:
+                dstPtr = (void*)((pntr_color*)data + i);
+            break;
+        }
+
+        pntr_set_pixel_color(dstPtr, image->data[i], pixelFormat);
+    }
+    if (dataSize != NULL) {
+        *dataSize = imageSize;
+    }
+
+    return data;
+}
+
+unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
+    void* data = pntr_image_to_pixelformat(image, )
+    cp_saved_png_t png = cp_save_png_to_memory(const cp_image_t* img);
 }
 
 inline void pntr_unload_file(unsigned char* fileData) {
