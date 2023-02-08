@@ -4,6 +4,7 @@
  * Configuration:
  *
  * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
+ * PNTR_NO_SUPPORT_PNG: Disables loading PNG images
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
  * PNTR_NO_STB_IMAGE: Avoids using stb_image
@@ -284,29 +285,43 @@ extern "C" {
 #include <stdio.h> // FILE, fopen, fread
 #endif  // PNTR_LOAD_FILE
 
-// stb_image
-// TODO: Allow selective inclusion with stb_image. And use STBI_NO_STDIO
-#ifndef PNTR_NO_STB_IMAGE
-#ifndef PNTR_NO_STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_PNG
-#define STBI_NO_SIMD
-#define STBI_NO_HDR
-#define STBI_NO_LINEAR
-#define STBI_NO_GIF
-#define STBI_NO_THREAD_LOCALS
-#define STBI_NO_STDIO
-#define STBI_NO_LINEAR
-#endif  // PNTR_NO_STB_IMAGE_IMPLEMENTATION
+#ifndef PNTR_MEMSET
+	#include <string.h>
+	#define PNTR_MEMSET memset
+#endif
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wconversion"
-#include "external/stb_image.h"
-#pragma GCC diagnostic pop
-#endif  // PNTR_NO_STB_IMAGE
+// cute_png
+#ifndef PNTR_NO_SUPPORT_PNG
+#ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
+#define CUTE_PNG_IMPLEMENTATION
+#define CUTE_PNG_ALLOCA PNTR_MALLOC
+#define CUTE_PNG_ALLOC PNTR_MALLOC
+#define CUTE_PNG_FREE PNTR_FREE
+#define CUTE_PNG_CALLOC(num, size) PNTR_MALLOC((num) * (size))
+void* pntr_cute_png_realloc(void* ptr, int size) {
+    PNTR_FREE(ptr); return PNTR_MALLOC(size);
+}
+#define CUTE_PNG_REALLOC pntr_cute_png_realloc
+#define CUTE_PNG_MEMCPY PNTR_MEMCPY
+#define CUTE_PNG_MEMSET PNTR_MEMSET
+#define CUTE_PNG_ASSERT(condition) if (condition) { pntr_set_error("Failed assertion"); }
+#define CUTE_PNG_SEEK_SET 0
+#define CUTE_PNG_SEEK_END 0
+#define CUTE_PNG_FILE void
+#define CUTE_PNG_FOPEN(filename, mode) (CUTE_PNG_FILE*)filename
+#define CUTE_PNG_FSEEK(stream, offset, origin) offset
+#define CUTE_PNG_FREAD(data, size, num, fp) (void)(data)
+#define CUTE_PNG_FTELL(fp) 0
+#define CUTE_PNG_FWRITE(data, size, num, fp) (void)(data)
+#define CUTE_PNG_FCLOSE (void)
+#define CUTE_PNG_FERROR(fp) 1
+#define CUTE_PNG_ATLAS_MUST_FIT 1
+#define CUTE_PNG_ATLAS_FLIP_Y_AXIS_FOR_UV 0
+//#define CUTE_PNG_ATLAS_EMPTY_COLOR
+#endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
+
+#include "external/cute_png.h"
+#endif // PNTR_NO_SUPPORT_PNG
 
 /**
  * The last error that was reported from pntr.
@@ -655,16 +670,15 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned 
         return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
     }
 
-#ifdef PNTR_NO_STB_IMAGE
-    return pntr_set_error("pntr_load_image_from_memory() requires STB_IMAGE. PNTR_NO_STB_IMAGE was defined.");
+#ifdef PNTR_NO_SUPPORT_PNG
+    return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_NO_SUPPORT_PNG was defined.");
 #else
-    int width, height, channels_in_file;
-    void* output = (void*)stbi_load_from_memory(fileData, (int)dataSize, &width, &height, &channels_in_file, 4);
-    if (output == NULL) {
-        return pntr_set_error("pntr_load_image_from_memory() failed to load image from memory");
+    cp_image_t image = cp_load_png_mem(fileData, dataSize);
+    if (image.pix == NULL) {
+        return pntr_set_error(cp_error_reason);
     }
 
-    return pntr_image_from_pixelformat(output, width, height, PNTR_PIXELFORMAT_RGBA8888);
+    return pntr_image_from_pixelformat((void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
 #endif
 }
 
