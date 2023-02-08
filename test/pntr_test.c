@@ -209,7 +209,28 @@ int main() {
         pntr_unload_file(fileData);
     }
 
+    // pntr_save_file()
+    {
+        const char* fileName = "tempFile.txt";
+        const char* fileData = "Hello World!";
+        unsigned int bytes = 12;
+        bool result = pntr_save_file(fileName, (unsigned char*)fileData, bytes);
+        assert(result);
+
+        unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
+        assert(bytes > 5);
+        assert(fileDataResult[0] == 'H');
+        assert(fileDataResult[1] == 'e');
+        assert(fileDataResult[2] == 'l');
+        assert(fileDataResult[3] == 'l');
+        assert(fileDataResult[4] == 'o');
+        pntr_unload_file(fileDataResult);
+    }
+
     // Ensure there were no errors.
+    if (pntr_get_error() != NULL) {
+        printf("Error: %s\n", pntr_get_error());
+    }
     assert(pntr_get_error() == NULL);
 
     return 0;

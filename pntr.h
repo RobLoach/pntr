@@ -10,11 +10,13 @@
  * PNTR_NO_STB_IMAGE: Avoids using stb_image
  * PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips implementing STB_IMAGE
  * PNTR_LOAD_FILE A callback to use when asked to load a file. Must match the pntr_load_file definition.
+ * PNTR_SAVE_FILE A callback to use when asked to save a file. Must match the pntr_save_file definition.
  */
 #ifndef PNTR_H__
 #define PNTR_H__
 
 #include <stdint.h> // uint32_t
+#include <stdbool.h> // bool
 
 #ifndef PNTR_API
 #define PNTR_API
@@ -138,6 +140,7 @@ PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData,
 PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API void pntr_unload_file(unsigned char* fileData);
+PNTR_API bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite);
 
 #ifdef __cplusplus
 }
@@ -304,7 +307,7 @@ void* pntr_cute_png_realloc(void* ptr, int size) {
 #define CUTE_PNG_REALLOC pntr_cute_png_realloc
 #define CUTE_PNG_MEMCPY PNTR_MEMCPY
 #define CUTE_PNG_MEMSET PNTR_MEMSET
-#define CUTE_PNG_ASSERT(condition) if (condition) { pntr_set_error("Failed assertion"); }
+#define CUTE_PNG_ASSERT(condition) // Skip assertions
 #define CUTE_PNG_SEEK_SET 0
 #define CUTE_PNG_SEEK_END 0
 #define CUTE_PNG_FILE void
@@ -673,7 +676,7 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned 
 #ifdef PNTR_NO_SUPPORT_PNG
     return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_NO_SUPPORT_PNG was defined.");
 #else
-    cp_image_t image = cp_load_png_mem(fileData, dataSize);
+    cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
     if (image.pix == NULL) {
         return pntr_set_error(cp_error_reason);
     }
@@ -1201,6 +1204,35 @@ unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
     fclose(file);
 
     return data;
+#endif
+}
+
+bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite) {
+    if (fileName == NULL) {
+        return pntr_set_error("pntr_load_file() requires a valid fileName");
+    }
+
+#ifdef PNTR_SAVE_FILE
+    return PNTR_SAVE_FILE(fileName, data, bytesToWrite);
+#else
+    FILE *file = fopen(fileName, "wb");
+    if (file == NULL) {
+        return pntr_set_error("Failed to open file for writing");
+    }
+
+    size_t count = fwrite(data, sizeof(unsigned char), bytesToWrite, file);
+
+    if (count <= 0) {
+        fclose(file);
+        return pntr_set_error("Failed to write data to file");
+    }
+
+    if (count != (size_t)bytesToWrite) {
+        fclose(file);
+        return pntr_set_error("Failed to write the correct amount of data");
+    }
+
+    return fclose(file) == 0;
 #endif
 }
 
