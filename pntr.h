@@ -254,10 +254,24 @@ extern "C" {
 #define PNTR_FREE(obj) free((void*)(obj))
 #endif  // PNTR_FREE
 
+#ifndef PNTR_REALLOC
+#include <stdlib.h>
+#define PNTR_REALLOC realloc
+#endif  // PNTR_REALLOC
+
 #ifndef PNTR_MEMCPY
 #include <string.h>
 #define PNTR_MEMCPY(dest, src, n) memcpy((void*)(dest), (const void*)(src), (size_t)(n))
 #endif  // PNTR_MEMCPY
+
+#ifndef PNTR_MEMSET
+#include <string.h>
+#define PNTR_MEMSET memset
+#endif  // PNTR_MEMSET
+
+#ifndef PNTR_LOAD_FILE
+#include <stdio.h> // FILE, fopen, fread
+#endif  // PNTR_LOAD_FILE
 
 #ifndef PNTR_MAX
 #ifdef MAX
@@ -265,6 +279,7 @@ extern "C" {
 #else
 #define PNTR_MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
+
 #endif
 #ifndef PNTR_MIN
 #ifdef MIN
@@ -287,15 +302,6 @@ extern "C" {
  */
 #define pntr_draw_pixel_unsafe(dst, x, y, color) dst->data[(y) * (dst->pitch >> 2) + x] = color
 
-#ifndef PNTR_LOAD_FILE
-#include <stdio.h> // FILE, fopen, fread
-#endif  // PNTR_LOAD_FILE
-
-#ifndef PNTR_MEMSET
-	#include <string.h>
-	#define PNTR_MEMSET memset
-#endif
-
 // cute_png
 #ifndef PNTR_NO_SUPPORT_PNG
 #ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
@@ -304,13 +310,7 @@ extern "C" {
 #define CUTE_PNG_ALLOC PNTR_MALLOC
 #define CUTE_PNG_FREE PNTR_FREE
 #define CUTE_PNG_CALLOC(num, size) PNTR_MALLOC((num) * (size))
-void* _pntr_cute_png_realloc(void* ptr, int size) {
-    void* output = PNTR_MALLOC(size);
-    PNTR_MEMCPY(output, ptr, size);
-    PNTR_FREE(ptr);
-    return output;
-}
-#define CUTE_PNG_REALLOC _pntr_cute_png_realloc
+#define CUTE_PNG_REALLOC PNTR_REALLOC
 #define CUTE_PNG_MEMCPY PNTR_MEMCPY
 #define CUTE_PNG_MEMSET PNTR_MEMSET
 #define CUTE_PNG_ASSERT(condition) // Skip assertions
@@ -326,7 +326,7 @@ void* _pntr_cute_png_realloc(void* ptr, int size) {
 #define CUTE_PNG_FERROR(fp) 1
 #define CUTE_PNG_ATLAS_MUST_FIT 1
 #define CUTE_PNG_ATLAS_FLIP_Y_AXIS_FOR_UV 0
-//#define CUTE_PNG_ATLAS_EMPTY_COLOR
+#define CUTE_PNG_ATLAS_EMPTY_COLOR 0
 #endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
 #pragma GCC diagnostic push
@@ -879,10 +879,10 @@ pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
     float cA = (float)tint.a / 255.0f;
 
     return CLITERAL(pntr_color) {
-        .r = (unsigned char)(((float)color.r / 255 * cR) * 255.0f),
-        .g = (unsigned char)(((float)color.g / 255 * cG) * 255.0f),
-        .b = (unsigned char)(((float)color.b / 255 * cB) * 255.0f),
-        .a = (unsigned char)(((float)color.a / 255 * cA) * 255.0f)
+        .r = (unsigned char)(((float)color.r / 255.0f * cR) * 255.0f),
+        .g = (unsigned char)(((float)color.g / 255.0f * cG) * 255.0f),
+        .b = (unsigned char)(((float)color.b / 255.0f * cB) * 255.0f),
+        .a = (unsigned char)(((float)color.a / 255.0f * cA) * 255.0f)
     };
 }
 
@@ -1309,9 +1309,9 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
     if (image == NULL) {
         return pntr_set_error("Requires an actual image");
     }
-    (void)dataSize;
 
 #ifdef PNTR_NO_SUPPORT_PNG
+    (void)dataSize;
     return pntr_set_error("Saving images requires to not define PNTR_NO_SUPPORT_PNG");
 #else
     cp_image_t cpImage = CLITERAL(cp_image_t) {
@@ -1345,12 +1345,14 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
 bool pntr_save_image(pntr_image* image, const char* fileName) {
     unsigned int dataSize;
     unsigned char* data = pntr_save_image_to_memory(image, &dataSize);
+
     if (data == NULL) {
         return pntr_set_error("Failed to save image");
     }
 
     bool result = pntr_save_file(fileName, data, dataSize);
     PNTR_FREE(data);
+    
     return result;
 }
 
