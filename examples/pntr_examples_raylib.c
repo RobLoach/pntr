@@ -10,9 +10,6 @@
 #define STB_NO_RECT_PACK_IMPLEMENTATION
 //#define STB_NO_TRUETYPE_IMPLEMENTATION
 
-// raylib already uses stb_image, so we skip its implementation
-#define PNTR_NO_STB_IMAGE_IMPLEMENTATION
-
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
