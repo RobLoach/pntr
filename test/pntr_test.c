@@ -251,6 +251,13 @@ int main() {
         pntr_unload_image(loadedImage);
     }
 
+    // pntr_get_pixel_data_size()
+    {
+        assert(pntr_get_pixel_data_size(1, 1, PNTR_PIXELFORMAT_RGBA8888) == 4);
+        assert(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888) == 24);
+        assert(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGBA888) == 24);
+    }
+
     // Ensure there were no errors.
     if (pntr_get_error() != NULL) {
         printf("Error: %s\n", pntr_get_error());
