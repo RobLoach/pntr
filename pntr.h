@@ -8,8 +8,8 @@
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
  * PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION
- * PNTR_LOAD_FILE A callback to use when asked to load a file. Must match the pntr_load_file definition.
- * PNTR_SAVE_FILE A callback to use when asked to save a file. Must match the pntr_save_file definition.
+ * PNTR_LOAD_FILE: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
+ * PNTR_SAVE_FILE: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
  */
 #ifndef PNTR_H__
 #define PNTR_H__
