@@ -269,9 +269,9 @@ extern "C" {
 #define PNTR_MEMSET memset
 #endif  // PNTR_MEMSET
 
-#ifndef PNTR_LOAD_FILE
+#if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
 #include <stdio.h> // FILE, fopen, fread
-#endif  // PNTR_LOAD_FILE
+#endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
 
 #ifndef PNTR_MAX
 #ifdef MAX
