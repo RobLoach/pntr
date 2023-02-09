@@ -6,9 +6,6 @@
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
 
-// raylib already uses stb_image, so we skip its implementation
-#define PNTR_NO_STB_IMAGE_IMPLEMENTATION
-
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 

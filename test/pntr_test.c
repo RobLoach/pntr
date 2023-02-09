@@ -255,7 +255,7 @@ int main() {
     {
         assert(pntr_get_pixel_data_size(1, 1, PNTR_PIXELFORMAT_RGBA8888) == 4);
         assert(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888) == 24);
-        assert(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGBA888) == 24);
+        assert(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888) == 24);
     }
 
     // Ensure there were no errors.
