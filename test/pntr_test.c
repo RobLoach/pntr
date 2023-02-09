@@ -1,11 +1,10 @@
-//#include <assert.h>
 #include <stdio.h>
 
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
-#define assert(condition) if (!(bool)(condition)) { if (pntr_get_error() != NULL) { printf("Error: %s", pntr_get_error()); return 1; } }
+#define assert(condition) if (!(bool)(condition)) { printf("Fail:      %s\nCondition: %s\n%s:%d\n", pntr_get_error() == NULL ? "" : pntr_get_error(), #condition, __FILE__, __LINE__); return 1; }
 
 int main() {
     // pntr_set_error(), pntr_get_error()
@@ -103,6 +102,7 @@ int main() {
         pntr_set_error(NULL);
 
         image = pntr_load_image("resources/image.png");
+        assert(image != NULL);
         assert(image->width == 128);
         assert(image->height == 108);
         assert(image->data != NULL);
