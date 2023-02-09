@@ -4,11 +4,10 @@
  * Configuration:
  *
  * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
- * PNTR_NO_SUPPORT_PNG: Disables loading PNG images
+ * PNTR_NO_SUPPORT_PNG: Disables loading/saving PNG images
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
- * PNTR_NO_STB_IMAGE: Avoids using stb_image
- * PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips implementing STB_IMAGE
+ * PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION
  * PNTR_LOAD_FILE A callback to use when asked to load a file. Must match the pntr_load_file definition.
  * PNTR_SAVE_FILE A callback to use when asked to save a file. Must match the pntr_save_file definition.
  */
@@ -116,7 +115,8 @@ PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y);
 PNTR_API bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite);
-PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize);
+PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat);
+PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName);
 PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
 PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
@@ -304,10 +304,13 @@ extern "C" {
 #define CUTE_PNG_ALLOC PNTR_MALLOC
 #define CUTE_PNG_FREE PNTR_FREE
 #define CUTE_PNG_CALLOC(num, size) PNTR_MALLOC((num) * (size))
-void* pntr_cute_png_realloc(void* ptr, int size) {
-    PNTR_FREE(ptr); return PNTR_MALLOC(size);
+void* _pntr_cute_png_realloc(void* ptr, int size) {
+    void* output = PNTR_MALLOC(size);
+    PNTR_MEMCPY(output, ptr, size);
+    PNTR_FREE(ptr);
+    return output;
 }
-#define CUTE_PNG_REALLOC pntr_cute_png_realloc
+#define CUTE_PNG_REALLOC _pntr_cute_png_realloc
 #define CUTE_PNG_MEMCPY PNTR_MEMCPY
 #define CUTE_PNG_MEMSET PNTR_MEMSET
 #define CUTE_PNG_ASSERT(condition) // Skip assertions
@@ -326,7 +329,20 @@ void* pntr_cute_png_realloc(void* ptr, int size) {
 //#define CUTE_PNG_ATLAS_EMPTY_COLOR
 #endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-value"
+
 #include "external/cute_png.h"
+
+#pragma GCC diagnostic pop
+
 #endif // PNTR_NO_SUPPORT_PNG
 
 /**
@@ -887,12 +903,18 @@ pntr_color pntr_color_fade(pntr_color color, float alpha) {
 }
 
 void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat) {
+    if (PNTR_PIXELFORMAT == dstPixelFormat) {
+        *((pntr_color*)dstPtr) = color;
+        return;
+    }
+
     switch (dstPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-            ((uint32_t*)(dstPtr))[0] = ((int)color.r << 24) | ((int)color.g << 16) | ((int)color.b << 8) | (int)color.a;
+            *((uint32_t*)(dstPtr)) = ((uint32_t)color.a << 24) | ((uint32_t)color.b << 16) | ((uint32_t)color.g << 8) | (uint32_t)color.r;
             break;
         case PNTR_PIXELFORMAT_ARGB8888:
-            ((uint32_t*)(dstPtr))[0] = ((int)color.a << 24) | ((int)color.r << 16) | ((int)color.g << 8) | (int)color.b;
+            // TODO: pntr_set_pixel_color() Verify the ARGB conversion.
+            *((uint32_t*)(dstPtr)) = ((int)color.b << 24) | ((int)color.g << 16) | ((int)color.r << 8) | (int)color.a;
             break;
     }
 }
@@ -1245,9 +1267,7 @@ int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat
     }
 
     int bitsPerPixel = 0;
-
     switch (pixelFormat) {
-        case PNTR_PIXELFORMAT_GRAYSCALE: bitsPerPixel = 8; break;
         case PNTR_PIXELFORMAT_RGBA8888:
         case PNTR_PIXELFORMAT_ARGB8888: bitsPerPixel = 32; break;
     }
@@ -1260,22 +1280,24 @@ void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_
         return pntr_set_error("requires a valid image");
     }
 
-    int imageSize = pntr_get_pixel_data_size(image->width, image->height, pixelFormat);
-    void* data = PNTR_MALLOC(imageSize);
-    for (int i = 0; i < width * height; i++) {
-        void* dstPtr;
-        switch (pixelFormat) {
-            case PNTR_PIXELFORMAT_GRAYSCALE:
-                dstPtr = (void*)((unsigned char*)data + i);
-            break;
-            case PNTR_PIXELFORMAT_RGBA8888:
-            case PNTR_PIXELFORMAT_ARGB8888:
-                dstPtr = (void*)((pntr_color*)data + i);
-            break;
-        }
+    unsigned int imageSize = (unsigned int)pntr_get_pixel_data_size(image->width, image->height, pixelFormat);
+    if (imageSize <= 0) {
+        return pntr_set_error("Resulted in no image");
+    }
 
+    void* data = PNTR_MALLOC(imageSize);
+    if (data == NULL) {
+        return pntr_set_error("Failed to allocate memory for new image with different pixel format");
+    }
+
+    int pixelSize = pntr_get_pixel_data_size(1, 1, pixelFormat);
+
+    for (int i = 0; i < image->width * image->height; i++) {
+        void* dstPtr = ((unsigned char*)data) + (i * pixelSize) ;
         pntr_set_pixel_color(dstPtr, image->data[i], pixelFormat);
     }
+
+    // Output the data size
     if (dataSize != NULL) {
         *dataSize = imageSize;
     }
@@ -1284,8 +1306,52 @@ void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_
 }
 
 unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
-    void* data = pntr_image_to_pixelformat(image, )
-    cp_saved_png_t png = cp_save_png_to_memory(const cp_image_t* img);
+    if (image == NULL) {
+        return pntr_set_error("Requires an actual image");
+    }
+    (void)dataSize;
+
+#ifdef PNTR_NO_SUPPORT_PNG
+    return pntr_set_error("Saving images requires to not define PNTR_NO_SUPPORT_PNG");
+#else
+    cp_image_t cpImage = CLITERAL(cp_image_t) {
+        .w = image->width,
+        .h = image->height
+    };
+
+    cpImage.pix = (cp_pixel_t*)pntr_image_to_pixelformat(image, NULL, PNTR_PIXELFORMAT_RGBA8888);
+    if (cpImage.pix == NULL) {
+        return pntr_set_error("Failed to port image to RGBA8888");
+    }
+
+    cp_saved_png_t png = cp_save_png_to_memory(&cpImage);
+    if (png.data == NULL) {
+        cp_free_png(&cpImage);
+        return pntr_set_error("Failed to save image to memory");
+    }
+
+    // Export the datasize
+    if (dataSize != NULL) {
+        *dataSize = (unsigned int)png.size;
+    }
+
+    // Free up the temporary copy
+    cp_free_png(&cpImage);
+
+    return (unsigned char*)png.data;
+#endif  // PNTR_NO_SUPPORT_PNG
+}
+
+bool pntr_save_image(pntr_image* image, const char* fileName) {
+    unsigned int dataSize;
+    unsigned char* data = pntr_save_image_to_memory(image, &dataSize);
+    if (data == NULL) {
+        return pntr_set_error("Failed to save image");
+    }
+
+    bool result = pntr_save_file(fileName, data, dataSize);
+    PNTR_FREE(data);
+    return result;
 }
 
 inline void pntr_unload_file(unsigned char* fileData) {

@@ -1,9 +1,11 @@
-#include <assert.h>
+//#include <assert.h>
 #include <stdio.h>
 
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
+
+#define assert(condition) if (!(bool)(condition)) { if (pntr_get_error() != NULL) { printf("Error: %s", pntr_get_error()); return 1; } }
 
 int main() {
     // pntr_set_error(), pntr_get_error()
@@ -115,9 +117,10 @@ int main() {
 
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
         pntr_draw_text(image, font, "Hello World!", 10, 10);
+        assert(image != NULL);
 
-        pntr_unload_font(font);
         pntr_unload_image(image);
+        pntr_unload_font(font);
     }
 
     // pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()
@@ -225,6 +228,27 @@ int main() {
         assert(fileDataResult[3] == 'l');
         assert(fileDataResult[4] == 'o');
         pntr_unload_file(fileDataResult);
+    }
+
+    // pntr_save_image()
+    {
+        int width = 400;
+        int height = 300;
+        pntr_image* saveImage = pntr_gen_image_color(width, height, PNTR_RED);
+        assert(saveImage != NULL);
+        pntr_draw_circle(saveImage, 200, 150, 80, PNTR_BLUE);
+        pntr_draw_rectangle(saveImage, 10, 10, 20, 20, PNTR_GREEN);
+        bool result = pntr_save_image(saveImage, "saveImage.png");
+        assert(result);
+        pntr_unload_image(saveImage);
+
+        // Re-load the same image to verify it worked.
+        pntr_image* loadedImage = pntr_load_image("saveImage.png");
+        assert(loadedImage != NULL);
+        assert(loadedImage->width == 400);
+        assert(loadedImage->height == height);
+        assert(pntr_image_get_color(loadedImage, 15, 15).data == PNTR_GREEN.data)
+        pntr_unload_image(loadedImage);
     }
 
     // Ensure there were no errors.
