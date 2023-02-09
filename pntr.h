@@ -1267,12 +1267,13 @@ int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat
     }
 
     int bitsPerPixel = 0;
+    int bitsPerByte = 8;
     switch (pixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-        case PNTR_PIXELFORMAT_ARGB8888: bitsPerPixel = 32; break;
+        case PNTR_PIXELFORMAT_ARGB8888: bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte; break;
     }
 
-    return bitsPerPixel * width * height / 8; // Bytes
+    return bitsPerPixel * width * height / bitsPerByte; // Bytes
 }
 
 void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat) {
@@ -1280,7 +1281,7 @@ void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_
         return pntr_set_error("requires a valid image");
     }
 
-    unsigned int imageSize = (unsigned int)pntr_get_pixel_data_size(image->width, image->height, pixelFormat);
+    int imageSize = pntr_get_pixel_data_size(image->width, image->height, pixelFormat);
     if (imageSize <= 0) {
         return pntr_set_error("Resulted in no image");
     }
@@ -1299,7 +1300,7 @@ void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_
 
     // Output the data size
     if (dataSize != NULL) {
-        *dataSize = imageSize;
+        *dataSize = (unsigned int)imageSize;
     }
 
     return data;
@@ -1352,7 +1353,7 @@ bool pntr_save_image(pntr_image* image, const char* fileName) {
 
     bool result = pntr_save_file(fileName, data, dataSize);
     PNTR_FREE(data);
-    
+
     return result;
 }
 
