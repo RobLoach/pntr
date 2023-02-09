@@ -261,6 +261,7 @@ int main() {
     // Ensure there were no errors.
     if (pntr_get_error() != NULL) {
         printf("Error: %s\n", pntr_get_error());
+        return 1;
     }
     assert(pntr_get_error() == NULL);
 
