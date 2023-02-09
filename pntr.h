@@ -323,7 +323,7 @@ extern "C" {
 #define CUTE_PNG_REALLOC PNTR_REALLOC
 #define CUTE_PNG_MEMCPY PNTR_MEMCPY
 #define CUTE_PNG_MEMSET PNTR_MEMSET
-#define CUTE_PNG_ASSERT(condition) // Skip assertions
+#define CUTE_PNG_ASSERT(condition) 0 // Skip assertions
 #define CUTE_PNG_SEEK_SET 0
 #define CUTE_PNG_SEEK_END 0
 #define CUTE_PNG_FILE void
@@ -1443,7 +1443,12 @@ int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat
     int bitsPerByte = 8;
     switch (pixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-        case PNTR_PIXELFORMAT_ARGB8888: bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte; break;
+        case PNTR_PIXELFORMAT_ARGB8888:
+            bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte;
+            break;
+        case PNTR_PIXELFORMAT_GRAYSCALE:
+            bitsPerPixel = (int)sizeof(unsigned char) * bitsPerByte;
+            break;
     }
 
     return bitsPerPixel * width * height / bitsPerByte; // Bytes

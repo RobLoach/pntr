@@ -5,6 +5,9 @@
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
+#ifdef assert
+#undef assert
+#endif
 #define assert(condition) if (!(bool)(condition)) { printf("Fail:      %s\nCondition: %s\n%s:%d\n", pntr_get_error() == NULL ? "" : pntr_get_error(), #condition, __FILE__, __LINE__); return 1; }
 
 int main() {
