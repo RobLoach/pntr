@@ -277,6 +277,45 @@ int main() {
         assert(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888) == 24);
     }
 
+    // pntr_image_alpha_border(), pntr_image_alpha_crop()
+    {
+        pntr_image* image = pntr_gen_image_color(400, 400, PNTR_BLANK);
+        assert(image != NULL);
+        assert(image->width == 400);
+        assert(image->height == 400);
+
+        pntr_draw_rectangle(image, 100, 100, 200, 200, PNTR_BLUE);
+
+        pntr_rectangle crop = pntr_image_alpha_border(image, 0);
+        assert(crop.x == 100);
+        assert(crop.y == 100);
+        assert(crop.width == 200);
+        assert(crop.height == 200);
+
+        pntr_image_alpha_crop(image, 0);
+        assert(image != NULL);
+        assert(image->width == 200);
+        assert(image->height == 200);
+
+        pntr_color color = pntr_image_get_color(image, 50, 50);
+        assert(color.data == PNTR_BLUE.data);
+
+        pntr_unload_image(image);
+    }
+
+    // pntr_image_crop()
+    {
+        pntr_image* image = pntr_gen_image_color(200, 200, PNTR_RED);
+        assert(image != NULL);
+        pntr_image_crop(image, 10, 30, 20, 50);
+        assert(image != NULL);
+        assert(image->width == 20);
+        assert(image->height == 50);
+        pntr_color color = pntr_image_get_color(image, 10, 20);
+        assert(color.data == PNTR_RED.data);
+        pntr_unload_image(image);
+    }
+
     // Ensure there were no errors.
     if (pntr_get_error() != NULL) {
         printf("Error: %s\n", pntr_get_error());
