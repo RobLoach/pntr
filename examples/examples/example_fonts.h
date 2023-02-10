@@ -25,7 +25,7 @@ void example_fonts_init() {
     }
 
     // TTF Font
-    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 24);
+    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 25, PNTR_DARKPURPLE);
     if (ttyFont == NULL) {
         printf("resources/ttyfont-16x16.png not loaded!\n");
     }
@@ -44,7 +44,7 @@ const char* example_fonts_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 0, 80, 200, 20, PNTR_BLACK);
     pntr_draw_text(canvas, bmFont, "BM Font Example", 20, 80);
 
-    // TTY Font styling
+    // TTY Font
     pntr_color background = pntr_get_color(0x0000caff);
     pntr_color border = pntr_get_color(0x8a8affff);
     pntr_draw_rectangle(canvas, 0, 120, canvas->width, 60, border);
@@ -55,11 +55,13 @@ const char* example_fonts_update(pntr_image* canvas) {
     pntr_draw_text(canvas, ttyFont, text, canvas->width / 2 - textWidth / 2, 140);
 
     // TTF Font
-    pntr_draw_rectangle(canvas, 230, 50, 100, 12, PNTR_PINK);
-    pntr_draw_text(canvas, ttfFont, "TTF Font Example", 230, 50);
+    const char* ttfText = "TTF Font Example";
+    pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText);
+    pntr_draw_rectangle(canvas, 230, 50, textSize.x, textSize.y, PNTR_LIGHTGRAY);
+    pntr_draw_text(canvas, ttfFont, ttfText, 230, 50);
 
-    //pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
-    //pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
+    // pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
+    // pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
 
     return "Fonts";
 }

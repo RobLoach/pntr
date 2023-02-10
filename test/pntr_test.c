@@ -220,7 +220,7 @@ int main() {
 
     // pntr_load_ttffont()
     {
-        pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20);
+        pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
         assert(font != NULL);
         assert(font->charactersFound > 20);
         pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
