@@ -4,12 +4,15 @@
  * Configuration:
  *
  * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
+ * PNTR_SUPPORT_TTF: Enables TTF font loading
  * PNTR_NO_SUPPORT_PNG: Disables loading/saving PNG images
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
- * PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION
+ * PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
+ * PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
  * PNTR_LOAD_FILE: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
  * PNTR_SAVE_FILE: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+ * PNTR_NO_ALPHABLEND: Skips alpha blending when rendering images
  */
 #ifndef PNTR_H__
 #define PNTR_H__
@@ -30,15 +33,15 @@ typedef union {
     uint32_t data;
     struct {
         #if defined(PNTR_PIXELFORMAT_RGBA)
-        unsigned char r;
-        unsigned char g;
-        unsigned char b;
-        unsigned char a;
+            unsigned char r;
+            unsigned char g;
+            unsigned char b;
+            unsigned char a;
         #elif defined(PNTR_PIXELFORMAT_ARGB)
-        unsigned char b;
-        unsigned char g;
-        unsigned char r;
-        unsigned char a;
+            unsigned char b;
+            unsigned char g;
+            unsigned char r;
+            unsigned char a;
         #endif
     };
 } pntr_color;
@@ -72,11 +75,13 @@ typedef struct pntr_font {
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
     char characters[PNTR_MAX_FONTS];
     int charactersFound;
+    pntr_rectangle glyphBox[PNTR_MAX_FONTS];
 } pntr_font;
 
 typedef enum {
     PNTR_PIXELFORMAT_RGBA8888 = 0,
-    PNTR_PIXELFORMAT_ARGB8888
+    PNTR_PIXELFORMAT_ARGB8888,
+    PNTR_PIXELFORMAT_GRAYSCALE
 } pntr_pixelformat;
 
 typedef enum {
@@ -144,6 +149,13 @@ PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData,
 PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API void pntr_unload_file(unsigned char* fileData);
+PNTR_API pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor);
+PNTR_API pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor);
+PNTR_API void pntr_image_color_invert(pntr_image* image);
+PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);
+PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold);
+PNTR_API void pntr_image_crop(pntr_image* image, int x, int y, int width, int height);
+PNTR_API void pntr_image_alpha_crop(pntr_image* image, float threshold);
 
 #ifdef __cplusplus
 }
@@ -313,7 +325,7 @@ extern "C" {
 #define CUTE_PNG_REALLOC PNTR_REALLOC
 #define CUTE_PNG_MEMCPY PNTR_MEMCPY
 #define CUTE_PNG_MEMSET PNTR_MEMSET
-#define CUTE_PNG_ASSERT(condition) // Skip assertions
+#define CUTE_PNG_ASSERT(condition) 0 // Skip assertions
 #define CUTE_PNG_SEEK_SET 0
 #define CUTE_PNG_SEEK_END 0
 #define CUTE_PNG_FILE void
@@ -348,6 +360,42 @@ extern "C" {
 #endif // defined(__GNUC__) || defined(__clang__)
 
 #endif // PNTR_NO_SUPPORT_PNG
+
+#ifdef PNTR_SUPPORT_TTF
+#ifndef PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+
+#ifndef STBTT_malloc
+#define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
+#define STBTT_free(x,u)   ((void)(u), PNTR_FREE(x))
+#endif
+
+#ifndef STBTT_assert
+#include <assert.h>
+#define STBTT_assert(x) assert(x)
+#endif
+
+#ifndef STBTT_strlen
+#include <string.h>
+#define STBTT_strlen(x) strlen(x)
+#endif
+
+#ifndef STBTT_memcpy
+#include <string.h>
+#define STBTT_memcpy PNTR_MEMCPY
+#define STBTT_memset PNTR_MEMSET
+#endif
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#endif  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+#include "external/stb_truetype.h"
+#pragma GCC diagnostic pop
+#endif  // PNTR_SUPPORT_TTF
 
 /**
  * The last error that was reported from pntr.
@@ -460,7 +508,7 @@ void pntr_unload_image(pntr_image* image) {
 }
 
 void pntr_draw_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    pntr_color *row  = dst->data + posY * (dst->pitch >> 2);
+    pntr_color *row = dst->data + posY * (dst->pitch >> 2);
     for (int x = posX; x < posX + width; ++x) {
         row[x] = color;
     }
@@ -555,6 +603,7 @@ void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, 
     if (dst == NULL) {
         return;
     }
+
     int changeInX = (endPosX - startPosX);
     int absChangeInX = (changeInX < 0) ? -changeInX : changeInX;
     int changeInY = (endPosY - startPosY);
@@ -650,7 +699,7 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
     pntr_draw_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
     pntr_color* srcPixel = pntr_image_get_color_pointer(dst, rect.x, rect.y);
-    for (int y = rect.y + 1; y <= rect.y + rect.height; y++) {
+    for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
         PNTR_MEMCPY(pntr_image_get_color_pointer(dst, rect.x, y), srcPixel, (size_t)rect.width * sizeof(pntr_color));
     }
 }
@@ -722,10 +771,29 @@ pntr_image* pntr_load_image(const char* fileName) {
     return pntr_load_image_from_memory(fileData, bytesRead);
 }
 
-#define COMPOSE_FAST(S, D, A) (((S * A) + (D * (256U - A))) >> 8U)
-
 inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
     pntr_draw_image_rec(dst, src, CLITERAL(pntr_rectangle){0, 0, src->width, src->height}, posX, posY);
+}
+
+pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
+    if (src.a == 0) {
+        return dst;
+    }
+    else if (src.a == 255) {
+        return src;
+    }
+
+    pntr_color out;
+    unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
+    out.a = (unsigned char)(((unsigned int)alpha * 256 + (unsigned int)dst.a * (256 - alpha)) >> 8);
+
+    if (out.a > 0) {
+        out.r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst.r * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+        out.g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst.g * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+        out.b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst.b * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+    }
+
+    return out;
 }
 
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
@@ -768,35 +836,21 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     int rows_left = dstRect.height;
     int cols = dstRect.width;
 
-#ifdef PNTR_HAVE_COMPOSITION
-    pntr_color s, d;
     while (rows_left-- > 0) {
         for (int x = 0; x < cols; ++x) {
-            s = srcPixel[x];
-            d = dstPixel[x];
-            if (s.a == 0) {
-                continue;
-            }
-            dstPixel[x].data = ((s.a + d.a * (255 - s.a)) << 24) | (COMPOSE_FAST(s.r, d.r, s.a) << 16) | (COMPOSE_FAST(s.g, d.g, s.a) << 8) | (COMPOSE_FAST(s.b, d.b, s.a));
+            #ifndef PNTR_NO_ALPHABLEND
+                dstPixel[x] = pntr_color_alpha_blend(dstPixel[x], srcPixel[x]);
+            #else
+                // Alpha transparency threshold
+                if (srcPixel[x].a >= 128) {
+                    dstPixel[x] = srcPixel[x];
+                }
+            #endif  // PNTR_NO_ALPHABLEND
         }
 
         dstPixel += dst_skip;
         srcPixel += src_skip;
     }
-#else
-    while (rows_left-- > 0) {
-        for (int x = 0; x < cols; ++x) {
-            // Alpha transparency threshold
-            if (srcPixel[x].a <= 128) {
-                continue;
-            }
-            dstPixel[x] = srcPixel[x];
-        }
-
-        dstPixel += dst_skip;
-        srcPixel += src_skip;
-    }
-#endif
 }
 
 /**
@@ -809,30 +863,43 @@ pntr_image* pntr_image_from_pixelformat(void* data, int width, int height, pntr_
         return pntr_set_error("pntr_image_from_data() requires valid data");
     }
 
-    pntr_image* output = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
-    if (output == NULL) {
-        return pntr_set_error("pntr_image_from_pixelformat() failed to allocate memory");
-    }
-
-    output->width = width;
-    output->height = height;
-    output->pitch = width * (int)sizeof(pntr_color);
-    output->data = (pntr_color*)data;
-
-    // Check if we have to convert the pixel format.
-    if (pixelFormat != PNTR_PIXELFORMAT) {
-        switch (pixelFormat) {
-            case PNTR_PIXELFORMAT_ARGB8888:
-            case PNTR_PIXELFORMAT_RGBA8888:
-            default:
-            for (int i = 0; i < width * height; i++) {
-                output->data[i] = pntr_get_pixel_color((void*)(output->data + i), pixelFormat);
+    // Check how we are to convert the pixel format.
+    switch (pixelFormat) {
+        case PNTR_PIXELFORMAT_GRAYSCALE: {
+            pntr_image* image = pntr_new_image(width, height);
+            if (image == NULL) {
+                return NULL;
             }
-            break;
+
+            unsigned char* source = (unsigned char*)data;
+            for (int i = 0; i < width * height; i++) {
+                image->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
+            }
+            PNTR_FREE(data);
+            return image;
+        }
+
+        case PNTR_PIXELFORMAT_ARGB8888:
+        case PNTR_PIXELFORMAT_RGBA8888:
+        default: {
+            pntr_image* output = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
+            if (output == NULL) {
+                return pntr_set_error("pntr_image_from_pixelformat() failed to allocate memory");
+            }
+
+            output->width = width;
+            output->height = height;
+            output->pitch = width * (int)sizeof(pntr_color);
+            output->data = (pntr_color*)data;
+
+            if (pixelFormat != PNTR_PIXELFORMAT) {
+                for (int i = 0; i < width * height; i++) {
+                    output->data[i] = pntr_get_pixel_color((void*)(output->data + i), pixelFormat);
+                }
+            }
+            return output;
         }
     }
-
-    return output;
 }
 
 pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
@@ -920,6 +987,12 @@ void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPi
             // TODO: pntr_set_pixel_color() Verify the ARGB conversion.
             *((uint32_t*)(dstPtr)) = ((int)color.b << 24) | ((int)color.g << 16) | ((int)color.r << 8) | (int)color.a;
             break;
+        case PNTR_PIXELFORMAT_GRAYSCALE: {
+            float r = (float)color.r / 255.0f;
+            float g = (float)color.g / 255.0f;
+            float b = (float)color.b / 255.0f;
+            ((unsigned char *)dstPtr)[0] = (unsigned char)((r * 0.299f + g * 0.587f + b * 0.114f) * 255.0f);
+        } break;
     }
 }
 
@@ -932,7 +1005,6 @@ pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
                 .b = ((unsigned char *)srcPtr)[2],
                 .a = ((unsigned char *)srcPtr)[3]
             };
-        break;
         case PNTR_PIXELFORMAT_ARGB8888:
             return CLITERAL(pntr_color) {
                 .a = ((unsigned char *)srcPtr)[0],
@@ -940,7 +1012,14 @@ pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
                 .g = ((unsigned char *)srcPtr)[2],
                 .b = ((unsigned char *)srcPtr)[3]
             };
-        break;
+        case PNTR_PIXELFORMAT_GRAYSCALE:
+            // White, with alpha determining grayscale value. Use tint to change color afterwards.
+            return CLITERAL(pntr_color) {
+                .r = 255,
+                .g = 255,
+                .b = 255,
+                .a = ((unsigned char*)srcPtr)[0]
+            };
     }
 
     return PNTR_BLANK;
@@ -992,6 +1071,12 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
         if (pntr_image_get_color(image, i, 0).data == seperator.data) {
             font->characters[currentCharacter] = characters[currentCharacter];
             font->rectangles[currentCharacter] = currentRectangle;
+            font->glyphBox[currentCharacter] = CLITERAL(pntr_rectangle) {
+                .x = 0,
+                .y = 0,
+                .width = currentRectangle.width,
+                .height = currentRectangle.height,
+            };
             currentRectangle.width = 0;
             currentRectangle.x = i + 1;
             currentCharacter++;
@@ -1045,6 +1130,13 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         rect.width = glyphWidth;
         rect.height = glyphHeight;
 
+        font->glyphBox[currentCharIndex] = CLITERAL(pntr_rectangle) {
+            .x = 0,
+            .y = 0,
+            .width = glyphWidth,
+            .height = glyphHeight,
+        };
+
         font->rectangles[currentCharIndex] = rect;
         font->characters[currentCharIndex] = characters[currentCharIndex];
 
@@ -1077,19 +1169,24 @@ void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX
 
     int x = posX;
     int y = posY;
+    int tallestCharacter;
 
     const char * currentChar = text;
     while (currentChar != NULL && *currentChar != '\0') {
         if (*currentChar == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
             x = posX;
-            y += font->atlas->height;
+            y += tallestCharacter;
+            tallestCharacter = 0;
         }
         else {
             for (int i = 0; i < font->charactersFound; i++) {
                 if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x, y);
-                    x += font->rectangles[i].width;
+                    pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x + font->glyphBox[i].x, y + font->glyphBox[i].y);
+                    x += font->glyphBox[i].x + font->glyphBox[i].width;
+                    if (tallestCharacter < font->glyphBox[i].y + font->glyphBox[i].height) {
+                        tallestCharacter = font->glyphBox[i].y + font->glyphBox[i].height;
+                    }
                     break;
                 }
             }
@@ -1108,23 +1205,28 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
         return CLITERAL(pntr_vector){0, 0};
     }
 
-    pntr_vector output;
-    output.x = 0;
-    output.y = font->atlas->height;
-    int x = 0;
+    pntr_vector output = CLITERAL(pntr_vector) {.x = 0, .y = 0};
+    int currentX = 0;
+    int currentY = 0;
     const char * currentChar = text;
 
     while (currentChar != NULL && *currentChar != '\0') {
         if (*currentChar == '\n') {
-            output.y += font->atlas->height;
-            x = 0;
+            output.y += currentY;
+            currentX = 0;
+            currentY = 0;
         }
         else {
             for (int i = 0; i < font->charactersFound; i++) {
                 if (font->characters[i] == *currentChar) {
-                    x += font->rectangles[i].width;
-                    if (output.x < x) {
-                        output.x = x;
+                    currentX += font->glyphBox[i].x + font->glyphBox[i].width;
+                    if (currentX > output.x) {
+                        output.x = currentX;
+                    }
+
+                    // Find the tallest character
+                    if (currentY < font->glyphBox[i].y + font->glyphBox[i].height) {
+                        currentY = font->glyphBox[i].y + font->glyphBox[i].height;
                     }
                     break;
                 }
@@ -1132,6 +1234,9 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
         }
         currentChar++;
     }
+
+    // Has at least one line.
+    output.y += currentY;
 
     return output;
 }
@@ -1199,6 +1304,121 @@ pntr_font* pntr_load_default_font() {
 #endif
 }
 
+pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor) {
+    #ifndef PNTR_SUPPORT_TTF
+        (void)fileName;
+        (void)fontSize;
+        (void)fontColor;
+        return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
+    #else
+        unsigned int bytesRead;
+        unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
+
+        if (fileData == NULL) {
+            return NULL;
+        }
+
+        return pntr_load_ttffont_from_memory(fileData, bytesRead, fontSize, fontColor);
+    #endif
+}
+
+pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor) {
+    (void)dataSize;
+    #ifndef PNTR_SUPPORT_TTF
+        (void)fileData;
+        (void)fontSize;
+        return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
+    #else
+        if (fontSize <= 0) {
+            return pntr_set_error("TTF Fonts require a fontSize > 0");
+        }
+
+        // Create the font data
+        pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
+        if (font == NULL) {
+            return pntr_set_error("Failed to allocate memory for font");
+        }
+
+        // Create the bitmap data with ample space based on the font size
+        int width = fontSize * 10;
+        int height = fontSize * 10;
+        unsigned char *bitmap = (unsigned char*)malloc((size_t)(width * height));
+        if (bitmap == NULL) {
+            PNTR_FREE(font);
+            return pntr_set_error("Failed to allocate memory for bitmap");
+        }
+
+        #define NUM_GLYPHS 95
+        stbtt_bakedchar characterData[NUM_GLYPHS];
+        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, NUM_GLYPHS, characterData);
+
+        // Don't need the fileData anymore, so clear it up
+        PNTR_FREE(fileData);
+
+        // Check to make sure the font was baked correctly
+        if (result == 0) {
+            PNTR_FREE(font);
+            PNTR_FREE(bitmap);
+            return pntr_set_error("When baking font, no rows were created");
+        }
+
+        // Capture each glyph data
+        for (int i = 0; i < NUM_GLYPHS; i++) {
+            font->rectangles[i] = CLITERAL(pntr_rectangle) {
+                .x = characterData[i].x0,
+                .y = characterData[i].y0,
+                .width = characterData[i].x1 - characterData[i].x0,
+                .height = characterData[i].y1 - characterData[i].y0
+            };
+            font->characters[i] = (char)(32 + i);
+            font->charactersFound++;
+
+            font->glyphBox[i] = CLITERAL(pntr_rectangle) {
+                .x = (int)characterData[i].xoff,
+                .y = (int)characterData[i].yoff + (int)((float)fontSize / 1.5f), // TODO: Determine correct y glyph value
+                .width = (int)characterData[i].xadvance,
+                .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
+            };
+        }
+
+        // Port the bitmap to a pntr_image as the atlas.
+        pntr_image* atlas = pntr_image_from_pixelformat((void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
+        if (atlas == NULL) {
+            PNTR_FREE(font);
+            PNTR_FREE(bitmap);
+            return pntr_set_error("Failed to convert pixel format for font");
+        }
+
+        // Clear up the unused atlas space from memory from top left
+        pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
+        pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
+
+        // Apply the font color
+        if (fontColor.data != PNTR_WHITE.data) {
+            pntr_image_color_tint(atlas, fontColor);
+        }
+
+        font->atlas = atlas;
+
+        return font;
+    #endif
+}
+
+void pntr_image_color_invert(pntr_image* image) {
+    if (image == NULL) {
+        return;
+    }
+
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            pntr_color* color = pntr_image_get_color_pointer(image, x, y);
+            color->r = 255 - color->r;
+            color->g = 255 - color->g;
+            color->b = 255 - color->b;
+        }
+    }
+}
+
 unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
     if (fileName == NULL) {
         return pntr_set_error("pntr_load_file() requires a valid fileName");
@@ -1226,6 +1446,7 @@ unsigned char *pntr_load_file(const char *fileName, unsigned int *bytesRead) {
         fclose(file);
         return pntr_set_error("Failed to allocate data for file");
     }
+
     if (bytesRead != NULL) {
         *bytesRead = (unsigned int)fread(data, sizeof(unsigned char), size, file);
     }
@@ -1274,7 +1495,12 @@ int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat
     int bitsPerByte = 8;
     switch (pixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-        case PNTR_PIXELFORMAT_ARGB8888: bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte; break;
+        case PNTR_PIXELFORMAT_ARGB8888:
+            bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte;
+            break;
+        case PNTR_PIXELFORMAT_GRAYSCALE:
+            bitsPerPixel = (int)sizeof(unsigned char) * bitsPerByte;
+            break;
     }
 
     return bitsPerPixel * width * height / bitsPerByte; // Bytes
@@ -1363,6 +1589,89 @@ bool pntr_save_image(pntr_image* image, const char* fileName) {
 
 inline void pntr_unload_file(unsigned char* fileData) {
     PNTR_FREE(fileData);
+}
+
+pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
+    if (image == NULL) {
+        return CLITERAL(pntr_rectangle) {0, 0, 0, 0};
+    }
+
+    unsigned char alphaThreshold = (unsigned char)(threshold * 255.0f);
+    int xMin = 9999999;
+    int xMax = 0;
+    int yMin = 9999999;
+    int yMax = 0;
+
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (image->data[y * (image->pitch >> 2) + x].a > alphaThreshold) {
+                if (x < xMin) {
+                    xMin = x;
+                }
+                if (x > xMax) {
+                    xMax = x;
+                }
+                if (y < yMin) {
+                    yMin = y;
+                }
+                if (y > yMax) {
+                    yMax = y;
+                }
+            }
+        }
+    }
+
+    // Check for empty blank image
+    if ((xMin != 9999999) && (xMax != 9999999)) {
+        return CLITERAL(pntr_rectangle) {
+            .x = xMin,
+            .y = yMin,
+            .width = xMax + 1 - xMin,
+            .height = yMax + 1 - yMin
+        };
+    }
+
+    return CLITERAL(pntr_rectangle) {0, 0, 0, 0};
+}
+
+void pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
+    if (image == NULL) {
+        return;
+    }
+    pntr_rectangle destination = CLITERAL(pntr_rectangle) { 0, 0, image->width, image->height };
+    pntr_rectangle source = CLITERAL(pntr_rectangle) { x, y, width, height };
+    source = pntr_rectangle_intersect(&source, &destination);
+
+    if (source.width <= 0 || source.height <= 0) {
+        return;
+    }
+    if (source.width >= image->width && source.height >= image->height) {
+        return;
+    }
+
+    pntr_image* newImage = pntr_image_from_image(image, source.x, source.y, source.width, source.height);
+    if (newImage == NULL) {
+        return;
+    }
+
+    PNTR_FREE(image->data);
+    image->data = newImage->data;
+    image->width = newImage->width;
+    image->height = newImage->height;
+    image->pitch = newImage->pitch;
+    PNTR_FREE(newImage);
+}
+
+void pntr_image_alpha_crop(pntr_image* image, float threshold) {
+    if (image == NULL) {
+        return;
+    }
+
+    pntr_rectangle crop = pntr_image_alpha_border(image, threshold);
+
+    if (crop.width > 0 && crop.height > 0) {
+        pntr_image_crop(image, crop.x, crop.y, crop.width, crop.height);
+    }
 }
 
 #ifdef __cplusplus

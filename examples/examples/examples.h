@@ -6,14 +6,13 @@
 #include "example_bunnymark.h"
 #define EXAMPLES_COUNT 4
 
-int currentExample;
+int currentExample = 0;
 pntr_image* canvas;
 pntr_font* font;
 
 void examples_init() {
     canvas = pntr_new_image(400, 225);
     font = pntr_load_default_font();
-    currentExample = 0;
     example_shapes_init();
     example_fonts_init();
     example_images_init();

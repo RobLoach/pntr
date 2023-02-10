@@ -1,9 +1,13 @@
 #include <stdio.h>
 
 #define PNTR_SUPPORT_DEFAULT_FONT
+#define PNTR_SUPPORT_TTF
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
+#ifdef assert
+#undef assert
+#endif
 #define assert(condition) if (!(bool)(condition)) { printf("Fail:      %s\nCondition: %s\n%s:%d\n", pntr_get_error() == NULL ? "" : pntr_get_error(), #condition, __FILE__, __LINE__); return 1; }
 
 int main() {
@@ -127,16 +131,18 @@ int main() {
     {
         pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         assert(pntr_measure_text(font, "Hello World!") > 50);
-        pntr_vector size = pntr_measure_text_ex(font, "pntr_measure_text_ex()");
+        pntr_vector size = pntr_measure_text_ex(font, "Hello World!");
         assert(size.x > 50);
         assert(size.y == font->atlas->height);
 
-        size = pntr_measure_text_ex(font, "On\nNew\nLines");
-        assert(size.y == font->atlas->height * 3);
-
         pntr_image* textImage = pntr_gen_image_text(font, "Hello World!");
         assert(textImage != NULL);
+        assert(textImage->width == size.x);
+        assert(textImage->height == size.y);
         pntr_unload_image(textImage);
+
+        size = pntr_measure_text_ex(font, "On\nNew\nLines");
+        assert(size.y == font->atlas->height * 3);
 
         pntr_unload_font(font);
     }
@@ -212,6 +218,19 @@ int main() {
         pntr_unload_file(fileData);
     }
 
+    // pntr_load_ttffont()
+    {
+        pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
+        assert(font != NULL);
+        assert(font->charactersFound > 20);
+        pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
+        assert(canvas != NULL);
+        assert(canvas->width > 10);
+        assert(canvas->height > 10);
+        pntr_unload_image(canvas);
+        pntr_unload_font(font);
+    }
+
     // pntr_save_file()
     {
         const char* fileName = "tempFile.txt";
@@ -256,6 +275,45 @@ int main() {
         assert(pntr_get_pixel_data_size(1, 1, PNTR_PIXELFORMAT_RGBA8888) == 4);
         assert(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888) == 24);
         assert(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888) == 24);
+    }
+
+    // pntr_image_alpha_border(), pntr_image_alpha_crop()
+    {
+        pntr_image* image = pntr_gen_image_color(400, 400, PNTR_BLANK);
+        assert(image != NULL);
+        assert(image->width == 400);
+        assert(image->height == 400);
+
+        pntr_draw_rectangle(image, 100, 100, 200, 200, PNTR_BLUE);
+
+        pntr_rectangle crop = pntr_image_alpha_border(image, 0);
+        assert(crop.x == 100);
+        assert(crop.y == 100);
+        assert(crop.width == 200);
+        assert(crop.height == 200);
+
+        pntr_image_alpha_crop(image, 0);
+        assert(image != NULL);
+        assert(image->width == 200);
+        assert(image->height == 200);
+
+        pntr_color color = pntr_image_get_color(image, 50, 50);
+        assert(color.data == PNTR_BLUE.data);
+
+        pntr_unload_image(image);
+    }
+
+    // pntr_image_crop()
+    {
+        pntr_image* image = pntr_gen_image_color(200, 200, PNTR_RED);
+        assert(image != NULL);
+        pntr_image_crop(image, 10, 30, 20, 50);
+        assert(image != NULL);
+        assert(image->width == 20);
+        assert(image->height == 50);
+        pntr_color color = pntr_image_get_color(image, 10, 20);
+        assert(color.data == PNTR_RED.data);
+        pntr_unload_image(image);
     }
 
     // Ensure there were no errors.

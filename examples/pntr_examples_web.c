@@ -4,6 +4,7 @@
 
 // Use RGBA pixel format
 #define PNTR_PIXELFORMAT_RGBA
+#define PNTR_SUPPORT_TTF
 
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
