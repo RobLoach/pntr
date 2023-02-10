@@ -329,6 +329,7 @@ extern "C" {
 #define CUTE_PNG_ATLAS_EMPTY_COLOR 0
 #endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"
@@ -338,10 +339,13 @@ extern "C" {
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wunused-value"
+#endif // defined(__GNUC__) || defined(__clang__)
 
 #include "external/cute_png.h"
 
+#if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
+#endif // defined(__GNUC__) || defined(__clang__)
 
 #endif // PNTR_NO_SUPPORT_PNG
 
