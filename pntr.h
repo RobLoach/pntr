@@ -74,11 +74,6 @@ typedef struct pntr_font {
     pntr_rectangle rectangles[PNTR_MAX_FONTS];
     char characters[PNTR_MAX_FONTS];
     int charactersFound;
-
-    int ascents[PNTR_MAX_FONTS];
-    int descents[PNTR_MAX_FONTS];
-    int linegaps[PNTR_MAX_FONTS];
-
     pntr_rectangle glyphBox[PNTR_MAX_FONTS];
 } pntr_font;
 
