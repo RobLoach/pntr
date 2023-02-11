@@ -199,7 +199,7 @@ int main() {
         pntr_color color = PNTR_RED;
         assert(color.a == 255);
         assert(color.r == 230);
-        pntr_color faded = pntr_color_fade(color, 0.5f);
+        pntr_color faded = pntr_color_fade(color, -0.5f);
         assert(faded.a == 127);
         assert(faded.r == 230);
     }
@@ -321,6 +321,7 @@ int main() {
         printf("Error: %s\n", pntr_get_error());
         return 1;
     }
+
     assert(pntr_get_error() == NULL);
 
     return 0;
