@@ -21,12 +21,12 @@
 #include <stdbool.h> // bool
 
 #ifndef PNTR_API
-#define PNTR_API
+    #define PNTR_API
 #endif
 
 // Pixel Format. Default to PNTR_PIXELFORMAT_RGBA
 #if !defined(PNTR_PIXELFORMAT_RGBA) && !defined(PNTR_PIXELFORMAT_ARGB)
-#define PNTR_PIXELFORMAT_RGBA
+    #define PNTR_PIXELFORMAT_RGBA
 #endif
 
 typedef union {
@@ -179,82 +179,82 @@ PNTR_API void pntr_image_rotate(pntr_image* image, float rotation);
 #endif
 
 #ifndef PNTR_LIGHTGRAY
-#define PNTR_LIGHTGRAY  CLITERAL(pntr_color){ .r = 200, .g = 200, .b = 200, .a = 255 }
+#define PNTR_LIGHTGRAY  CLITERAL(pntr_color) { .r = 200, .g = 200, .b = 200, .a = 255 }
 #endif
 #ifndef PNTR_GRAY
-#define PNTR_GRAY       CLITERAL(pntr_color){ .r = 130, .g = 130, .b = 130, .a = 255 }
+#define PNTR_GRAY       CLITERAL(pntr_color) { .r = 130, .g = 130, .b = 130, .a = 255 }
 #endif
 #ifndef PNTR_DARKGRAY
-#define PNTR_DARKGRAY   CLITERAL(pntr_color){ .r = 80,  .g = 80,  .b = 80,  .a = 255 }
+#define PNTR_DARKGRAY   CLITERAL(pntr_color) { .r = 80,  .g = 80,  .b = 80,  .a = 255 }
 #endif
 #ifndef PNTR_YELLOW
-#define PNTR_YELLOW     CLITERAL(pntr_color){ .r = 253, .g = 249, .b = 0,   .a =255  }
+#define PNTR_YELLOW     CLITERAL(pntr_color) { .r = 253, .g = 249, .b = 0,   .a =255  }
 #endif
 #ifndef PNTR_GOLD
-#define PNTR_GOLD       CLITERAL(pntr_color){ .r = 255, .g = 203, .b = 0,   .a =255  }
+#define PNTR_GOLD       CLITERAL(pntr_color) { .r = 255, .g = 203, .b = 0,   .a =255  }
 #endif
 #ifndef PNTR_ORANGE
-#define PNTR_ORANGE     CLITERAL(pntr_color){ .r = 255, .g = 161, .b = 0,   .a =255  }
+#define PNTR_ORANGE     CLITERAL(pntr_color) { .r = 255, .g = 161, .b = 0,   .a =255  }
 #endif
 #ifndef PNTR_PINK
-#define PNTR_PINK       CLITERAL(pntr_color){ .r = 255, .g = 109, .b = 194, .a = 255 }
+#define PNTR_PINK       CLITERAL(pntr_color) { .r = 255, .g = 109, .b = 194, .a = 255 }
 #endif
 #ifndef PNTR_RED
-#define PNTR_RED        CLITERAL(pntr_color){ .r = 230, .g = 41,  .b = 55,  .a = 255 }
+#define PNTR_RED        CLITERAL(pntr_color) { .r = 230, .g = 41,  .b = 55,  .a = 255 }
 #endif
 #ifndef PNTR_MAROON
-#define PNTR_MAROON     CLITERAL(pntr_color){ .r = 190, .g = 33,  .b = 55,  .a = 255 }
+#define PNTR_MAROON     CLITERAL(pntr_color) { .r = 190, .g = 33,  .b = 55,  .a = 255 }
 #endif
 #ifndef PNTR_GREEN
-#define PNTR_GREEN      CLITERAL(pntr_color){ .r = 0,   .g = 228, .b = 48,  .a = 255 }
+#define PNTR_GREEN      CLITERAL(pntr_color) { .r = 0,   .g = 228, .b = 48,  .a = 255 }
 #endif
 #ifndef PNTR_LIME
-#define PNTR_LIME       CLITERAL(pntr_color){ .r = 0,   .g = 158, .b = 47,  .a = 255 }
+#define PNTR_LIME       CLITERAL(pntr_color) { .r = 0,   .g = 158, .b = 47,  .a = 255 }
 #endif
 #ifndef PNTR_DARKGREEN
-#define PNTR_DARKGREEN  CLITERAL(pntr_color){ .r = 0,   .g = 117, .b = 44,  .a = 255 }
+#define PNTR_DARKGREEN  CLITERAL(pntr_color) { .r = 0,   .g = 117, .b = 44,  .a = 255 }
 #endif
 #ifndef PNTR_SKYBLUE
-#define PNTR_SKYBLUE    CLITERAL(pntr_color){ .r = 102, .g = 191, .b = 255, .a = 255 }
+#define PNTR_SKYBLUE    CLITERAL(pntr_color) { .r = 102, .g = 191, .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_BLUE
-#define PNTR_BLUE       CLITERAL(pntr_color){ .r = 0,   .g = 121, .b = 241, .a = 255 }
+#define PNTR_BLUE       CLITERAL(pntr_color) { .r = 0,   .g = 121, .b = 241, .a = 255 }
 #endif
 #ifndef PNTR_DARKBLUE
-#define PNTR_DARKBLUE   CLITERAL(pntr_color){ .r = 0,   .g = 82,  .b = 172, .a = 255 }
+#define PNTR_DARKBLUE   CLITERAL(pntr_color) { .r = 0,   .g = 82,  .b = 172, .a = 255 }
 #endif
 #ifndef PNTR_PURPLE
-#define PNTR_PURPLE     CLITERAL(pntr_color){ .r = 200, .g = 122, .b = 255, .a = 255 }
+#define PNTR_PURPLE     CLITERAL(pntr_color) { .r = 200, .g = 122, .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_VIOLET
-#define PNTR_VIOLET     CLITERAL(pntr_color){ .r = 135, .g = 60,  .b = 190, .a = 255 }
+#define PNTR_VIOLET     CLITERAL(pntr_color) { .r = 135, .g = 60,  .b = 190, .a = 255 }
 #endif
 #ifndef PNTR_DARKPURPLE
-#define PNTR_DARKPURPLE CLITERAL(pntr_color){ .r = 112, .g = 31,  .b = 126, .a = 255 }
+#define PNTR_DARKPURPLE CLITERAL(pntr_color) { .r = 112, .g = 31,  .b = 126, .a = 255 }
 #endif
 #ifndef PNTR_BEIGE
-#define PNTR_BEIGE      CLITERAL(pntr_color){ .r = 211, .g = 176, .b = 131, .a = 255 }
+#define PNTR_BEIGE      CLITERAL(pntr_color) { .r = 211, .g = 176, .b = 131, .a = 255 }
 #endif
 #ifndef PNTR_BROWN
-#define PNTR_BROWN      CLITERAL(pntr_color){ .r = 127, .g = 106, .b = 79,  .a = 255 }
+#define PNTR_BROWN      CLITERAL(pntr_color) { .r = 127, .g = 106, .b = 79,  .a = 255 }
 #endif
 #ifndef PNTR_DARKBROWN
-#define PNTR_DARKBROWN  CLITERAL(pntr_color){ .r = 76,  .g = 63,  .b = 47,  .a = 255 }
+#define PNTR_DARKBROWN  CLITERAL(pntr_color) { .r = 76,  .g = 63,  .b = 47,  .a = 255 }
 #endif
 #ifndef PNTR_WHITE
-#define PNTR_WHITE      CLITERAL(pntr_color){ .r = 255, .g = 255, .b = 255, .a = 255 }
+#define PNTR_WHITE      CLITERAL(pntr_color) { .r = 255, .g = 255, .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_BLACK
-#define PNTR_BLACK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 255 }
+#define PNTR_BLACK      CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_BLANK
-#define PNTR_BLANK      CLITERAL(pntr_color){ .r = 0,   .g = 0,   .b = 0,   .a = 0   }
+#define PNTR_BLANK      CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 0   }
 #endif
 #ifndef PNTR_MAGENTA
-#define PNTR_MAGENTA    CLITERAL(pntr_color){ .r = 255, .g = 0,   .b = 255, .a = 255 }
+#define PNTR_MAGENTA    CLITERAL(pntr_color) { .r = 255, .g = 0,   .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_RAYWHITE
-#define PNTR_RAYWHITE   CLITERAL(pntr_color){ .r = 245, .g = 245, .b = 245, .a = 255 }
+#define PNTR_RAYWHITE   CLITERAL(pntr_color) { .r = 245, .g = 245, .b = 245, .a = 255 }
 #endif
 
 #endif  // PNTR_H__
@@ -268,56 +268,56 @@ extern "C" {
 #endif
 
 #ifndef PNTR_MALLOC
-#include <stdlib.h>
-#define PNTR_MALLOC(size) malloc((size_t)(size))
+    #include <stdlib.h>
+    #define PNTR_MALLOC(size) malloc((size_t)(size))
 #endif  // PNTR_MALLOC
 
 #ifndef PNTR_FREE
-#include <stdlib.h>
-#define PNTR_FREE(obj) free((void*)(obj))
+    #include <stdlib.h>
+    #define PNTR_FREE(obj) free((void*)(obj))
 #endif  // PNTR_FREE
 
 #ifndef PNTR_REALLOC
-#include <stdlib.h>
-#define PNTR_REALLOC realloc
+    #include <stdlib.h>
+    #define PNTR_REALLOC realloc
 #endif  // PNTR_REALLOC
 
 #ifndef PNTR_MEMCPY
-#include <string.h>
-#define PNTR_MEMCPY(dest, src, n) memcpy((void*)(dest), (const void*)(src), (size_t)(n))
+    #include <string.h>
+    #define PNTR_MEMCPY(dest, src, n) memcpy((void*)(dest), (const void*)(src), (size_t)(n))
 #endif  // PNTR_MEMCPY
 
 #ifndef PNTR_MEMSET
-#include <string.h>
-#define PNTR_MEMSET memset
+    #include <string.h>
+    #define PNTR_MEMSET memset
 #endif  // PNTR_MEMSET
 
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
-#include <stdio.h> // FILE, fopen, fread
+    #include <stdio.h> // FILE, fopen, fread
 #endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
 
 #ifndef PNTR_MAX
-#ifdef MAX
-#define PNTR_MAX MAX
-#else
-#define PNTR_MAX(a, b) ((a) > (b) ? (a) : (b))
+    #ifdef MAX
+        #define PNTR_MAX MAX
+    #else
+        #define PNTR_MAX(a, b) ((a) > (b) ? (a) : (b))
+    #endif
 #endif
 
-#endif
 #ifndef PNTR_MIN
-#ifdef MIN
-#define PNTR_MIN MIN
-#else
-#define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
+    #ifdef MIN
+        #define PNTR_MIN MIN
+    #else
+        #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
+    #endif
 #endif
 
 #ifndef PNTR_PIXELFORMAT
-#if defined(PNTR_PIXELFORMAT_RGBA)
-#define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
-#elif defined(PNTR_PIXELFORMAT_ARGB)
-#define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
-#endif
+    #if defined(PNTR_PIXELFORMAT_RGBA)
+        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
+    #elif defined(PNTR_PIXELFORMAT_ARGB)
+        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
+    #endif
 #endif
 
 /**
@@ -354,21 +354,21 @@ extern "C" {
 #endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
 #if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#pragma GCC diagnostic ignored "-Wunused-value"
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wpragmas"
+    #pragma GCC diagnostic ignored "-Wunknown-pragmas"
+    #pragma GCC diagnostic ignored "-Wsign-conversion"
+    #pragma GCC diagnostic ignored "-Wconversion"
+    #pragma GCC diagnostic ignored "-Wunused-function"
+    #pragma GCC diagnostic ignored "-Wunused-variable"
+    #pragma GCC diagnostic ignored "-Wsign-compare"
+    #pragma GCC diagnostic ignored "-Wunused-value"
 #endif // defined(__GNUC__) || defined(__clang__)
 
 #include "external/cute_png.h"
 
 #if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
+    #pragma GCC diagnostic pop
 #endif // defined(__GNUC__) || defined(__clang__)
 
 #endif // PNTR_NO_SUPPORT_PNG
@@ -377,36 +377,43 @@ extern "C" {
 #ifndef PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
 
 #ifndef STBTT_malloc
-#define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
-#define STBTT_free(x,u)   ((void)(u), PNTR_FREE(x))
+    #define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
+    #define STBTT_free(x,u)   ((void)(u), PNTR_FREE(x))
 #endif
 
 #ifndef STBTT_assert
-#include <assert.h>
-#define STBTT_assert(x) assert(x)
+    #include <assert.h>
+    #define STBTT_assert(x) assert(x)
 #endif
 
 #ifndef STBTT_strlen
-#include <string.h>
-#define STBTT_strlen(x) strlen(x)
+    #include <string.h>
+    #define STBTT_strlen(x) strlen(x)
 #endif
 
 #ifndef STBTT_memcpy
-#include <string.h>
-#define STBTT_memcpy PNTR_MEMCPY
-#define STBTT_memset PNTR_MEMSET
+    #include <string.h>
+    #define STBTT_memcpy PNTR_MEMCPY
+    #define STBTT_memset PNTR_MEMSET
 #endif
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #endif  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wconversion"
+#if defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wpragmas"
+    #pragma GCC diagnostic ignored "-Wunknown-pragmas"
+    #pragma GCC diagnostic ignored "-Wsign-conversion"
+    #pragma GCC diagnostic ignored "-Wconversion"
+#endif  // defined(__GNUC__) || defined(__clang__)
+
 #include "external/stb_truetype.h"
-#pragma GCC diagnostic pop
+
+#if defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic pop
+#endif  // defined(__GNUC__) || defined(__clang__)
+
 #endif  // PNTR_SUPPORT_TTF
 
 /**
@@ -763,16 +770,16 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned 
         return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
     }
 
-#ifdef PNTR_NO_SUPPORT_PNG
-    return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_NO_SUPPORT_PNG was defined.");
-#else
-    cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
-    if (image.pix == NULL) {
-        return pntr_set_error(cp_error_reason);
-    }
+    #ifdef PNTR_NO_SUPPORT_PNG
+        return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_NO_SUPPORT_PNG was defined.");
+    #else
+        cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
+        if (image.pix == NULL) {
+            return pntr_set_error(cp_error_reason);
+        }
 
-    return pntr_image_from_pixelformat((void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
-#endif
+        return pntr_image_from_pixelformat((void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
+    #endif
 }
 
 pntr_image* pntr_load_image(const char* fileName) {
@@ -1360,40 +1367,40 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  * #define PNTR_DEFAULT_FONT load_my_font
  */
 pntr_font* pntr_load_default_font() {
-#ifdef PNTR_DEFAULT_FONT
-    return PNTR_DEFAULT_FONT();
-#elif defined(PNTR_SUPPORT_DEFAULT_FONT)
-    // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
-    #include "external/font8x8.h"
+    #ifdef PNTR_DEFAULT_FONT
+        return PNTR_DEFAULT_FONT();
+    #elif defined(PNTR_SUPPORT_DEFAULT_FONT)
+        // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
+        #include "external/font8x8.h"
 
-    // Port the font8x8 data to a pntr_image
-    pntr_image* sourceImage = pntr_image_from_pixelformat((void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
-    if (sourceImage == NULL) {
-        return pntr_set_error("pntr_load_default_font() failed to convert default image");
-    }
+        // Port the font8x8 data to a pntr_image
+        pntr_image* sourceImage = pntr_image_from_pixelformat((void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
+        if (sourceImage == NULL) {
+            return pntr_set_error("pntr_load_default_font() failed to convert default image");
+        }
 
-    // Create a copy since the original source data is held locally
-    pntr_image* newImage = pntr_image_copy(sourceImage);
+        // Create a copy since the original source data is held locally
+        pntr_image* newImage = pntr_image_copy(sourceImage);
 
-    // Since the source data is defined locally, don't free() it
-    sourceImage->data = NULL;
-    pntr_unload_image(sourceImage);
+        // Since the source data is defined locally, don't free() it
+        sourceImage->data = NULL;
+        pntr_unload_image(sourceImage);
 
-    if (newImage == NULL) {
-        return pntr_set_error("pntr_load_default_font() failed to copy the source image");
-    }
+        if (newImage == NULL) {
+            return pntr_set_error("pntr_load_default_font() failed to copy the source image");
+        }
 
-    // Load the font from the new image.
-    pntr_font* font = pntr_load_ttyfont_from_image(newImage, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
-    if (font == NULL) {
-        pntr_unload_image(newImage);
-        return pntr_set_error("Failed to load default font from image");
-    }
+        // Load the font from the new image.
+        pntr_font* font = pntr_load_ttyfont_from_image(newImage, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
+        if (font == NULL) {
+            pntr_unload_image(newImage);
+            return pntr_set_error("Failed to load default font from image");
+        }
 
-    return font;
-#else
-    return pntr_set_error("pntr_load_default_font() requires PNTR_SUPPORT_DEFAULT_FONT");
-#endif
+        return font;
+    #else
+        return pntr_set_error("pntr_load_default_font() requires PNTR_SUPPORT_DEFAULT_FONT");
+    #endif
 }
 
 pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor) {
@@ -1537,37 +1544,37 @@ unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
         return pntr_set_error("pntr_load_file() requires a valid fileName");
     }
 
-#ifdef PNTR_LOAD_FILE
-    return PNTR_LOAD_FILE(fileName, bytesRead);
-#else
-    FILE* file = fopen(fileName, "rb");
-    if (file == NULL) {
-        return pntr_set_error("Failed to open file");
-    }
+    #ifdef PNTR_LOAD_FILE
+        return PNTR_LOAD_FILE(fileName, bytesRead);
+    #else
+        FILE* file = fopen(fileName, "rb");
+        if (file == NULL) {
+            return pntr_set_error("Failed to open file");
+        }
 
-    fseek(file, 0, SEEK_END);
-    size_t size = (size_t)ftell(file);
-    fseek(file, 0, SEEK_SET);
+        fseek(file, 0, SEEK_END);
+        size_t size = (size_t)ftell(file);
+        fseek(file, 0, SEEK_SET);
 
-    if (size <= 0) {
+        if (size <= 0) {
+            fclose(file);
+            return pntr_set_error("Failed to read file");
+        }
+
+        unsigned char* data = (unsigned char*)PNTR_MALLOC(size * sizeof(unsigned char));
+        if (data == NULL) {
+            fclose(file);
+            return pntr_set_error("Failed to allocate data for file");
+        }
+
+        if (bytesRead != NULL) {
+            *bytesRead = (unsigned int)fread(data, sizeof(unsigned char), size, file);
+        }
+
         fclose(file);
-        return pntr_set_error("Failed to read file");
-    }
 
-    unsigned char* data = (unsigned char*)PNTR_MALLOC(size * sizeof(unsigned char));
-    if (data == NULL) {
-        fclose(file);
-        return pntr_set_error("Failed to allocate data for file");
-    }
-
-    if (bytesRead != NULL) {
-        *bytesRead = (unsigned int)fread(data, sizeof(unsigned char), size, file);
-    }
-
-    fclose(file);
-
-    return data;
-#endif
+        return data;
+    #endif
 }
 
 bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite) {
@@ -1575,28 +1582,28 @@ bool pntr_save_file(const char *fileName, void *data, unsigned int bytesToWrite)
         return pntr_set_error("pntr_load_file() requires a valid fileName");
     }
 
-#ifdef PNTR_SAVE_FILE
-    return PNTR_SAVE_FILE(fileName, data, bytesToWrite);
-#else
-    FILE *file = fopen(fileName, "wb");
-    if (file == NULL) {
-        return pntr_set_error("Failed to open file for writing");
-    }
+    #ifdef PNTR_SAVE_FILE
+        return PNTR_SAVE_FILE(fileName, data, bytesToWrite);
+    #else
+        FILE *file = fopen(fileName, "wb");
+        if (file == NULL) {
+            return pntr_set_error("Failed to open file for writing");
+        }
 
-    size_t count = fwrite(data, sizeof(unsigned char), bytesToWrite, file);
+        size_t count = fwrite(data, sizeof(unsigned char), bytesToWrite, file);
 
-    if (count <= 0) {
-        fclose(file);
-        return pntr_set_error("Failed to write data to file");
-    }
+        if (count <= 0) {
+            fclose(file);
+            return pntr_set_error("Failed to write data to file");
+        }
 
-    if (count != (size_t)bytesToWrite) {
-        fclose(file);
-        return pntr_set_error("Failed to write the correct amount of data");
-    }
+        if (count != (size_t)bytesToWrite) {
+            fclose(file);
+            return pntr_set_error("Failed to write the correct amount of data");
+        }
 
-    return fclose(file) == 0;
-#endif
+        return fclose(file) == 0;
+    #endif
 }
 
 int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat) {
@@ -1654,36 +1661,36 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
         return pntr_set_error("Requires an actual image");
     }
 
-#ifdef PNTR_NO_SUPPORT_PNG
-    (void)dataSize;
-    return pntr_set_error("Saving images requires to not define PNTR_NO_SUPPORT_PNG");
-#else
-    cp_image_t cpImage = CLITERAL(cp_image_t) {
-        .w = image->width,
-        .h = image->height
-    };
+    #ifdef PNTR_NO_SUPPORT_PNG
+        (void)dataSize;
+        return pntr_set_error("Saving images requires to not define PNTR_NO_SUPPORT_PNG");
+    #else
+        cp_image_t cpImage = CLITERAL(cp_image_t) {
+            .w = image->width,
+            .h = image->height
+        };
 
-    cpImage.pix = (cp_pixel_t*)pntr_image_to_pixelformat(image, NULL, PNTR_PIXELFORMAT_RGBA8888);
-    if (cpImage.pix == NULL) {
-        return pntr_set_error("Failed to port image to RGBA8888");
-    }
+        cpImage.pix = (cp_pixel_t*)pntr_image_to_pixelformat(image, NULL, PNTR_PIXELFORMAT_RGBA8888);
+        if (cpImage.pix == NULL) {
+            return pntr_set_error("Failed to port image to RGBA8888");
+        }
 
-    cp_saved_png_t png = cp_save_png_to_memory(&cpImage);
-    if (png.data == NULL) {
+        cp_saved_png_t png = cp_save_png_to_memory(&cpImage);
+        if (png.data == NULL) {
+            cp_free_png(&cpImage);
+            return pntr_set_error("Failed to save image to memory");
+        }
+
+        // Export the datasize
+        if (dataSize != NULL) {
+            *dataSize = (unsigned int)png.size;
+        }
+
+        // Free up the temporary copy
         cp_free_png(&cpImage);
-        return pntr_set_error("Failed to save image to memory");
-    }
 
-    // Export the datasize
-    if (dataSize != NULL) {
-        *dataSize = (unsigned int)png.size;
-    }
-
-    // Free up the temporary copy
-    cp_free_png(&cpImage);
-
-    return (unsigned char*)png.data;
-#endif  // PNTR_NO_SUPPORT_PNG
+        return (unsigned char*)png.data;
+    #endif  // PNTR_NO_SUPPORT_PNG
 }
 
 bool pntr_save_image(pntr_image* image, const char* fileName) {
@@ -1960,16 +1967,12 @@ void pntr_image_rotate(pntr_image* image, float rotation) {
         image->pitch = result->pitch;
         PNTR_FREE(oldData);
         PNTR_FREE(result);
-        return;
     }
-
-    if (rotation == 0.5f) {
+    else if (rotation == 0.5f) {
         pntr_image_flip_vertical(image);
         pntr_image_flip_horizontal(image);
-        return;
     }
-
-    if (rotation == 0.75f) {
+    else if (rotation == 0.75f) {
         pntr_image* result = pntr_new_image(image->height, image->width);
         if (result == NULL) {
             pntr_set_error("Failed to create memory result for rotation");
@@ -1989,12 +1992,11 @@ void pntr_image_rotate(pntr_image* image, float rotation) {
         image->pitch = result->pitch;
         PNTR_FREE(oldData);
         PNTR_FREE(result);
-        return;
     }
-
-    // TODO: pntr_image_rotate - Add dynamic rotation.
-    pntr_set_error("pntr_image_rotate: Rotation outside of 0.25f increments not supported yet");
-    return;
+    else {
+        // TODO: pntr_image_rotate - Add dynamic rotation.
+        pntr_set_error("pntr_image_rotate: Rotation outside of 0.25f increments not supported yet");
+    }
 }
 
 #ifdef __cplusplus
