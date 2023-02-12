@@ -14,6 +14,7 @@ void example_images_init() {
 
     // Resize the image
     resized = pntr_image_resize(image, image->width / 2, image->height / 2, PNTR_FILTER_NEARESTNEIGHBOR);
+    pntr_image_rotate(resized, 0.75f);
 }
 
 const char* example_images_update(pntr_image* canvas) {

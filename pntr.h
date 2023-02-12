@@ -164,6 +164,9 @@ PNTR_API void pntr_image_flip_vertical(pntr_image* image);
 PNTR_API void pntr_image_flip_horizontal(pntr_image* image);
 PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast);
 PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast);
+PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
+PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
+PNTR_API void pntr_image_rotate(pntr_image* image, float rotation);
 
 #ifdef __cplusplus
 }
@@ -320,7 +323,8 @@ extern "C" {
 /**
  * Draws a pixel on the canvas, ignoring sanity checks.
  */
-#define pntr_draw_pixel_unsafe(dst, x, y, color) dst->data[(y) * (dst->pitch >> 2) + x] = color
+#define pntr_draw_pixel_unsafe(dst, x, y, color) dst->data[((y) * (dst->pitch >> 2)) + (x)] = (color)
+#define pntr_image_get_color_unsafe(image, x, y) image->data[((y) * (image->pitch >> 2)) + (x)]
 
 // cute_png
 #ifndef PNTR_NO_SUPPORT_PNG
@@ -524,6 +528,12 @@ void pntr_draw_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int w
 
 void pntr_clear_background(pntr_image* image, pntr_color color) {
     if (image == NULL) {
+        return;
+    }
+
+    // Blank
+    if (color.a == 0) {
+        PNTR_MEMSET((void*)image->data, 0, (size_t)(image->height * image->pitch));
         return;
     }
 
@@ -945,8 +955,8 @@ void pntr_image_flip_vertical(pntr_image* image) {
     }
 
     unsigned char *flippedData = (unsigned char*)PNTR_MALLOC(image->width * image->pitch);
-    for (int i = image->height - 1, offsetSize = 0; i >= 0; i--) {
-        memcpy(flippedData + offsetSize, ((unsigned char*)image->data) + i * image->pitch, (size_t)image->pitch);
+    for (int y = image->height - 1, offsetSize = 0; y >= 0; y--) {
+        memcpy(flippedData + offsetSize, ((unsigned char*)image->data) + y * image->pitch, (size_t)image->pitch);
         offsetSize += image->pitch;
     }
 
@@ -960,11 +970,12 @@ void pntr_image_flip_horizontal(pntr_image* image) {
     }
 
     pntr_color* data = (pntr_color*)image->data;
+    pntr_color swap;
     for (int y = 0; y < image->height; y++) {
         for (int x = 0; x < image->width / 2; x++) {
-            pntr_color backup = data[y * image->width + x];
+            swap = data[y * image->width + x];
             data[y * image->width + x] = data[y * image->width + (image->width - 1 - x)];
-            data[y * image->width + (image->width - 1 - x)] = backup;
+            data[y * image->width + (image->width - 1 - x)] = swap;
         }
     }
 }
@@ -1842,6 +1853,148 @@ void pntr_image_color_contrast(pntr_image* image, float contrast) {
     for (int i = 0; i < image->width * image->height; i++) {
         image->data[i] = pntr_color_contrast(image->data[i], contrast);
     }
+}
+
+void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY) {
+    if (image == NULL || alphaMask == NULL) {
+        return;
+    }
+
+    pntr_rectangle srcRect = CLITERAL(pntr_rectangle){0, 0, alphaMask->width, alphaMask->height};
+    pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, alphaMask->width, alphaMask->height};
+    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle){0, 0, image->width, image->height};
+
+    // Update the source coordinates based on the destination
+    if (dstRect.x < 0) {
+        srcRect.x -= dstRect.x;
+        srcRect.width += dstRect.x;
+    }
+    if (dstRect.y < 0) {
+        srcRect.y -= dstRect.y;
+        srcRect.height += dstRect.y;
+    }
+
+    // Figure out the final desintation
+    dstRect = pntr_rectangle_intersect(&dstRect, &dstCanvas);
+    dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
+    dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
+
+    // Final sanity checks
+    if (srcRect.width <= 0 || srcRect.height <= 0 || dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= image->width || dstRect.y >= image->height) {
+        return;
+    }
+
+    for (int y = 0; y < dstRect.height; y++) {
+        for (int x = 0; x < dstRect.width; x++) {
+            pntr_color* pixel = pntr_image_get_color_pointer(image, posX + x, posY + y);
+            if (pixel->a > 0) {
+                pntr_color* alphaPixel = pntr_image_get_color_pointer(alphaMask, x, y);
+                pixel->a = alphaPixel->a;
+            }
+        }
+    }
+}
+
+void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
+    if (image == NULL) {
+        return;
+    }
+
+    pntr_image* newImage = pntr_gen_image_color(newWidth, newHeight, fill);
+    if (newImage == NULL) {
+        pntr_set_error("pntr_image_resize_canvas: Failed to build new image");
+        return;
+    }
+
+    pntr_draw_image(newImage, image, offsetX, offsetY);
+
+    pntr_color* oldData = image->data;
+    image->data = newImage->data;
+    image->width = newImage->width;
+    image->height = newImage->height;
+    image->pitch = newImage->pitch;
+
+    PNTR_FREE(oldData);
+    PNTR_FREE(newImage);
+}
+
+/**
+ * Rotates the given image by the given rotation.
+ *
+ * Rotation goes from 0.0f to 1.0f for a full 360' rotation.
+ *
+ * For example: 0.25f == 90 degrees
+ */
+void pntr_image_rotate(pntr_image* image, float rotation) {
+    if (image == NULL) {
+        return;
+    }
+
+    while (rotation >= 1.0f) {
+        rotation -= 1.0f;
+    }
+    while (rotation < 0.0f) {
+        rotation += 1.0f;
+    }
+    if (rotation == 0.0f) {
+        return;
+    }
+
+    if (rotation == 0.25f) {
+        pntr_image* result = pntr_new_image(image->height, image->width);
+        if (result == NULL) {
+            pntr_set_error("Failed to create memory result for rotation");
+            return;
+        }
+
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                result->data[x * image->height + (image->height - y - 1)] = pntr_image_get_color(image, x, y);
+            }
+        }
+
+        pntr_color* oldData = image->data;
+        image->data = result->data;
+        image->width = result->width;
+        image->height = result->height;
+        image->pitch = result->pitch;
+        PNTR_FREE(oldData);
+        PNTR_FREE(result);
+        return;
+    }
+
+    if (rotation == 0.5f) {
+        pntr_image_flip_vertical(image);
+        pntr_image_flip_horizontal(image);
+        return;
+    }
+
+    if (rotation == 0.75f) {
+        pntr_image* result = pntr_new_image(image->height, image->width);
+        if (result == NULL) {
+            pntr_set_error("Failed to create memory result for rotation");
+            return;
+        }
+
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                result->data[x * image->height + y] = image->data[y*image->width + image->width - x - 1];
+            }
+        }
+
+        pntr_color* oldData = image->data;
+        image->data = result->data;
+        image->width = result->width;
+        image->height = result->height;
+        image->pitch = result->pitch;
+        PNTR_FREE(oldData);
+        PNTR_FREE(result);
+        return;
+    }
+
+    // TODO: pntr_image_rotate - Add dynamic rotation.
+    pntr_set_error("pntr_image_rotate: Rotation outside of 0.25f increments not supported yet");
+    return;
 }
 
 #ifdef __cplusplus

@@ -34,7 +34,7 @@ int main() {
         if (IsKeyPressed(KEY_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
             examples_previous();
         }
-        if (IsKeyPressed(KEY_RIGHT) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             examples_next();
         }
 

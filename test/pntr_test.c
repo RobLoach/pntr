@@ -316,6 +316,72 @@ int main() {
         pntr_unload_image(image);
     }
 
+    // pntr_image_resize_canvas()
+    {
+        pntr_image* image = pntr_gen_image_color(200, 200, PNTR_BLUE);
+        assert(image != NULL);
+        pntr_image_resize_canvas(image, 400, 400, 100, 100, PNTR_RED);
+        assert(image->width == 400);
+        assert(image->height == 400);
+        pntr_color color = pntr_image_get_color(image, 50, 50);
+        assert(color.data == PNTR_RED.data);
+        color = pntr_image_get_color(image, 150, 150);
+        assert(color.data == PNTR_BLUE.data);
+        pntr_unload_image(image);
+    }
+
+    // pntr_image_rotate()
+    {
+        pntr_image* image = pntr_gen_image_color(40, 30, PNTR_BLUE);
+        assert(image != NULL);
+        pntr_draw_rectangle(image, 9, 9, 3, 3, PNTR_RED);
+
+        pntr_image_rotate(image, 0.0f);
+        assert(image->width == 40);
+        assert(image->height == 30);
+
+        {
+            pntr_image* rotated = pntr_image_copy(image);
+            assert(rotated != NULL);
+            pntr_image_rotate(rotated, 0.25f);
+            assert(rotated->width == image->height);
+            assert(rotated->height == image->width);
+            pntr_color color = pntr_image_get_color(rotated, 10, 10);
+            assert(color.data == PNTR_BLUE.data);
+            color = pntr_image_get_color(rotated, 20, 10);
+            assert(color.data == PNTR_RED.data);
+            pntr_unload_image(rotated);
+        }
+
+        {
+            pntr_image* rotated = pntr_image_copy(image);
+            assert(rotated != NULL);
+            pntr_image_rotate(rotated, 0.5f);
+            assert(rotated->width == image->width);
+            assert(rotated->height == image->height);
+            pntr_color color = pntr_image_get_color(rotated, 10, 10);
+            assert(color.data == PNTR_BLUE.data);
+            color = pntr_image_get_color(rotated, 30, 20);
+            assert(color.data == PNTR_RED.data);
+            pntr_unload_image(rotated);
+        }
+
+        {
+            pntr_image* rotated = pntr_image_copy(image);
+            assert(rotated != NULL);
+            pntr_image_rotate(rotated, 0.75f);
+            assert(rotated->width == image->height);
+            assert(rotated->height == image->width);
+            pntr_color color = pntr_image_get_color(rotated, 10, 10);
+            assert(color.data == PNTR_BLUE.data);
+            color = pntr_image_get_color(rotated, 10, 30);
+            assert(color.data == PNTR_RED.data);
+            pntr_unload_image(rotated);
+        }
+
+        pntr_unload_image(image);
+    }
+
     // Ensure there were no errors.
     if (pntr_get_error() != NULL) {
         printf("Error: %s\n", pntr_get_error());
