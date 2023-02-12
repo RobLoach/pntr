@@ -216,11 +216,7 @@ MODULE(pntr, {
         unsigned char* fileData = pntr_load_file("resources/text.txt", &bytesRead);
 
         GREATER(bytesRead, 5);
-        EQUALS(fileData[0], 'H');
-        EQUALS(fileData[1], 'e');
-        EQUALS(fileData[2], 'l');
-        EQUALS(fileData[3], 'l');
-        EQUALS(fileData[4], 'o');
+        STRCEQUALS((const char*)fileData, "Hello", 5);
         pntr_unload_file(fileData);
     });
 
@@ -247,11 +243,7 @@ MODULE(pntr, {
 
         unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
         GREATER(bytes, 5);
-        EQUALS(fileDataResult[0], 'H');
-        EQUALS(fileDataResult[1], 'e');
-        EQUALS(fileDataResult[2], 'l');
-        EQUALS(fileDataResult[3], 'l');
-        EQUALS(fileDataResult[4], 'o');
+        STRCEQUALS((const char*)fileDataResult, "Hello", 5);
         pntr_unload_file(fileDataResult);
     });
 

@@ -167,6 +167,8 @@ PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast);
 PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
 PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
 PNTR_API void pntr_image_rotate(pntr_image* image, float rotation);
+PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom);
+PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
 
 #ifdef __cplusplus
 }
@@ -1997,6 +1999,44 @@ void pntr_image_rotate(pntr_image* image, float rotation) {
         // TODO: pntr_image_rotate - Add dynamic rotation.
         pntr_set_error("pntr_image_rotate: Rotation outside of 0.25f increments not supported yet");
     }
+}
+
+pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom) {
+    pntr_image* image = pntr_new_image(width, height);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    for (int y = 0; y < height; y++) {
+        float factor = (float)y / (float)height;
+        for (int x = 0; x < width; x++) {
+            image->data[y * width + x].r = (unsigned char)((float)bottom.r * factor + (float)top.r * (1.0f - factor));
+            image->data[y * width + x].g = (unsigned char)((float)bottom.g * factor + (float)top.g * (1.0f - factor));
+            image->data[y * width + x].b = (unsigned char)((float)bottom.b * factor + (float)top.b * (1.0f - factor));
+            image->data[y * width + x].a = (unsigned char)((float)bottom.a * factor + (float)top.a * (1.0f - factor));
+        }
+    }
+
+    return image;
+}
+
+pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right) {
+    pntr_image* image = pntr_new_image(width, height);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    for (int x = 0; x < width; x++) {
+        float factor = (float)x / (float)width;
+        for (int y = 0; y < height; y++) {
+            image->data[y * width + x].r = (unsigned char)((float)right.r * factor + (float)left.r * (1.0f - factor));
+            image->data[y * width + x].g = (unsigned char)((float)right.g * factor + (float)left.g * (1.0f - factor));
+            image->data[y * width + x].b = (unsigned char)((float)right.b * factor + (float)left.b * (1.0f - factor));
+            image->data[y * width + x].a = (unsigned char)((float)right.a * factor + (float)left.a * (1.0f - factor));
+        }
+    }
+
+    return image;
 }
 
 #ifdef __cplusplus
