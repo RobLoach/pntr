@@ -1,394 +1,398 @@
-#include <stdio.h>
+#define UNIT_STATIC
+#include "unit.h"
 
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_SUPPORT_TTF
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
-#ifdef assert
-#undef assert
-#endif
-#define assert(condition) if (!(bool)(condition)) { printf("Fail:      %s\nCondition: %s\n%s:%d\n", pntr_get_error() == NULL ? "" : pntr_get_error(), #condition, __FILE__, __LINE__); return 1; }
 
-int main() {
-    // pntr_set_error(), pntr_get_error()
-    {
+#define COLOREQUALS(color1, color2) { \
+    pntr_color firstColor = (color1); \
+    pntr_color secondColor = (color2); \
+    EQUALS(firstColor.r, secondColor.r); \
+    EQUALS(firstColor.g, secondColor.g); \
+    EQUALS(firstColor.b, secondColor.b); \
+    EQUALS(firstColor.a, secondColor.a); \
+}
+
+MODULE(pntr, {
+    IT("pntr_set_error(), pntr_get_error()", {
         pntr_set_error(NULL);
-        assert(pntr_get_error() == NULL);
+        EQUALS(pntr_get_error(), NULL);
         pntr_image* image = pntr_new_image(-500, -500);
-        assert(image == NULL);
-        assert(pntr_get_error() != NULL);
+        EQUALS(image, NULL);
+        NEQUALS(pntr_get_error(), NULL);
         pntr_unload_image(image);
         pntr_set_error(NULL);
-    }
+    });
 
     // pntr_color, pntr_color_get_r(), pntr_color_get_g(), pntr_color_get_b(), pntr_color_get_a()
-    {
+    IT("pntr_color", {
         pntr_color color = PNTR_RED;
-        assert(pntr_color_get_r(color) == 230);
-        assert(pntr_color_get_g(color) == 41);
-        assert(pntr_color_get_b(color) == 55);
-        assert(pntr_color_get_a(color) == 255);
-        assert(color.r == 230);
-        assert(color.g == 41);
-        assert(color.b == 55);
-        assert(color.a == 255);
-    }
+        EQUALS(pntr_color_get_r(color), 230);
+        EQUALS(pntr_color_get_g(color), 41);
+        EQUALS(pntr_color_get_b(color), 55);
+        EQUALS(pntr_color_get_a(color), 255);
+        EQUALS(color.r, 230);
+        EQUALS(color.g, 41);
+        EQUALS(color.b, 55);
+        EQUALS(color.a, 255);
+    });
 
-    // pntr_color_set_r(), pntr_color_set_g(), pntr_color_set_b(), pntr_color_set_a()
-    {
-        pntr_color color = PNTR_BLANK;
-        pntr_color_set_r(&color, 10);
-        pntr_color_set_g(&color, 20);
-        pntr_color_set_b(&color, 30);
-        pntr_color_set_a(&color, 40);
-        assert(color.r == 10);
-        assert(color.g == 20);
-        assert(color.b == 30);
-        assert(color.a == 40);
-    }
+    IT("pntr_color_set_*", {
+        pntr_color blank = PNTR_BLANK;
+        pntr_color_set_r(&blank, 10);
+        pntr_color_set_g(&blank, 20);
+        pntr_color_set_b(&blank, 30);
+        pntr_color_set_a(&blank, 40);
+        EQUALS(blank.r, 10);
+        EQUALS(blank.g, 20);
+        EQUALS(blank.b, 30);
+        EQUALS(blank.a, 40);
+    });
 
-    // pntr_color_get_rgba()
-    {
+    IT("pntr_color_get_rgba()", {
         unsigned char color_r, color_g, color_b, color_a;
         pntr_color_get_rgba(PNTR_RED, &color_r, &color_g, &color_b, &color_a);
-        assert(color_r == 230);
-        assert(color_g == 41);
-        assert(color_b == 55);
-        assert(color_a == 255);
-    }
+        EQUALS(color_r, 230);
+        EQUALS(color_g, 41);
+        EQUALS(color_b, 55);
+        EQUALS(color_a, 255);
+    });
 
-    // pntr_get_color()
-    {
+    IT("pntr_get_color()", {
         pntr_color color = pntr_get_color(0x052c46ff);
-        assert(color.r == 5);
-        assert(color.g == 44);
-        assert(color.b == 70);
-        assert(color.a == 255);
-    }
+        EQUALS(color.r, 5);
+        EQUALS(color.g, 44);
+        EQUALS(color.b, 70);
+        EQUALS(color.a, 255);
+    });
 
-    // pntr_gen_image_color(), pntr_image_get_color(), pntr_image_get_color_pointer(), pntr_draw_pixel()
-    {
+
+    IT("pntr_gen_image_color(), pntr_image_get_color()", {
         pntr_image* image = pntr_gen_image_color(640, 480, PNTR_SKYBLUE);
-        assert(image->width == 640);
-        assert(image->height == 480);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, 640);
+        EQUALS(image->height, 480);
 
         pntr_color color = pntr_image_get_color(image, 10, 10);
-        assert(color.data == PNTR_SKYBLUE.data);
+        COLOREQUALS(color, PNTR_SKYBLUE);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_get_color_pointer(), pntr_draw_pixel()", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_SKYBLUE);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, 100);
+        EQUALS(image->height, 100);
 
         pntr_draw_pixel(image, 10, 10, PNTR_PURPLE);
-        color = pntr_image_get_color(image, 10, 10);
-        assert(color.data == PNTR_PURPLE.data);
+        pntr_color color = pntr_image_get_color(image, 10, 10);
+        COLOREQUALS(color, PNTR_PURPLE);
 
         pntr_color* colorPointer = pntr_image_get_color_pointer(image, 50, 50);
-        assert(colorPointer->data == PNTR_SKYBLUE.data);
+        COLOREQUALS(*colorPointer, PNTR_SKYBLUE);
 
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_clear_background(), pntr_draw_rectangle()
-    {
+    IT("pntr_clear_background(), pntr_draw_rectangle()", {
         pntr_image* image = pntr_new_image(100, 100);
         pntr_clear_background(image, PNTR_RED);
+
         pntr_color color = pntr_image_get_color(image, 10, 10);
-        assert(color.data == PNTR_RED.data);
+        COLOREQUALS(color, PNTR_RED);
+
+        pntr_clear_background(image, PNTR_BLANK);
+        color = pntr_image_get_color(image, 10, 10);
+        COLOREQUALS(color, PNTR_BLANK);
 
         pntr_draw_rectangle(image, 9, 9, 3, 3, PNTR_BLUE);
         color = pntr_image_get_color(image, 10, 10);
-        assert(color.data == PNTR_BLUE.data);
+        COLOREQUALS(color, PNTR_BLUE);
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_load_image()
-    {
+    IT("pntr_load_image()", {
         pntr_image* image = pntr_load_image("NotFoundImage.png");
-        assert(image == NULL);
+        EQUALS(image, NULL);
         pntr_set_error(NULL);
 
         image = pntr_load_image("resources/image.png");
-        assert(image != NULL);
-        assert(image->width == 128);
-        assert(image->height == 108);
-        assert(image->data != NULL);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, 128);
+        EQUALS(image->height, 108);
+        NEQUALS(image->data, NULL);
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_load_bmfont(), pntr_unload_font(), pntr_draw_text()
-    {
+    IT("pntr_load_bmfont(), pntr_unload_font(), pntr_draw_text()", {
         pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
-        assert(font != NULL);
-        assert(font->charactersFound > 10);
+        NEQUALS(font, NULL);
+        GREATER(font->charactersFound, 10);
 
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
         pntr_draw_text(image, font, "Hello World!", 10, 10);
-        assert(image != NULL);
+        NEQUALS(image, NULL);
 
         pntr_unload_image(image);
         pntr_unload_font(font);
-    }
+    });
 
-    // pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()
-    {
+    IT("pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()", {
         pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
-        assert(pntr_measure_text(font, "Hello World!") > 50);
+        GREATER(pntr_measure_text(font, "Hello World!"), 50);
         pntr_vector size = pntr_measure_text_ex(font, "Hello World!");
-        assert(size.x > 50);
-        assert(size.y == font->atlas->height);
+        GREATER(size.x, 50);
+        EQUALS(size.y, font->atlas->height);
 
         pntr_image* textImage = pntr_gen_image_text(font, "Hello World!");
-        assert(textImage != NULL);
-        assert(textImage->width == size.x);
-        assert(textImage->height == size.y);
+        NEQUALS(textImage, NULL);
+        EQUALS(textImage->width, size.x);
+        EQUALS(textImage->height, size.y);
         pntr_unload_image(textImage);
 
         size = pntr_measure_text_ex(font, "On\nNew\nLines");
-        assert(size.y == font->atlas->height * 3);
+        EQUALS(size.y, font->atlas->height * 3);
 
         pntr_unload_font(font);
-    }
+    });
 
-    // pntr_load_ttyfont()
-    {
+    IT("pntr_load_ttyfont()", {
         pntr_font* font = pntr_load_ttyfont("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
-        assert(font != NULL);
-        assert(font->charactersFound > 20);
+        NEQUALS(font, NULL);
+        GREATER(font->charactersFound, 20);
         pntr_unload_font(font);
-    }
+    });
 
-    // pntr_load_default_font()
-    {
+    IT("pntr_load_default_font()", {
         pntr_font* font = pntr_load_default_font();
-        assert(font != NULL);
-        assert(font->charactersFound > 10);
+        NEQUALS(font, NULL);
+        GREATER(font->charactersFound, 10);
         pntr_unload_font(font);
-    }
+    });
 
-    // pntr_image_resize()
-    {
+    IT("pntr_image_resize()", {
         pntr_image* image = pntr_new_image(300, 100);
-        assert(image != NULL);
+        NEQUALS(image, NULL);
 
         pntr_image* resized = pntr_image_resize(image, 640, 480, PNTR_FILTER_NEARESTNEIGHBOR);
-        assert(resized != NULL);
-        assert(resized->width == 640);
-        assert(resized->height == 480);
+        NEQUALS(resized, NULL);
+        EQUALS(resized->width, 640);
+        EQUALS(resized->height, 480);
         pntr_unload_image(resized);
 
         resized = pntr_image_resize(image, 100, 100, PNTR_FILTER_NEARESTNEIGHBOR);
-        assert(resized != NULL);
-        assert(resized->width == 100);
-        assert(resized->height == 100);
+        NEQUALS(resized, NULL);
+        EQUALS(resized->width, 100);
+        EQUALS(resized->height, 100);
         pntr_unload_image(resized);
 
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_image_color_replace()
-    {
+    IT("pntr_image_color_replace()", {
         pntr_image* image = pntr_gen_image_color(100, 100, PNTR_BLUE);
         pntr_color color = pntr_image_get_color(image, 10, 10);
-        assert(color.data == PNTR_BLUE.data);
+        COLOREQUALS(color, PNTR_BLUE);
         pntr_image_color_replace(image, PNTR_BLUE, PNTR_RED);
         color = pntr_image_get_color(image, 10, 10);
-        assert(color.data == PNTR_RED.data);
+        COLOREQUALS(color, PNTR_RED);
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_color_fade()
-    {
+    IT("pntr_color_fade()", {
         pntr_color color = PNTR_RED;
-        assert(color.a == 255);
-        assert(color.r == 230);
+        EQUALS(color.a, 255);
+        EQUALS(color.r, 230);
         pntr_color faded = pntr_color_fade(color, -0.5f);
-        assert(faded.a == 127);
-        assert(faded.r == 230);
-    }
+        EQUALS(faded.a, 127);
+        EQUALS(faded.r, 230);
+    });
 
-    // pntr_load_file(), pntr_unload_file()
-    {
+    IT("pntr_load_file(), pntr_unload_file()", {
         unsigned int bytesRead;
         unsigned char* fileData = pntr_load_file("resources/text.txt", &bytesRead);
 
-        assert(bytesRead > 5);
-        assert(fileData[0] == 'H');
-        assert(fileData[1] == 'e');
-        assert(fileData[2] == 'l');
-        assert(fileData[3] == 'l');
-        assert(fileData[4] == 'o');
+        GREATER(bytesRead, 5);
+        EQUALS(fileData[0], 'H');
+        EQUALS(fileData[1], 'e');
+        EQUALS(fileData[2], 'l');
+        EQUALS(fileData[3], 'l');
+        EQUALS(fileData[4], 'o');
         pntr_unload_file(fileData);
-    }
+    });
 
-    // pntr_load_ttffont()
-    {
+    IT("pntr_load_ttffont()", {
         pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
-        assert(font != NULL);
-        assert(font->charactersFound > 20);
+        NEQUALS(font, NULL);
+        GREATER(font->charactersFound, 20);
+
         pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
-        assert(canvas != NULL);
-        assert(canvas->width > 10);
-        assert(canvas->height > 10);
+        NEQUALS(canvas, NULL);
+        GREATER(canvas->width, 10);
+        GREATER(canvas->height, 10);
+
         pntr_unload_image(canvas);
         pntr_unload_font(font);
-    }
+    });
 
-    // pntr_save_file()
-    {
+    IT("pntr_save_file()", {
         const char* fileName = "tempFile.txt";
         const char* fileData = "Hello World!";
         unsigned int bytes = 12;
         bool result = pntr_save_file(fileName, (unsigned char*)fileData, bytes);
-        assert(result);
+        EQUALS(result, true);
 
         unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
-        assert(bytes > 5);
-        assert(fileDataResult[0] == 'H');
-        assert(fileDataResult[1] == 'e');
-        assert(fileDataResult[2] == 'l');
-        assert(fileDataResult[3] == 'l');
-        assert(fileDataResult[4] == 'o');
+        GREATER(bytes, 5);
+        EQUALS(fileDataResult[0], 'H');
+        EQUALS(fileDataResult[1], 'e');
+        EQUALS(fileDataResult[2], 'l');
+        EQUALS(fileDataResult[3], 'l');
+        EQUALS(fileDataResult[4], 'o');
         pntr_unload_file(fileDataResult);
-    }
+    });
 
-    // pntr_save_image()
-    {
+    IT("pntr_save_image()", {
         int width = 400;
         int height = 300;
         pntr_image* saveImage = pntr_gen_image_color(width, height, PNTR_RED);
-        assert(saveImage != NULL);
+        NEQUALS(saveImage, NULL);
         pntr_draw_circle(saveImage, 200, 150, 80, PNTR_BLUE);
         pntr_draw_rectangle(saveImage, 10, 10, 20, 20, PNTR_GREEN);
         bool result = pntr_save_image(saveImage, "saveImage.png");
-        assert(result);
+        EQUALS(result, true);
         pntr_unload_image(saveImage);
 
-        // Re-load the same image to verify it worked.
         pntr_image* loadedImage = pntr_load_image("saveImage.png");
-        assert(loadedImage != NULL);
-        assert(loadedImage->width == 400);
-        assert(loadedImage->height == height);
-        assert(pntr_image_get_color(loadedImage, 15, 15).data == PNTR_GREEN.data)
+        NEQUALS(loadedImage, NULL);
+        EQUALS(loadedImage->width, 400);
+        EQUALS(loadedImage->height, height);
+        COLOREQUALS(pntr_image_get_color(loadedImage, 15, 15), PNTR_GREEN)
         pntr_unload_image(loadedImage);
-    }
+    });
 
-    // pntr_get_pixel_data_size()
-    {
-        assert(pntr_get_pixel_data_size(1, 1, PNTR_PIXELFORMAT_RGBA8888) == 4);
-        assert(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888) == 24);
-        assert(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888) == 24);
-    }
+    IT("pntr_get_pixel_data_size()", {
+        EQUALS(pntr_get_pixel_data_size(1, 1, PNTR_PIXELFORMAT_RGBA8888), 4);
+        EQUALS(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888), 24);
+        EQUALS(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888), 24);
+    });
 
-    // pntr_image_alpha_border(), pntr_image_alpha_crop()
-    {
+    IT("pntr_image_alpha_border(), pntr_image_alpha_crop()", {
         pntr_image* image = pntr_gen_image_color(400, 400, PNTR_BLANK);
-        assert(image != NULL);
-        assert(image->width == 400);
-        assert(image->height == 400);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, 400);
+        EQUALS(image->height, 400);
 
         pntr_draw_rectangle(image, 100, 100, 200, 200, PNTR_BLUE);
 
         pntr_rectangle crop = pntr_image_alpha_border(image, 0);
-        assert(crop.x == 100);
-        assert(crop.y == 100);
-        assert(crop.width == 200);
-        assert(crop.height == 200);
+        EQUALS(crop.x, 100);
+        EQUALS(crop.y, 100);
+        EQUALS(crop.width, 200);
+        EQUALS(crop.height, 200);
 
         pntr_image_alpha_crop(image, 0);
-        assert(image != NULL);
-        assert(image->width == 200);
-        assert(image->height == 200);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, 200);
+        EQUALS(image->height, 200);
 
         pntr_color color = pntr_image_get_color(image, 50, 50);
-        assert(color.data == PNTR_BLUE.data);
+        COLOREQUALS(color, PNTR_BLUE);
 
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_image_crop()
-    {
+    IT("pntr_image_crop()", {
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_RED);
-        assert(image != NULL);
+        NEQUALS(image, NULL);
         pntr_image_crop(image, 10, 30, 20, 50);
-        assert(image != NULL);
-        assert(image->width == 20);
-        assert(image->height == 50);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, 20);
+        EQUALS(image->height, 50);
         pntr_color color = pntr_image_get_color(image, 10, 20);
-        assert(color.data == PNTR_RED.data);
+        COLOREQUALS(color, PNTR_RED);
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_image_resize_canvas()
-    {
+    IT("pntr_image_resize_canvas()", {
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_BLUE);
-        assert(image != NULL);
+        NEQUALS(image, NULL);
         pntr_image_resize_canvas(image, 400, 400, 100, 100, PNTR_RED);
-        assert(image->width == 400);
-        assert(image->height == 400);
+        EQUALS(image->width, 400);
+        EQUALS(image->height, 400);
         pntr_color color = pntr_image_get_color(image, 50, 50);
-        assert(color.data == PNTR_RED.data);
+        COLOREQUALS(color, PNTR_RED);
         color = pntr_image_get_color(image, 150, 150);
-        assert(color.data == PNTR_BLUE.data);
+        COLOREQUALS(color, PNTR_BLUE);
         pntr_unload_image(image);
-    }
+    });
 
-    // pntr_image_rotate()
-    {
+    IT("pntr_image_rotate()", {
         pntr_image* image = pntr_gen_image_color(40, 30, PNTR_BLUE);
-        assert(image != NULL);
+        NEQUALS(image, NULL);
         pntr_draw_rectangle(image, 9, 9, 3, 3, PNTR_RED);
 
         pntr_image_rotate(image, 0.0f);
-        assert(image->width == 40);
-        assert(image->height == 30);
+        EQUALS(image->width, 40);
+        EQUALS(image->height, 30);
 
-        {
+        IT("pntr_image_rotate(image, 0.25f)", {
             pntr_image* rotated = pntr_image_copy(image);
-            assert(rotated != NULL);
+            NEQUALS(rotated, NULL);
             pntr_image_rotate(rotated, 0.25f);
-            assert(rotated->width == image->height);
-            assert(rotated->height == image->width);
+            EQUALS(rotated->width, image->height);
+            EQUALS(rotated->height, image->width);
             pntr_color color = pntr_image_get_color(rotated, 10, 10);
-            assert(color.data == PNTR_BLUE.data);
+            COLOREQUALS(color, PNTR_BLUE);
             color = pntr_image_get_color(rotated, 20, 10);
-            assert(color.data == PNTR_RED.data);
+            COLOREQUALS(color, PNTR_RED);
             pntr_unload_image(rotated);
-        }
+        })
 
-        {
+        IT("pntr_image_rotate(image, 0.5f)", {
             pntr_image* rotated = pntr_image_copy(image);
-            assert(rotated != NULL);
+            NEQUALS(rotated, NULL);
             pntr_image_rotate(rotated, 0.5f);
-            assert(rotated->width == image->width);
-            assert(rotated->height == image->height);
+            EQUALS(rotated->width, image->width);
+            EQUALS(rotated->height, image->height);
             pntr_color color = pntr_image_get_color(rotated, 10, 10);
-            assert(color.data == PNTR_BLUE.data);
+            COLOREQUALS(color, PNTR_BLUE);
             color = pntr_image_get_color(rotated, 30, 20);
-            assert(color.data == PNTR_RED.data);
+            COLOREQUALS(color, PNTR_RED);
             pntr_unload_image(rotated);
-        }
+        });
 
-        {
+        IT("pntr_image_rotate(image, 0.75f)", {
             pntr_image* rotated = pntr_image_copy(image);
-            assert(rotated != NULL);
+            NEQUALS(rotated, NULL);
             pntr_image_rotate(rotated, 0.75f);
-            assert(rotated->width == image->height);
-            assert(rotated->height == image->width);
+            EQUALS(rotated->width, image->height);
+            EQUALS(rotated->height, image->width);
             pntr_color color = pntr_image_get_color(rotated, 10, 10);
-            assert(color.data == PNTR_BLUE.data);
+            COLOREQUALS(color, PNTR_BLUE);
             color = pntr_image_get_color(rotated, 10, 30);
-            assert(color.data == PNTR_RED.data);
+            COLOREQUALS(color, PNTR_RED);
             pntr_unload_image(rotated);
-        }
+        });
 
         pntr_unload_image(image);
-    }
+    });
 
-    // Ensure there were no errors.
-    if (pntr_get_error() != NULL) {
-        printf("Error: %s\n", pntr_get_error());
-        return 1;
-    }
+    IT("didn't error out", {
+        const char* err = "";
+        if (pntr_get_error() != NULL) {
+            err = pntr_get_error();
+        }
 
-    assert(pntr_get_error() == NULL);
+        STREQUALS(err, "");
+    });
+});
 
-    return 0;
+int main() {
+    UNIT_CREATE("pntr");
+    UNIT_MODULE(pntr);
+    return UNIT_RUN();
 }
