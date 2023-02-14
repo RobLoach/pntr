@@ -3,6 +3,7 @@
 
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_SUPPORT_TTF
+#define PNTR_SUPPORT_FILTER_SMOOTH
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
@@ -177,17 +178,29 @@ MODULE(pntr, {
         pntr_image* image = pntr_new_image(300, 100);
         NEQUALS(image, NULL);
 
-        pntr_image* resized = pntr_image_resize(image, 640, 480, PNTR_FILTER_NEARESTNEIGHBOR);
-        NEQUALS(resized, NULL);
-        EQUALS(resized->width, 640);
-        EQUALS(resized->height, 480);
-        pntr_unload_image(resized);
+        IT("pntr_image_resize() same size", {
+            pntr_image* resized = pntr_image_resize(image, 640, 480, PNTR_FILTER_NEARESTNEIGHBOR);
+            NEQUALS(resized, NULL);
+            EQUALS(resized->width, 640);
+            EQUALS(resized->height, 480);
+            pntr_unload_image(resized);
+        });
 
-        resized = pntr_image_resize(image, 100, 100, PNTR_FILTER_NEARESTNEIGHBOR);
-        NEQUALS(resized, NULL);
-        EQUALS(resized->width, 100);
-        EQUALS(resized->height, 100);
-        pntr_unload_image(resized);
+        IT("pntr_image_resize() nearest neighbor", {
+            pntr_image* resized = pntr_image_resize(image, 100, 100, PNTR_FILTER_NEARESTNEIGHBOR);
+            NEQUALS(resized, NULL);
+            EQUALS(resized->width, 100);
+            EQUALS(resized->height, 100);
+            pntr_unload_image(resized);
+        });
+
+        IT("pntr_image_resize() smooth", {
+            pntr_image* resized = pntr_image_resize(image, 800, 600, PNTR_FILTER_SMOOTH);
+            NEQUALS(resized, NULL);
+            EQUALS(resized->width, 800);
+            EQUALS(resized->height, 600);
+            pntr_unload_image(resized);
+        });
 
         pntr_unload_image(image);
     });

@@ -3,8 +3,9 @@
 #include "example_shapes.h"
 #include "example_fonts.h"
 #include "example_images.h"
+#include "example_images_resize.h"
 #include "example_bunnymark.h"
-#define EXAMPLES_COUNT 4
+#define EXAMPLES_COUNT 5
 
 int currentExample = 0;
 pntr_image* canvas;
@@ -16,6 +17,7 @@ void examples_init() {
     example_shapes_init();
     example_fonts_init();
     example_images_init();
+    example_images_resize_init();
     example_bunnymark_init();
 }
 
@@ -35,6 +37,9 @@ void examples_update() {
         case 3:
             exampleTitle = example_bunnymark_update(canvas);
             break;
+        case 4:
+            exampleTitle = example_images_resize_update(canvas);
+            break;
     }
 
     pntr_draw_text(canvas, font, "Example:", 10, 10);
@@ -46,6 +51,7 @@ void examples_unload() {
     example_shapes_unload();
     example_fonts_unload();
     example_images_unload();
+    example_images_resize_unload();
     example_bunnymark_unload();
     pntr_unload_image(canvas);
 }

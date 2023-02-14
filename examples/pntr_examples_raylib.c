@@ -6,6 +6,8 @@
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_SUPPORT_TTF
+#define PNTR_SUPPORT_FILTER_SMOOTH
+#define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION // raylib embeds stb_image_resize, so tell pntr to skip its implementation
 
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"

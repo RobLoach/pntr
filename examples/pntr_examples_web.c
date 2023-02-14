@@ -8,6 +8,7 @@
 
 // Support the default font
 #define PNTR_SUPPORT_DEFAULT_FONT
+#define PNTR_SUPPORT_FILTER_SMOOTH
 
 // Tell Emscripten to export the pntr API
 #define PNTR_API EMSCRIPTEN_KEEPALIVE

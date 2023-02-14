@@ -6,6 +6,7 @@
  * PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
  * PNTR_SUPPORT_TTF: Enables TTF font loading
  * PNTR_NO_SUPPORT_PNG: Disables loading/saving PNG images
+ * PNTR_SUPPORT_FILTER_SMOOTH: When resizing images, use stb_image, which is slower, but can look better.
  * PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
  * PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
@@ -85,7 +86,9 @@ typedef enum {
 } pntr_pixelformat;
 
 typedef enum {
-    PNTR_FILTER_NEARESTNEIGHBOR = 0
+    PNTR_FILTER_DEFAULT = 0,
+    PNTR_FILTER_NEARESTNEIGHBOR,
+    PNTR_FILTER_SMOOTH
 } pntr_filter;
 
 #ifdef __cplusplus
@@ -330,93 +333,144 @@ extern "C" {
 
 // cute_png
 #ifndef PNTR_NO_SUPPORT_PNG
-#ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
-#define CUTE_PNG_IMPLEMENTATION
-#define CUTE_PNG_ALLOCA PNTR_MALLOC
-#define CUTE_PNG_ALLOC PNTR_MALLOC
-#define CUTE_PNG_FREE PNTR_FREE
-#define CUTE_PNG_CALLOC(num, size) PNTR_MALLOC((num) * (size))
-#define CUTE_PNG_REALLOC PNTR_REALLOC
-#define CUTE_PNG_MEMCPY PNTR_MEMCPY
-#define CUTE_PNG_MEMSET PNTR_MEMSET
-#define CUTE_PNG_ASSERT(condition) 0 // Skip assertions
-#define CUTE_PNG_SEEK_SET 0
-#define CUTE_PNG_SEEK_END 0
-#define CUTE_PNG_FILE void
-#define CUTE_PNG_FOPEN(filename, mode) (CUTE_PNG_FILE*)filename
-#define CUTE_PNG_FSEEK(stream, offset, origin) offset
-#define CUTE_PNG_FREAD(data, size, num, fp) (void)(data)
-#define CUTE_PNG_FTELL(fp) 0
-#define CUTE_PNG_FWRITE(data, size, num, fp) (void)(data)
-#define CUTE_PNG_FCLOSE (void)
-#define CUTE_PNG_FERROR(fp) 1
-#define CUTE_PNG_ATLAS_MUST_FIT 1
-#define CUTE_PNG_ATLAS_FLIP_Y_AXIS_FOR_UV 0
-#define CUTE_PNG_ATLAS_EMPTY_COLOR 0
-#endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
+    #ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
+        #define CUTE_PNG_IMPLEMENTATION
+        #define CUTE_PNG_ALLOCA PNTR_MALLOC
+        #define CUTE_PNG_ALLOC PNTR_MALLOC
+        #define CUTE_PNG_FREE PNTR_FREE
+        #define CUTE_PNG_CALLOC(num, size) PNTR_MALLOC((num) * (size))
+        #define CUTE_PNG_REALLOC PNTR_REALLOC
+        #define CUTE_PNG_MEMCPY PNTR_MEMCPY
+        #define CUTE_PNG_MEMSET PNTR_MEMSET
+        #define CUTE_PNG_ASSERT(condition) 0 // Skip assertions
+        #define CUTE_PNG_SEEK_SET 0
+        #define CUTE_PNG_SEEK_END 0
+        #define CUTE_PNG_FILE void
+        #define CUTE_PNG_FOPEN(filename, mode) (CUTE_PNG_FILE*)filename
+        #define CUTE_PNG_FSEEK(stream, offset, origin) offset
+        #define CUTE_PNG_FREAD(data, size, num, fp) (void)(data)
+        #define CUTE_PNG_FTELL(fp) 0
+        #define CUTE_PNG_FWRITE(data, size, num, fp) (void)(data)
+        #define CUTE_PNG_FCLOSE (void)
+        #define CUTE_PNG_FERROR(fp) 1
+        #define CUTE_PNG_ATLAS_MUST_FIT 1
+        #define CUTE_PNG_ATLAS_FLIP_Y_AXIS_FOR_UV 0
+        #define CUTE_PNG_ATLAS_EMPTY_COLOR 0
+    #endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
-#if defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wpragmas"
-    #pragma GCC diagnostic ignored "-Wunknown-pragmas"
-    #pragma GCC diagnostic ignored "-Wsign-conversion"
-    #pragma GCC diagnostic ignored "-Wconversion"
-    #pragma GCC diagnostic ignored "-Wunused-function"
-    #pragma GCC diagnostic ignored "-Wunused-variable"
-    #pragma GCC diagnostic ignored "-Wsign-compare"
-    #pragma GCC diagnostic ignored "-Wunused-value"
-#endif // defined(__GNUC__) || defined(__clang__)
+    #if defined(__GNUC__) || defined(__clang__)
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wpragmas"
+        #pragma GCC diagnostic ignored "-Wunknown-pragmas"
+        #pragma GCC diagnostic ignored "-Wsign-conversion"
+        #pragma GCC diagnostic ignored "-Wconversion"
+        #pragma GCC diagnostic ignored "-Wunused-function"
+        #pragma GCC diagnostic ignored "-Wunused-variable"
+        #pragma GCC diagnostic ignored "-Wsign-compare"
+        #pragma GCC diagnostic ignored "-Wunused-value"
+    #endif // defined(__GNUC__) || defined(__clang__)
 
-#include "external/cute_png.h"
+    #include "external/cute_png.h"
+    #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
+    #ifdef CUTE_PNG_IMPLEMENTATION
+        #undef CUTE_PNG_IMPLEMENTATION
+    #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic pop
-#endif // defined(__GNUC__) || defined(__clang__)
+    #if defined(__GNUC__) || defined(__clang__)
+        #pragma GCC diagnostic pop
+    #endif // defined(__GNUC__) || defined(__clang__)
 
 #endif // PNTR_NO_SUPPORT_PNG
 
+// STB TrueType
 #ifdef PNTR_SUPPORT_TTF
-#ifndef PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+    #ifdef PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+        #ifdef STB_TRUETYPE_IMPLEMENTATION
+            #undef STB_TRUETYPE_IMPLEMENTATION
+        #endif  // STB_TRUETYPE_IMPLEMENTATION
+    #else
+        #ifndef STBTT_malloc
+            #define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
+        #endif  // STBTT_malloc
 
-#ifndef STBTT_malloc
-    #define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
-    #define STBTT_free(x,u)   ((void)(u), PNTR_FREE(x))
-#endif
+        #ifndef STBTT_free
+            #define STBTT_free(x,u)   ((void)(u), PNTR_FREE(x))
+        #endif  // STBTT_free
 
-#ifndef STBTT_assert
-    #include <assert.h>
-    #define STBTT_assert(x) assert(x)
-#endif
+        #ifndef STBTT_assert
+            #define STBTT_assert(x) ((void)(0))
+        #endif  // STBTT_assert
 
-#ifndef STBTT_strlen
-    #include <string.h>
-    #define STBTT_strlen(x) strlen(x)
-#endif
+        #ifndef STBTT_strlen
+            #include <string.h>
+            #define STBTT_strlen(x) strlen(x)
+        #endif  // STBTT_strlen
 
-#ifndef STBTT_memcpy
-    #include <string.h>
-    #define STBTT_memcpy PNTR_MEMCPY
-    #define STBTT_memset PNTR_MEMSET
-#endif
+        #ifndef STBTT_memcpy
+            #define STBTT_memcpy PNTR_MEMCPY
+            #define STBTT_memset PNTR_MEMSET
+        #endif  // STBTT_memcpy
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#endif  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+        #define STB_TRUETYPE_IMPLEMENTATION
+    #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wpragmas"
-    #pragma GCC diagnostic ignored "-Wunknown-pragmas"
-    #pragma GCC diagnostic ignored "-Wsign-conversion"
-    #pragma GCC diagnostic ignored "-Wconversion"
-#endif  // defined(__GNUC__) || defined(__clang__)
+    #if defined(__GNUC__) || defined(__clang__)
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wpragmas"
+        #pragma GCC diagnostic ignored "-Wunknown-pragmas"
+        #pragma GCC diagnostic ignored "-Wsign-conversion"
+        #pragma GCC diagnostic ignored "-Wconversion"
+    #endif  // defined(__GNUC__) || defined(__clang__)
 
-#include "external/stb_truetype.h"
+    #include "external/stb_truetype.h"
+    #define PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
 
-#if defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic pop
-#endif  // defined(__GNUC__) || defined(__clang__)
+    #if defined(__GNUC__) || defined(__clang__)
+        #pragma GCC diagnostic pop
+    #endif  // defined(__GNUC__) || defined(__clang__)
 
 #endif  // PNTR_SUPPORT_TTF
+
+// STB Image Resize
+#ifdef PNTR_SUPPORT_FILTER_SMOOTH
+    #ifdef PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+        #ifdef STB_IMAGE_RESIZE_IMPLEMENTATION
+            #undef STB_IMAGE_RESIZE_IMPLEMENTATION
+        #endif
+        // Just declare the function we need.
+        int stbir_resize_uint8_srgb(const unsigned char *input_pixels, int input_w, int input_h, int input_stride_in_bytes,
+            unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+            int num_channels, int alpha_channel, int flags);
+    #else
+        #define STB_IMAGE_RESIZE_IMPLEMENTATION
+        #ifndef STBIR_MALLOC
+            #define STBIR_MALLOC(size, context) ((void)(context), PNTR_MALLOC(size))
+        #endif
+        #ifndef STBIR_FREE
+            #define STBIR_FREE(ptr, context) ((void)(context), PNTR_FREE(ptr))
+        #endif
+        #ifndef STBIR_ASSERT
+            #define STBIR_ASSERT(val) ((void)(val))
+        #endif
+
+        #if defined(__GNUC__) || defined(__clang__)
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wpragmas"
+            #pragma GCC diagnostic ignored "-Wunknown-pragmas"
+            #pragma GCC diagnostic ignored "-Wsign-conversion"
+            #pragma GCC diagnostic ignored "-Wconversion"
+            #pragma GCC diagnostic ignored "-Wunused-parameter"
+        #endif  // defined(__GNUC__) || defined(__clang__)
+
+        #include "external/stb_image_resize.h"
+
+        #if defined(__GNUC__) || defined(__clang__)
+            #pragma GCC diagnostic pop
+        #endif  // defined(__GNUC__) || defined(__clang__)
+
+        #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+    #endif  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+#endif  // PNTR_SUPPORT_FILTER_SMOOTH
 
 /**
  * The last error that was reported from pntr.
@@ -935,9 +989,48 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
     }
 
     pntr_image* output = pntr_new_image(newWidth, newHeight);
+    if (output == NULL) {
+        return NULL;
+    }
+
+    // The default uses the smooth filter if it's available, but falls back to nearest neighbor.
+    if (filter == PNTR_FILTER_DEFAULT) {
+        #ifdef PNTR_SUPPORT_FILTER_SMOOTH
+            filter = PNTR_FILTER_SMOOTH;
+        #else
+            filter = PNTR_FILTER_NEARESTNEIGHBOR;
+        #endif
+    }
 
     switch (filter) {
-        // TODO: pntr_image_resize: Add more filters to resize using. stb_image_resize?
+        case PNTR_FILTER_SMOOTH: {
+            #ifndef PNTR_SUPPORT_FILTER_SMOOTH
+                pntr_unload_image(output);
+                return pntr_set_error("To use the Smooth filter, define PNTR_SUPPORT_FILTER_SMOOTH, or use PNTR_FILTER_DEFAULT to have a fallback");
+            #else
+
+                int result = stbir_resize_uint8_srgb(
+                    (const unsigned char*)image->data,
+                    image->width, image->height,
+                    0, // Input stride
+                    (unsigned char*)output->data, output->width, output->height,
+                    0, // Output stride
+                    4, // Number of channels
+                    // TODO: pntr_image_resize() - Is the alpha channel always 3?
+                    #if defined(PNTR_PIXELFORMAT_RGBA)
+                        3, // Alpha channel
+                    #elif defined(PNTR_PIXELFORMAT_ARGB)
+                        3, // Alpha channel
+                    #endif
+                    0);
+
+                if (result == 0) {
+                    pntr_unload_image(output);
+                    return pntr_set_error("Failed to reszize imagess");
+                }
+            #endif
+        }
+        break;
         case PNTR_FILTER_NEARESTNEIGHBOR:
         default: {
             int xRatio = (image->width << 16) / newWidth + 1;
@@ -947,7 +1040,6 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
                 for (int x = 0; x < newWidth; x++) {
                     int x2 = (x * xRatio) >> 16;
                     int y2 = (y * yRatio) >> 16;
-
                     output->data[(y * newWidth) + x] = image->data[(y2 * image->width) + x2];
                 }
             }
