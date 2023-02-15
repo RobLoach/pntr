@@ -2056,7 +2056,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
 
         for (int y = 0; y < image->height; y++) {
             for (int x = 0; x < image->width; x++) {
-                result->data[x * image->height + (image->height - y - 1)] = pntr_image_get_color(image, x, y);
+                result->data[x * image->height + y] = image->data[y*image->width + image->width - x - 1];
             }
         }
 
@@ -2080,7 +2080,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
 
         for (int y = 0; y < image->height; y++) {
             for (int x = 0; x < image->width; x++) {
-                result->data[x * image->height + y] = image->data[y*image->width + image->width - x - 1];
+                result->data[x * image->height + (image->height - y - 1)] = pntr_image_get_color(image, x, y);
             }
         }
 
@@ -2093,7 +2093,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
 
 void _pntr_image_rotate_trig(int width, int height, float rotation, float zoomx, float zoomy,
 							  int *dstwidth, int *dstheight,
-							  float *sanglezoom, float *canglezoom) {
+                              float *canglezoom, float *sanglezoom) {
 	float radangle = rotation * 360.0f * (PNTR_PI / 180.0f);
 	*sanglezoom = sinf(radangle);
 	*canglezoom = cosf(radangle);
@@ -2115,20 +2115,21 @@ void _pntr_image_rotate_trig(int width, int height, float rotation, float zoomx,
 }
 
 pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX, int centerY) {
-
     if (image == NULL) {
         return pntr_set_error("image_rotate requires a valid image");
     }
+
     int dstwidth;
     int dstheight;
     float canglezoom;
     float sanglezoom;
 
-    _pntr_image_rotate_trig(image->width, image->height, rotation, 1.0f, 1.0f, &dstwidth, &dstheight, &sanglezoom, &canglezoom);
-    int isin = (int)sanglezoom;
-    int icos = (int)canglezoom;
+    _pntr_image_rotate_trig(image->width, image->height, rotation, 1.0f, 1.0f, &dstwidth, &dstheight, &canglezoom, &sanglezoom);
 
-    pntr_image* result = pntr_new_image(dstwidth, dstheight);
+    int isin = sanglezoom * 65536.0f;
+    int icos = canglezoom * 65536.0f;
+
+    pntr_image* result = pntr_gen_image_color(dstwidth, dstheight, PNTR_BLANK);
     if (result == NULL) {
         return NULL;
     }
@@ -2142,30 +2143,94 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX,
 	pntr_color* pc = result->data;
 	int gap = result->pitch - result->width * 4;
 
-    // TODO: Allow for Smoothing?
-    for (int y = 0; y < result->height; y++) {
-        int dy = centerY - y;
-        int sdx = (ax + (isin * dy)) + xd;
-        int sdy = (ay - (icos * dy)) + yd;
-        for (int x = 0; x < result->width; x++) {
-            int dx = (short) (sdx >> 16);
-            dy = (short) (sdy >> 16);
-            // if (flipx) {
-            //     dx = (image->width-1)-dx;
-            // }
-            // if (flipy) {
-            //     dy = (image->height-1)-dy;
-            // }
-            if ((dx >= 0) && (dy >= 0) && (dx < image->width) && (dy < image->height)) {
-                pntr_color* sp = (pntr_color *) (((unsigned char *) image->data) + image->pitch * dy);
-                sp += dx;
-                *pc = *sp;
+    bool smoothing = false;
+    bool flipx = false;
+    bool flipy = false;
+
+    if (!smoothing) {
+
+        for (int y = 0; y < result->height; y++) {
+            int dy = centerY - y;
+            int sdx = (ax + (isin * dy)) + xd;
+            int sdy = (ay - (icos * dy)) + yd;
+            for (int x = 0; x < result->width; x++) {
+                int dx = (short) (sdx >> 16);
+                dy = (short) (sdy >> 16);
+                if (flipx) {
+                    dx = (image->width-1)-dx;
+                }
+                if (flipy) {
+                    dy = (image->height-1)-dy;
+                }
+                if ((dx >= 0) && (dy >= 0) && (dx < image->width) && (dy < image->height)) {
+                    pntr_color* sp = (pntr_color *) (((unsigned char *) image->data) + image->pitch * dy);
+                    sp += dx;
+                    *pc = *sp;
+                }
+                sdx += icos;
+                sdy += isin;
+                pc++;
             }
-            sdx += icos;
-            sdy += isin;
-            pc++;
+            pc = (pntr_color*) (((unsigned char*) pc )+ gap);
         }
-        pc = (pntr_color*) (((unsigned char*) pc )+ gap);
+    }
+    else {
+        pntr_color *sp;
+        pntr_color c00, c01, c10, c11, cswap;
+
+
+		for (int y = 0; y < result->height; y++) {
+			int dy = centerY - y;
+			int sdx = (ax + (isin * dy)) + xd;
+			int sdy = (ay - (icos * dy)) + yd;
+			for (int x = 0; x < result->width; x++) {
+				int dx = (sdx >> 16);
+				dy = (sdy >> 16);
+				if (flipx) dx = sw - dx;
+				if (flipy) dy = sh - dy;
+				if ((dx > -1) && (dy > -1) && (dx < (image->width-1)) && (dy < (image->height-1))) {
+					sp = image->data;
+					sp += ((image->pitch/4) * dy);
+					sp += dx;
+					c00 = *sp;
+					sp += 1;
+					c01 = *sp;
+					sp += (image->pitch/4);
+					c11 = *sp;
+					sp -= 1;
+					c10 = *sp;
+					if (flipx) {
+						cswap = c00; c00=c01; c01=cswap;
+						cswap = c10; c10=c11; c11=cswap;
+					}
+					if (flipy) {
+						cswap = c00; c00=c10; c10=cswap;
+						cswap = c01; c01=c11; c11=cswap;
+					}
+					/*
+					* Interpolate colors
+					*/
+					int ex = (sdx & 0xffff);
+					int ey = (sdy & 0xffff);
+					int t1 = ((((c01.r - c00.r) * ex) >> 16) + c00.r) & 0xff;
+					int t2 = ((((c11.r - c10.r) * ex) >> 16) + c10.r) & 0xff;
+					pc->r = (((t2 - t1) * ey) >> 16) + t1;
+					t1 = ((((c01.g - c00.g) * ex) >> 16) + c00.g) & 0xff;
+					t2 = ((((c11.g - c10.g) * ex) >> 16) + c10.g) & 0xff;
+					pc->g = (((t2 - t1) * ey) >> 16) + t1;
+					t1 = ((((c01.b - c00.b) * ex) >> 16) + c00.b) & 0xff;
+					t2 = ((((c11.b - c10.b) * ex) >> 16) + c10.b) & 0xff;
+					pc->b = (((t2 - t1) * ey) >> 16) + t1;
+					t1 = ((((c01.a - c00.a) * ex) >> 16) + c00.a) & 0xff;
+					t2 = ((((c11.a - c10.a) * ex) >> 16) + c10.a) & 0xff;
+					pc->a = (((t2 - t1) * ey) >> 16) + t1;
+				}
+				sdx += icos;
+				sdy += isin;
+				pc++;
+			}
+			pc = (pntr_color *) ((unsigned char *) pc + gap);
+		}
     }
 
     return result;

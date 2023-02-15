@@ -1,7 +1,7 @@
 #include "../../pntr.h"
 
 pntr_image* imageToRotate;
-float rotation = 0.0f;
+float rotation = 0.51f;
 
 void example_image_rotate_init() {
     // Load an image
@@ -13,7 +13,7 @@ const char* example_image_rotate_update(pntr_image* canvas) {
         return pntr_get_error();
     }
 
-    rotation += 0.005f;
+    rotation += 0.001f;
 
     // Resize the image
     pntr_image* rotatedImage = pntr_image_rotate(imageToRotate, rotation);
