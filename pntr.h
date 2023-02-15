@@ -169,7 +169,8 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast);
 PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast);
 PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
 PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
-PNTR_API void pntr_image_rotate(pntr_image* image, float rotation);
+PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation);
+PNTR_API pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX, int centerY);
 PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom);
 PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
 
@@ -300,6 +301,11 @@ extern "C" {
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
     #include <stdio.h> // FILE, fopen, fread
 #endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
+
+#include <math.h>
+#ifndef PNTR_PI
+#define PNTR_PI 3.14159265359f
+#endif
 
 #ifndef PNTR_MAX
     #ifdef MAX
@@ -2020,15 +2026,15 @@ void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, in
 }
 
 /**
- * Rotates the given image by the given rotation.
+ * Creates a new image based off the given image, that's rotated by the given rotation.
  *
  * Rotation goes from 0.0f to 1.0f for a full 360' rotation.
  *
  * For example: 0.25f == 90 degrees
  */
-void pntr_image_rotate(pntr_image* image, float rotation) {
+pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
     if (image == NULL) {
-        return;
+        return NULL;
     }
 
     while (rotation >= 1.0f) {
@@ -2038,14 +2044,14 @@ void pntr_image_rotate(pntr_image* image, float rotation) {
         rotation += 1.0f;
     }
     if (rotation == 0.0f) {
-        return;
+        return pntr_image_copy(image);
     }
 
     if (rotation == 0.25f) {
         pntr_image* result = pntr_new_image(image->height, image->width);
         if (result == NULL) {
             pntr_set_error("Failed to create memory result for rotation");
-            return;
+            return NULL;
         }
 
         for (int y = 0; y < image->height; y++) {
@@ -2054,23 +2060,22 @@ void pntr_image_rotate(pntr_image* image, float rotation) {
             }
         }
 
-        pntr_color* oldData = image->data;
-        image->data = result->data;
-        image->width = result->width;
-        image->height = result->height;
-        image->pitch = result->pitch;
-        PNTR_FREE(oldData);
-        PNTR_FREE(result);
+        return result;
     }
     else if (rotation == 0.5f) {
-        pntr_image_flip_vertical(image);
-        pntr_image_flip_horizontal(image);
+        pntr_image* result = pntr_image_copy(image);
+        if (result == NULL) {
+            return NULL;
+        }
+        pntr_image_flip_vertical(result);
+        pntr_image_flip_horizontal(result);
+        return result;
     }
     else if (rotation == 0.75f) {
         pntr_image* result = pntr_new_image(image->height, image->width);
         if (result == NULL) {
             pntr_set_error("Failed to create memory result for rotation");
-            return;
+            return NULL;
         }
 
         for (int y = 0; y < image->height; y++) {
@@ -2079,18 +2084,91 @@ void pntr_image_rotate(pntr_image* image, float rotation) {
             }
         }
 
-        pntr_color* oldData = image->data;
-        image->data = result->data;
-        image->width = result->width;
-        image->height = result->height;
-        image->pitch = result->pitch;
-        PNTR_FREE(oldData);
-        PNTR_FREE(result);
+        return result;
     }
-    else {
-        // TODO: pntr_image_rotate - Add dynamic rotation.
-        pntr_set_error("pntr_image_rotate: Rotation outside of 0.25f increments not supported yet");
+
+    return pntr_image_rotate_ex(image, rotation, image->width / 2, image->height / 2);
+}
+
+
+void _pntr_image_rotate_trig(int width, int height, float rotation, float zoomx, float zoomy,
+							  int *dstwidth, int *dstheight,
+							  float *sanglezoom, float *canglezoom) {
+	float radangle = rotation * 360.0f * (PNTR_PI / 180.0f);
+	*sanglezoom = sinf(radangle);
+	*canglezoom = cosf(radangle);
+	*sanglezoom *= zoomx;
+	*canglezoom *= zoomx;
+	float x = (float)(width / 2);
+	float y = (float)(height / 2);
+	float cx = *canglezoom * x;
+	float cy = *canglezoom * y;
+	float sx = *sanglezoom * x;
+	float sy = *sanglezoom * y;
+
+	int dstwidthhalf = PNTR_MAX((int)
+		ceil(PNTR_MAX(PNTR_MAX(PNTR_MAX(fabs(cx + sy), fabs(cx - sy)), fabs(-cx + sy)), fabs(-cx - sy))), 1);
+	int dstheighthalf = PNTR_MAX((int)
+		ceil(PNTR_MAX(PNTR_MAX(PNTR_MAX(fabs(sx + cy), fabs(sx - cy)), fabs(-sx + cy)), fabs(-sx - cy))), 1);
+	*dstwidth = 2 * dstwidthhalf;
+	*dstheight = 2 * dstheighthalf;
+}
+
+pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX, int centerY) {
+
+    if (image == NULL) {
+        return pntr_set_error("image_rotate requires a valid image");
     }
+    int dstwidth;
+    int dstheight;
+    float canglezoom;
+    float sanglezoom;
+
+    _pntr_image_rotate_trig(image->width, image->height, rotation, 1.0f, 1.0f, &dstwidth, &dstheight, &sanglezoom, &canglezoom);
+    int isin = (int)sanglezoom;
+    int icos = (int)canglezoom;
+
+    pntr_image* result = pntr_new_image(dstwidth, dstheight);
+    if (result == NULL) {
+        return NULL;
+    }
+
+	int xd = ((image->width - result->width) << 15);
+	int yd = ((image->height - result->height) << 15);
+	int ax = (centerX << 16) - (icos * centerX);
+	int ay = (centerY << 16) - (isin * centerX);
+	int sw = image->width - 1;
+	int sh = image->height - 1;
+	pntr_color* pc = result->data;
+	int gap = result->pitch - result->width * 4;
+
+    // TODO: Allow for Smoothing?
+    for (int y = 0; y < result->height; y++) {
+        int dy = centerY - y;
+        int sdx = (ax + (isin * dy)) + xd;
+        int sdy = (ay - (icos * dy)) + yd;
+        for (int x = 0; x < result->width; x++) {
+            int dx = (short) (sdx >> 16);
+            dy = (short) (sdy >> 16);
+            // if (flipx) {
+            //     dx = (image->width-1)-dx;
+            // }
+            // if (flipy) {
+            //     dy = (image->height-1)-dy;
+            // }
+            if ((dx >= 0) && (dy >= 0) && (dx < image->width) && (dy < image->height)) {
+                pntr_color* sp = (pntr_color *) (((unsigned char *) image->data) + image->pitch * dy);
+                sp += dx;
+                *pc = *sp;
+            }
+            sdx += icos;
+            sdy += isin;
+            pc++;
+        }
+        pc = (pntr_color*) (((unsigned char*) pc )+ gap);
+    }
+
+    return result;
 }
 
 pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom) {

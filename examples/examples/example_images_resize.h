@@ -1,8 +1,6 @@
 #include "../../pntr.h"
 
 pntr_image* originalImage;
-pntr_image* nearestNeighbor;
-pntr_image* smooth;
 float size = 1.0f;
 float speed = 0.02f;
 
@@ -25,8 +23,8 @@ const char* example_images_resize_update(pntr_image* canvas) {
     }
 
     // Resize the image
-    nearestNeighbor = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_NEARESTNEIGHBOR);
-    smooth = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_SMOOTH);
+    pntr_image* nearestNeighbor = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_NEARESTNEIGHBOR);
+    pntr_image* smooth = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_SMOOTH);
 
     // Draw an image on the canvas
     pntr_draw_image(canvas, nearestNeighbor, canvas->width / 2 - nearestNeighbor->width / 2 - nearestNeighbor->width / 2, canvas->height / 2 - nearestNeighbor->height / 2);
