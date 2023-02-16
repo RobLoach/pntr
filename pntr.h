@@ -2088,11 +2088,10 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
         return result;
     }
 
-    return pntr_image_rotate_ex(image, rotation, image->width / 2, image->height / 2, false);
+    return pntr_image_rotate_ex(image, rotation, image->width / 2, image->height / 2, true);
 }
 
 inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
-    // TODO: Ensure interpolation is correct here.
     return CLITERAL(pntr_color) {
         .a = (uint8_t)(color00.a * (1 - coordinateX) * (1 - coordinateY) + color01.a * (1 - coordinateX) * coordinateY + color10.a * coordinateX * (1 - coordinateY) + color11.a * coordinateX * coordinateY),
         .r = (uint8_t)(color00.r * (1 - coordinateX) * (1 - coordinateY) + color01.r * (1 - coordinateX) * coordinateY + color10.r * coordinateX * (1 - coordinateY) + color11.r * coordinateX * coordinateY),
@@ -2106,12 +2105,12 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX,
         return pntr_set_error("image_rotate requires a valid image");
     }
 
-    float radians = rotation * 6.283185307f; // 360.0f * PNTR_PI / 180.0f;
+    float radians = rotation * 6.283185307f; // (rotation * 360.0f) * PNTR_PI / 180.0f;
     float cosTheta = cosf(radians);
     float sinTheta = sinf(radians);
 
-    int newWidth = ceilf(fabsf(image->width * cosTheta) + fabsf(image->height * sinTheta));
-    int newHeight = ceilf(fabsf(image->width * sinTheta) + fabsf(image->height * cosTheta));
+    int newWidth = (int)ceilf(fabsf((float)image->width * cosTheta) + fabsf((float)image->height * sinTheta));
+    int newHeight = (int)ceilf(fabsf((float)image->width * sinTheta) + fabsf((float)image->height * cosTheta));
 
     pntr_image* rotatedImage = pntr_gen_image_color(newWidth, newHeight, PNTR_BLANK);
     if (rotatedImage == NULL) {
@@ -2120,9 +2119,9 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX,
 
     for (int y = 0; y < newHeight; y++) {
         for (int x = 0; x < newWidth; x++) {
-            // TODO: pntr_image_rotate_ex: Is centerX and centerY correct here?
-            float srcX = (x - newWidth / 2) * cosTheta - (y - newHeight / 2) * sinTheta + centerX;
-            float srcY = (x - newWidth / 2) * sinTheta + (y - newHeight / 2) * cosTheta + centerY;
+            // TODO: pntr_image_rotate_ex: Fix centerX and centerY rotations.
+            float srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + (float)centerX;
+            float srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + (float)centerY;
 
             if (srcX >= 0 && srcX < image->width && srcY >= 0 && srcY < image->height) {
                 if (!smooth) {
@@ -2131,8 +2130,8 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX,
                 else {
                     rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = pntr_color_bilinear_interpolate(
                         image->data[(int)srcY * (image->pitch >> 2) + (int)srcX],
-                        image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
                         image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX],
+                        image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
                         image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX + 1],
                         srcX - floorf(srcX),
                         srcY - floorf(srcY)
