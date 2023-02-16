@@ -170,9 +170,10 @@ PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast);
 PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
 PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation);
-PNTR_API pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX, int centerY);
+PNTR_API pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX, int centerY, bool smooth);
 PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom);
 PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
+PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
 
 #ifdef __cplusplus
 }
@@ -2087,153 +2088,61 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
         return result;
     }
 
-    return pntr_image_rotate_ex(image, rotation, image->width / 2, image->height / 2);
+    return pntr_image_rotate_ex(image, rotation, image->width / 2, image->height / 2, false);
 }
 
-
-void _pntr_image_rotate_trig(int width, int height, float rotation, float zoomx, float zoomy,
-							  int *dstwidth, int *dstheight,
-                              float *canglezoom, float *sanglezoom) {
-	float radangle = rotation * 360.0f * (PNTR_PI / 180.0f);
-	*sanglezoom = sinf(radangle);
-	*canglezoom = cosf(radangle);
-	*sanglezoom *= zoomx;
-	*canglezoom *= zoomx;
-	float x = (float)(width / 2);
-	float y = (float)(height / 2);
-	float cx = *canglezoom * x;
-	float cy = *canglezoom * y;
-	float sx = *sanglezoom * x;
-	float sy = *sanglezoom * y;
-
-	int dstwidthhalf = PNTR_MAX((int)
-		ceil(PNTR_MAX(PNTR_MAX(PNTR_MAX(fabs(cx + sy), fabs(cx - sy)), fabs(-cx + sy)), fabs(-cx - sy))), 1);
-	int dstheighthalf = PNTR_MAX((int)
-		ceil(PNTR_MAX(PNTR_MAX(PNTR_MAX(fabs(sx + cy), fabs(sx - cy)), fabs(-sx + cy)), fabs(-sx - cy))), 1);
-	*dstwidth = 2 * dstwidthhalf;
-	*dstheight = 2 * dstheighthalf;
+inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
+    // TODO: Ensure interpolation is correct here.
+    return CLITERAL(pntr_color) {
+        .a = (uint8_t)(color00.a * (1 - coordinateX) * (1 - coordinateY) + color01.a * (1 - coordinateX) * coordinateY + color10.a * coordinateX * (1 - coordinateY) + color11.a * coordinateX * coordinateY),
+        .r = (uint8_t)(color00.r * (1 - coordinateX) * (1 - coordinateY) + color01.r * (1 - coordinateX) * coordinateY + color10.r * coordinateX * (1 - coordinateY) + color11.r * coordinateX * coordinateY),
+        .g = (uint8_t)(color00.g * (1 - coordinateX) * (1 - coordinateY) + color01.g * (1 - coordinateX) * coordinateY + color10.g * coordinateX * (1 - coordinateY) + color11.g * coordinateX * coordinateY),
+        .b = (uint8_t)(color00.b * (1 - coordinateX) * (1 - coordinateY) + color01.b * (1 - coordinateX) * coordinateY + color10.b * coordinateX * (1 - coordinateY) + color11.b * coordinateX * coordinateY)
+    };
 }
 
-pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX, int centerY) {
+pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX, int centerY, bool smooth) {
     if (image == NULL) {
         return pntr_set_error("image_rotate requires a valid image");
     }
 
-    int dstwidth;
-    int dstheight;
-    float canglezoom;
-    float sanglezoom;
+    float radians = rotation * 6.283185307f; // 360.0f * PNTR_PI / 180.0f;
+    float cosTheta = cosf(radians);
+    float sinTheta = sinf(radians);
 
-    _pntr_image_rotate_trig(image->width, image->height, rotation, 1.0f, 1.0f, &dstwidth, &dstheight, &canglezoom, &sanglezoom);
+    int newWidth = ceilf(fabsf(image->width * cosTheta) + fabsf(image->height * sinTheta));
+    int newHeight = ceilf(fabsf(image->width * sinTheta) + fabsf(image->height * cosTheta));
 
-    int isin = sanglezoom * 65536.0f;
-    int icos = canglezoom * 65536.0f;
-
-    pntr_image* result = pntr_gen_image_color(dstwidth, dstheight, PNTR_BLANK);
-    if (result == NULL) {
+    pntr_image* rotatedImage = pntr_gen_image_color(newWidth, newHeight, PNTR_BLANK);
+    if (rotatedImage == NULL) {
         return NULL;
     }
 
-	int xd = ((image->width - result->width) << 15);
-	int yd = ((image->height - result->height) << 15);
-	int ax = (centerX << 16) - (icos * centerX);
-	int ay = (centerY << 16) - (isin * centerX);
-	int sw = image->width - 1;
-	int sh = image->height - 1;
-	pntr_color* pc = result->data;
-	int gap = result->pitch - result->width * 4;
+    for (int y = 0; y < newHeight; y++) {
+        for (int x = 0; x < newWidth; x++) {
+            // TODO: pntr_image_rotate_ex: Is centerX and centerY correct here?
+            float srcX = (x - newWidth / 2) * cosTheta - (y - newHeight / 2) * sinTheta + centerX;
+            float srcY = (x - newWidth / 2) * sinTheta + (y - newHeight / 2) * cosTheta + centerY;
 
-    bool smoothing = false;
-    bool flipx = false;
-    bool flipy = false;
-
-    if (!smoothing) {
-
-        for (int y = 0; y < result->height; y++) {
-            int dy = centerY - y;
-            int sdx = (ax + (isin * dy)) + xd;
-            int sdy = (ay - (icos * dy)) + yd;
-            for (int x = 0; x < result->width; x++) {
-                int dx = (short) (sdx >> 16);
-                dy = (short) (sdy >> 16);
-                if (flipx) {
-                    dx = (image->width-1)-dx;
+            if (srcX >= 0 && srcX < image->width && srcY >= 0 && srcY < image->height) {
+                if (!smooth) {
+                    rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = image->data[(int)srcY * (image->pitch >> 2) + (int)srcX];
                 }
-                if (flipy) {
-                    dy = (image->height-1)-dy;
+                else {
+                    rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = pntr_color_bilinear_interpolate(
+                        image->data[(int)srcY * (image->pitch >> 2) + (int)srcX],
+                        image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
+                        image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX],
+                        image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX + 1],
+                        srcX - floorf(srcX),
+                        srcY - floorf(srcY)
+                    );
                 }
-                if ((dx >= 0) && (dy >= 0) && (dx < image->width) && (dy < image->height)) {
-                    pntr_color* sp = (pntr_color *) (((unsigned char *) image->data) + image->pitch * dy);
-                    sp += dx;
-                    *pc = *sp;
-                }
-                sdx += icos;
-                sdy += isin;
-                pc++;
             }
-            pc = (pntr_color*) (((unsigned char*) pc )+ gap);
         }
     }
-    else {
-        pntr_color *sp;
-        pntr_color c00, c01, c10, c11, cswap;
 
-
-		for (int y = 0; y < result->height; y++) {
-			int dy = centerY - y;
-			int sdx = (ax + (isin * dy)) + xd;
-			int sdy = (ay - (icos * dy)) + yd;
-			for (int x = 0; x < result->width; x++) {
-				int dx = (sdx >> 16);
-				dy = (sdy >> 16);
-				if (flipx) dx = sw - dx;
-				if (flipy) dy = sh - dy;
-				if ((dx > -1) && (dy > -1) && (dx < (image->width-1)) && (dy < (image->height-1))) {
-					sp = image->data;
-					sp += ((image->pitch/4) * dy);
-					sp += dx;
-					c00 = *sp;
-					sp += 1;
-					c01 = *sp;
-					sp += (image->pitch/4);
-					c11 = *sp;
-					sp -= 1;
-					c10 = *sp;
-					if (flipx) {
-						cswap = c00; c00=c01; c01=cswap;
-						cswap = c10; c10=c11; c11=cswap;
-					}
-					if (flipy) {
-						cswap = c00; c00=c10; c10=cswap;
-						cswap = c01; c01=c11; c11=cswap;
-					}
-					/*
-					* Interpolate colors
-					*/
-					int ex = (sdx & 0xffff);
-					int ey = (sdy & 0xffff);
-					int t1 = ((((c01.r - c00.r) * ex) >> 16) + c00.r) & 0xff;
-					int t2 = ((((c11.r - c10.r) * ex) >> 16) + c10.r) & 0xff;
-					pc->r = (((t2 - t1) * ey) >> 16) + t1;
-					t1 = ((((c01.g - c00.g) * ex) >> 16) + c00.g) & 0xff;
-					t2 = ((((c11.g - c10.g) * ex) >> 16) + c10.g) & 0xff;
-					pc->g = (((t2 - t1) * ey) >> 16) + t1;
-					t1 = ((((c01.b - c00.b) * ex) >> 16) + c00.b) & 0xff;
-					t2 = ((((c11.b - c10.b) * ex) >> 16) + c10.b) & 0xff;
-					pc->b = (((t2 - t1) * ey) >> 16) + t1;
-					t1 = ((((c01.a - c00.a) * ex) >> 16) + c00.a) & 0xff;
-					t2 = ((((c11.a - c10.a) * ex) >> 16) + c10.a) & 0xff;
-					pc->a = (((t2 - t1) * ey) >> 16) + t1;
-				}
-				sdx += icos;
-				sdy += isin;
-				pc++;
-			}
-			pc = (pntr_color *) ((unsigned char *) pc + gap);
-		}
-    }
-
-    return result;
+    return rotatedImage;
 }
 
 pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom) {
