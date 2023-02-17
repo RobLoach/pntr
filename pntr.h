@@ -88,6 +88,7 @@ typedef enum {
 typedef enum {
     PNTR_FILTER_DEFAULT = 0,
     PNTR_FILTER_NEARESTNEIGHBOR,
+    PNTR_FILTER_BILINEAR,
     PNTR_FILTER_SMOOTH
 } pntr_filter;
 
@@ -1020,12 +1021,12 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
         return NULL;
     }
 
-    // The default uses the smooth filter if it's available, but falls back to nearest neighbor.
+    // The default uses the smooth filter if it's available, but falls back to bilinear.
     if (filter == PNTR_FILTER_DEFAULT) {
         #ifdef PNTR_SUPPORT_FILTER_SMOOTH
             filter = PNTR_FILTER_SMOOTH;
         #else
-            filter = PNTR_FILTER_NEARESTNEIGHBOR;
+            filter = PNTR_FILTER_BILINEAR;
         #endif
     }
 
@@ -1033,9 +1034,8 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
         case PNTR_FILTER_SMOOTH: {
             #ifndef PNTR_SUPPORT_FILTER_SMOOTH
                 pntr_unload_image(output);
-                return pntr_set_error("To use the Smooth filter, define PNTR_SUPPORT_FILTER_SMOOTH, or use PNTR_FILTER_DEFAULT to have a fallback");
+                return pntr_set_error("To use the Smooth filter, define PNTR_SUPPORT_FILTER_SMOOTH, or use PNTR_FILTER_DEFAULT to have a fallback to PNTR_FILTER_B");
             #else
-
                 int result = stbir_resize_uint8_srgb(
                     (const unsigned char*)image->data,
                     image->width, image->height,
@@ -1058,6 +1058,29 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
             #endif
         }
         break;
+        case PNTR_FILTER_BILINEAR: {
+            float xRatio = (float)image->width / (float)newWidth;
+            float yRatio = (float)image->height / (float)newHeight;
+
+            for (int y = 0; y < newHeight; y++) {
+                float srcY = (float)y * yRatio;
+                int srcYPixel = (int)srcY;
+                int srcYPixelPlusOne = y == newHeight - 1 ? (int)srcY : (int)srcY + 1;
+                for (int x = 0; x < newWidth; x++) {
+                    float srcX = (float)x * xRatio;
+                    int srcXPixel = (int)srcX;
+                    int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcX : (int)srcX + 1;
+                    output->data[(y * (output->pitch >> 2)) + x] = pntr_color_bilinear_interpolate(
+                        image->data[srcYPixel * (image->pitch >> 2) + srcXPixel],
+                        image->data[srcYPixelPlusOne * (image->pitch >> 2) + srcXPixel],
+                        image->data[srcYPixel * (image->pitch >> 2) + srcXPixelPlusOne],
+                        image->data[srcYPixelPlusOne * (image->pitch >> 2) + srcXPixelPlusOne],
+                        srcX - PNTR_FLOORF(srcX),
+                        srcY - PNTR_FLOORF(srcY));
+                }
+            }
+        }
+        break;
         case PNTR_FILTER_NEARESTNEIGHBOR:
         default: {
             int xRatio = (image->width << 16) / newWidth + 1;
@@ -1067,7 +1090,7 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
                 for (int x = 0; x < newWidth; x++) {
                     int x2 = (x * xRatio) >> 16;
                     int y2 = (y * yRatio) >> 16;
-                    output->data[(y * newWidth) + x] = image->data[(y2 * image->width) + x2];
+                    output->data[(y * (output->pitch >> 2)) + x] = image->data[(y2 * image->width) + x2];
                 }
             }
         }
@@ -2136,12 +2159,11 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, bool smooth)
         return NULL;
     }
 
-    float centerX = (float)(image->width / 2);
-    float centerY = (float)(image->height / 2);
+    float centerX = (float)image->width / 2.0f;
+    float centerY = (float)image->height / 2.0f;
 
     for (int y = 0; y < newHeight; y++) {
         for (int x = 0; x < newWidth; x++) {
-            // TODO: pntr_image_rotate_ex: Fix centerX and centerY rotations.
             float srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
             float srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
 

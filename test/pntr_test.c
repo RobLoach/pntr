@@ -181,10 +181,10 @@ MODULE(pntr, {
         NEQUALS(image, NULL);
 
         IT("pntr_image_resize() same size", {
-            pntr_image* resized = pntr_image_resize(image, 640, 480, PNTR_FILTER_NEARESTNEIGHBOR);
+            pntr_image* resized = pntr_image_resize(image, 300, 100, PNTR_FILTER_DEFAULT);
             NEQUALS(resized, NULL);
-            EQUALS(resized->width, 640);
-            EQUALS(resized->height, 480);
+            EQUALS(resized->width, 300);
+            EQUALS(resized->height, 100);
             pntr_unload_image(resized);
         });
 
@@ -201,6 +201,14 @@ MODULE(pntr, {
             NEQUALS(resized, NULL);
             EQUALS(resized->width, 800);
             EQUALS(resized->height, 600);
+            pntr_unload_image(resized);
+        });
+
+        IT("pntr_image_resize() bilinear", {
+            pntr_image* resized = pntr_image_resize(image, 400, 300, PNTR_FILTER_BILINEAR);
+            NEQUALS(resized, NULL);
+            EQUALS(resized->width, 400);
+            EQUALS(resized->height, 300);
             pntr_unload_image(resized);
         });
 
