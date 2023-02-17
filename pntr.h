@@ -299,14 +299,34 @@ extern "C" {
     #define PNTR_MEMSET memset
 #endif  // PNTR_MEMSET
 
+#ifndef PNTR_COSF
+    #include <math.h>
+    #define PNTR_COSF cosf
+#endif  // PNTR_COSF
+
+#ifndef PNTR_SINF
+    #include <math.h>
+    #define PNTR_SINF sinf
+#endif  // PNTR_SINF
+
+#ifndef PNTR_CEILF
+    #include <math.h>
+    #define PNTR_CEILF ceilf
+#endif  // PNTR_CEILF
+
+#ifndef PNTR_FABSF
+    #include <math.h>
+    #define PNTR_FABSF fabsf
+#endif  // PNTR_FABSF
+
+#ifndef PNTR_FLOORF
+    #include <math.h>
+    #define PNTR_FLOORF floorf
+#endif  // PNTR_FLOORF
+
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
     #include <stdio.h> // FILE, fopen, fread
 #endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
-
-#include <math.h>
-#ifndef PNTR_PI
-#define PNTR_PI 3.14159265359f
-#endif
 
 #ifndef PNTR_MAX
     #ifdef MAX
@@ -2070,6 +2090,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
         }
         pntr_image_flip_vertical(result);
         pntr_image_flip_horizontal(result);
+        
         return result;
     }
     else if (rotation == 0.75f) {
@@ -2092,6 +2113,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation) {
 }
 
 inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
+    // TODO: pntr_color_bilinear_interpolate: Is this interpolation done correctly?
     return CLITERAL(pntr_color) {
         .a = (uint8_t)(color00.a * (1 - coordinateX) * (1 - coordinateY) + color01.a * (1 - coordinateX) * coordinateY + color10.a * coordinateX * (1 - coordinateY) + color11.a * coordinateX * coordinateY),
         .r = (uint8_t)(color00.r * (1 - coordinateX) * (1 - coordinateY) + color01.r * (1 - coordinateX) * coordinateY + color10.r * coordinateX * (1 - coordinateY) + color11.r * coordinateX * coordinateY),
@@ -2105,12 +2127,12 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX,
         return pntr_set_error("image_rotate requires a valid image");
     }
 
-    float radians = rotation * 6.283185307f; // (rotation * 360.0f) * PNTR_PI / 180.0f;
-    float cosTheta = cosf(radians);
-    float sinTheta = sinf(radians);
+    float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+    float cosTheta = PNTR_COSF(radians);
+    float sinTheta = PNTR_SINF(radians);
 
-    int newWidth = (int)ceilf(fabsf((float)image->width * cosTheta) + fabsf((float)image->height * sinTheta));
-    int newHeight = (int)ceilf(fabsf((float)image->width * sinTheta) + fabsf((float)image->height * cosTheta));
+    int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * cosTheta) + PNTR_FABSF((float)image->height * sinTheta));
+    int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * sinTheta) + PNTR_FABSF((float)image->height * cosTheta));
 
     pntr_image* rotatedImage = pntr_gen_image_color(newWidth, newHeight, PNTR_BLANK);
     if (rotatedImage == NULL) {
@@ -2123,7 +2145,7 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX,
             float srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + (float)centerX;
             float srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + (float)centerY;
 
-            if (srcX >= 0 && srcX < image->width && srcY >= 0 && srcY < image->height) {
+            if (srcX >= 0 && srcX < image->width - 1 && srcY >= 0 && srcY < image->height - 1) {
                 if (!smooth) {
                     rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = image->data[(int)srcY * (image->pitch >> 2) + (int)srcX];
                 }
@@ -2133,8 +2155,8 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, int centerX,
                         image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX],
                         image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
                         image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX + 1],
-                        srcX - floorf(srcX),
-                        srcY - floorf(srcY)
+                        srcX - PNTR_FLOORF(srcX),
+                        srcY - PNTR_FLOORF(srcY)
                     );
                 }
             }
