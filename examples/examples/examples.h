@@ -8,7 +8,7 @@
 #include "example_bunnymark.h"
 #define EXAMPLES_COUNT 6
 
-int currentExample = 5;
+int currentExample = 0;
 pntr_image* canvas;
 pntr_font* font;
 

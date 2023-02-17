@@ -89,6 +89,10 @@ License:
 #define UNIT_JOIN2(a,b) a##b
 #endif
 
+#ifndef UNIT_TEST_PREFIX
+#define UNIT_TEST_PREFIX "It "
+#endif
+
 /* Isolates test results within compilation units, this allows for running
     multiple test suites per single binary. */
 #ifdef UNIT_STATIC
@@ -161,7 +165,7 @@ License:
         UNIT_ZPL_RESTORE_MEMORY(); \
     } \
     if (_lasterr != UNIT_SKIP_MAGIC) _errors += _lasterr; \
-    printf(" * [%s]: It %s %s\n", (_lasterr == UNIT_SKIP_MAGIC) ? "\x1B[33mSKIP\x1B[0m" : (_lasterr) ? "\x1B[31mFAIL\x1B[0m" : "\x1B[32mPASS\x1B[0m", desc, _errstr);
+    printf(" * [%s]: " UNIT_TEST_PREFIX "%s %s\n", (_lasterr == UNIT_SKIP_MAGIC) ? "\x1B[33mSKIP\x1B[0m" : (_lasterr) ? "\x1B[31mFAIL\x1B[0m" : "\x1B[32mPASS\x1B[0m", desc, _errstr);
 
 /* TEST CHECKS */
 #define FAIL(a, b)                             { _errstr = unit__bprintf("\n\n\tassert: \x1B[31m%s:%lld %s %s:%lld\x1B[0m\n\tat %s:%d\n", #a, a, (a == b)?"==":"!=", #b, b, __FILE__, __LINE__); _lasterr = 1; break; }
