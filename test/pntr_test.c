@@ -1,3 +1,4 @@
+#define UNIT_TEST_PREFIX ""
 #define UNIT_STATIC
 #include "unit.h"
 
@@ -70,7 +71,6 @@ MODULE(pntr, {
         EQUALS(color.a, 255);
     });
 
-
     IT("pntr_gen_image_color(), pntr_image_get_color()", {
         pntr_image* image = pntr_gen_image_color(640, 480, PNTR_SKYBLUE);
         NEQUALS(image, NULL);
@@ -100,6 +100,7 @@ MODULE(pntr, {
 
     IT("pntr_clear_background(), pntr_draw_rectangle()", {
         pntr_image* image = pntr_new_image(100, 100);
+        NEQUALS(image, NULL);
         pntr_clear_background(image, PNTR_RED);
 
         pntr_color color = pntr_image_get_color(image, 10, 10);
@@ -134,6 +135,7 @@ MODULE(pntr, {
         GREATER(font->charactersFound, 10);
 
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
+        NEQUALS(image, NULL);
         pntr_draw_text(image, font, "Hello World!", 10, 10);
         NEQUALS(image, NULL);
 
@@ -207,6 +209,7 @@ MODULE(pntr, {
 
     IT("pntr_image_color_replace()", {
         pntr_image* image = pntr_gen_image_color(100, 100, PNTR_BLUE);
+        NEQUALS(image, NULL);
         pntr_color color = pntr_image_get_color(image, 10, 10);
         COLOREQUALS(color, PNTR_BLUE);
         pntr_image_color_replace(image, PNTR_BLUE, PNTR_RED);
@@ -325,7 +328,10 @@ MODULE(pntr, {
     IT("pntr_image_resize_canvas()", {
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_BLUE);
         NEQUALS(image, NULL);
+        EQUALS(image->width, 200);
+        EQUALS(image->height, 200);
         pntr_image_resize_canvas(image, 400, 400, 100, 100, PNTR_RED);
+        NEQUALS(image, NULL);
         EQUALS(image->width, 400);
         EQUALS(image->height, 400);
         pntr_color color = pntr_image_get_color(image, 50, 50);
@@ -340,27 +346,30 @@ MODULE(pntr, {
         NEQUALS(image, NULL);
         pntr_draw_rectangle(image, 9, 9, 3, 3, PNTR_RED);
 
-        pntr_image_rotate(image, 0.0f);
-        EQUALS(image->width, 40);
-        EQUALS(image->height, 30);
+        IT("pntr_image_rotate(image, 0.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 0.0f);
+            NEQUALS(rotated, NULL);
+            EQUALS(image->width, 40);
+            EQUALS(image->height, 30);
+            pntr_unload_image(rotated);
+        });
 
         IT("pntr_image_rotate(image, 0.25f)", {
-            pntr_image* rotated = pntr_image_copy(image);
+            pntr_image* rotated = pntr_image_rotate(image, 0.25f);
             NEQUALS(rotated, NULL);
-            pntr_image_rotate(rotated, 0.25f);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
             pntr_color color = pntr_image_get_color(rotated, 10, 10);
             COLOREQUALS(color, PNTR_BLUE);
-            color = pntr_image_get_color(rotated, 20, 10);
+            color = pntr_image_get_color(rotated, 10, 30);
+            pntr_save_image(rotated, "rotate2.png");
             COLOREQUALS(color, PNTR_RED);
             pntr_unload_image(rotated);
         })
 
         IT("pntr_image_rotate(image, 0.5f)", {
-            pntr_image* rotated = pntr_image_copy(image);
+            pntr_image* rotated = pntr_image_rotate(image, 0.5f);
             NEQUALS(rotated, NULL);
-            pntr_image_rotate(rotated, 0.5f);
             EQUALS(rotated->width, image->width);
             EQUALS(rotated->height, image->height);
             pntr_color color = pntr_image_get_color(rotated, 10, 10);
@@ -371,22 +380,33 @@ MODULE(pntr, {
         });
 
         IT("pntr_image_rotate(image, 0.75f)", {
-            pntr_image* rotated = pntr_image_copy(image);
+            pntr_image* rotated = pntr_image_rotate(image, 0.75f);
             NEQUALS(rotated, NULL);
-            pntr_image_rotate(rotated, 0.75f);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
             pntr_color color = pntr_image_get_color(rotated, 10, 10);
             COLOREQUALS(color, PNTR_BLUE);
-            color = pntr_image_get_color(rotated, 10, 30);
+            color = pntr_image_get_color(rotated, 20, 10);
             COLOREQUALS(color, PNTR_RED);
             pntr_unload_image(rotated);
         });
 
+        IT("pntr_image_rotate(image, 0.33f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 0.33f);
+            NEQUALS(rotated, NULL);
+            NEQUALS(rotated->width, image->height);
+            NEQUALS(rotated->height, image->width);
+            pntr_color color = pntr_image_get_color(rotated, 5, 5);
+            COLOREQUALS(color, PNTR_BLANK);
+            color = pntr_image_get_color(rotated, rotated->width / 2, rotated->height / 2);
+            COLOREQUALS(color, PNTR_BLUE);
+            pntr_unload_image(rotated);
+        })
+
         pntr_unload_image(image);
     });
 
-    IT("didn't error out", {
+    IT("No reported errors", {
         const char* err = "";
         if (pntr_get_error() != NULL) {
             err = pntr_get_error();

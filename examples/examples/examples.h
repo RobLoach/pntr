@@ -4,8 +4,9 @@
 #include "example_fonts.h"
 #include "example_images.h"
 #include "example_images_resize.h"
+#include "example_image_rotate.h"
 #include "example_bunnymark.h"
-#define EXAMPLES_COUNT 5
+#define EXAMPLES_COUNT 6
 
 int currentExample = 0;
 pntr_image* canvas;
@@ -18,6 +19,7 @@ void examples_init() {
     example_fonts_init();
     example_images_init();
     example_images_resize_init();
+    example_image_rotate_init();
     example_bunnymark_init();
 }
 
@@ -40,6 +42,9 @@ void examples_update() {
         case 4:
             exampleTitle = example_images_resize_update(canvas);
             break;
+        case 5:
+            exampleTitle = example_image_rotate_update(canvas);
+            break;
     }
 
     pntr_draw_text(canvas, font, "Example:", 10, 10);
@@ -52,6 +57,7 @@ void examples_unload() {
     example_fonts_unload();
     example_images_unload();
     example_images_resize_unload();
+    example_image_rotate_unload();
     example_bunnymark_unload();
     pntr_unload_image(canvas);
 }
