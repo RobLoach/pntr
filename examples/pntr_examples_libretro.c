@@ -66,7 +66,6 @@ void retro_get_system_av_info(struct retro_system_av_info *info) {
       .fps = 60.0,
       .sample_rate = 0.0,
    };
-
    info->geometry = (struct retro_game_geometry) {
       .base_width   = examples_width(),
       .base_height  = examples_height(),

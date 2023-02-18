@@ -98,15 +98,21 @@ pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color
 pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
 ```
 
+## Development
+
+To build the tests and examples, use [CMake](https://cmake.org):
+
 ``` bash
-# setup for native build
+# Set up the build files.
 cmake -B build
 
-# build library and native demos
+# Build the tests and examples.
 cmake --build build
 ```
 
-## Web Assembly
+### Web Assembly
+
+To build the web-based examples, use [Emscripten](https://emscripten.org/):
 
 ``` bash
 # Emscripten
