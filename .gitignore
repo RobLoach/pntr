@@ -1,3 +1,4 @@
 .vscode
 build
 /web/pntr_demo*
+/docs
