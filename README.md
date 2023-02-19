@@ -50,6 +50,7 @@ Add these defines prior to including `pntr.h` to modify how it functions.
 - `PNTR_LOAD_FILE`: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
 - `PNTR_SAVE_FILE`: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
 - `PNTR_NO_ALPHABLEND`: Skips alpha blending when rendering images
+- `PNTR_NO_MATH`: Disables dependency on C's math.h library
 
 ### Functions
 

@@ -1,7 +1,8 @@
 /**
- * pntr: 2D graphics library.
+ * pntr: Image manipulation library for C99 and C++, with a focus on ease-of-use.
  *
  * Configuration:
+ * - PNTR_IMPLEMENTATION: Define this in one of your .c files, before including pntr.h
  * - PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
  * - PNTR_SUPPORT_TTF: Enables TTF font loading
  * - PNTR_NO_SUPPORT_PNG: Disables loading/saving PNG images
@@ -13,6 +14,7 @@
  * - PNTR_LOAD_FILE: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
  * - PNTR_SAVE_FILE: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
  * - PNTR_NO_ALPHABLEND: Skips alpha blending when rendering images
+ * - PNTR_NO_MATH: Disables dependency on C's math.h library. Will disable PNTR_SUPPORT_FILTER_SMOOTH, and PNTR_SUPPORT_TTF.
  *
  * @file pntr.h
  *
@@ -53,6 +55,13 @@
      * @defgroup config Configuration
      * @{
      */
+
+    /**
+     * Define `PNTR_IMPLEMENTATION` in one of your `.c` files before including `pntr.h`.
+     *
+     * This will let pntr.h know where to implement its functions.
+     */
+    #define PNTR_IMPLEMENTATION
 
     /**
      * Enables support for pntr's default font. It's a small 8x8 font.
@@ -133,11 +142,14 @@
     #define PNTR_NO_ALPHABLEND
 
     /**
-     * Define `PNTR_IMPLEMENTATION` in one of your `.c` files before including `pntr.h`.
+     * Will disable pntr's dependency on C's math.h library.
      *
-     * This will let pntr.h know where to implement its functions.
+     * This will disable PNTR_SUPPORT_FILTER_SMOOTH and PNTR_SUPPORT_TTF.
+     *
+     * @see PNTR_SUPPORT_FILTER_SMOOTH
+     * @see PNTR_SUPPORT_TTF
      */
-     #define PNTR_IMPLEMENTATION
+    #define PNTR_NO_MATH
 
     /**
      * @}
@@ -669,45 +681,69 @@ extern "C" {
     #define PNTR_MEMSET memset
 #endif  // PNTR_MEMSET
 
-#ifndef PNTR_COSF
-    #include <math.h>
-    /**
-     * Computes the cosine of the argument in radians.
-     */
-    #define PNTR_COSF cosf
-#endif  // PNTR_COSF
+#ifdef PNTR_NO_MATH
+    #ifdef PNTR_SUPPORT_TTF
+        // TTF requires math.h
+        #undef PNTR_SUPPORT_TTF
+    #endif
+    #ifdef PNTR_SUPPORT_FILTER_SMOOTH
+        // stb_image_resize requires math.h
+        #undef PNTR_SUPPORT_FILTER_SMOOTH
+    #endif
 
-#ifndef PNTR_SINF
-    #include <math.h>
     /**
-     * Computes the sine of the argument in radians.
+     * Custom implementation of floorf().
      */
-    #define PNTR_SINF sinf
-#endif  // PNTR_SINF
+    float _pntr_floorf(float val) {
+        if (val < 0.0f) {
+            return (float)((int)val - 1);
+        }
+        else {
+            return (float)((int)val);
+        }
+    }
+    #define PNTR_FLOORF _pntr_floorf
+#else
+    #ifndef PNTR_COSF
+        #include <math.h>
+        /**
+         * Computes the cosine of the argument in radians.
+         */
+        #define PNTR_COSF cosf
+    #endif  // PNTR_COSF
 
-#ifndef PNTR_CEILF
-    #include <math.h>
-    /**
-     * Computes the smallest integer value not less than arg.
-     */
-    #define PNTR_CEILF ceilf
-#endif  // PNTR_CEILF
+    #ifndef PNTR_SINF
+        #include <math.h>
+        /**
+         * Computes the sine of the argument in radians.
+         */
+        #define PNTR_SINF sinf
+    #endif  // PNTR_SINF
 
-#ifndef PNTR_FABSF
-    #include <math.h>
-    /**
-     * Computes the absolute value of a floating point value arg.
-     */
-    #define PNTR_FABSF fabsf
-#endif  // PNTR_FABSF
+    #ifndef PNTR_CEILF
+        #include <math.h>
+        /**
+         * Computes the smallest integer value not less than arg.
+         */
+        #define PNTR_CEILF ceilf
+    #endif  // PNTR_CEILF
 
-#ifndef PNTR_FLOORF
-    #include <math.h>
-    /**
-     * Computes the largest integer value not greater than arg.
-     */
-    #define PNTR_FLOORF floorf
-#endif  // PNTR_FLOORF
+    #ifndef PNTR_FABSF
+        #include <math.h>
+        /**
+         * Computes the absolute value of a floating point value arg.
+         */
+        #define PNTR_FABSF fabsf
+    #endif  // PNTR_FABSF
+
+    #ifndef PNTR_FLOORF
+        #include <math.h>
+        /**
+         * Computes the largest integer value not greater than arg.
+         */
+        #define PNTR_FLOORF floorf
+    #endif  // PNTR_FLOORF
+#endif  // PNTR_NO_MATH
 
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
     #include <stdio.h> // FILE, fopen, fread
@@ -809,7 +845,7 @@ extern "C" {
         #ifdef STB_TRUETYPE_IMPLEMENTATION
             #undef STB_TRUETYPE_IMPLEMENTATION
         #endif  // STB_TRUETYPE_IMPLEMENTATION
-    #else
+    #else  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
         #ifndef STBTT_malloc
             #define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
         #endif  // STBTT_malloc
@@ -833,7 +869,7 @@ extern "C" {
         #endif  // STBTT_memcpy
 
         #define STB_TRUETYPE_IMPLEMENTATION
-    #endif
+    #endif  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
 
     #if defined(__GNUC__) || defined(__clang__)
         #pragma GCC diagnostic push
@@ -849,7 +885,6 @@ extern "C" {
     #if defined(__GNUC__) || defined(__clang__)
         #pragma GCC diagnostic pop
     #endif  // defined(__GNUC__) || defined(__clang__)
-
 #endif  // PNTR_SUPPORT_TTF
 
 // STB Image Resize
@@ -857,22 +892,22 @@ extern "C" {
     #ifdef PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
         #ifdef STB_IMAGE_RESIZE_IMPLEMENTATION
             #undef STB_IMAGE_RESIZE_IMPLEMENTATION
-        #endif
+        #endif  // STB_IMAGE_RESIZE_IMPLEMENTATION
         // Just declare the function that we need from stb_image_resize.
         int stbir_resize_uint8_srgb(const unsigned char *input_pixels, int input_w, int input_h, int input_stride_in_bytes,
             unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
             int num_channels, int alpha_channel, int flags);
-    #else
+    #else  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
         #define STB_IMAGE_RESIZE_IMPLEMENTATION
         #ifndef STBIR_MALLOC
             #define STBIR_MALLOC(size, context) ((void)(context), PNTR_MALLOC(size))
-        #endif
+        #endif  // STBIR_MALLOC
         #ifndef STBIR_FREE
             #define STBIR_FREE(ptr, context) ((void)(context), PNTR_FREE(ptr))
-        #endif
+        #endif  // STBIR_FREE
         #ifndef STBIR_ASSERT
             #define STBIR_ASSERT(val) ((void)(val))
-        #endif
+        #endif  // STBIR_ASSERT
 
         #if defined(__GNUC__) || defined(__clang__)
             #pragma GCC diagnostic push
@@ -903,7 +938,7 @@ extern "C" {
  * @internal
  * @private
  */
-const char* pntr_error;
+const char* _pntr_error;
 
 /**
  * Gets the last error that was reported.
@@ -911,7 +946,7 @@ const char* pntr_error;
  * @return The last error, or NULL if there wasn't an error.
  */
 inline const char* pntr_get_error() {
-    return pntr_error;
+    return _pntr_error;
 }
 
 /**
@@ -922,7 +957,7 @@ inline const char* pntr_get_error() {
  * @return Always returns NULL.
  */
 inline void* pntr_set_error(const char* error) {
-    pntr_error = error;
+    _pntr_error = error;
     return NULL;
 }
 
@@ -2266,6 +2301,7 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
     #ifndef PNTR_SUPPORT_TTF
         (void)fileData;
         (void)fontSize;
+        (void)fontColor;
         return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
     #else
         if (fontSize <= 0) {
@@ -3028,45 +3064,51 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter 
         return pntr_set_error("image_rotate requires a valid image");
     }
 
-    float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
-    float cosTheta = PNTR_COSF(radians);
-    float sinTheta = PNTR_SINF(radians);
+    #ifdef PNTR_NO_MATH
+        (void)rotation;
+        (void)filter;
+        return pntr_set_error("image_rotate requires the math library, without PNTR_NO_MATH");
+    #else
+        float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+        float cosTheta = PNTR_COSF(radians);
+        float sinTheta = PNTR_SINF(radians);
 
-    int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * cosTheta) + PNTR_FABSF((float)image->height * sinTheta));
-    int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * sinTheta) + PNTR_FABSF((float)image->height * cosTheta));
+        int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * cosTheta) + PNTR_FABSF((float)image->height * sinTheta));
+        int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * sinTheta) + PNTR_FABSF((float)image->height * cosTheta));
 
-    pntr_image* rotatedImage = pntr_gen_image_color(newWidth, newHeight, PNTR_BLANK);
-    if (rotatedImage == NULL) {
-        return NULL;
-    }
+        pntr_image* rotatedImage = pntr_gen_image_color(newWidth, newHeight, PNTR_BLANK);
+        if (rotatedImage == NULL) {
+            return NULL;
+        }
 
-    float centerX = (float)image->width / 2.0f;
-    float centerY = (float)image->height / 2.0f;
+        float centerX = (float)image->width / 2.0f;
+        float centerY = (float)image->height / 2.0f;
 
-    for (int y = 0; y < newHeight; y++) {
-        for (int x = 0; x < newWidth; x++) {
-            float srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
-            float srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+        for (int y = 0; y < newHeight; y++) {
+            for (int x = 0; x < newWidth; x++) {
+                float srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
+                float srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
 
-            if (srcX >= 0 && srcX < image->width - 1 && srcY >= 0 && srcY < image->height - 1) {
-                if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
-                    rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = image->data[(int)srcY * (image->pitch >> 2) + (int)srcX];
-                }
-                else {
-                    rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = pntr_color_bilinear_interpolate(
-                        image->data[(int)srcY * (image->pitch >> 2) + (int)srcX],
-                        image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX],
-                        image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
-                        image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX + 1],
-                        srcX - PNTR_FLOORF(srcX),
-                        srcY - PNTR_FLOORF(srcY)
-                    );
+                if (srcX >= 0 && srcX < image->width - 1 && srcY >= 0 && srcY < image->height - 1) {
+                    if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
+                        rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = image->data[(int)srcY * (image->pitch >> 2) + (int)srcX];
+                    }
+                    else {
+                        rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = pntr_color_bilinear_interpolate(
+                            image->data[(int)srcY * (image->pitch >> 2) + (int)srcX],
+                            image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX],
+                            image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
+                            image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX + 1],
+                            srcX - PNTR_FLOORF(srcX),
+                            srcY - PNTR_FLOORF(srcY)
+                        );
+                    }
                 }
             }
         }
-    }
 
-    return rotatedImage;
+        return rotatedImage;
+    #endif  // PNTR_NO_MATH
 }
 
 /**

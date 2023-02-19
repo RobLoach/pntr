@@ -196,13 +196,15 @@ MODULE(pntr, {
             pntr_unload_image(resized);
         });
 
-        IT("pntr_image_resize() smooth", {
-            pntr_image* resized = pntr_image_resize(image, 800, 600, PNTR_FILTER_SMOOTH);
-            NEQUALS(resized, NULL);
-            EQUALS(resized->width, 800);
-            EQUALS(resized->height, 600);
-            pntr_unload_image(resized);
-        });
+        #ifdef PNTR_SUPPORT_FILTER_SMOOOTH
+            IT("pntr_image_resize() smooth", {
+                pntr_image* resized = pntr_image_resize(image, 800, 600, PNTR_FILTER_SMOOTH);
+                NEQUALS(resized, NULL);
+                EQUALS(resized->width, 800);
+                EQUALS(resized->height, 600);
+                pntr_unload_image(resized);
+            });
+        #endif  // PNTR_SUPPORT_FILTER_SMOOOTH
 
         IT("pntr_image_resize() bilinear", {
             pntr_image* resized = pntr_image_resize(image, 400, 300, PNTR_FILTER_BILINEAR);
@@ -244,19 +246,25 @@ MODULE(pntr, {
         pntr_unload_file(fileData);
     });
 
-    IT("pntr_load_ttffont()", {
-        pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
-        NEQUALS(font, NULL);
-        GREATER(font->charactersLen, 20);
+    #ifdef PNTR_SUPPORT_TTF
+        IT("pntr_load_ttffont()", {
+            pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
+            NEQUALS(font, NULL);
+            GREATER(font->charactersLen, 20);
 
-        pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
-        NEQUALS(canvas, NULL);
-        GREATER(canvas->width, 10);
-        GREATER(canvas->height, 10);
+            pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
+            NEQUALS(canvas, NULL);
+            GREATER(canvas->width, 10);
+            GREATER(canvas->height, 10);
 
-        pntr_unload_image(canvas);
-        pntr_unload_font(font);
-    });
+            pntr_unload_image(canvas);
+            pntr_unload_font(font);
+        });
+    #else
+        IT("pntr_load_ttffont(): PNTR_SUPPORT_TTF is disabled, unable to test.", {
+            // Nothing
+        });
+    #endif  // PNTR_SUPPORT_TTF
 
     IT("pntr_save_file()", {
         const char* fileName = "tempFile.txt";
@@ -399,17 +407,23 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        IT("pntr_image_rotate(image, 0.33f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.33f);
-            NEQUALS(rotated, NULL);
-            NEQUALS(rotated->width, image->height);
-            NEQUALS(rotated->height, image->width);
-            pntr_color color = pntr_image_get_color(rotated, 5, 5);
-            COLOREQUALS(color, PNTR_BLANK);
-            color = pntr_image_get_color(rotated, rotated->width / 2, rotated->height / 2);
-            COLOREQUALS(color, PNTR_BLUE);
-            pntr_unload_image(rotated);
-        })
+        #ifndef PNTR_NO_MATH
+            IT("pntr_image_rotate(image, 0.33f)", {
+                pntr_image* rotated = pntr_image_rotate(image, 0.33f);
+                NEQUALS(rotated, NULL);
+                NEQUALS(rotated->width, image->height);
+                NEQUALS(rotated->height, image->width);
+                pntr_color color = pntr_image_get_color(rotated, 5, 5);
+                COLOREQUALS(color, PNTR_BLANK);
+                color = pntr_image_get_color(rotated, rotated->width / 2, rotated->height / 2);
+                COLOREQUALS(color, PNTR_BLUE);
+                pntr_unload_image(rotated);
+            });
+        #else
+            IT("pntr_image_rotate(image, 0.33f): PNTR_NO_MATH is defined, unable to test.", {
+                // Nothing
+            });
+        #endif  // PNTR_NO_MATH
 
         pntr_unload_image(image);
     });
