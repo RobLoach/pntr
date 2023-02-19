@@ -1,4 +1,4 @@
-# pntr <a href="https://github.com/robloach/pntr"><img src="examples/resources/logo-32x32.png" align=left width=32 height=32 /></a>
+# pntr <a href="https://github.com/robloach/pntr"><img src="examples/resources/logo-55x55.png" align=left width=55 height=55 /></a>
 
 Image manipulation library for C99 or C++, with a focus on ease-of-use.
 
