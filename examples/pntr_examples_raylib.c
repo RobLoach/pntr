@@ -42,18 +42,24 @@ int main() {
 
         // Screenshot
         if (IsKeyPressed(KEY_F12)) {
-            // Take a screenshot with a clean filename.
-            const char* fileName;
-            if (DirectoryExists("../../examples/examples/screenshots")) {
-                fileName = TextFormat("../../examples/examples/screenshots/%s.png", examples_update());
-            }
-            else {
-                fileName = TextFormat("%s.png", examples_update());
+            // Grab the example name, and clean it up for a screenshot.
+            const char* fileName = examples_update();
+
+            // Clean up the Bunnymark name.
+            if (TextFindIndex(fileName, "Bunn") != -1) {
+                fileName = "bunnymark";
             }
 
-            fileName = TextReplace(fileName, " ", "_");
+            fileName = TextReplace((char*)fileName, " ", "_");
             fileName = TextToLower(fileName);
 
+            // Find where to save the screenshot.
+            if (DirectoryExists("../../examples/examples/screenshots")) {
+                fileName = TextFormat("../../examples/examples/screenshots/%s.png", fileName);
+            }
+            else {
+                fileName = TextFormat("%s.png", fileName);
+            }
             TakeScreenshot(fileName);
         }
 

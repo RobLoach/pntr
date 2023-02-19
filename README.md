@@ -23,12 +23,12 @@ int main() {
 
 The [examples](examples) can be run through [SDL](https://www.libsdl.org/), [raylib](https://www.raylib.com/), [libretro](https://www.retroarch.com/), or [Emscripten](https://emscripten.org/).
 
-[![Example: Shapes](examples/examples/screenshots/Shapes.png)](examples/examples/example_shapes.h)
+[![Example: Shapes](examples/examples/screenshots/shapes.png)](examples/examples/example_shapes.h)
 [![Example: Image](examples/examples/screenshots/image.png)](examples/examples/example_image.h)
 [![Example: Fonts](examples/examples/screenshots/fonts.png)](examples/examples/example_fonts.h)
 [![Example: Image Resize](examples/examples/screenshots/image_resize.png)](examples/examples/example_image_resize.h)
 [![Example: Image Rotate](examples/examples/screenshots/image_rotate.png)](examples/examples/example_image_rotate.h)
-[![Example: Bunnies](examples/examples/screenshots/bunnies.png)](examples/examples/example_bunnymark.h)
+[![Example: Bunnymark](examples/examples/screenshots/bunnymark.png)](examples/examples/example_bunnymark.h)
 
 ## API
 
@@ -145,6 +145,9 @@ cmake -B build
 
 # Build the tests and examples.
 cmake --build build
+
+# Run the tests
+ctest --test-dir build -V
 ```
 
 ### Web Assembly
