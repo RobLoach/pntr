@@ -3,12 +3,12 @@
 pntr_image* image;
 pntr_image* resized;
 
-void example_images_init() {
+void example_image_init() {
     // Load an image
-    image = pntr_load_image("resources/image.png");
+    image = pntr_load_image("resources/logo-128x128.png");
 
     if (image == NULL) {
-        printf("resources/image.png not loaded!\n");
+        printf("resources/logo-128x128.png not loaded!\n");
         return;
     }
 
@@ -18,7 +18,7 @@ void example_images_init() {
     pntr_unload_image(newImage);
 }
 
-const char* example_images_update(pntr_image* canvas) {
+const char* example_image_update(pntr_image* canvas) {
     // Draw an image on the canvas
     pntr_draw_image(canvas, image, 50, 50);
 
@@ -37,10 +37,10 @@ const char* example_images_update(pntr_image* canvas) {
     // Draw the resized image
     pntr_draw_image(canvas, resized, 200, 130);
 
-    return "Images";
+    return "Image";
 }
 
-void example_images_unload() {
+void example_image_unload() {
     pntr_unload_image(image);
     pntr_unload_image(resized);
 }

@@ -5,7 +5,7 @@ float rotation = 0.0f;
 
 void example_image_rotate_init() {
     // Load an image
-    imageToRotate = pntr_load_image("resources/image.png");
+    imageToRotate = pntr_load_image("resources/logo-128x128.png");
 }
 
 const char* example_image_rotate_update(pntr_image* canvas) {

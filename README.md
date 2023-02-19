@@ -1,20 +1,57 @@
-# pntr
+# pntr <img src="examples/resources/logo-55x55.png" align=left width=55 height=55 />
 
-Low-level image manipulation using the RGBA or ARGB pixel data in C99.
+Image manipulation library for C99 or C++, with a focus on ease-of-use.
+
+## Usage
 
 ``` c
 #define PNTR_PIXELFORMAT_RGBA
 #define PNTR_IMPLEMENTATION
 #include "pntr.h"
+
+int main() {
+    pntr_image* image = pntr_new_image(200, 200);
+    pntr_draw_circle(image, 100, 100, 80, PNTR_RED);
+    pntr_save_image(image, "output.png");
+    pntr_unload_image(image);
+
+    return 0;
+}
 ```
 
-## Screenshots
+## Examples
 
-![pntr: Examples - SDL Screenshot](examples/pntr_examples_sdl.png)
+The [examples](examples) can be run through [SDL](https://www.libsdl.org/), [raylib](https://www.raylib.com/), [libretro](https://www.retroarch.com/), or [Emscripten](https://emscripten.org/).
 
-![pntr: Examples - raylib Screenshot](examples/pntr_examples_raylib.png)
+[![Example: Shapes](examples/examples/screenshots/Shapes.png)](examples/examples/example_shapes.h)
+[![Example: Image](examples/examples/screenshots/image.png)](examples/examples/example_image.h)
+[![Example: Fonts](examples/examples/screenshots/fonts.png)](examples/examples/example_fonts.h)
+[![Example: Image Resize](examples/examples/screenshots/image_resize.png)](examples/examples/example_image_resize.h)
+[![Example: Image Rotate](examples/examples/screenshots/image_rotate.png)](examples/examples/example_image_rotate.h)
+[![Example: Bunnies](examples/examples/screenshots/bunnies.png)](examples/examples/example_bunnymark.h)
 
 ## API
+
+This covers how to use *pntr*.
+
+### Configuration
+
+Add these defines prior to including `pntr.h` to modify how it functions.
+
+- `PNTR_IMPLEMENTATION`: Define this in one of your `.c` or `.cpp` files before including `pntr.h`.
+- `PNTR_PIXELFORMAT_RGBA`: Use the `RGBA` format
+- `PNTR_PIXELFORMAT_ARGB`: Use the `ARGB` pixel format
+- `PNTR_SUPPORT_DEFAULT_FONT`: Enables the default font
+- `PNTR_SUPPORT_TTF`: Enables TTF font loading
+- `PNTR_NO_SUPPORT_PNG`: Disables loading/saving PNG images
+- `PNTR_SUPPORT_FILTER_SMOOTH`: When resizing images, use stb_image, which is slower, but can look better.
+- `PNTR_NO_CUTE_PNG_IMPLEMENTATION`: Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
+- `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION`: Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
+- `PNTR_LOAD_FILE`: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
+- `PNTR_SAVE_FILE`: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+- `PNTR_NO_ALPHABLEND`: Skips alpha blending when rendering images
+
+### Functions
 
 ``` c
 pntr_image* pntr_new_image(int width, int height);
@@ -122,6 +159,20 @@ emcc examples/pntr_examples_web.c -o build/index.html --preload-file examples/re
 emcc examples/pntr_examples_sdl.c -sUSE_SDL=2 -o build/index.html --preload-file examples/resources@/resources --shell-file examples/pntr_examples_web.html
 ```
 
+## Acknowledgements
+
+- [cute_png.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) by [Randy Gaul](https://github.com/RandyGaul) provides the PNG loading/saving
+- [SDL_tty](https://github.com/Grumbel/SDL_tty) by [Ingo Ruhnke](https://github.com/Grumbel) provides the [8x8 default font](https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h)
+- [stb_image_resize.h](https://github.com/nothings/stb/blob/master/stb_image_resize.h) by [Sean Barrett](https://github.com/nothings) provides the smooth image resizing
+- [stb_truetype.h](https://github.com/nothings/stb/blob/master/stb_truetype.h) by [Sean Barrett](https://github.com/nothings) provides TrueType font support
+- [Logo](https://www.pixilart.com/art/bob-ross-9910c4da4b3a1c8) by [Ravenist](https://www.pixilart.com/ravenist), used with [permission](https://www.reddit.com/r/PixelArt/comments/fi2b1v/oc_felt_a_little_sad_so_i_watched_bob_ross_videos/j6ordqn/)
+
 ## License
 
-[Zlib](LICENSE)
+Unless stated otherwise, all works are:
+
+- Copyright (c) 2023 [Rob Loach](https://robloach.net)
+
+... and licensed under:
+
+- [zlib License](LICENSE)

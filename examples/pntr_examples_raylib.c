@@ -40,6 +40,23 @@ int main() {
             examples_next();
         }
 
+        // Screenshot
+        if (IsKeyPressed(KEY_F12)) {
+            // Take a screenshot with a clean filename.
+            const char* fileName;
+            if (DirectoryExists("../../examples/examples/screenshots")) {
+                fileName = TextFormat("../../examples/examples/screenshots/%s.png", examples_update());
+            }
+            else {
+                fileName = TextFormat("%s.png", examples_update());
+            }
+
+            fileName = TextReplace(fileName, " ", "_");
+            fileName = TextToLower(fileName);
+
+            TakeScreenshot(fileName);
+        }
+
         // Update
         examples_update();
 

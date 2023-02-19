@@ -133,6 +133,13 @@
     #define PNTR_NO_ALPHABLEND
 
     /**
+     * Define `PNTR_IMPLEMENTATION` in one of your `.c` files before including `pntr.h`.
+     *
+     * This will let pntr.h know where to implement its functions.
+     */
+     #define PNTR_IMPLEMENTATION
+
+    /**
      * @}
      */
 #endif

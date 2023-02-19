@@ -4,12 +4,12 @@ pntr_image* originalImage;
 float size = 1.0f;
 float speed = 0.02f;
 
-void example_images_resize_init() {
+void example_image_resize_init() {
     // Load an image
-    originalImage = pntr_load_image("resources/image.png");
+    originalImage = pntr_load_image("resources/logo-128x128.png");
 }
 
-const char* example_images_resize_update(pntr_image* canvas) {
+const char* example_image_resize_update(pntr_image* canvas) {
     if (originalImage == NULL) {
         return pntr_get_error();
     }
@@ -34,9 +34,9 @@ const char* example_images_resize_update(pntr_image* canvas) {
     pntr_unload_image(nearestNeighbor);
     pntr_unload_image(smooth);
 
-    return "Images Resize";
+    return "Image Resize";
 }
 
-void example_images_resize_unload() {
+void example_image_resize_unload() {
     pntr_unload_image(originalImage);
 }
