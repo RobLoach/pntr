@@ -57,7 +57,7 @@ const char* example_fonts_update(pntr_image* canvas) {
     // TTF Font
     const char* ttfText = "TTF Font Example";
     pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText);
-    pntr_draw_rectangle(canvas, 230, 50, textSize.x, textSize.y, PNTR_LIGHTGRAY);
+    pntr_draw_rectangle(canvas, 230, 50, textSize.x, textSize.y, PNTR_SKYBLUE);
     pntr_draw_text(canvas, ttfFont, ttfText, 230, 50);
 
     // pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
