@@ -53,7 +53,12 @@ void update() {
  * Mouse click event
  */
 EM_BOOL click_callback(int eventType, const EmscriptenMouseEvent *e, void *userData) {
-    examples_next();
+    if (e->button == 0) {
+        examples_next();
+    }
+    else if (e->button == 1) {
+        examples_previous();
+    }
     return 0;
 }
 
@@ -61,7 +66,10 @@ EM_BOOL click_callback(int eventType, const EmscriptenMouseEvent *e, void *userD
  * Key down event
  */
 EM_BOOL key_callback(int eventType, const EmscriptenKeyboardEvent *keyEvent, void *userData) {
-    examples_next();
+    if (keyEvent->repeat == false) {
+        examples_next();
+    }
+
     return 0;
 }
 
@@ -71,7 +79,7 @@ int main() {
 
     // Set up input
     emscripten_set_click_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, 0, 1, click_callback);
-    emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, 0, 1, key_callback);
+    emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, 0, 1, key_callback);
 
     // Start the main loop
     emscripten_set_main_loop(update, 60, true);

@@ -1,12 +1,13 @@
 #include "../../pntr.h"
 
-#define EXAMPLES_COUNT 7
+#define EXAMPLES_COUNT 8
 #include "example_welcome.h"
 #include "example_shapes.h"
 #include "example_fonts.h"
 #include "example_image.h"
 #include "example_image_resize.h"
 #include "example_image_rotate.h"
+#include "example_image_sprite.h"
 #include "example_bunnymark.h"
 
 int currentExample = 0;
@@ -22,6 +23,7 @@ void examples_init() {
     example_image_init();
     example_image_resize_init();
     example_image_rotate_init();
+    example_image_sprite_init();
     example_bunnymark_init();
 }
 
@@ -48,6 +50,9 @@ const char* examples_update() {
             exampleTitle = example_image_rotate_update(canvas);
             break;
         case 6:
+            exampleTitle = example_image_sprite_update(canvas);
+            break;
+        case 7:
             exampleTitle = example_bunnymark_update(canvas);
             break;
     }
@@ -72,6 +77,7 @@ void examples_unload() {
     example_fonts_unload();
     example_image_unload();
     example_image_resize_unload();
+    example_image_sprite_unload();
     example_image_rotate_unload();
     example_bunnymark_unload();
     pntr_unload_image(canvas);

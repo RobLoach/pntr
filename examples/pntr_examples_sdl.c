@@ -34,7 +34,14 @@ void mainloop() {
                 shouldClose = true;
                 break;
             case SDL_MOUSEBUTTONUP:
-                examples_next();
+                switch (event.button.button) {
+                    case SDL_BUTTON_LEFT:
+                        examples_next();
+                        break;
+                    case SDL_BUTTON_RIGHT:
+                        examples_previous();
+                        break;
+                }
                 break;
             case SDL_KEYUP:
                 switch (event.key.keysym.sym) {

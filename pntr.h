@@ -3063,7 +3063,7 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter 
     #ifdef PNTR_NO_MATH
         (void)rotation;
         (void)filter;
-        return pntr_set_error("image_rotate requires the math library, without PNTR_NO_MATH");
+        return pntr_set_error("pntr_image_rotate_ex requires the math library, without PNTR_NO_MATH");
     #else
         float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
         float cosTheta = PNTR_COSF(radians);
