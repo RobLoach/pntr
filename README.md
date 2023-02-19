@@ -21,7 +21,7 @@ int main() {
 
 ## Examples
 
-The [examples](examples) can be run through [SDL](https://www.libsdl.org/), [raylib](https://www.raylib.com/), [libretro](https://www.retroarch.com/), or [Emscripten](https://emscripten.org/).
+The [examples](examples) can be run through [SDL](https://www.libsdl.org/), [raylib](https://www.raylib.com/), [libretro](https://www.retroarch.com/), or on the web with [Emscripten](https://emscripten.org/).
 
 [![Example: Shapes](examples/examples/screenshots/shapes.png)](examples/examples/example_shapes.h)
 [![Example: Image](examples/examples/screenshots/image.png)](examples/examples/example_image.h)

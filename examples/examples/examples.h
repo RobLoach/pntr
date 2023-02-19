@@ -1,7 +1,6 @@
 #include "../../pntr.h"
 
 #define EXAMPLES_COUNT 7
-#define EXAMPLES_COUNT_STR "6"
 #include "example_welcome.h"
 #include "example_shapes.h"
 #include "example_fonts.h"
@@ -55,10 +54,10 @@ const char* examples_update() {
 
     char title[50];
     if (currentExample == 0) {
-        sprintf(&title, "%s", exampleTitle);
+        sprintf(title, "%s", exampleTitle);
     }
     else {
-        sprintf(&title, "%d/%d %s", currentExample, EXAMPLES_COUNT - 1, exampleTitle);
+        sprintf(title, "%d/%d %s", currentExample, EXAMPLES_COUNT - 1, exampleTitle);
     }
 
     pntr_draw_text(canvas, font, title, 10, 10);
