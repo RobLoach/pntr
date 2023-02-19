@@ -164,6 +164,9 @@
  * Color, represented by an unsigned 32-bit integer.
  *
  * Has four components: Red, Green, Blue, and Alpha.
+ *
+ * @see pntr_new_color()
+ * @see pntr_get_color()
  */
 typedef union pntr_color {
     /**
@@ -284,27 +287,38 @@ typedef struct pntr_rectangle {
     int height;
 } pntr_rectangle;
 
-#ifndef PNTR_MAX_FONTS
-/**
- * The maximum number of characters that can be used in a font.
- *
- * TODO: Port use of PNTR_MAX_FONTS to a pointer array.
- */
-#define PNTR_MAX_FONTS 256
-#endif
-
 /**
  * Font.
+ *
+ * @see pntr_load_ttyfont()
+ * @see pntr_load_ttffont()
+ * @see pntr_load_bmfont()
  */
 typedef struct pntr_font {
     /**
      * The image used for the character atlas for the font.
      */
     pntr_image* atlas;
-    pntr_rectangle rectangles[PNTR_MAX_FONTS];
-    char characters[PNTR_MAX_FONTS];
-    int charactersFound;
-    pntr_rectangle glyphBox[PNTR_MAX_FONTS];
+
+    /**
+     * The glyph source rectangles on the atlas.
+     */
+    pntr_rectangle* srcRects;
+
+    /**
+     * How the glyph appears when rendering.
+     */
+    pntr_rectangle* glyphRects;
+
+    /**
+     * An array of characters that are available in the font's atlas.
+     */
+    char* characters;
+
+    /**
+     * The number of characters that the font implements.
+     */
+    int charactersLen;
 } pntr_font;
 
 /**
@@ -1817,17 +1831,18 @@ void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPi
     switch (dstPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
             *((uint32_t*)(dstPtr)) = ((uint32_t)color.a << 24) | ((uint32_t)color.b << 16) | ((uint32_t)color.g << 8) | (uint32_t)color.r;
-            break;
+        break;
         case PNTR_PIXELFORMAT_ARGB8888:
             // TODO: pntr_set_pixel_color() Verify the ARGB conversion.
             *((uint32_t*)(dstPtr)) = ((int)color.b << 24) | ((int)color.g << 16) | ((int)color.r << 8) | (int)color.a;
-            break;
+        break;
         case PNTR_PIXELFORMAT_GRAYSCALE: {
             float r = (float)color.r / 255.0f;
             float g = (float)color.g / 255.0f;
             float b = (float)color.b / 255.0f;
             ((unsigned char *)dstPtr)[0] = (unsigned char)((r * 0.299f + g * 0.587f + b * 0.114f) * 255.0f);
-        } break;
+        }
+        break;
     }
 }
 
@@ -1916,13 +1931,27 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
 
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
     pntr_rectangle currentRectangle = CLITERAL(pntr_rectangle){1, 0, 0, image->height};
-    int currentCharacter = 0;
+    font->charactersLen = 0;
 
-    for (int i = 1; i < image->width && currentCharacter < PNTR_MAX_FONTS; i++) {
+    // Find out how many characters there are.
+    for (int i = 0; i < image->width; i++) {
+        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
+            font->charactersLen++;
+        }
+    }
+
+    // Set up the data structures.
+    font->atlas = image;
+    font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
+    font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
+    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)font->charactersLen);
+
+    int currentCharacter = 0;
+    for (int i = 1; i < image->width; i++) {
         if (pntr_image_get_color(image, i, 0).data == seperator.data) {
             font->characters[currentCharacter] = characters[currentCharacter];
-            font->rectangles[currentCharacter] = currentRectangle;
-            font->glyphBox[currentCharacter] = CLITERAL(pntr_rectangle) {
+            font->srcRects[currentCharacter] = currentRectangle;
+            font->glyphRects[currentCharacter] = CLITERAL(pntr_rectangle) {
                 .x = 0,
                 .y = 0,
                 .width = currentRectangle.width,
@@ -1933,12 +1962,10 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
             currentCharacter++;
         }
         else {
+            // Increase the width of the active glyph rectangle.
             currentRectangle.width++;
         }
     }
-
-    font->atlas = image;
-    font->charactersFound = currentCharacter;
 
     return font;
 }
@@ -1971,31 +1998,46 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         return pntr_set_error("pntr_load_ttyfont_from_image() failed to allocate pntr_font memory");
     }
 
-    int currentCharIndex = 0;
-    const char * currentChar = characters;
-    while (currentChar != NULL && *currentChar != '\0' && currentCharIndex < PNTR_MAX_FONTS) {
-        pntr_rectangle rect;
-        rect.x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth;
-        rect.y = (currentCharIndex / (image->width / glyphWidth)) * glyphHeight;
+    // Find out how many characters there are.
+    font->charactersLen = 0;
+	int i = 0;
+	while (characters[i++] != '\0') {
+		font->charactersLen += 1;
+	}
 
-        rect.width = glyphWidth;
-        rect.height = glyphHeight;
+    // If there were no characters found, error out.
+    if (font->charactersLen <= 0) {
+        PNTR_FREE(font);
+        return pntr_set_error("pntr_load_ttyfont_from_image did not find enough characters");
+    }
 
-        font->glyphBox[currentCharIndex] = CLITERAL(pntr_rectangle) {
+    // Set up the data structures.
+    font->atlas = image;
+    font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
+    font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
+    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)font->charactersLen);
+
+    // Set up the font data.
+    for (int currentCharIndex = 0; currentCharIndex < font->charactersLen; currentCharIndex++) {
+        // Source rectangle
+        font->srcRects[currentCharIndex] = CLITERAL(pntr_rectangle) {
+            .x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth,
+            .y = (currentCharIndex / (image->width / glyphWidth)) * glyphHeight,
+            .width = glyphWidth,
+            .height = glyphHeight
+        };
+
+        // Where the glyph will be rendered.
+        font->glyphRects[currentCharIndex] = CLITERAL(pntr_rectangle) {
             .x = 0,
             .y = 0,
             .width = glyphWidth,
             .height = glyphHeight,
         };
 
-        font->rectangles[currentCharIndex] = rect;
+        // Set the character.
         font->characters[currentCharIndex] = characters[currentCharIndex];
-
-        currentCharIndex++;
     }
-
-    font->atlas = image;
-    font->charactersFound = currentCharIndex;
 
     return font;
 }
@@ -2013,6 +2055,21 @@ void pntr_unload_font(pntr_font* font) {
     if (font->atlas != NULL) {
         pntr_unload_image(font->atlas);
         font->atlas = NULL;
+    }
+
+    if (font->srcRects != NULL) {
+        PNTR_FREE(font->srcRects);
+        font->srcRects = NULL;
+    }
+
+    if (font->glyphRects != NULL) {
+        PNTR_FREE(font->glyphRects);
+        font->glyphRects = NULL;
+    }
+
+    if (font->characters != NULL) {
+        PNTR_FREE(font->characters);
+        font->characters = NULL;
     }
 
     PNTR_FREE(font);
@@ -2036,12 +2093,12 @@ void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX
             tallestCharacter = 0;
         }
         else {
-            for (int i = 0; i < font->charactersFound; i++) {
+            for (int i = 0; i < font->charactersLen; i++) {
                 if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_rec(dst, font->atlas, font->rectangles[i], x + font->glyphBox[i].x, y + font->glyphBox[i].y);
-                    x += font->glyphBox[i].x + font->glyphBox[i].width;
-                    if (tallestCharacter < font->glyphBox[i].y + font->glyphBox[i].height) {
-                        tallestCharacter = font->glyphBox[i].y + font->glyphBox[i].height;
+                    pntr_draw_image_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y);
+                    x += font->glyphRects[i].x + font->glyphRects[i].width;
+                    if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+                        tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
                     }
                     break;
                 }
@@ -2081,16 +2138,16 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
             currentY = 0;
         }
         else {
-            for (int i = 0; i < font->charactersFound; i++) {
+            for (int i = 0; i < font->charactersLen; i++) {
                 if (font->characters[i] == *currentChar) {
-                    currentX += font->glyphBox[i].x + font->glyphBox[i].width;
+                    currentX += font->glyphRects[i].x + font->glyphRects[i].width;
                     if (currentX > output.x) {
                         output.x = currentX;
                     }
 
                     // Find the tallest character
-                    if (currentY < font->glyphBox[i].y + font->glyphBox[i].height) {
-                        currentY = font->glyphBox[i].y + font->glyphBox[i].height;
+                    if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
+                        currentY = font->glyphRects[i].y + font->glyphRects[i].height;
                     }
                     break;
                 }
@@ -2240,43 +2297,50 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
             return pntr_set_error("When baking font, no rows were created");
         }
 
-        // Capture each glyph data
-        for (int i = 0; i < NUM_GLYPHS; i++) {
-            font->rectangles[i] = CLITERAL(pntr_rectangle) {
-                .x = characterData[i].x0,
-                .y = characterData[i].y0,
-                .width = characterData[i].x1 - characterData[i].x0,
-                .height = characterData[i].y1 - characterData[i].y0
-            };
-            font->characters[i] = (char)(32 + i);
-            font->charactersFound++;
-
-            font->glyphBox[i] = CLITERAL(pntr_rectangle) {
-                .x = (int)characterData[i].xoff,
-                .y = (int)characterData[i].yoff + (int)((float)fontSize / 1.5f), // TODO: Determine correct y glyph value
-                .width = (int)characterData[i].xadvance,
-                .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
-            };
-        }
-
         // Port the bitmap to a pntr_image as the atlas.
-        pntr_image* atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
-        if (atlas == NULL) {
+        font->atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
+        if (font->atlas == NULL) {
             PNTR_FREE(font);
             PNTR_FREE(bitmap);
             return pntr_set_error("Failed to convert pixel format for font");
         }
 
         // Clear up the unused atlas space from memory from top left
-        pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
-        pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
+        pntr_rectangle crop = pntr_image_alpha_border(font->atlas, 0.0f);
+        pntr_image_crop(font->atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
         // Apply the font color
         if (fontColor.data != PNTR_WHITE.data) {
-            pntr_image_color_tint(atlas, fontColor);
+            pntr_image_color_tint(font->atlas, fontColor);
         }
 
-        font->atlas = atlas;
+        // Set up the data structures.
+        font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * NUM_GLYPHS);
+        font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * NUM_GLYPHS);
+        font->characters = PNTR_MALLOC(sizeof(unsigned char) * NUM_GLYPHS);
+
+        // Capture each glyph data
+        for (int i = 0; i < NUM_GLYPHS; i++) {
+            // Calculate the source rectangles.
+            font->srcRects[i] = CLITERAL(pntr_rectangle) {
+                .x = characterData[i].x0,
+                .y = characterData[i].y0,
+                .width = characterData[i].x1 - characterData[i].x0,
+                .height = characterData[i].y1 - characterData[i].y0
+            };
+
+            // Find where the glyphs will be rendered.
+            font->glyphRects[i] = CLITERAL(pntr_rectangle) {
+                .x = (int)characterData[i].xoff,
+                .y = (int)characterData[i].yoff + (int)((float)fontSize / 1.5f), // TODO: Determine correct y glyph value
+                .width = (int)characterData[i].xadvance,
+                .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
+            };
+
+            // Set up the active character.
+            font->characters[i] = (char)(32 + i);
+            font->charactersLen++;
+        }
 
         return font;
     #endif

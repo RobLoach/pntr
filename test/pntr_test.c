@@ -132,7 +132,7 @@ MODULE(pntr, {
     IT("pntr_load_bmfont(), pntr_unload_font(), pntr_draw_text()", {
         pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         NEQUALS(font, NULL);
-        GREATER(font->charactersFound, 10);
+        GREATER(font->charactersLen, 10);
 
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
         NEQUALS(image, NULL);
@@ -165,14 +165,14 @@ MODULE(pntr, {
     IT("pntr_load_ttyfont()", {
         pntr_font* font = pntr_load_ttyfont("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
         NEQUALS(font, NULL);
-        GREATER(font->charactersFound, 20);
+        GREATER(font->charactersLen, 20);
         pntr_unload_font(font);
     });
 
     IT("pntr_load_default_font()", {
         pntr_font* font = pntr_load_default_font();
         NEQUALS(font, NULL);
-        GREATER(font->charactersFound, 10);
+        GREATER(font->charactersLen, 10);
         pntr_unload_font(font);
     });
 
@@ -247,7 +247,7 @@ MODULE(pntr, {
     IT("pntr_load_ttffont()", {
         pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
         NEQUALS(font, NULL);
-        GREATER(font->charactersFound, 20);
+        GREATER(font->charactersLen, 20);
 
         pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
         NEQUALS(canvas, NULL);
