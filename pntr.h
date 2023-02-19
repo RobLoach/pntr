@@ -2261,10 +2261,6 @@ pntr_font* pntr_load_default_font() {
             return pntr_set_error("pntr_load_default_font() failed to copy the source image");
         }
 
-        // The 8x8 font from SDL_tty is offset by one pixel horizontally.
-        // TODO: Fix the font8x8 offset over at https://github.com/Grumbel/SDL_tty/pull/1 .
-        pntr_image_crop(newImage, 1, 0, newImage->width - 1, newImage->height);
-
         // Load the font from the new image.
         pntr_font* font = pntr_load_ttyfont_from_image(newImage, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
         if (font == NULL) {
