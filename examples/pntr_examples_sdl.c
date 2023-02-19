@@ -46,6 +46,7 @@ void mainloop() {
                         break;
                     case SDLK_RIGHT:
                     case SDLK_SPACE:
+                    case SDLK_RETURN:
                         examples_next();
                         break;
                 }
