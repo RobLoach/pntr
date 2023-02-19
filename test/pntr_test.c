@@ -124,7 +124,7 @@ MODULE(pntr, {
         image = pntr_load_image("resources/image.png");
         NEQUALS(image, NULL);
         EQUALS(image->width, 128);
-        EQUALS(image->height, 108);
+        EQUALS(image->height, 128);
         NEQUALS(image->data, NULL);
         pntr_unload_image(image);
     });
