@@ -1946,6 +1946,10 @@ pntr_font* pntr_load_bmfont(const char* fileName, const char* characters) {
 }
 
 pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
+    if (fileData == NULL || dataSize == 0 || characters == NULL) {
+        return pntr_set_error("pntr_load_bmfont_from_memory() requires valid file data, size and characters");
+    }
+
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
     if (image == NULL) {
         return NULL;
@@ -2015,6 +2019,10 @@ pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeig
 }
 
 pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
+    if (fileData == NULL || dataSize <= 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
+        return pntr_set_error("pntr_load_ttyfont_from_memory() requires valid file data, size, glyph size, and characters");
+    }
+
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
     if (image == NULL) {
         return NULL;
@@ -2275,9 +2283,11 @@ pntr_font* pntr_load_default_font() {
 }
 
 pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor) {
+    if (fileName == NULL || fontSize <= 0) {
+        return pntr_set_error("pntr_load_ttffont() requires a valid fileName and font size.");
+    }
+
     #ifndef PNTR_SUPPORT_TTF
-        (void)fileName;
-        (void)fontSize;
         (void)fontColor;
         return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
     #else
@@ -2293,17 +2303,14 @@ pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color font
 }
 
 pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor) {
-    (void)dataSize;
+    if (fileData == NULL || dataSize == 0 || fontSize <= 0) {
+        return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
+    }
+
     #ifndef PNTR_SUPPORT_TTF
-        (void)fileData;
-        (void)fontSize;
         (void)fontColor;
         return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
     #else
-        if (fontSize <= 0) {
-            return pntr_set_error("TTF Fonts require a fontSize > 0");
-        }
-
         // Create the font data
         pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
         if (font == NULL) {
