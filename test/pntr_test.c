@@ -280,6 +280,12 @@ MODULE(pntr, {
             GREATER(canvas->width, 10);
             GREATER(canvas->height, 10);
 
+            IT("pntr_load_ttffont() - pntr_measure_text_ex()", {
+                pntr_vector size = pntr_measure_text_ex(font, "Hello!!");
+                GREATER(size.x, 20);
+                GREATER(size.y, 5);
+            });
+
             pntr_unload_image(canvas);
             pntr_unload_font(font);
         });
