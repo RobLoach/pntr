@@ -161,6 +161,9 @@ emcc examples/pntr_examples_web.c -o build/index.html --preload-file examples/re
 
 # Emscripten with SDL
 emcc examples/pntr_examples_sdl.c -sUSE_SDL=2 -o build/index.html --preload-file examples/resources@/resources --shell-file examples/pntr_examples_web.html
+
+# Run tests through Node.js
+npm it
 ```
 
 ## Acknowledgements
