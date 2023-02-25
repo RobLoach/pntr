@@ -1,3 +1,5 @@
+#include <stdio.h> // sprintf
+
 #include "../../pntr.h"
 
 #define EXAMPLES_COUNT 8
