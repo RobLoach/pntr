@@ -799,6 +799,7 @@ extern "C" {
         #define CUTE_PNG_REALLOC PNTR_REALLOC
         #define CUTE_PNG_MEMCPY PNTR_MEMCPY
         #define CUTE_PNG_MEMSET PNTR_MEMSET
+        #define CUTE_PNG_FPRINTF (void)
         #define CUTE_PNG_ASSERT(condition) 0 // Skip assertions
         #define CUTE_PNG_SEEK_SET 0
         #define CUTE_PNG_SEEK_END 0
@@ -1005,6 +1006,7 @@ pntr_image* pntr_new_image(int width, int height) {
 pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
     pntr_image* image = pntr_new_image(width, height);
     pntr_clear_background(image, color);
+
     return image;
 }
 
@@ -1403,7 +1405,10 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned 
             return pntr_set_error(cp_error_reason);
         }
 
-        return pntr_image_from_pixelformat((const void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
+        pntr_image* output = pntr_image_from_pixelformat((const void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
+        cp_free_png(&image);
+
+        return output;
     #endif
 }
 
@@ -1419,18 +1424,14 @@ pntr_image* pntr_load_image(const char* fileName) {
         return pntr_set_error("pntr_load_image() requires a valid fileName");
     }
 
-    // Load the file data.
     unsigned int bytesRead;
-    unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
+    const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
     if (fileData == NULL) {
         return pntr_set_error("Failed to load file");
     }
 
-    // Port the file data to an image.
     pntr_image* output = pntr_load_image_from_memory(fileData, bytesRead);
-
-    // Clean up the loaded file data.
-    pntr_unload_file(fileData);
+    pntr_unload_file((unsigned char*)fileData);
 
     return output;
 }
@@ -1542,9 +1543,9 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
 }
 
 /**
- * Converts the given data to a pntr_image.
+ * Creates a new image based on the given image data, from the given original pixel format.
  *
- * The new image will take ownership of the original data, or free it when needed.
+ * This will not clear the original imageData.
  *
  * @param imageData The data of the image in memory.
  * @param width The width of the image.
@@ -1571,26 +1572,16 @@ pntr_image* pntr_image_from_pixelformat(const void* imageData, int width, int he
                 output->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
             }
 
-            PNTR_FREE(imageData);
             return output;
         }
 
         case PNTR_PIXELFORMAT_ARGB8888:
         case PNTR_PIXELFORMAT_RGBA8888: {
-            pntr_image* output = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
-            if (output == NULL) {
-                return pntr_set_error("pntr_image_from_pixelformat() failed to allocate memory");
-            }
+            pntr_image* output = pntr_new_image(width, height);
 
-            output->width = width;
-            output->height = height;
-            output->pitch = width * (int)sizeof(pntr_color);
-            output->data = (pntr_color*)imageData;
-
-            if (pixelFormat != PNTR_PIXELFORMAT) {
-                for (int i = 0; i < width * height; i++) {
-                    output->data[i] = pntr_get_pixel_color((void*)(output->data + i), pixelFormat);
-                }
+            pntr_color* source = (pntr_color*)imageData;
+            for (int i = 0; i < width * height; i++) {
+                output->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
             }
 
             return output;
@@ -1846,6 +1837,10 @@ pntr_color pntr_color_fade(pntr_color color, float factor) {
  * @see pntr_color_fade()
  */
 void pntr_image_color_fade(pntr_image* image, float factor) {
+    if (image == NULL) {
+        return;
+    }
+
     if (factor < -1.0f) {
         factor = -1.0f;
     }
@@ -2047,7 +2042,12 @@ pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeig
         return NULL;
     }
 
-    return pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+    pntr_font* output = pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+    if (output == NULL) {
+        pntr_unload_image(image);
+    }
+
+    return output;
 }
 
 pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
@@ -2060,11 +2060,16 @@ pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned
         return NULL;
     }
 
-    return pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+    pntr_font* output = pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+    if (output == NULL) {
+        pntr_unload_image(image);
+    }
+
+    return output;
 }
 
 pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
-    if (image == NULL || glyphWidth <= 0 || glyphHeight <= 0 || characters == NULL) {
+    if (image == NULL || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
         return pntr_set_error("pntr_load_ttyfont_from_image() requires a valid image and characters");
     }
 
@@ -2093,14 +2098,12 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         PNTR_FREE(font);
         return pntr_set_error("Failed to allocate memory for source rects");
     }
-
     font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
     if (font->glyphRects == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for glyph rects");
+        return pntr_set_error("Failed to allocate memory for glyphRects");
     }
-
     font->characters = PNTR_MALLOC(sizeof(char) * (size_t)font->charactersLen);
     if (font->characters == NULL) {
         PNTR_FREE(font->srcRects);
@@ -2227,7 +2230,6 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
         if (*currentChar == '\n') {
             output.y += currentY;
             currentX = 0;
-            currentY = 0;
         }
         else {
             for (int i = 0; i < font->charactersLen; i++) {
@@ -2302,26 +2304,15 @@ pntr_font* pntr_load_default_font() {
         #include "external/font8x8.h"
 
         // Port the font8x8 data to a pntr_image
-        pntr_image* sourceImage = pntr_image_from_pixelformat((const void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
-        if (sourceImage == NULL) {
+        pntr_image* atlas = pntr_image_from_pixelformat((const void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
+        if (atlas == NULL) {
             return pntr_set_error("pntr_load_default_font() failed to convert default image");
         }
 
-        // Create a copy since the original source data is held locally
-        pntr_image* newImage = pntr_image_copy(sourceImage);
-
-        // Since the source data is defined locally, don't free() it
-        sourceImage->data = NULL;
-        pntr_unload_image(sourceImage);
-
-        if (newImage == NULL) {
-            return pntr_set_error("pntr_load_default_font() failed to copy the source image");
-        }
-
         // Load the font from the new image.
-        pntr_font* font = pntr_load_ttyfont_from_image(newImage, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
+        pntr_font* font = pntr_load_ttyfont_from_image(atlas, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
         if (font == NULL) {
-            pntr_unload_image(newImage);
+            pntr_unload_image(atlas);
             return pntr_set_error("Failed to load default font from image");
         }
 
@@ -2372,15 +2363,15 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
         // Create the bitmap data with ample space based on the font size
         int width = fontSize * 10;
         int height = fontSize * 10;
-        unsigned char* bitmap = (unsigned char*)malloc((size_t)(width * height));
+        unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
         if (bitmap == NULL) {
             PNTR_FREE(font);
             return pntr_set_error("Failed to allocate memory for bitmap");
         }
 
-        #define NUM_GLYPHS 95
-        stbtt_bakedchar characterData[NUM_GLYPHS];
-        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, NUM_GLYPHS, characterData);
+        #define PNTR_NUM_GLYPHS 95
+        stbtt_bakedchar characterData[PNTR_NUM_GLYPHS];
+        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, PNTR_NUM_GLYPHS, characterData);
 
         // Check to make sure the font was baked correctly
         if (result == 0) {
@@ -2391,9 +2382,12 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
 
         // Port the bitmap to a pntr_image as the atlas.
         font->atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
+
+        // Don't need the original bitmap data anymore.
+        PNTR_FREE(bitmap);
+
         if (font->atlas == NULL) {
             PNTR_FREE(font);
-            PNTR_FREE(bitmap);
             return pntr_set_error("Failed to convert pixel format for font");
         }
 
@@ -2407,32 +2401,30 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
         }
 
         // Set up the data structures.
-        font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * NUM_GLYPHS);
+        font->charactersLen = PNTR_NUM_GLYPHS;
+        font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * PNTR_NUM_GLYPHS);
         if (font->srcRects == NULL) {
             PNTR_FREE(font);
-            PNTR_FREE(bitmap);
             return pntr_set_error("Failed to allocate memory for source rects");
         }
 
-        font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * NUM_GLYPHS);
+        font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * PNTR_NUM_GLYPHS);
         if (font->glyphRects == NULL) {
             PNTR_FREE(font->srcRects);
             PNTR_FREE(font);
-            PNTR_FREE(bitmap);
             return pntr_set_error("Failed to allocate memory for glyph rects");
         }
 
-        font->characters = PNTR_MALLOC(sizeof(unsigned char) * NUM_GLYPHS);
+        font->characters = PNTR_MALLOC(sizeof(unsigned char) * PNTR_NUM_GLYPHS);
         if (font->characters == NULL) {
             PNTR_FREE(font->srcRects);
             PNTR_FREE(font->glyphRects);
             PNTR_FREE(font);
-            PNTR_FREE(bitmap);
             return pntr_set_error("Failed to allocate memory for characters");
         }
 
         // Capture each glyph data
-        for (int i = 0; i < NUM_GLYPHS; i++) {
+        for (int i = 0; i < PNTR_NUM_GLYPHS; i++) {
             // Calculate the source rectangles.
             font->srcRects[i] = CLITERAL(pntr_rectangle) {
                 .x = characterData[i].x0,
@@ -2451,7 +2443,6 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
 
             // Set up the active character.
             font->characters[i] = (char)(32 + i);
-            font->charactersLen++;
         }
 
         return font;
@@ -2583,8 +2574,8 @@ unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
  * @return True if the file saved properly, false otherwise.
  */
 bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite) {
-    if (fileName == NULL || data == NULL || bytesToWrite == 0) {
-        return pntr_set_error("pntr_load_file() requires a valid fileName, data or bytesToWrite");
+    if (fileName == NULL || data == NULL) {
+        return pntr_set_error("pntr_save_file() requires a valid fileName");
     }
 
     #ifdef PNTR_SAVE_FILE
@@ -2621,7 +2612,7 @@ bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesTo
  * @return The size of the image data, in bytes.
  */
 int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat) {
-    if (width <= 0 || height <= 0) {
+    if (width <= 0 || height <= 0 || pixelFormat < 0) {
         return 0;
     }
 
@@ -2636,8 +2627,8 @@ int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat
             bitsPerPixel = (int)sizeof(unsigned char) * bitsPerByte;
             break;
         default:
-            pntr_set_error("Unknown pixel format");
-            bitsPerPixel = sizeof(unsigned char);
+            bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte;
+            pntr_set_error("Unknown pixel format for pntr_get_pixel_data_size");
             break;
     }
 

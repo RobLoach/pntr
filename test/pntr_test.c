@@ -138,8 +138,8 @@ MODULE(pntr, {
         EQUALS(image->width, 128);
         EQUALS(image->height, 128);
 
-        pntr_unload_image(image);
         pntr_unload_file(fileData);
+        pntr_unload_image(image);
     });
 
     IT("pntr_load_bmfont(), pntr_unload_font(), pntr_draw_text()", {
