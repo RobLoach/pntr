@@ -1006,6 +1006,7 @@ pntr_image* pntr_new_image(int width, int height) {
 pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
     pntr_image* image = pntr_new_image(width, height);
     pntr_clear_background(image, color);
+
     return image;
 }
 
@@ -1406,6 +1407,7 @@ pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned 
 
         pntr_image* output = pntr_image_from_pixelformat((const void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
         cp_free_png(&image);
+
         return output;
     #endif
 }
@@ -1430,6 +1432,7 @@ pntr_image* pntr_load_image(const char* fileName) {
 
     pntr_image* output = pntr_load_image_from_memory(fileData, bytesRead);
     pntr_unload_file((unsigned char*)fileData);
+
     return output;
 }
 
@@ -1938,6 +1941,16 @@ void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
     }
 }
 
+/**
+ * Load a BMFont from the file system.
+ *
+ * @param fileName The name of the image file to load as the bmfont.
+ * @param characters A string representing the characters to load from the atlas.
+ *
+ * @return The newly loaded font.
+ *
+ * @example examples/resources/bmfont.png
+ */
 pntr_font* pntr_load_bmfont(const char* fileName, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
     if (image == NULL) {
@@ -2011,6 +2024,18 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
     return font;
 }
 
+/**
+ * Loads a TTY Font from the file system.
+ *
+ * @param fileName The name of the image file to load as the font.
+ * @param glyphWidth The width of each character on the font atlas.
+ * @param glyphHeight The height of each character on the font atlas.
+ * @param characters A string of characters that appear in the image.
+ *
+ * @return The newly loaded TTY font.
+ *
+ * @example examples/resources/ttyfont-16x16.png
+ */
 pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
     if (image == NULL) {
@@ -2069,8 +2094,23 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
     // Set up the data structures.
     font->atlas = image;
     font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
+    if (font->srcRects == NULL) {
+        PNTR_FREE(font);
+        return pntr_set_error("Failed to allocate memory for source rects");
+    }
     font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
+    if (font->glyphRects == NULL) {
+        PNTR_FREE(font->srcRects);
+        PNTR_FREE(font);
+        return pntr_set_error("Failed to allocate memory for glyphRects");
+    }
     font->characters = PNTR_MALLOC(sizeof(char) * (size_t)font->charactersLen);
+    if (font->characters == NULL) {
+        PNTR_FREE(font->srcRects);
+        PNTR_FREE(font->glyphRects);
+        PNTR_FREE(font);
+        return pntr_set_error("Failed to allocate memory for characters");
+    }
 
     // Set up the font data.
     for (int currentCharIndex = 0; currentCharIndex < font->charactersLen; currentCharIndex++) {
@@ -2363,8 +2403,25 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
         // Set up the data structures.
         font->charactersLen = PNTR_NUM_GLYPHS;
         font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * PNTR_NUM_GLYPHS);
+        if (font->srcRects == NULL) {
+            PNTR_FREE(font);
+            return pntr_set_error("Failed to allocate memory for source rects");
+        }
+
         font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * PNTR_NUM_GLYPHS);
+        if (font->glyphRects == NULL) {
+            PNTR_FREE(font->srcRects);
+            PNTR_FREE(font);
+            return pntr_set_error("Failed to allocate memory for glyph rects");
+        }
+
         font->characters = PNTR_MALLOC(sizeof(unsigned char) * PNTR_NUM_GLYPHS);
+        if (font->characters == NULL) {
+            PNTR_FREE(font->srcRects);
+            PNTR_FREE(font->glyphRects);
+            PNTR_FREE(font);
+            return pntr_set_error("Failed to allocate memory for characters");
+        }
 
         // Capture each glyph data
         for (int i = 0; i < PNTR_NUM_GLYPHS; i++) {
