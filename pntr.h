@@ -2185,7 +2185,6 @@ void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX
             // TODO: pntr_draw_text(): Allow for center/right alignment
             x = posX;
             y += tallestCharacter;
-            tallestCharacter = 0;
         }
         else {
             for (int i = 0; i < font->charactersLen; i++) {
