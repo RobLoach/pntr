@@ -10,7 +10,7 @@ void example_image_rotate_init() {
 
 const char* example_image_rotate_update(pntr_image* canvas) {
     if (imageToRotate == NULL) {
-        return pntr_get_error();
+        return "Failed to load resources/logo-128x128.png";
     }
 
     rotation += 0.001f;

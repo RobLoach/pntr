@@ -5,35 +5,24 @@ pntr_font* bmFont;
 pntr_font* ttyFont;
 pntr_font* ttfFont;
 
-#include <stdio.h>
-
 void example_fonts_init() {
     // Default Font
     defaultFont = pntr_load_default_font();
 
     // BM Font
     bmFont = pntr_load_bmfont("resources/bmfont.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
-    if (bmFont == NULL) {
-        printf("resources/bmfont.png not loaded!\n");
-    }
 
     // TTY Font
     ttyFont = pntr_load_ttyfont("resources/ttyfont-16x16.png", 16, 16,
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
-    if (ttyFont == NULL) {
-        printf("resources/ttyfonFailed to load ttyFontt-16x16.png not loaded");
-    }
 
     // TTF Font
-    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 25, PNTR_DARKPURPLE);
-    if (ttyFont == NULL) {
-        printf("resources/ttyfont-16x16.png not loaded!\n");
-    }
+    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 28, PNTR_DARKPURPLE);
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
     // Only display the fonts if they loaded correctly.
-    if (defaultFont == NULL || bmFont == NULL || ttyFont == NULL) {
+    if (defaultFont == NULL || bmFont == NULL || ttyFont == NULL || ttfFont == NULL) {
         return "Fonts - Failed to load fonts";
     }
 
@@ -57,11 +46,11 @@ const char* example_fonts_update(pntr_image* canvas) {
     // TTF Font
     const char* ttfText = "TTF Font Example";
     pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText);
-    pntr_draw_rectangle(canvas, 230, 50, textSize.x, textSize.y, PNTR_SKYBLUE);
-    pntr_draw_text(canvas, ttfFont, ttfText, 230, 50);
+    pntr_draw_rectangle(canvas, 200, 50, textSize.x, textSize.y, PNTR_SKYBLUE);
+    pntr_draw_text(canvas, ttfFont, ttfText, 200, 50);
 
-    // pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
-    // pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
+    pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_WHITE);
+    pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
 
     return "Fonts";
 }

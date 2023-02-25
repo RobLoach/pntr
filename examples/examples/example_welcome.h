@@ -7,16 +7,15 @@ void example_welcome_init() {
     // Load an image
     welcomeLogo = pntr_load_image("resources/logo-128x128.png");
 
-    if (welcomeLogo == NULL) {
-        printf("resources/logo-128x128.png not loaded!\n");
-        return;
-    }
-
     // Load the default font
     welcomeFont = pntr_load_default_font();
 }
 
 const char* example_welcome_update(pntr_image* canvas) {
+    if (welcomeLogo == NULL) {
+        return "Failed to load resources/logo-128x128.png";
+    }
+
     // Rectangle
     pntr_draw_rectangle(canvas, 10, 22, canvas->width - 20, 2, PNTR_DARKBROWN);
 

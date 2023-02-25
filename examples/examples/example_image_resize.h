@@ -11,7 +11,7 @@ void example_image_resize_init() {
 
 const char* example_image_resize_update(pntr_image* canvas) {
     if (originalImage == NULL) {
-        return pntr_get_error();
+        return "Failed to load resources/logo-128x128.png";
     }
 
     size += speed;

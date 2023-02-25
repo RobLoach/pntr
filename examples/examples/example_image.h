@@ -6,9 +6,7 @@ pntr_image* resized;
 void example_image_init() {
     // Load an image
     image = pntr_load_image("resources/logo-128x128.png");
-
     if (image == NULL) {
-        printf("resources/logo-128x128.png not loaded!\n");
         return;
     }
 
@@ -19,6 +17,10 @@ void example_image_init() {
 }
 
 const char* example_image_update(pntr_image* canvas) {
+    if (image == NULL) {
+        return "Failed to load resources/logo-128x128.png";
+    }
+
     // Draw an image on the canvas
     pntr_draw_image(canvas, image, 50, 50);
 

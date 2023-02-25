@@ -20,7 +20,7 @@ void example_image_sprite_init() {
 
 const char* example_image_sprite_update(pntr_image* canvas) {
     if (scarfy == NULL) {
-        return pntr_get_error();
+        return "Failed to load resources/scarfy.png";
     }
 
     framesCounter++;

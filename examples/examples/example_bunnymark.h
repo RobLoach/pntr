@@ -26,17 +26,15 @@ void example_bunnymark_init() {
     // Load an image
     bunnyImage = pntr_load_image("resources/bunny.png");
 
-    if (bunnyImage == NULL) {
-        printf("bunnyImage not loaded!\n");
-        return;
-    }
-
     bunnies = (Bunny *)malloc(MAX_BUNNIES * sizeof(Bunny));
     bunniesCount = 0;
     frameCount = 0;
 }
 
 const char* example_bunnymark_update(pntr_image* canvas) {
+    if (bunnyImage == NULL) {
+        return "resources/bunny.png failed to load";
+    }
 
     if (++frameCount > randNum(5, 10) && bunniesCount < MAX_BUNNIES) {
         frameCount = 0;
