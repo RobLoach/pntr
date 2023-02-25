@@ -36,7 +36,7 @@ const char* example_bunnymark_update(pntr_image* canvas) {
         return "resources/bunny.png failed to load";
     }
 
-    if (++frameCount > randNum(5, 10)) {
+    if (++frameCount > randNum(5, 10) && bunniesCount < MAX_BUNNIES) {
         frameCount = 0;
         bunnies[bunniesCount].positionX = randNum(0, canvas->width - bunnyImage->width);
         bunnies[bunniesCount].positionY = randNum(0, canvas->height - bunnyImage->height);

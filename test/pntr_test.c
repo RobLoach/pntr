@@ -129,6 +129,19 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_load_image_from_memory()", {
+        unsigned int bytes;
+        unsigned char* fileData = pntr_load_file("resources/image.png", &bytes);
+
+        pntr_image* image = pntr_load_image_from_memory(fileData, bytes);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, 128);
+        EQUALS(image->height, 128);
+
+        pntr_unload_file(fileData);
+        pntr_unload_image(image);
+    });
+
     IT("pntr_load_bmfont(), pntr_unload_font(), pntr_draw_text()", {
         pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         NEQUALS(font, NULL);
@@ -172,6 +185,7 @@ MODULE(pntr, {
     IT("pntr_load_default_font()", {
         pntr_font* font = pntr_load_default_font();
         NEQUALS(font, NULL);
+        NEQUALS(font->atlas, NULL);
         GREATER(font->charactersLen, 10);
         pntr_unload_font(font);
     });
@@ -244,6 +258,15 @@ MODULE(pntr, {
         GREATER(bytesRead, 5);
         STRCEQUALS((const char*)fileData, "Hello", 5);
         pntr_unload_file(fileData);
+
+        // Try to load a file that doesn't exist.
+        unsigned char* fileNotFound = pntr_load_file("FileNotFound.txt", NULL);
+        EQUALS(fileNotFound, NULL);
+
+        // Expect an error to result.
+        const char* error = pntr_get_error();
+        NEQUALS(error, NULL);
+        pntr_set_error(NULL);
     });
 
     #ifdef PNTR_SUPPORT_TTF

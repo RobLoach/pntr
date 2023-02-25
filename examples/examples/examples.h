@@ -83,6 +83,7 @@ void examples_unload() {
     example_image_rotate_unload();
     example_bunnymark_unload();
     pntr_unload_image(canvas);
+    pntr_unload_font(font);
 }
 
 void* examples_data() {
