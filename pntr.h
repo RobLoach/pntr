@@ -799,6 +799,7 @@ extern "C" {
         #define CUTE_PNG_REALLOC PNTR_REALLOC
         #define CUTE_PNG_MEMCPY PNTR_MEMCPY
         #define CUTE_PNG_MEMSET PNTR_MEMSET
+        #define CUTE_PNG_FPRINTF (void)
         #define CUTE_PNG_ASSERT(condition) 0 // Skip assertions
         #define CUTE_PNG_SEEK_SET 0
         #define CUTE_PNG_SEEK_END 0
