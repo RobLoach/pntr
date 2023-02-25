@@ -1,0 +1,24 @@
+{
+  "name": "pntr",
+  "version": "0.0.1",
+  "description": "Image manipulation library",
+  "private": true,
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "cd build && node test.js",
+    "pretest": "mkdir -p build && emcc test/pntr_test.c -o build/test.js --preload-file test/resources@/resources"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RobLoach/pntr.git"
+  },
+  "author": "Rob Loach (https://robloach.net)",
+  "license": "Zlib",
+  "bugs": {
+    "url": "https://github.com/RobLoach/pntr/issues"
+  },
+  "homepage": "https://github.com/RobLoach/pntr#readme"
+}

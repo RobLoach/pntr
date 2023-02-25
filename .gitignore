@@ -3,3 +3,4 @@ build
 /web/pntr_demo*
 /docs
 Testing
+package-lock.json
