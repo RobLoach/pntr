@@ -1973,33 +1973,68 @@ pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned 
     return pntr_load_bmfont_from_image(image, characters);
 }
 
+pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
+    if (numCharacters <= 0) {
+        return pntr_set_error("requires at least one character for fonts, none found");
+    }
+
+    pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
+    if (font == NULL) {
+        return pntr_set_error("pntr_new_font() failed to allocate pntr_font memory");
+    }
+
+    // Source Rectangles
+    font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)numCharacters);
+    if (font->srcRects == NULL) {
+        PNTR_FREE(font);
+        return pntr_set_error("Failed to allocate memory for source rects");
+    }
+
+    // Glyph Rectangles
+    font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)numCharacters);
+    if (font->glyphRects == NULL) {
+        PNTR_FREE(font->srcRects);
+        PNTR_FREE(font);
+        return pntr_set_error("Failed to allocate memory for glyphRects");
+    }
+
+    // Characters
+    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)numCharacters);
+    if (font->characters == NULL) {
+        PNTR_FREE(font->srcRects);
+        PNTR_FREE(font->glyphRects);
+        PNTR_FREE(font);
+        return pntr_set_error("Failed to allocate memory for characters");
+    }
+
+    font->charactersLen = numCharacters;
+    font->atlas = atlas;
+
+    return font;
+}
+
 pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters) {
     if (image == NULL || characters == NULL) {
         return pntr_set_error("pntr_load_bmfont_from_image() requires a valid image and characters");
     }
 
-    pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
-    if (font == NULL) {
-        return pntr_set_error("pntr_load_bmfont_from_image() failed to allocate pntr_font memory");
-    }
-
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
     pntr_rectangle currentRectangle = CLITERAL(pntr_rectangle){1, 0, 0, image->height};
-    font->charactersLen = 0;
 
     // Find out how many characters there are.
+    int numCharacters = 0;
     for (int i = 0; i < image->width; i++) {
         if (pntr_image_get_color(image, i, 0).data == seperator.data) {
-            font->charactersLen++;
+            numCharacters++;
         }
     }
 
-    // Set up the data structures.
-    font->atlas = image;
-    font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
-    font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
-    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)font->charactersLen);
+    pntr_font* font = _pntr_new_font(numCharacters, image);
+    if (font == NULL) {
+        return NULL;
+    }
 
+    // Set up the data structures.
     int currentCharacter = 0;
     for (int i = 1; i < image->width; i++) {
         if (pntr_image_get_color(image, i, 0).data == seperator.data) {
@@ -2073,43 +2108,17 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         return pntr_set_error("pntr_load_ttyfont_from_image() requires a valid image and characters");
     }
 
-    pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
-    if (font == NULL) {
-        return pntr_set_error("pntr_load_ttyfont_from_image() failed to allocate pntr_font memory");
-    }
-
     // Find out how many characters there are.
-    font->charactersLen = 0;
+    int numCharacters = 0;
 	int i = 0;
 	while (characters[i++] != '\0') {
-		font->charactersLen += 1;
+		numCharacters++;
 	}
 
-    // If there were no characters found, error out.
-    if (font->charactersLen <= 0) {
-        PNTR_FREE(font);
-        return pntr_set_error("pntr_load_ttyfont_from_image did not find enough characters");
-    }
-
-    // Set up the data structures.
-    font->atlas = image;
-    font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
-    if (font->srcRects == NULL) {
-        PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for source rects");
-    }
-    font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)font->charactersLen);
-    if (font->glyphRects == NULL) {
-        PNTR_FREE(font->srcRects);
-        PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for glyphRects");
-    }
-    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)font->charactersLen);
-    if (font->characters == NULL) {
-        PNTR_FREE(font->srcRects);
-        PNTR_FREE(font->glyphRects);
-        PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for characters");
+    // Create the font
+    pntr_font* font = _pntr_new_font(numCharacters, image);
+    if (font == NULL) {
+        return NULL;
     }
 
     // Set up the font data.
@@ -2321,6 +2330,17 @@ pntr_font* pntr_load_default_font() {
     #endif
 }
 
+/**
+ * Loads a truetype font from the file system.
+ *
+ * @param fileName The name of the .ttf file.
+ * @param fontSize The size of the font, in pixels.
+ * @param fontColor The color of the font.
+ *
+ * @return The newly loaded truetype font.
+ *
+ * @example examples/resources/tuffy.ttf
+ */
 pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor) {
     if (fileName == NULL || fontSize <= 0) {
         return pntr_set_error("pntr_load_ttffont() requires a valid fileName and font size.");
@@ -2332,7 +2352,6 @@ pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color font
     #else
         unsigned int bytesRead;
         unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
-
         if (fileData == NULL) {
             return NULL;
         }
@@ -2353,18 +2372,11 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
         (void)fontColor;
         return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
     #else
-        // Create the font data
-        pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
-        if (font == NULL) {
-            return pntr_set_error("Failed to allocate memory for font");
-        }
-
         // Create the bitmap data with ample space based on the font size
         int width = fontSize * 10;
         int height = fontSize * 10;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
         if (bitmap == NULL) {
-            PNTR_FREE(font);
             return pntr_set_error("Failed to allocate memory for bitmap");
         }
 
@@ -2374,52 +2386,31 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
 
         // Check to make sure the font was baked correctly
         if (result == 0) {
-            PNTR_FREE(font);
             PNTR_FREE(bitmap);
             return pntr_set_error("When baking font, no rows were created");
         }
 
         // Port the bitmap to a pntr_image as the atlas.
-        font->atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
-
-        // Don't need the original bitmap data anymore.
+        pntr_image* atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         PNTR_FREE(bitmap);
-
-        if (font->atlas == NULL) {
-            PNTR_FREE(font);
+        if (atlas == NULL) {
             return pntr_set_error("Failed to convert pixel format for font");
         }
 
         // Clear up the unused atlas space from memory from top left
-        pntr_rectangle crop = pntr_image_alpha_border(font->atlas, 0.0f);
-        pntr_image_crop(font->atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
+        pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
+        pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
         // Apply the font color
         if (fontColor.data != PNTR_WHITE.data) {
-            pntr_image_color_tint(font->atlas, fontColor);
+            pntr_image_color_tint(atlas, fontColor);
         }
 
-        // Set up the data structures.
-        font->charactersLen = PNTR_NUM_GLYPHS;
-        font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * PNTR_NUM_GLYPHS);
-        if (font->srcRects == NULL) {
-            PNTR_FREE(font);
-            return pntr_set_error("Failed to allocate memory for source rects");
-        }
-
-        font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * PNTR_NUM_GLYPHS);
-        if (font->glyphRects == NULL) {
-            PNTR_FREE(font->srcRects);
-            PNTR_FREE(font);
-            return pntr_set_error("Failed to allocate memory for glyph rects");
-        }
-
-        font->characters = PNTR_MALLOC(sizeof(unsigned char) * PNTR_NUM_GLYPHS);
-        if (font->characters == NULL) {
-            PNTR_FREE(font->srcRects);
-            PNTR_FREE(font->glyphRects);
-            PNTR_FREE(font);
-            return pntr_set_error("Failed to allocate memory for characters");
+        // Create the font
+        pntr_font* font = _pntr_new_font(PNTR_NUM_GLYPHS, atlas);
+        if (font == NULL) {
+            pntr_unload_image(atlas);
+            return NULL;
         }
 
         // Capture each glyph data
@@ -2533,6 +2524,9 @@ unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
     #else
         FILE* file = fopen(fileName, "rb");
         if (file == NULL) {
+            if (bytesRead != NULL) {
+                *bytesRead = 0;
+            }
             return pntr_set_error("Failed to open file");
         }
 
@@ -2542,20 +2536,27 @@ unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
 
         if (size <= 0) {
             fclose(file);
+            if (bytesRead != NULL) {
+                *bytesRead = 0;
+            }
             return pntr_set_error("Failed to read file");
         }
 
         unsigned char* data = (unsigned char*)PNTR_MALLOC(size * sizeof(unsigned char));
         if (data == NULL) {
             fclose(file);
+            if (bytesRead != NULL) {
+                *bytesRead = 0;
+            }
             return pntr_set_error("Failed to allocate data for file");
         }
 
-        if (bytesRead != NULL) {
-            *bytesRead = (unsigned int)fread(data, sizeof(unsigned char), size, file);
-        }
-
+        // Read the file
+        unsigned int bytes = (unsigned int)fread(data, sizeof(unsigned char), size, file);
         fclose(file);
+        if (bytesRead != NULL) {
+            *bytesRead = bytes;
+        }
 
         return data;
     #endif
@@ -2691,7 +2692,9 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
     }
 
     #ifdef PNTR_NO_SUPPORT_PNG
-        (void)dataSize;
+        if (dataSize != NULL) {
+            *dataSize = 0;
+        }
         return pntr_set_error("Saving images requires to not define PNTR_NO_SUPPORT_PNG");
     #else
         cp_image_t cpImage = CLITERAL(cp_image_t) {
@@ -2733,7 +2736,6 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
 bool pntr_save_image(pntr_image* image, const char* fileName) {
     unsigned int dataSize;
     unsigned char* data = pntr_save_image_to_memory(image, &dataSize);
-
     if (data == NULL) {
         return pntr_set_error("Failed to save image");
     }
