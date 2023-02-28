@@ -38,19 +38,21 @@ This covers how to use *pntr*.
 
 Add these defines prior to including `pntr.h` to modify how it functions.
 
-- `PNTR_IMPLEMENTATION`: Define this in one of your `.c` or `.cpp` files before including `pntr.h`.
-- `PNTR_PIXELFORMAT_RGBA`: Use the `RGBA` format
-- `PNTR_PIXELFORMAT_ARGB`: Use the `ARGB` pixel format
-- `PNTR_SUPPORT_DEFAULT_FONT`: Enables the default font
-- `PNTR_SUPPORT_TTF`: Enables TTF font loading
-- `PNTR_NO_SUPPORT_PNG`: Disables loading/saving PNG images
-- `PNTR_SUPPORT_FILTER_SMOOTH`: When resizing images, use stb_image, which is slower, but can look better.
-- `PNTR_NO_CUTE_PNG_IMPLEMENTATION`: Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
-- `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION`: Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
-- `PNTR_LOAD_FILE`: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
-- `PNTR_SAVE_FILE`: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
-- `PNTR_NO_ALPHABLEND`: Skips alpha blending when rendering images
-- `PNTR_NO_MATH`: Disables dependency on C's math.h library
+| Name | Description |
+|------|-------------|
+| `PNTR_IMPLEMENTATION` | Define this in one of your `.c` or `.cpp` files before including `pntr.h`. |
+| `PNTR_PIXELFORMAT_RGBA` | Use the `RGBA` pixel format |
+| `PNTR_PIXELFORMAT_ARGB` | Use the `ARGB` pixel format |
+| `PNTR_SUPPORT_DEFAULT_FONT` | Enables the default font |
+| `PNTR_SUPPORT_TTF` | Enables TTF font loading |
+| `PNTR_NO_SUPPORT_PNG` | Disables loading/saving PNG images |
+| `PNTR_SUPPORT_FILTER_SMOOTH` | When resizing images, use stb_image, which is slower, but can look better. |
+| `PNTR_NO_CUTE_PNG_IMPLEMENTATION` | Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using  |cute_png elsewhere.
+| `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION` | Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're  |using cute_png elsewhere.
+| `PNTR_LOAD_FILE` | Callback to use when asked to load a file. Must match the pntr_load_file() definition. |
+| `PNTR_SAVE_FILE` | Callback to use when asked to save a file. Must match the pntr_save_file() definition. |
+| `PNTR_NO_ALPHABLEND` | Skips alpha blending when rendering images |
+| `PNTR_NO_MATH` | Disables dependency on C's `math.h` library |
 
 ### Functions
 
