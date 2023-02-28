@@ -7,9 +7,24 @@
     "example": "examples",
     "test": "test"
   },
+  "main": "build/wasm/pntr.js",
+  "files": [
+    "build/wasm"
+  ],
   "scripts": {
-    "test": "cd build && node test.js",
-    "pretest": "mkdir -p build && emcc test/pntr_test.c -o build/test.js --preload-file test/resources@/resources"
+    "test": "cd build/test && node pntr_test.js",
+    "pretest": "npm-run-all pntr_test",
+    "prepntr_test": "npm-run-all mkdir",
+    "pntr_test": "emcc test/pntr_test.c -o build/test/pntr_test.js --preload-file test/resources@/resources",
+    "mkdir": "mkdir -p build/wasm build/web build/test",
+    "prebuild": "npm-run-all mkdir",
+    "build": "emcc lib/libpntr.c -o build/wasm/pntr.js -sMODULARIZE -sEXPORT_NAME=pntr",
+    "prepntr_examples_web": "npm-run-all mkdir",
+    "pntr_examples_web": "emcc examples/pntr_examples_web.c -o build/web/index.html --preload-file examples/resources@/resources --shell-file examples/pntr_examples_web.html",
+    "start": "http-server build/web -o",
+    "prestart": "npm-run-all pntr_examples_web",
+    "predeploy": "npm-run-all pntr_examples_web",
+    "deploy": "gh-pages -d build/web"
   },
   "repository": {
     "type": "git",
@@ -20,5 +35,10 @@
   "bugs": {
     "url": "https://github.com/RobLoach/pntr/issues"
   },
-  "homepage": "https://github.com/RobLoach/pntr#readme"
+  "homepage": "https://github.com/RobLoach/pntr#readme",
+  "devDependencies": {
+    "gh-pages": "^5.0.0",
+    "http-server": "^14.1.1",
+    "npm-run-all": "^4.1.5"
+  }
 }
