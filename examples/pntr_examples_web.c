@@ -4,14 +4,11 @@
 
 // Use RGBA pixel format
 #define PNTR_PIXELFORMAT_RGBA
-#define PNTR_SUPPORT_TTF
 
-// Support the default font
+// Enable all pntr features
+#define PNTR_SUPPORT_TTF
 #define PNTR_SUPPORT_DEFAULT_FONT
 #define PNTR_SUPPORT_FILTER_SMOOTH
-
-// Tell Emscripten to export the pntr API
-#define PNTR_API EMSCRIPTEN_KEEPALIVE
 
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
@@ -55,11 +52,14 @@ void update() {
 EM_BOOL click_callback(int eventType, const EmscriptenMouseEvent *e, void *userData) {
     if (e->button == 0) {
         examples_next();
+        return true;
     }
-    else if (e->button == 1) {
+    else if (e->button == 2) {
         examples_previous();
+        return true;
     }
-    return 0;
+
+    return false;
 }
 
 /**
@@ -68,9 +68,10 @@ EM_BOOL click_callback(int eventType, const EmscriptenMouseEvent *e, void *userD
 EM_BOOL key_callback(int eventType, const EmscriptenKeyboardEvent *keyEvent, void *userData) {
     if (keyEvent->repeat == false) {
         examples_next();
+        return true;
     }
 
-    return 0;
+    return false;
 }
 
 int main() {
@@ -78,10 +79,12 @@ int main() {
     examples_init();
 
     // Set up input
-    emscripten_set_click_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, 0, 1, click_callback);
-    emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, 0, 1, key_callback);
+    emscripten_set_click_callback("#canvas", NULL, false, click_callback);
+    emscripten_set_keydown_callback("#canvas", NULL, false, key_callback);
 
     // Start the main loop
     emscripten_set_main_loop(update, 60, true);
     examples_unload();
+
+    return 0;
 }
