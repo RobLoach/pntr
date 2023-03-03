@@ -3,18 +3,19 @@
  *
  * Configuration:
  * - PNTR_IMPLEMENTATION: Define this in one of your .c files, before including pntr.h
- * - PNTR_SUPPORT_DEFAULT_FONT: Enables the default font
- * - PNTR_SUPPORT_TTF: Enables TTF font loading
- * - PNTR_NO_SUPPORT_PNG: Disables loading/saving PNG images
- * - PNTR_SUPPORT_FILTER_SMOOTH: When resizing images, use stb_image, which is slower, but can look better.
  * - PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * - PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
- * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
- * - PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
+ * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
+ * - PNTR_ENABLE_TTF: Enables TTF font loading
+ * - PNTR_ENABLE_FILTER_SMOOTH: When resizing images, use stb_image, which is slower, but can look better.
+ * - PNTR_DISABLE_PNG: Disables loading/saving PNG images via cute_png
+ * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
+ * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_FILTER_SMOOTH, and PNTR_ENABLE_TTF.
  * - PNTR_LOAD_FILE: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
  * - PNTR_SAVE_FILE: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
- * - PNTR_NO_ALPHABLEND: Skips alpha blending when rendering images
- * - PNTR_NO_MATH: Disables dependency on C's math.h library. Will disable PNTR_SUPPORT_FILTER_SMOOTH, and PNTR_SUPPORT_TTF.
+ * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
+ * - PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using stb_truetype elsewhere.
+ * - PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION: Skips defining STB_IMAGE_RESIZE_IMPLEMENTATION. Useful if you're using stb_image_resize elsewhere.
  *
  * @file pntr.h
  *
@@ -64,34 +65,6 @@
     #define PNTR_IMPLEMENTATION
 
     /**
-     * Enables support for pntr's default font. It's a small 8x8 font.
-     *
-     * @see pntr_load_default_font()
-     */
-    #define PNTR_SUPPORT_DEFAULT_FONT
-
-    /**
-     * Enables TTF font loading via stb_truetype.
-     *
-     * @see pntr_load_ttffont()
-     */
-    #define PNTR_SUPPORT_TTF
-
-    /**
-     * Disables loading/saving PNG images, and will avoid loading cute_png.h.
-     *
-     * @see pntr_load_image()
-     */
-    #define PNTR_NO_SUPPORT_PNG
-
-    /**
-     * When resizing images, use stb_image, which is slower, but can look better.
-     *
-     * @see PNTR_FILTER_SMOOTH
-     */
-    #define PNTR_SUPPORT_FILTER_SMOOTH
-
-    /**
      * When defined, will use the RGBA format.
      *
      * @see PNTR_PIXELFORMAT_RGBA8888
@@ -106,19 +79,49 @@
     #define PNTR_PIXELFORMAT_ARGB
 
     /**
-     * Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
+     * Enables support for pntr's default font. It's a small 8x8 font.
+     *
+     * @see pntr_load_default_font()
      */
-    #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
+    #define PNTR_ENABLE_DEFAULT_FONT
 
     /**
-     * Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere.
+     * Enables TTF font loading via stb_truetype.
+     *
+     * @see pntr_load_ttffont()
      */
-    #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+    #define PNTR_ENABLE_TTF
 
     /**
-     * Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using stb_truetype elsewhere.
+     * When resizing images, use stb_image, which is slower, but can look better.
+     *
+     * @see PNTR_FILTER_SMOOTH
      */
-    #define PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+    #define PNTR_ENABLE_FILTER_SMOOTH
+
+    /**
+     * Disables loading/saving PNG images, and will avoid loading cute_png.h.
+     *
+     * @see pntr_load_image()
+     */
+    #define PNTR_DISABLE_PNG
+
+    /**
+     * Skips alpha blending when rendering images. Defining this will improve performance.
+     *
+     * @see pntr_draw_image_rec()
+     */
+    #define PNTR_DISABLE_ALPHABLEND
+
+    /**
+     * Will disable pntr's dependency on C's math.h library.
+     *
+     * This will disable PNTR_ENABLE_FILTER_SMOOTH and PNTR_ENABLE_TTF.
+     *
+     * @see PNTR_ENABLE_FILTER_SMOOTH
+     * @see PNTR_ENABLE_TTF
+     */
+    #define PNTR_DISABLE_MATH
 
     /**
      * Callback to use when asked to load a file. Must match the pntr_load_file() definition.
@@ -135,21 +138,19 @@
     #define PNTR_SAVE_FILE
 
     /**
-     * Skips alpha blending when rendering images. Defining this will improve performance.
-     *
-     * @see pntr_draw_image_rec()
+     * Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
      */
-    #define PNTR_NO_ALPHABLEND
+    #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
     /**
-     * Will disable pntr's dependency on C's math.h library.
-     *
-     * This will disable PNTR_SUPPORT_FILTER_SMOOTH and PNTR_SUPPORT_TTF.
-     *
-     * @see PNTR_SUPPORT_FILTER_SMOOTH
-     * @see PNTR_SUPPORT_TTF
+     * Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere.
      */
-    #define PNTR_NO_MATH
+    #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+
+    /**
+     * Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using stb_truetype elsewhere.
+     */
+    #define PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
 
     /**
      * @}
@@ -171,6 +172,9 @@
 #if !defined(PNTR_PIXELFORMAT_RGBA) && !defined(PNTR_PIXELFORMAT_ARGB)
     #define PNTR_PIXELFORMAT_RGBA
 #endif
+#if defined(PNTR_PIXELFORMAT_RGBA) && defined(PNTR_PIXELFORMAT_ARGB)
+    #undef PNTR_PIXELFORMAT_ARGB
+#endif
 
 /**
  * Color, represented by an unsigned 32-bit integer.
@@ -189,42 +193,42 @@ typedef union pntr_color {
     struct {
         #if defined(PNTR_PIXELFORMAT_RGBA)
             /**
-             * Red component.
+             * Red channel.
              */
             unsigned char r;
 
             /**
-             * Green component.
+             * Green channel.
              */
             unsigned char g;
 
             /**
-             * Blue component.
+             * Blue channel.
              */
             unsigned char b;
 
             /**
-             * Alpha component.
+             * Alpha channel.
              */
             unsigned char a;
         #elif defined(PNTR_PIXELFORMAT_ARGB)
             /**
-             * Blue component.
+             * Blue channel.
              */
             unsigned char b;
 
             /**
-             * Green component.
+             * Green channel.
              */
             unsigned char g;
 
             /**
-             * Red component.
+             * Red channel.
              */
             unsigned char r;
 
             /**
-             * Alpha component.
+             * Alpha channel.
              */
             unsigned char a;
         #endif
@@ -348,7 +352,7 @@ typedef enum pntr_pixelformat {
     PNTR_PIXELFORMAT_ARGB8888,
 
     /**
-     * Grayscale, with one byte for each pixel, 0 - 255. 0 being transparent, 255 being black.
+     * Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled.
      */
     PNTR_PIXELFORMAT_GRAYSCALE
 } pntr_pixelformat;
@@ -376,6 +380,8 @@ typedef enum pntr_filter {
 
     /**
      * Smooth filter will use stb_image_resize, which combines a number of different filtering algorithms.
+     *
+     * @see PNTR_DISABLE_FILTER_SMOOTH
      */
     PNTR_FILTER_SMOOTH
 } pntr_filter;
@@ -682,14 +688,14 @@ extern "C" {
     #define PNTR_MEMSET memset
 #endif  // PNTR_MEMSET
 
-#ifdef PNTR_NO_MATH
-    #ifdef PNTR_SUPPORT_TTF
+#ifdef PNTR_DISABLE_MATH
+    #ifdef PNTR_ENABLE_TTF
         // TTF requires math.h
-        #undef PNTR_SUPPORT_TTF
+        #undef PNTR_ENABLE_TTF
     #endif
-    #ifdef PNTR_SUPPORT_FILTER_SMOOTH
+    #ifdef PNTR_ENABLE_FILTER_SMOOTH
         // stb_image_resize requires math.h
-        #undef PNTR_SUPPORT_FILTER_SMOOTH
+        #undef PNTR_ENABLE_FILTER_SMOOTH
     #endif
 
     /**
@@ -744,7 +750,7 @@ extern "C" {
          */
         #define PNTR_FLOORF floorf
     #endif  // PNTR_FLOORF
-#endif  // PNTR_NO_MATH
+#endif  // PNTR_DISABLE_MATH
 
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
     #include <stdio.h> // FILE, fopen, fread
@@ -790,7 +796,7 @@ extern "C" {
 #define pntr_image_get_color_unsafe(image, x, y) image->data[((y) * (image->pitch >> 2)) + (x)]
 
 // cute_png
-#ifndef PNTR_NO_SUPPORT_PNG
+#ifndef PNTR_DISABLE_PNG
     #ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
         #define CUTE_PNG_IMPLEMENTATION
         #define CUTE_PNG_ALLOCA PNTR_MALLOC
@@ -839,10 +845,10 @@ extern "C" {
         #pragma GCC diagnostic pop
     #endif // defined(__GNUC__) || defined(__clang__)
 
-#endif // PNTR_NO_SUPPORT_PNG
+#endif // PNTR_DISABLE_PNG
 
 // STB TrueType
-#ifdef PNTR_SUPPORT_TTF
+#ifdef PNTR_ENABLE_TTF
     #ifdef PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
         #ifdef STB_TRUETYPE_IMPLEMENTATION
             #undef STB_TRUETYPE_IMPLEMENTATION
@@ -887,10 +893,10 @@ extern "C" {
     #if defined(__GNUC__) || defined(__clang__)
         #pragma GCC diagnostic pop
     #endif  // defined(__GNUC__) || defined(__clang__)
-#endif  // PNTR_SUPPORT_TTF
+#endif  // PNTR_ENABLE_TTF
 
 // STB Image Resize
-#ifdef PNTR_SUPPORT_FILTER_SMOOTH
+#ifdef PNTR_ENABLE_FILTER_SMOOTH
     #ifdef PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
         #ifdef STB_IMAGE_RESIZE_IMPLEMENTATION
             #undef STB_IMAGE_RESIZE_IMPLEMENTATION
@@ -928,7 +934,7 @@ extern "C" {
 
         #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
     #endif  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-#endif  // PNTR_SUPPORT_FILTER_SMOOTH
+#endif  // PNTR_ENABLE_FILTER_SMOOTH
 
 /**
  * The last error that was reported from pntr.
@@ -1040,8 +1046,10 @@ pntr_image* pntr_image_copy(pntr_image* image) {
  * @param rec2 A pointer to the second rectangle.
  *
  * @return A new rectangle that represents the intersection of the original rectangles.
+ *
+ * @internal
  */
-pntr_rectangle pntr_rectangle_intersect(pntr_rectangle *rec1, pntr_rectangle *rec2) {
+pntr_rectangle _pntr_rectangle_intersect(pntr_rectangle *rec1, pntr_rectangle *rec2) {
     int left   = PNTR_MAX(rec1->x, rec2->x);
     int right  = PNTR_MIN(rec1->x + rec1->width, rec2->x + rec2->width);
     int top    = PNTR_MAX(rec1->y, rec2->y);
@@ -1061,7 +1069,7 @@ pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, in
 
     pntr_rectangle srcRect = CLITERAL(pntr_rectangle){x, y, width, height};
     pntr_rectangle imgRect = CLITERAL(pntr_rectangle){0, 0, image->width, image->height};
-    srcRect = pntr_rectangle_intersect(&imgRect, &srcRect);
+    srcRect = _pntr_rectangle_intersect(&imgRect, &srcRect);
 
     if (srcRect.width <= 0 || srcRect.height <= 0) {
         return NULL;
@@ -1322,7 +1330,7 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
     }
 
     pntr_rectangle dstRect = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
-    rect = pntr_rectangle_intersect(&rect, &dstRect);
+    rect = _pntr_rectangle_intersect(&rect, &dstRect);
     if (rect.width <= 0 || rect.height <= 0) {
         return;
     }
@@ -1362,6 +1370,12 @@ void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pnt
 
 /**
  * Get image pixel color at (x, y) position.
+ *
+ * @param image The image to get the color from.
+ * @param x The x position of the pixel.
+ * @param y The y position of the pixel.
+ *
+ * @return The color at (x, y) position from the image.
  */
 pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     if (image == NULL) {
@@ -1389,17 +1403,17 @@ inline pntr_color* pntr_image_get_color_pointer(pntr_image* image, int x, int y)
 /**
  * Load an image from memory buffer.
  *
- * Not supported if PNTR_NO_SUPPORT_PNG is defined.
+ * Not supported if PNTR_DISABLE_PNG is defined.
  *
- * @see PNTR_NO_SUPPORT_PNG
+ * @see PNTR_DISABLE_PNG
  */
 pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
     if (fileData == NULL || dataSize <= 0) {
         return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
     }
 
-    #ifdef PNTR_NO_SUPPORT_PNG
-        return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_NO_SUPPORT_PNG was defined.");
+    #ifdef PNTR_DISABLE_PNG
+        return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_DISABLE_PNG was defined.");
     #else
         cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
         if (image.pix == NULL) {
@@ -1476,7 +1490,7 @@ pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
 /**
  * Draw a source image within a destination image.
  *
- * You can improve performance of this method by defining PNTR_NO_ALPHABLEND.
+ * You can improve performance of this method by defining PNTR_DISABLE_ALPHABLEND.
  *
  * @param dst The destination image.
  * @param src The source image.
@@ -1484,7 +1498,7 @@ pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
  *
- * @see PNTR_NO_ALPHABLEND
+ * @see PNTR_DISABLE_ALPHABLEND
  */
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
@@ -1506,7 +1520,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     }
 
     // Figure out the final desintation
-    dstRect = pntr_rectangle_intersect(&dstRect, &dstCanvas);
+    dstRect = _pntr_rectangle_intersect(&dstRect, &dstCanvas);
     dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
     dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
 
@@ -1528,14 +1542,14 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
 
     while (rows_left-- > 0) {
         for (int x = 0; x < cols; ++x) {
-            #ifndef PNTR_NO_ALPHABLEND
+            #ifndef PNTR_DISABLE_ALPHABLEND
                 dstPixel[x] = pntr_color_alpha_blend(dstPixel[x], srcPixel[x]);
             #else
                 // Alpha transparency threshold
                 if (srcPixel[x].a >= 128) {
                     dstPixel[x] = srcPixel[x];
                 }
-            #endif  // PNTR_NO_ALPHABLEND
+            #endif  // PNTR_DISABLE_ALPHABLEND
         }
 
         dstPixel += dst_skip;
@@ -1614,7 +1628,7 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
 
     // The default uses the smooth filter if it's available, but falls back to bilinear.
     if (filter == PNTR_FILTER_DEFAULT) {
-        #ifdef PNTR_SUPPORT_FILTER_SMOOTH
+        #ifdef PNTR_ENABLE_FILTER_SMOOTH
             filter = PNTR_FILTER_SMOOTH;
         #else
             filter = PNTR_FILTER_BILINEAR;
@@ -1623,9 +1637,9 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
 
     switch (filter) {
         case PNTR_FILTER_SMOOTH: {
-            #ifndef PNTR_SUPPORT_FILTER_SMOOTH
+            #ifndef PNTR_ENABLE_FILTER_SMOOTH
                 pntr_unload_image(output);
-                return pntr_set_error("To use the Smooth filter, define PNTR_SUPPORT_FILTER_SMOOTH, or use PNTR_FILTER_DEFAULT to have a fallback to PNTR_FILTER_B");
+                return pntr_set_error("To use the Smooth filter, define PNTR_ENABLE_FILTER_SMOOTH, or use PNTR_FILTER_DEFAULT to have a fallback to PNTR_FILTER_B");
             #else
                 int result = stbir_resize_uint8_srgb(
                     (const unsigned char*)image->data,
@@ -1974,6 +1988,16 @@ pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned 
     return pntr_load_bmfont_from_image(image, characters);
 }
 
+/**
+ * Creates a new pntr_font object, with the number of allocated characters, using the given image.
+ *
+ * @param numCharacters The amount of glyphs to prepare within the font.
+ * @param atlas A pre-created image for the glyph atlas.
+ *
+ * @return The new font object allocated in memory.
+ *
+ * @internal
+ */
 pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
     if (numCharacters <= 0) {
         return pntr_set_error("requires at least one character for fonts, none found");
@@ -2180,6 +2204,15 @@ void pntr_unload_font(pntr_font* font) {
     PNTR_FREE(font);
 }
 
+/**
+ * Prints text on the given image.
+ *
+ * @param dst The image of which to print the text on.
+ * @param font The font to use when rendering the text.
+ * @param text The text to write. Must be NULL terminated.
+ * @param posX The position to print the text, starting from the top left on the X axis.
+ * @param posY The position to print the text, starting from the top left on the Y axis.
+ */
 void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY) {
     if (dst == NULL || font == NULL || text == NULL) {
         return;
@@ -2293,7 +2326,7 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  *
  * This must be unloaded manually afterwards with pntr_unload_font().
  *
- * Define PNTR_SUPPORT_DEFAULT_FONT to allow using the default 8x8 font.
+ * Define PNTR_ENABLE_DEFAULT_FONT to allow using the default 8x8 font.
  *
  * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_default_font()
  *
@@ -2302,13 +2335,13 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  * @return The default font, which must be unloaded when finished using.
  *
  * @see pntr_unload_font()
- * @see PNTR_SUPPORT_DEFAULT_FONT
+ * @see PNTR_ENABLE_DEFAULT_FONT
  * @see PNTR_DEFAULT_FONT
  */
 pntr_font* pntr_load_default_font() {
     #ifdef PNTR_DEFAULT_FONT
         return PNTR_DEFAULT_FONT();
-    #elif defined(PNTR_SUPPORT_DEFAULT_FONT)
+    #elif defined(PNTR_ENABLE_DEFAULT_FONT)
         // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
         #include "external/font8x8.h"
 
@@ -2327,7 +2360,7 @@ pntr_font* pntr_load_default_font() {
 
         return font;
     #else
-        return pntr_set_error("pntr_load_default_font() requires PNTR_SUPPORT_DEFAULT_FONT");
+        return pntr_set_error("pntr_load_default_font() requires PNTR_ENABLE_DEFAULT_FONT");
     #endif
 }
 
@@ -2347,9 +2380,9 @@ pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color font
         return pntr_set_error("pntr_load_ttffont() requires a valid fileName and font size.");
     }
 
-    #ifndef PNTR_SUPPORT_TTF
+    #ifndef PNTR_ENABLE_TTF
         (void)fontColor;
-        return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
+        return pntr_set_error("pntr_load_ttffont requires PNTR_ENABLE_TTF");
     #else
         unsigned int bytesRead;
         unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
@@ -2369,9 +2402,9 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
         return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
     }
 
-    #ifndef PNTR_SUPPORT_TTF
+    #ifndef PNTR_ENABLE_TTF
         (void)fontColor;
-        return pntr_set_error("pntr_load_ttffont requires PNTR_SUPPORT_TTF");
+        return pntr_set_error("pntr_load_ttffont requires PNTR_ENABLE_TTF");
     #else
         // Create the bitmap data with ample space based on the font size
         int width = fontSize * 10;
@@ -2678,25 +2711,25 @@ void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_
 /**
  * Gets a PNG representation of the given image in memory.
  *
- * If PNTR_NO_SUPPORT_PNG is defined, this function will not be supported.
+ * If PNTR_DISABLE_PNG is defined, this function will not be supported.
  *
  * @param image The image to save to memory.
  * @param dataSize Where to put the resulting size of the image. Use NULL if you do not care about getting the file size.
  *
- * @return The image data in memory.
+ * @return The image data in memory. This data must be freed when finished using.
  *
- * @see PNTR_NO_SUPPORT_PNG
+ * @see PNTR_DISABLE_PNG
  */
 unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
     if (image == NULL) {
         return pntr_set_error("Requires an actual image");
     }
 
-    #ifdef PNTR_NO_SUPPORT_PNG
+    #ifdef PNTR_DISABLE_PNG
         if (dataSize != NULL) {
             *dataSize = 0;
         }
-        return pntr_set_error("Saving images requires to not define PNTR_NO_SUPPORT_PNG");
+        return pntr_set_error("Saving images requires to not define PNTR_DISABLE_PNG");
     #else
         cp_image_t cpImage = CLITERAL(cp_image_t) {
             .w = image->width,
@@ -2723,7 +2756,7 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
         cp_free_png(&cpImage);
 
         return (unsigned char*)png.data;
-    #endif  // PNTR_NO_SUPPORT_PNG
+    #endif  // PNTR_DISABLE_PNG
 }
 
 /**
@@ -2760,6 +2793,11 @@ inline void pntr_unload_file(unsigned char* fileData) {
 
 /**
  * Calculates a rectangle representing the available alpha border.
+ *
+ * @param image The image to calculate the alpha border on.
+ * @param threshold A threshold factor from 0.0f to 1.0f to consider alpha.
+ *
+ * @return The rectangle representing the alpha border of the image.
  */
 pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
     if (image == NULL) {
@@ -2820,7 +2858,7 @@ void pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
 
     pntr_rectangle destination = CLITERAL(pntr_rectangle) { 0, 0, image->width, image->height };
     pntr_rectangle source = CLITERAL(pntr_rectangle) { x, y, width, height };
-    source = pntr_rectangle_intersect(&source, &destination);
+    source = _pntr_rectangle_intersect(&source, &destination);
 
     if (source.width <= 0 || source.height <= 0 || source.width > image->width || source.height > image->height) {
         return;
@@ -2972,7 +3010,7 @@ void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, i
     }
 
     // Figure out the final desintation
-    dstRect = pntr_rectangle_intersect(&dstRect, &dstCanvas);
+    dstRect = _pntr_rectangle_intersect(&dstRect, &dstCanvas);
     dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
     dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
 
@@ -3135,10 +3173,10 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter 
         return pntr_set_error("image_rotate requires a valid image");
     }
 
-    #ifdef PNTR_NO_MATH
+    #ifdef PNTR_DISABLE_MATH
         (void)rotation;
         (void)filter;
-        return pntr_set_error("pntr_image_rotate_ex requires the math library, without PNTR_NO_MATH");
+        return pntr_set_error("pntr_image_rotate_ex requires the math library, without PNTR_DISABLE_MATH");
     #else
         float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
         float cosTheta = PNTR_COSF(radians);
@@ -3179,7 +3217,7 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter 
         }
 
         return rotatedImage;
-    #endif  // PNTR_NO_MATH
+    #endif  // PNTR_DISABLE_MATH
 }
 
 /**

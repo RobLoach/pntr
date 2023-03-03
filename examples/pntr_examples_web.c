@@ -6,9 +6,9 @@
 #define PNTR_PIXELFORMAT_RGBA
 
 // Enable all pntr features
-#define PNTR_SUPPORT_TTF
-#define PNTR_SUPPORT_DEFAULT_FONT
-#define PNTR_SUPPORT_FILTER_SMOOTH
+#define PNTR_ENABLE_TTF
+#define PNTR_ENABLE_DEFAULT_FONT
+#define PNTR_ENABLE_FILTER_SMOOTH
 
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"

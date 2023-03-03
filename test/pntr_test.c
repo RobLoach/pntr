@@ -2,12 +2,12 @@
 #define UNIT_STATIC
 #include "unit.h"
 
-#define PNTR_SUPPORT_DEFAULT_FONT
-#define PNTR_SUPPORT_TTF
-#define PNTR_SUPPORT_FILTER_SMOOTH
+#define PNTR_ENABLE_DEFAULT_FONT
+#define PNTR_ENABLE_TTF
+#define PNTR_ENABLE_FILTER_SMOOTH
+
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
-
 
 #define COLOREQUALS(color1, color2) { \
     pntr_color firstColor = (color1); \
@@ -269,7 +269,7 @@ MODULE(pntr, {
         pntr_set_error(NULL);
     });
 
-    #ifdef PNTR_SUPPORT_TTF
+    #ifdef PNTR_ENABLE_TTF
         IT("pntr_load_ttffont()", {
             pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
             NEQUALS(font, NULL);
@@ -290,10 +290,10 @@ MODULE(pntr, {
             pntr_unload_font(font);
         });
     #else
-        IT("pntr_load_ttffont(): PNTR_SUPPORT_TTF is disabled, unable to test.", {
+        IT("pntr_load_ttffont(): PNTR_ENABLE_TTF is disabled, unable to test.", {
             // Nothing
         });
-    #endif  // PNTR_SUPPORT_TTF
+    #endif  // PNTR_ENABLE_TTF
 
     IT("pntr_save_file()", {
         const char* fileName = "tempFile.txt";
@@ -436,7 +436,7 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        #ifndef PNTR_NO_MATH
+        #ifndef PNTR_DISABLE_MATH
             IT("pntr_image_rotate(image, 0.33f)", {
                 pntr_image* rotated = pntr_image_rotate(image, 0.33f);
                 NEQUALS(rotated, NULL);
@@ -449,10 +449,10 @@ MODULE(pntr, {
                 pntr_unload_image(rotated);
             });
         #else
-            IT("pntr_image_rotate(image, 0.33f): PNTR_NO_MATH is defined, unable to test.", {
+            IT("pntr_image_rotate(image, 0.33f): PNTR_DISABLE_MATH is defined, unable to test.", {
                 // Nothing
             });
-        #endif  // PNTR_NO_MATH
+        #endif  // PNTR_DISABLE_MATH
 
         IT("pntr_gen_image_gradient, pntr_gen_image_gradient_horizontal, pntr_gen_image_gradient_vertical", {
             pntr_image* image = pntr_gen_image_gradient(500, 500, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_GOLD);

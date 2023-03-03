@@ -117,3 +117,7 @@ void examples_next() {
         currentExample = 0;
     }
 }
+
+void examples_screenshot(const char* fileName) {
+    pntr_save_image(canvas, fileName);
+}

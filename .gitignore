@@ -5,3 +5,5 @@ build
 Testing
 package-lock.json
 node_modules
+examples/examples/screenshots/pntr.png
+examples/examples/screenshots/image_sprite.png
