@@ -462,6 +462,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation);
 PNTR_API pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter filter);
 PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom);
 PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
+PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
 
 #ifdef __cplusplus
@@ -3233,6 +3234,23 @@ pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color
             image->data[y * width + x].g = (unsigned char)((float)right.g * factor + (float)left.g * (1.0f - factor));
             image->data[y * width + x].b = (unsigned char)((float)right.b * factor + (float)left.b * (1.0f - factor));
             image->data[y * width + x].a = (unsigned char)((float)right.a * factor + (float)left.a * (1.0f - factor));
+        }
+    }
+
+    return image;
+}
+
+pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
+    pntr_image* image = pntr_new_image(width, height);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    for (int x = 0; x < width; x++) {
+        float factorX = (float)x / (float)width;
+        for (int y = 0; y < height; y++) {
+            float factorY = (float)y / (float)height;
+            image->data[y * width + x] = pntr_color_bilinear_interpolate(topLeft, bottomLeft, topRight, bottomRight, factorX, factorY);
         }
     }
 

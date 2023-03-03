@@ -454,6 +454,29 @@ MODULE(pntr, {
             });
         #endif  // PNTR_NO_MATH
 
+        IT("pntr_gen_image_gradient, pntr_gen_image_gradient_horizontal, pntr_gen_image_gradient_vertical", {
+            pntr_image* image = pntr_gen_image_gradient(500, 500, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_GOLD);
+            NEQUALS(image, NULL);
+            pntr_color red = pntr_image_get_color(image, 0, 0);
+            COLOREQUALS(red, PNTR_RED);
+            pntr_color green = pntr_image_get_color(image, image->width - 1, 0);
+            GREATER(green.g, 220);
+            pntr_color blue = pntr_image_get_color(image, 0, image->height - 1);
+            GREATER(blue.b, 230);
+            pntr_color gold = pntr_image_get_color(image, image->width - 1, image->height - 1);
+            GREATER(gold.r, 230);
+            GREATER(gold.g, 180);
+            pntr_unload_image(image);
+
+            image = pntr_gen_image_gradient_horizontal(400, 400, PNTR_RED, PNTR_BLUE);
+            NEQUALS(image, NULL);
+            pntr_unload_image(image);
+            image = pntr_gen_image_gradient_vertical(400, 400, PNTR_RED, PNTR_BLUE);
+            NEQUALS(image, NULL);
+            pntr_unload_image(image);
+
+        });
+
         pntr_unload_image(image);
     });
 
