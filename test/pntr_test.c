@@ -9,13 +9,13 @@
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
-#define COLOREQUALS(color1, color2) { \
-    pntr_color firstColor = (color1); \
-    pntr_color secondColor = (color2); \
-    EQUALS(firstColor.r, secondColor.r); \
-    EQUALS(firstColor.g, secondColor.g); \
-    EQUALS(firstColor.b, secondColor.b); \
-    EQUALS(firstColor.a, secondColor.a); \
+#define COLOREQUALS(actual, expected) { \
+    pntr_color actualColor = (actual); \
+    pntr_color expectedColor = (expected); \
+    EQUALS(actualColor.r, expectedColor.r); \
+    EQUALS(actualColor.g, expectedColor.g); \
+    EQUALS(actualColor.b, expectedColor.b); \
+    EQUALS(actualColor.a, expectedColor.a); \
 }
 
 MODULE(pntr, {
