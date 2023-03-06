@@ -2,20 +2,20 @@
 #define UNIT_STATIC
 #include "unit.h"
 
-#define PNTR_SUPPORT_DEFAULT_FONT
-#define PNTR_SUPPORT_TTF
-#define PNTR_SUPPORT_FILTER_SMOOTH
+#define PNTR_ENABLE_DEFAULT_FONT
+#define PNTR_ENABLE_TTF
+#define PNTR_ENABLE_FILTER_SMOOTH
+
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
-
-#define COLOREQUALS(color1, color2) { \
-    pntr_color firstColor = (color1); \
-    pntr_color secondColor = (color2); \
-    EQUALS(firstColor.r, secondColor.r); \
-    EQUALS(firstColor.g, secondColor.g); \
-    EQUALS(firstColor.b, secondColor.b); \
-    EQUALS(firstColor.a, secondColor.a); \
+#define COLOREQUALS(actual, expected) { \
+    pntr_color actualColor = (actual); \
+    pntr_color expectedColor = (expected); \
+    EQUALS(actualColor.r, expectedColor.r); \
+    EQUALS(actualColor.g, expectedColor.g); \
+    EQUALS(actualColor.b, expectedColor.b); \
+    EQUALS(actualColor.a, expectedColor.a); \
 }
 
 MODULE(pntr, {
@@ -269,7 +269,7 @@ MODULE(pntr, {
         pntr_set_error(NULL);
     });
 
-    #ifdef PNTR_SUPPORT_TTF
+    #ifdef PNTR_ENABLE_TTF
         IT("pntr_load_ttffont()", {
             pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
             NEQUALS(font, NULL);
@@ -290,10 +290,10 @@ MODULE(pntr, {
             pntr_unload_font(font);
         });
     #else
-        IT("pntr_load_ttffont(): PNTR_SUPPORT_TTF is disabled, unable to test.", {
+        IT("pntr_load_ttffont(): PNTR_ENABLE_TTF is disabled, unable to test.", {
             // Nothing
         });
-    #endif  // PNTR_SUPPORT_TTF
+    #endif  // PNTR_ENABLE_TTF
 
     IT("pntr_save_file()", {
         const char* fileName = "tempFile.txt";
@@ -436,7 +436,7 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        #ifndef PNTR_NO_MATH
+        #ifndef PNTR_DISABLE_MATH
             IT("pntr_image_rotate(image, 0.33f)", {
                 pntr_image* rotated = pntr_image_rotate(image, 0.33f);
                 NEQUALS(rotated, NULL);
@@ -449,10 +449,33 @@ MODULE(pntr, {
                 pntr_unload_image(rotated);
             });
         #else
-            IT("pntr_image_rotate(image, 0.33f): PNTR_NO_MATH is defined, unable to test.", {
+            IT("pntr_image_rotate(image, 0.33f): PNTR_DISABLE_MATH is defined, unable to test.", {
                 // Nothing
             });
-        #endif  // PNTR_NO_MATH
+        #endif  // PNTR_DISABLE_MATH
+
+        IT("pntr_gen_image_gradient, pntr_gen_image_gradient_horizontal, pntr_gen_image_gradient_vertical", {
+            pntr_image* image = pntr_gen_image_gradient(500, 500, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_GOLD);
+            NEQUALS(image, NULL);
+            pntr_color red = pntr_image_get_color(image, 0, 0);
+            COLOREQUALS(red, PNTR_RED);
+            pntr_color green = pntr_image_get_color(image, image->width - 1, 0);
+            GREATER(green.g, 220);
+            pntr_color blue = pntr_image_get_color(image, 0, image->height - 1);
+            GREATER(blue.b, 230);
+            pntr_color gold = pntr_image_get_color(image, image->width - 1, image->height - 1);
+            GREATER(gold.r, 230);
+            GREATER(gold.g, 180);
+            pntr_unload_image(image);
+
+            image = pntr_gen_image_gradient_horizontal(400, 400, PNTR_RED, PNTR_BLUE);
+            NEQUALS(image, NULL);
+            pntr_unload_image(image);
+            image = pntr_gen_image_gradient_vertical(400, 400, PNTR_RED, PNTR_BLUE);
+            NEQUALS(image, NULL);
+            pntr_unload_image(image);
+
+        });
 
         pntr_unload_image(image);
     });

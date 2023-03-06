@@ -2,7 +2,7 @@
 
 #include "../../pntr.h"
 
-#define EXAMPLES_COUNT 8
+#define EXAMPLES_COUNT 9
 #include "example_welcome.h"
 #include "example_shapes.h"
 #include "example_fonts.h"
@@ -10,6 +10,7 @@
 #include "example_image_resize.h"
 #include "example_image_rotate.h"
 #include "example_image_sprite.h"
+#include "example_image_alphamask.h"
 #include "example_bunnymark.h"
 
 int currentExample = 0;
@@ -27,6 +28,7 @@ void examples_init() {
     example_image_rotate_init();
     example_image_sprite_init();
     example_bunnymark_init();
+    example_image_alphamask_init();
 }
 
 const char* examples_update() {
@@ -52,9 +54,12 @@ const char* examples_update() {
             exampleTitle = example_image_rotate_update(canvas);
             break;
         case 6:
-            exampleTitle = example_image_sprite_update(canvas);
+            exampleTitle = example_image_alphamask_update(canvas);
             break;
         case 7:
+            exampleTitle = example_image_sprite_update(canvas);
+            break;
+        case 8:
             exampleTitle = example_bunnymark_update(canvas);
             break;
     }
@@ -81,6 +86,7 @@ void examples_unload() {
     example_image_resize_unload();
     example_image_sprite_unload();
     example_image_rotate_unload();
+    example_image_alphamask_unload();
     example_bunnymark_unload();
     pntr_unload_image(canvas);
     pntr_unload_font(font);
@@ -116,4 +122,8 @@ void examples_next() {
     if (++currentExample >= EXAMPLES_COUNT) {
         currentExample = 0;
     }
+}
+
+void examples_screenshot(const char* fileName) {
+    pntr_save_image(canvas, fileName);
 }
