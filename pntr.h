@@ -466,6 +466,7 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
 PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation);
 PNTR_API pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter filter);
+PNTR_API void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, pntr_filter filter);
 PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom);
 PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
 PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
@@ -3218,6 +3219,80 @@ pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter 
 
         return rotatedImage;
     #endif  // PNTR_DISABLE_MATH
+}
+#include <stdio.h>
+
+void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, pntr_filter filter) {
+    if (dst == NULL || src == NULL) {
+        pntr_set_error("image_rotate requires a valid image");
+        return;
+    }
+
+    #ifdef PNTR_DISABLE_MATH
+        (void)rotation;
+        (void)filter;
+        pntr_set_error("pntr_image_draw_rotate_zoom requires the math library, without PNTR_DISABLE_MATH");
+        return;
+    #else
+        float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+        float cosTheta = PNTR_COSF(radians);
+        float sinTheta = PNTR_SINF(radians);
+
+        if (srcRect.x < 0) {
+            srcRect.width -= srcRect.x;
+            srcRect.x = 0;
+        }
+        if (srcRect.y < 0) {
+            srcRect.height -= srcRect.y;
+            srcRect.y = 0;
+        }
+        if (srcRect.width <= 0) {
+            srcRect.width = src->width - srcRect.x;
+        }
+        if (srcRect.height <= 0) {
+            srcRect.height = src->height - srcRect.y;
+        }
+
+        int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.height * sinTheta));
+        int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.height * cosTheta));
+
+        float centerX = (float)srcRect.width / 2.0f;
+        float centerY = (float)srcRect.height / 2.0f;
+
+        for (int y = 0; y < newHeight; y++) {
+            for (int x = 0; x < newWidth; x++) {
+                float srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX + srcRect.x;
+                float srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY + srcRect.y;
+
+                if (srcX >= srcRect.x && srcX < srcRect.width - 1 && srcY >= srcRect.y && srcY < srcRect.height - 1) {
+                    if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
+                        //rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = image->data[(int)srcY * (image->pitch >> 2) + (int)srcX];
+                        //pntr_color* destination = pntr_image_get_color_pointer(dst, posX + x, posY + y);
+                        //if (destination != NULL) {
+
+                        pntr_color source = pntr_image_get_color(src, (int)srcX, (int)srcY);
+
+                        //printf("Something: %dx%d\n", (int)srcX, (int)srcY);
+                        //*destination = source;
+
+                        pntr_draw_pixel(dst, x, y, source);
+                        //}
+                        //*destination = pntr_color_alpha_blend(*destination, source);
+                    }
+                    else {
+                        // rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = pntr_color_bilinear_interpolate(
+                        //     image->data[(int)srcY * (image->pitch >> 2) + (int)srcX],
+                        //     image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX],
+                        //     image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
+                        //     image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX + 1],
+                        //     srcX - PNTR_FLOORF(srcX),
+                        //     srcY - PNTR_FLOORF(srcY)
+                        // );
+                    }
+                }
+            }
+        }
+    #endif
 }
 
 /**

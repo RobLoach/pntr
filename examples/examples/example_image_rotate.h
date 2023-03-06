@@ -24,6 +24,9 @@ const char* example_image_rotate_update(pntr_image* canvas) {
         pntr_draw_image(canvas, notSmooth, canvas->width / 4 - notSmooth->width / 2, canvas->height / 2 - notSmooth->height / 2);
         pntr_draw_image(canvas, rotatedImage, canvas->width / 4 - rotatedImage->width / 2 + canvas->width / 2, canvas->height / 2 - rotatedImage->height / 2);
 
+
+
+        pntr_draw_image_rotate(canvas, imageToRotate, (pntr_rectangle){30,30,imageToRotate->width-60, imageToRotate->height-60}, 100, 100, rotation, PNTR_FILTER_NEARESTNEIGHBOR);
         // Unload the resized images
         pntr_unload_image(notSmooth);
         pntr_unload_image(rotatedImage);
