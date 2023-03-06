@@ -109,7 +109,7 @@
     /**
      * Skips alpha blending when rendering images. Defining this will improve performance.
      *
-     * @see pntr_draw_image_rec()
+     * @see pntr_color_alpha_blend()
      */
     #define PNTR_DISABLE_ALPHABLEND
 
@@ -1465,7 +1465,12 @@ inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY
  * @param src The source color.
  *
  * @return The new alpha-blended color.
+ *
+ * @see PNTR_DISABLE_ALPHABLEND
  */
+#ifdef PNTR_DISABLE_ALPHABLEND
+inline
+#endif
 pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
     if (src.a == 0) {
         return dst;
@@ -1474,31 +1479,31 @@ pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
         return src;
     }
 
-    pntr_color out;
-    unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
-    out.a = (unsigned char)(((unsigned int)alpha * 256 + (unsigned int)dst.a * (256 - alpha)) >> 8);
+    #ifdef PNTR_DISABLE_ALPHABLEND
+        return src;
+    #else
+        pntr_color out;
+        unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
+        out.a = (unsigned char)(((unsigned int)alpha * 256 + (unsigned int)dst.a * (256 - alpha)) >> 8);
 
-    if (out.a > 0) {
-        out.r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst.r * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-        out.g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst.g * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-        out.b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst.b * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-    }
+        if (out.a > 0) {
+            out.r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst.r * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+            out.g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst.g * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+            out.b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst.b * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+        }
 
-    return out;
+        return out;
+    #endif
 }
 
 /**
  * Draw a source image within a destination image.
- *
- * You can improve performance of this method by defining PNTR_DISABLE_ALPHABLEND.
  *
  * @param dst The destination image.
  * @param src The source image.
  * @param srcRect The source rectangle of what to draw from the source image.
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
- *
- * @see PNTR_DISABLE_ALPHABLEND
  */
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
@@ -1542,14 +1547,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
 
     while (rows_left-- > 0) {
         for (int x = 0; x < cols; ++x) {
-            #ifndef PNTR_DISABLE_ALPHABLEND
-                dstPixel[x] = pntr_color_alpha_blend(dstPixel[x], srcPixel[x]);
-            #else
-                // Alpha transparency threshold
-                if (srcPixel[x].a >= 128) {
-                    dstPixel[x] = srcPixel[x];
-                }
-            #endif  // PNTR_DISABLE_ALPHABLEND
+            dstPixel[x] = pntr_color_alpha_blend(dstPixel[x], srcPixel[x]);
         }
 
         dstPixel += dst_skip;
@@ -3287,8 +3285,7 @@ pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, p
     for (int x = 0; x < width; x++) {
         float factorX = (float)x / (float)width;
         for (int y = 0; y < height; y++) {
-            float factorY = (float)y / (float)height;
-            image->data[y * width + x] = pntr_color_bilinear_interpolate(topLeft, bottomLeft, topRight, bottomRight, factorX, factorY);
+            image->data[y * width + x] = pntr_color_bilinear_interpolate(topLeft, bottomLeft, topRight, bottomRight, factorX, (float)y / (float)height);
         }
     }
 
