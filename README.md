@@ -91,7 +91,7 @@ int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat
 pntr_image* pntr_load_image(const char* fileName);
 pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
 pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
-const char* pntr_get_error();
+const char* pntr_get_error(void);
 void* pntr_set_error(const char* error);
 pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
@@ -102,7 +102,7 @@ void pntr_image_color_fade(pntr_image* image, float alpha);
 pntr_color pntr_color_brightness(pntr_color color, float factor);
 pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
 void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
-pntr_font* pntr_load_default_font();
+pntr_font* pntr_load_default_font(void);
 void pntr_unload_font(pntr_font* font);
 pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
