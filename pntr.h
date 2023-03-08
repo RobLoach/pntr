@@ -438,6 +438,8 @@ PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixel
 PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
 PNTR_API pntr_font* pntr_load_default_font();
 PNTR_API void pntr_unload_font(pntr_font* font);
+PNTR_API pntr_font* pntr_font_copy(pntr_font* font);
+PNTR_API pntr_font* pntr_font_resize(pntr_font* font, float scale, pntr_filter filter);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
@@ -2200,6 +2202,71 @@ void pntr_unload_font(pntr_font* font) {
     }
 
     PNTR_FREE(font);
+}
+
+/**
+ * Creates a copy of the given font.
+ *
+ * @param font The font to copy.
+ *
+ * @return A new font that is a copy of the given font.
+ */
+pntr_font* pntr_font_copy(pntr_font* font) {
+    if (font == NULL) {
+        return pntr_set_error("pntr_font_copy requires a valid font");
+    }
+
+    pntr_image* atlas = pntr_image_copy(font->atlas);
+    pntr_font* output = _pntr_new_font(font->charactersLen, atlas);
+    PNTR_MEMCPY(output->srcRects, font->srcRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
+    PNTR_MEMCPY(output->glyphRects, font->glyphRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
+    PNTR_MEMCPY(output->characters, font->characters, sizeof(char) * (size_t)output->charactersLen);
+
+    return output;
+}
+
+/**
+ * Resize a font by a given scale.
+ *
+ * @param font The font that you would like to scale.
+ * @param scale The scale of which to resize the font by.
+ * @param filter The filter to apply when resizing the font. PNTR_FILTER_NEARESTNEIGHBOR is good for pixel fonts.
+ *
+ * @return The new font that has been resized.
+ */
+pntr_font* pntr_font_resize(pntr_font* font, float scale, pntr_filter filter) {
+    if (font == NULL) {
+        return pntr_set_error("pntr_font_copy requires a valid font");
+    }
+
+    if (scale <= 0.0f) {
+        return pntr_set_error("pntr_font_resize requires a scale >= 0");
+    }
+
+    // Create the new font.
+    pntr_font* output = pntr_font_copy(font);
+    if (output == NULL) {
+        return pntr_set_error("Failed to create a font copy");
+    }
+
+    // Resize the atlas.
+    pntr_image* resizedAtlas = pntr_image_resize(output->atlas, (int)((float)output->atlas->width * scale), (int)((float)output->atlas->height * scale), filter);
+    pntr_unload_image(output->atlas);
+    output->atlas = resizedAtlas;
+
+    // Resize the rectangles.
+    for (int i = 0; i < font->charactersLen; i++) {
+        output->srcRects[i].x = (int)((float)output->srcRects[i].x * scale);
+        output->srcRects[i].y = (int)((float)output->srcRects[i].y * scale);
+        output->srcRects[i].width = (int)((float)output->srcRects[i].width * scale);
+        output->srcRects[i].height = (int)((float)output->srcRects[i].height * scale);
+        output->glyphRects[i].x = (int)((float)output->glyphRects[i].x * scale);
+        output->glyphRects[i].y = (int)((float)output->glyphRects[i].y * scale);
+        output->glyphRects[i].width = (int)((float)output->glyphRects[i].width * scale);
+        output->glyphRects[i].height = (int)((float)output->glyphRects[i].height * scale);
+    }
+
+    return output;
 }
 
 /**
