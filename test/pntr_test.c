@@ -394,8 +394,8 @@ MODULE(pntr, {
         IT("pntr_image_rotate(image, 0.0f)", {
             pntr_image* rotated = pntr_image_rotate(image, 0.0f);
             NEQUALS(rotated, NULL);
-            EQUALS(image->width, 40);
-            EQUALS(image->height, 30);
+            EQUALS(rotated->width, 40);
+            EQUALS(rotated->height, 30);
             pntr_unload_image(rotated);
         });
 
@@ -457,6 +457,7 @@ MODULE(pntr, {
         IT("pntr_gen_image_gradient, pntr_gen_image_gradient_horizontal, pntr_gen_image_gradient_vertical", {
             pntr_image* image = pntr_gen_image_gradient(500, 500, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_GOLD);
             NEQUALS(image, NULL);
+
             pntr_color red = pntr_image_get_color(image, 0, 0);
             COLOREQUALS(red, PNTR_RED);
             pntr_color green = pntr_image_get_color(image, image->width - 1, 0);
@@ -474,10 +475,43 @@ MODULE(pntr, {
             image = pntr_gen_image_gradient_vertical(400, 400, PNTR_RED, PNTR_BLUE);
             NEQUALS(image, NULL);
             pntr_unload_image(image);
-
         });
 
         pntr_unload_image(image);
+    });
+
+    IT("pntr_font_copy()", {
+        pntr_font* font = pntr_load_default_font();
+        NEQUALS(font, NULL);
+
+        pntr_font* copy = pntr_font_copy(font);
+        NEQUALS(copy, NULL);
+
+        EQUALS(font->charactersLen, copy->charactersLen);
+        EQUALS(font->atlas->width, copy->atlas->width);
+        EQUALS(font->atlas->height, copy->atlas->height);
+        NEQUALS(font->atlas, copy->atlas);
+
+        pntr_unload_font(copy);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_font_resize()", {
+        pntr_font* font = pntr_load_default_font();
+        NEQUALS(font, NULL);
+
+        int scale = 5;
+        pntr_font* resized = pntr_font_resize(font, (float)scale, PNTR_FILTER_BILINEAR);
+        NEQUALS(resized, NULL);
+
+        EQUALS(font->charactersLen, resized->charactersLen);
+        EQUALS(font->atlas->width * scale, resized->atlas->width);
+        EQUALS(font->atlas->height * scale, resized->atlas->height);
+        EQUALS(resized->glyphRects[0].width, font->glyphRects[0].width * scale);
+        NEQUALS(font->atlas, resized->atlas);
+
+        pntr_unload_font(font);
+        pntr_unload_font(resized);
     });
 
     IT("No reported errors", {

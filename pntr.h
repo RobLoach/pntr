@@ -109,7 +109,7 @@
     /**
      * Skips alpha blending when rendering images. Defining this will improve performance.
      *
-     * @see pntr_draw_image_rec()
+     * @see pntr_color_alpha_blend()
      */
     #define PNTR_DISABLE_ALPHABLEND
 
@@ -438,6 +438,8 @@ PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixel
 PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
 PNTR_API pntr_font* pntr_load_default_font();
 PNTR_API void pntr_unload_font(pntr_font* font);
+PNTR_API pntr_font* pntr_font_copy(pntr_font* font);
+PNTR_API pntr_font* pntr_font_resize(pntr_font* font, float scale, pntr_filter filter);
 PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
@@ -1466,7 +1468,12 @@ inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY
  * @param src The source color.
  *
  * @return The new alpha-blended color.
+ *
+ * @see PNTR_DISABLE_ALPHABLEND
  */
+#ifdef PNTR_DISABLE_ALPHABLEND
+inline
+#endif
 pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
     if (src.a == 0) {
         return dst;
@@ -1475,31 +1482,31 @@ pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
         return src;
     }
 
-    pntr_color out;
-    unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
-    out.a = (unsigned char)(((unsigned int)alpha * 256 + (unsigned int)dst.a * (256 - alpha)) >> 8);
+    #ifdef PNTR_DISABLE_ALPHABLEND
+        return src;
+    #else
+        pntr_color out;
+        unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
+        out.a = (unsigned char)(((unsigned int)alpha * 256 + (unsigned int)dst.a * (256 - alpha)) >> 8);
 
-    if (out.a > 0) {
-        out.r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst.r * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-        out.g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst.g * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-        out.b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst.b * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-    }
+        if (out.a > 0) {
+            out.r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst.r * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+            out.g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst.g * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+            out.b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst.b * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
+        }
 
-    return out;
+        return out;
+    #endif
 }
 
 /**
  * Draw a source image within a destination image.
- *
- * You can improve performance of this method by defining PNTR_DISABLE_ALPHABLEND.
  *
  * @param dst The destination image.
  * @param src The source image.
  * @param srcRect The source rectangle of what to draw from the source image.
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
- *
- * @see PNTR_DISABLE_ALPHABLEND
  */
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
@@ -1543,14 +1550,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
 
     while (rows_left-- > 0) {
         for (int x = 0; x < cols; ++x) {
-            #ifndef PNTR_DISABLE_ALPHABLEND
-                dstPixel[x] = pntr_color_alpha_blend(dstPixel[x], srcPixel[x]);
-            #else
-                // Alpha transparency threshold
-                if (srcPixel[x].a >= 128) {
-                    dstPixel[x] = srcPixel[x];
-                }
-            #endif  // PNTR_DISABLE_ALPHABLEND
+            dstPixel[x] = pntr_color_alpha_blend(dstPixel[x], srcPixel[x]);
         }
 
         dstPixel += dst_skip;
@@ -2203,6 +2203,71 @@ void pntr_unload_font(pntr_font* font) {
     }
 
     PNTR_FREE(font);
+}
+
+/**
+ * Creates a copy of the given font.
+ *
+ * @param font The font to copy.
+ *
+ * @return A new font that is a copy of the given font.
+ */
+pntr_font* pntr_font_copy(pntr_font* font) {
+    if (font == NULL) {
+        return pntr_set_error("pntr_font_copy requires a valid font");
+    }
+
+    pntr_image* atlas = pntr_image_copy(font->atlas);
+    pntr_font* output = _pntr_new_font(font->charactersLen, atlas);
+    PNTR_MEMCPY(output->srcRects, font->srcRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
+    PNTR_MEMCPY(output->glyphRects, font->glyphRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
+    PNTR_MEMCPY(output->characters, font->characters, sizeof(char) * (size_t)output->charactersLen);
+
+    return output;
+}
+
+/**
+ * Resize a font by a given scale.
+ *
+ * @param font The font that you would like to scale.
+ * @param scale The scale of which to resize the font by.
+ * @param filter The filter to apply when resizing the font. PNTR_FILTER_NEARESTNEIGHBOR is good for pixel fonts.
+ *
+ * @return The new font that has been resized.
+ */
+pntr_font* pntr_font_resize(pntr_font* font, float scale, pntr_filter filter) {
+    if (font == NULL) {
+        return pntr_set_error("pntr_font_copy requires a valid font");
+    }
+
+    if (scale <= 0.0f) {
+        return pntr_set_error("pntr_font_resize requires a scale >= 0");
+    }
+
+    // Create the new font.
+    pntr_font* output = pntr_font_copy(font);
+    if (output == NULL) {
+        return pntr_set_error("Failed to create a font copy");
+    }
+
+    // Resize the atlas.
+    pntr_image* resizedAtlas = pntr_image_resize(output->atlas, (int)((float)output->atlas->width * scale), (int)((float)output->atlas->height * scale), filter);
+    pntr_unload_image(output->atlas);
+    output->atlas = resizedAtlas;
+
+    // Resize the rectangles.
+    for (int i = 0; i < font->charactersLen; i++) {
+        output->srcRects[i].x = (int)((float)output->srcRects[i].x * scale);
+        output->srcRects[i].y = (int)((float)output->srcRects[i].y * scale);
+        output->srcRects[i].width = (int)((float)output->srcRects[i].width * scale);
+        output->srcRects[i].height = (int)((float)output->srcRects[i].height * scale);
+        output->glyphRects[i].x = (int)((float)output->glyphRects[i].x * scale);
+        output->glyphRects[i].y = (int)((float)output->glyphRects[i].y * scale);
+        output->glyphRects[i].width = (int)((float)output->glyphRects[i].width * scale);
+        output->glyphRects[i].height = (int)((float)output->glyphRects[i].height * scale);
+    }
+
+    return output;
 }
 
 /**
@@ -3362,8 +3427,7 @@ pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, p
     for (int x = 0; x < width; x++) {
         float factorX = (float)x / (float)width;
         for (int y = 0; y < height; y++) {
-            float factorY = (float)y / (float)height;
-            image->data[y * width + x] = pntr_color_bilinear_interpolate(topLeft, bottomLeft, topRight, bottomRight, factorX, factorY);
+            image->data[y * width + x] = pntr_color_bilinear_interpolate(topLeft, bottomLeft, topRight, bottomRight, factorX, (float)y / (float)height);
         }
     }
 

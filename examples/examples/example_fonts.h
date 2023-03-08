@@ -4,6 +4,7 @@ pntr_font* defaultFont;
 pntr_font* bmFont;
 pntr_font* ttyFont;
 pntr_font* ttfFont;
+pntr_font* resizedFont;
 
 void example_fonts_init() {
     // Default Font
@@ -18,6 +19,9 @@ void example_fonts_init() {
 
     // TTF Font
     ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 28, PNTR_DARKPURPLE);
+
+    // Resize the default font
+    resizedFont = pntr_font_resize(defaultFont, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
@@ -27,11 +31,11 @@ const char* example_fonts_update(pntr_image* canvas) {
     }
 
     // Font Drawing
-    pntr_draw_text(canvas, defaultFont, "Default Font Example", 20, 50);
+    pntr_draw_text(canvas, defaultFont, "Default Font Example", 10, 50);
 
     // BMFont
-    pntr_draw_rectangle(canvas, 0, 80, 200, 20, PNTR_BLACK);
-    pntr_draw_text(canvas, bmFont, "BM Font Example", 20, 80);
+    pntr_draw_rectangle(canvas, 0, 90, 200, 20, PNTR_BLACK);
+    pntr_draw_text(canvas, bmFont, "BM Font Example", 10, 90);
 
     // TTY Font
     pntr_color background = pntr_get_color(0x0000caff);
@@ -54,6 +58,9 @@ const char* example_fonts_update(pntr_image* canvas) {
     // pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_GRAY);
     // pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
 
+    // Show the Resized Font
+    pntr_draw_text(canvas, resizedFont, "Bigger Font", 10, 60);
+
     return "Fonts";
 }
 
@@ -62,4 +69,5 @@ void example_fonts_unload() {
     pntr_unload_font(ttyFont);
     pntr_unload_font(bmFont);
     pntr_unload_font(ttfFont);
+    pntr_unload_font(resizedFont);
 }
