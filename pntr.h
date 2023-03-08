@@ -425,7 +425,7 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
 PNTR_API pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
-PNTR_API const char* pntr_get_error();
+PNTR_API const char* pntr_get_error(void);
 PNTR_API void* pntr_set_error(const char* error);
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
@@ -436,7 +436,7 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float alpha);
 PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor);
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
 PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
-PNTR_API pntr_font* pntr_load_default_font();
+PNTR_API pntr_font* pntr_load_default_font(void);
 PNTR_API void pntr_unload_font(pntr_font* font);
 PNTR_API pntr_font* pntr_font_copy(pntr_font* font);
 PNTR_API pntr_font* pntr_font_resize(pntr_font* font, float scale, pntr_filter filter);
@@ -955,7 +955,7 @@ const char* _pntr_error;
  *
  * @return The last error, or NULL if there wasn't an error.
  */
-inline const char* pntr_get_error() {
+inline const char* pntr_get_error(void) {
     return _pntr_error;
 }
 
@@ -2403,7 +2403,7 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  * @see PNTR_ENABLE_DEFAULT_FONT
  * @see PNTR_DEFAULT_FONT
  */
-pntr_font* pntr_load_default_font() {
+pntr_font* pntr_load_default_font(void) {
     #ifdef PNTR_DEFAULT_FONT
         return PNTR_DEFAULT_FONT();
     #elif defined(PNTR_ENABLE_DEFAULT_FONT)
