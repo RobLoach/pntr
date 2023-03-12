@@ -392,7 +392,7 @@ MODULE(pntr, {
         pntr_draw_rectangle(image, 9, 9, 3, 3, PNTR_RED);
 
         IT("pntr_image_rotate(image, 0.0f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.0f);
+            pntr_image* rotated = pntr_image_rotate(image, 0.0f, PNTR_FILTER_DEFAULT);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, 40);
             EQUALS(rotated->height, 30);
@@ -400,7 +400,7 @@ MODULE(pntr, {
         });
 
         IT("pntr_image_rotate(image, 0.25f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.25f);
+            pntr_image* rotated = pntr_image_rotate(image, 0.25f, PNTR_FILTER_DEFAULT);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -413,7 +413,7 @@ MODULE(pntr, {
         })
 
         IT("pntr_image_rotate(image, 0.5f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.5f);
+            pntr_image* rotated = pntr_image_rotate(image, 0.5f, PNTR_FILTER_DEFAULT);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->width);
             EQUALS(rotated->height, image->height);
@@ -425,7 +425,7 @@ MODULE(pntr, {
         });
 
         IT("pntr_image_rotate(image, 0.75f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.75f);
+            pntr_image* rotated = pntr_image_rotate(image, 0.75f, PNTR_FILTER_DEFAULT);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -438,7 +438,7 @@ MODULE(pntr, {
 
         #ifndef PNTR_DISABLE_MATH
             IT("pntr_image_rotate(image, 0.33f)", {
-                pntr_image* rotated = pntr_image_rotate(image, 0.33f);
+                pntr_image* rotated = pntr_image_rotate(image, 0.33f, PNTR_FILTER_DEFAULT);
                 NEQUALS(rotated, NULL);
                 NEQUALS(rotated->width, image->height);
                 NEQUALS(rotated->height, image->width);
@@ -496,18 +496,19 @@ MODULE(pntr, {
         pntr_unload_font(font);
     });
 
-    IT("pntr_font_resize()", {
+    IT("pntr_font_scale()", {
         pntr_font* font = pntr_load_default_font();
         NEQUALS(font, NULL);
 
-        int scale = 5;
-        pntr_font* resized = pntr_font_resize(font, (float)scale, PNTR_FILTER_BILINEAR);
+        int scaleX = 5;
+        int scaleY = 2;
+        pntr_font* resized = pntr_font_scale(font, (float)scaleX, (float)scaleY, PNTR_FILTER_BILINEAR);
         NEQUALS(resized, NULL);
 
         EQUALS(font->charactersLen, resized->charactersLen);
-        EQUALS(font->atlas->width * scale, resized->atlas->width);
-        EQUALS(font->atlas->height * scale, resized->atlas->height);
-        EQUALS(resized->glyphRects[0].width, font->glyphRects[0].width * scale);
+        EQUALS(font->atlas->width * scaleX, resized->atlas->width);
+        EQUALS(font->atlas->height * scaleY, resized->atlas->height);
+        EQUALS(resized->glyphRects[0].width, font->glyphRects[0].width * scaleX);
         NEQUALS(font->atlas, resized->atlas);
 
         pntr_unload_font(font);

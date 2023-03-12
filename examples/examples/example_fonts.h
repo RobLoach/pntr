@@ -21,7 +21,7 @@ void example_fonts_init() {
     ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 28, PNTR_DARKPURPLE);
 
     // Resize the default font
-    resizedFont = pntr_font_resize(defaultFont, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+    resizedFont = pntr_font_scale(defaultFont, 2.0f, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
@@ -54,12 +54,12 @@ const char* example_fonts_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 200, 50, textSize.x, textSize.y, PNTR_SKYBLUE);
     pntr_draw_text(canvas, ttfFont, ttfText, 200, 50);
 
+    // Show the Resized Font
+    pntr_draw_text(canvas, resizedFont, "Bigger Font", 10, 65);
+
     // Display the canvas
     // pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_GRAY);
     // pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
-
-    // Show the Resized Font
-    pntr_draw_text(canvas, resizedFont, "Bigger Font", 10, 60);
 
     return "Fonts";
 }
