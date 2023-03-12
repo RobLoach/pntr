@@ -69,6 +69,8 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
 void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
+void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, pntr_filter filter);
+void pntr_draw_image_rotate_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, pntr_filter filter);
 void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 pntr_color pntr_get_color(unsigned int hexValue);
@@ -130,8 +132,7 @@ pntr_color pntr_color_contrast(pntr_color color, float contrast);
 void pntr_image_color_contrast(pntr_image* image, float contrast);
 void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
 void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
-pntr_image* pntr_image_rotate(pntr_image* image, float rotation);
-pntr_image* pntr_image_rotate_ex(pntr_image* image, float rotation, pntr_filter filter);
+pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter filter);
 pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom);
 pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
 pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);

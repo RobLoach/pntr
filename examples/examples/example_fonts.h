@@ -21,7 +21,7 @@ void example_fonts_init() {
     ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 28, PNTR_DARKPURPLE);
 
     // Resize the default font
-    resizedFont = pntr_font_resize(defaultFont, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+    resizedFont = pntr_font_scale(defaultFont, 2.0f, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
 }
 
 const char* example_fonts_update(pntr_image* canvas) {
