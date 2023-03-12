@@ -54,12 +54,12 @@ const char* example_fonts_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 200, 50, textSize.x, textSize.y, PNTR_SKYBLUE);
     pntr_draw_text(canvas, ttfFont, ttfText, 200, 50);
 
+    // Show the Resized Font
+    pntr_draw_text(canvas, resizedFont, "Bigger Font", 10, 65);
+
     // Display the canvas
     // pntr_draw_rectangle(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_GRAY);
     // pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
-
-    // Show the Resized Font
-    pntr_draw_text(canvas, resizedFont, "Bigger Font", 10, 60);
 
     return "Fonts";
 }

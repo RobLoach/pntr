@@ -13,7 +13,7 @@
 #include "example_image_alphamask.h"
 #include "example_bunnymark.h"
 
-int currentExample = 3;
+int currentExample = 0;
 pntr_image* canvas;
 pntr_font* font;
 

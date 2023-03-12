@@ -507,19 +507,19 @@ PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_col
 /**
  * Yellow.
  */
-#define PNTR_YELLOW     CLITERAL(pntr_color) { .r = 253, .g = 249, .b = 0,   .a =255  }
+#define PNTR_YELLOW     CLITERAL(pntr_color) { .r = 253, .g = 249, .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_GOLD
 /**
  * Gold.
  */
-#define PNTR_GOLD       CLITERAL(pntr_color) { .r = 255, .g = 203, .b = 0,   .a =255  }
+#define PNTR_GOLD       CLITERAL(pntr_color) { .r = 255, .g = 203, .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_ORANGE
 /**
  * Orange.
  */
-#define PNTR_ORANGE     CLITERAL(pntr_color) { .r = 255, .g = 161, .b = 0,   .a =255  }
+#define PNTR_ORANGE     CLITERAL(pntr_color) { .r = 255, .g = 161, .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_PINK
 /**
@@ -1044,6 +1044,40 @@ pntr_image* pntr_image_copy(pntr_image* image) {
 }
 
 /**
+ * Alpha blend the source color into the destination color.
+ *
+ * @param dst The destination color.
+ * @param src The source color.
+ *
+ * @see PNTR_DISABLE_ALPHABLEND
+ * @see pntr_color_alpha_blend()
+ */
+#ifdef PNTR_DISABLE_ALPHABLEND
+inline
+#endif
+void _pntr_set_pixel_alpha_blend(pntr_color* dst, pntr_color src) {
+    if (src.a == 255) {
+        *dst = src;
+        return;
+    }
+    #ifndef PNTR_DISABLE_ALPHABLEND
+        if (src.a == 0) {
+            return;
+        }
+
+        unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
+        unsigned int dstAlpha = (unsigned int)dst->a * (256 - alpha);
+        dst->a = (unsigned char)((alpha * 256 + dstAlpha) >> 8);
+
+        if (dst->a > 0) {
+            dst->r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst->r * dstAlpha) / dst->a) >> 8);
+            dst->g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst->g * dstAlpha) / dst->a) >> 8);
+            dst->b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst->b * dstAlpha) / dst->a) >> 8);
+        }
+    #endif
+}
+
+/**
  * Get a new rectangle representing the intersection of the two given rectangles.
  *
  * @param rec1 A pointer to the first rectangle.
@@ -1230,7 +1264,7 @@ inline void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
         return;
     }
 
-    pntr_draw_pixel_unsafe(dst, x, y, color);
+    _pntr_set_pixel_alpha_blend(dst->data + y * (dst->pitch >> 2) + x, color);
 }
 
 /**
@@ -1339,11 +1373,21 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
         return;
     }
 
-    pntr_draw_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
+    if (color.a == 255) {
+        pntr_draw_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
-    pntr_color* srcPixel = pntr_image_get_color_pointer(dst, rect.x, rect.y);
-    for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
-        PNTR_MEMCPY(pntr_image_get_color_pointer(dst, rect.x, y), srcPixel, (size_t)rect.width * sizeof(pntr_color));
+        pntr_color* srcPixel = pntr_image_get_color_pointer(dst, rect.x, rect.y);
+        for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
+            PNTR_MEMCPY(pntr_image_get_color_pointer(dst, rect.x, y), srcPixel, (size_t)rect.width * sizeof(pntr_color));
+        }
+    }
+    else {
+        for (int y = 0; y < rect.height; y++) {
+            pntr_color* col = pntr_image_get_color_pointer(dst, rect.x, rect.y + y);
+            for (int x = 0; x < rect.width; x++) {
+                _pntr_set_pixel_alpha_blend(col++, color);
+            }
+        }
     }
 }
 
@@ -1498,40 +1542,6 @@ pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
         }
 
         return out;
-    #endif
-}
-
-/**
- * Alpha blend the source color into the destination color.
- *
- * @param dst The destination color.
- * @param src The source color.
- *
- * @see PNTR_DISABLE_ALPHABLEND
- * @see pntr_color_alpha_blend()
- */
-#ifdef PNTR_DISABLE_ALPHABLEND
-inline
-#endif
-void _pntr_set_pixel_alpha_blend(pntr_color* dst, pntr_color src) {
-    if (src.a == 255) {
-        *dst = src;
-        return;
-    }
-    #ifndef PNTR_DISABLE_ALPHABLEND
-        if (src.a == 0) {
-            return;
-        }
-
-        unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
-        unsigned int dstAlpha = (unsigned int)dst->a * (256 - alpha);
-        dst->a = (unsigned char)((alpha * 256 + dstAlpha) >> 8);
-
-        if (dst->a > 0) {
-            dst->r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst->r * dstAlpha) / dst->a) >> 8);
-            dst->g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst->g * dstAlpha) / dst->a) >> 8);
-            dst->b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst->b * dstAlpha) / dst->a) >> 8);
-        }
     #endif
 }
 
@@ -2983,8 +2993,8 @@ void pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
         return;
     }
 
-    pntr_rectangle destination = CLITERAL(pntr_rectangle) { 0, 0, image->width, image->height };
-    pntr_rectangle source = CLITERAL(pntr_rectangle) { x, y, width, height };
+    pntr_rectangle destination = CLITERAL(pntr_rectangle) {0, 0, image->width, image->height};
+    pntr_rectangle source = CLITERAL(pntr_rectangle) {x, y, width, height};
     source = _pntr_rectangle_intersect(&source, &destination);
 
     if (source.width <= 0 || source.height <= 0 || source.width > image->width || source.height > image->height) {
@@ -3330,6 +3340,10 @@ inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color
 }
 
 void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
+    if (dst == NULL || src == NULL) {
+        return;
+    }
+
     pntr_draw_image_rotate_rec(dst, src,
         CLITERAL(pntr_rectangle) {.x = 0, .y = 0, .width = src->width, .height = src->height},
         posX, posY,
@@ -3343,6 +3357,7 @@ void pntr_draw_image_rotate_rec(pntr_image* dst, pntr_image* src, pntr_rectangle
         return;
     }
 
+    // Determine the correct rotation.
     while (rotation >= 1.0f) {
         rotation -= 1.0f;
     }
@@ -3350,106 +3365,48 @@ void pntr_draw_image_rotate_rec(pntr_image* dst, pntr_image* src, pntr_rectangle
         rotation += 1.0f;
     }
 
+    // Draw the image normally if not rotated.
     if (rotation == 0.0f) {
-        pntr_draw_image_rec(dst, src, srcRect, posX - (int)offsetX, posY - offsetY);
+        pntr_draw_image_rec(dst, src, srcRect, posX - (int)offsetX, posY - (int)offsetY);
         return;
     }
 
-    if (srcRect.width <= 0) {
+    // Clean up the source rectangle.
+    if (srcRect.x < 0) {
+        srcRect.x = 0;
+    }
+    if (srcRect.y < 0) {
+        srcRect.y = 0;
+    }
+    if (srcRect.width <= 0 || srcRect.width > src->width) {
         srcRect.width = src->width - srcRect.x;
     }
-    if (srcRect.height <= 0) {
+    if (srcRect.height <= 0 || srcRect.height > src->height) {
         srcRect.height = src->height - srcRect.y;
     }
 
-    // Scaling is not supported
-    pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, srcRect.width, srcRect.height};
-
-    // Update the source coordinates based on the destination
-    if (dstRect.x < 0) {
-        srcRect.x -= dstRect.x;
-        srcRect.width += dstRect.x;
-    }
-    if (dstRect.y < 0) {
-        srcRect.y -= dstRect.y;
-        srcRect.height += dstRect.y;
-    }
-
-    // Figure out the final desintation
-    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
-    dstRect = _pntr_rectangle_intersect(&dstRect, &dstCanvas);
-    dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
-    dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
-
-    // Final sanity checks
-    if (dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= dst->width || dstRect.y >= dst->height) {
-        return;
-    }
-
-    if (rotation == 0.25f) {
-        // Restrict the drawing width and height.
-        if (dstRect.x + dstRect.height > dstCanvas.width) {
-            dstRect.height = dstCanvas.width - dstRect.x;
-        }
-        if (dstRect.y + dstRect.width > dstCanvas.height) {
-            dstRect.width = dstCanvas.height - dstRect.y;
-        }
-        for (int x = 0; x < dstRect.width; x++) {
-            for (int y = 0; y < dstRect.height; y++) {
-                _pntr_set_pixel_alpha_blend(
-                    pntr_image_get_color_pointer(dst, dstRect.x + y, dstRect.y + dstRect.width - x),
-                    pntr_image_get_color(src, srcRect.x + x, srcRect.y + y)
-                );
-            }
-        }
-        return;
-    }
-
-    if (rotation == 0.5f) {
-        for (int x = 0; x < dstRect.width; x++) {
-            for (int y = 0; y < dstRect.height; y++) {
-                _pntr_set_pixel_alpha_blend(
-                    pntr_image_get_color_pointer(dst, dstRect.x + dstRect.width - x, dstRect.y + dstRect.height - y),
-                    pntr_image_get_color(src, srcRect.x + x, srcRect.y + y)
-                );
-            }
-        }
-        return;
-    }
-
-    if (rotation == 0.75f) {
-        // Restrict the drawing width and height.
-        if (dstRect.x + dstRect.height > dstCanvas.width) {
-            dstRect.height = dstCanvas.width - dstRect.x;
-        }
-        if (dstRect.y + dstRect.width > dstCanvas.height) {
-            dstRect.width = dstCanvas.height - dstRect.y;
-        }
-        for (int x = 0; x < dstRect.width; x++) {
-            for (int y = 0; y < dstRect.height; y++) {
-                _pntr_set_pixel_alpha_blend(
-                    pntr_image_get_color_pointer(dst, dstRect.x + dstRect.height - y, dstRect.y + x),
-                    pntr_image_get_color(src, srcRect.x + x, srcRect.y + y)
-                );
-            }
-        }
-        return;
-    }
+    // TODO: pntr_draw_image_rotate_rec() performance: Add drawing rotated without creating a new image.
+    float offsetXRatio = offsetX / (float)srcRect.width;
+    float offsetYRatio = offsetY / (float)srcRect.height;
 
     // Drawing the whole image?
     if (srcRect.x == 0 && srcRect.y == 0 && srcRect.width == src->width && srcRect.height == src->height) {
         pntr_image* rotated = pntr_image_rotate(src, rotation, filter);
         pntr_draw_image(dst, rotated,
-            dstRect.x,
-            dstRect.y);
+            posX - (int)(offsetXRatio * (float)rotated->width),
+            posY - (int)(offsetYRatio * (float)rotated->height)
+        );
         pntr_unload_image(rotated);
         return;
     }
 
     // Drawing a clip of the image.
-    pntr_image* clipped = pntr_image_from_image(src, srcRect.x, srcRect.y, dstRect.width, dstRect.height);
+    pntr_image* clipped = pntr_image_from_image(src, srcRect.x, srcRect.y, srcRect.width, srcRect.height);
     pntr_image* rotated = pntr_image_rotate(clipped, rotation, filter);
-    pntr_draw_image(dst, rotated, dstRect.x, dstRect.y);
+    pntr_draw_image(dst, rotated,
+        posX - (int)(offsetXRatio * (float)rotated->width),
+        posY - (int)(offsetYRatio * (float)rotated->height)
+    );
     pntr_unload_image(rotated);
     pntr_unload_image(clipped);
 }
