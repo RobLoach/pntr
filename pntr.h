@@ -3351,45 +3351,21 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
         return pntr_image_copy(image);
     }
 
-    if (rotation == 0.25f) {
-        pntr_image* result = pntr_new_image(image->height, image->width);
-        if (result == NULL) {
-            pntr_set_error("Failed to create memory result for rotation");
-            return NULL;
+    if (rotation == 0.25f || rotation == 0.5f || rotation == 0.75f) {
+        pnt_image* output;
+        if (rotation == 0.5f) {
+            pntr_image* output = pntr_gen_image_color(image->width, image->height, PNTR_BLANK);
+        }
+        else {
+            pntr_image* output = pntr_gen_image_color(image->height, image->width, PNTR_BLANK);
         }
 
-        for (int y = 0; y < image->height; y++) {
-            for (int x = 0; x < image->width; x++) {
-                result->data[x * image->height + y] = image->data[y*image->width + image->width - x - 1];
-            }
+        if (output == NULL) {
+            return;
         }
 
-        return result;
-    }
-    else if (rotation == 0.5f) {
-        pntr_image* result = pntr_image_copy(image);
-        if (result == NULL) {
-            return NULL;
-        }
-        pntr_image_flip_vertical(result);
-        pntr_image_flip_horizontal(result);
-
-        return result;
-    }
-    else if (rotation == 0.75f) {
-        pntr_image* result = pntr_new_image(image->height, image->width);
-        if (result == NULL) {
-            pntr_set_error("Failed to create memory result for rotation");
-            return NULL;
-        }
-
-        for (int y = 0; y < image->height; y++) {
-            for (int x = 0; x < image->width; x++) {
-                result->data[x * image->height + (image->height - y - 1)] = pntr_image_get_color(image, x, y);
-            }
-        }
-
-        return result;
+        pntr_draw_image_rec_rotated(output, image, 0, 0, rotation, 0.0f, 0.0f, filter);
+        return output;
     }
 
     #ifdef PNTR_DISABLE_MATH
@@ -3512,7 +3488,59 @@ void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangl
         srcRect.height = src->height - srcRect.y;
     }
 
-    // TODO: pntr_draw_image_rotate_rec() performance: Add drawing rotated without creating a new image.
+    // Simple rotation by 90 degrees.
+    if (rotation == 0.25f || rotation == 0.5f || rotation == 0.75f) {
+        pntr_rectangle dstRect = CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
+        if (rotation == 0.25f || rotation == 0.75f) {
+            dstRect.width = srcRect.height;
+            dstRect.height = srcRect.width;
+        }
+
+        if (dstRect.x + dstRect.width < 0 || dstRect.y + dstRect.height < 0 || dstRect.x > dst->width || dstRect.y > dst->height) {
+            return;
+        }
+
+        if (rotation == 0.25f) {
+            for (int y = 0; y < srcRect.height; y++) {
+                for (int x = 0; x < srcRect.width; x++) {
+                    pntr_draw_pixel(dst,
+                        posX - (int)offsetX + y,
+                        posY - (int)offsetY + srcRect.width - x,
+                        pntr_image_get_color_unsafe(src, x, y)
+                    );
+                }
+            }
+            return;
+        }
+
+        if (rotation == 0.5f) {
+            for (int y = 0; y < srcRect.height; y++) {
+                for (int x = 0; x < srcRect.width; x++) {
+                    pntr_draw_pixel(dst,
+                        posX - (int)offsetX + srcRect.width - x,
+                        posY - (int)offsetY + srcRect.height - y,
+                        pntr_image_get_color_unsafe(src, x, y)
+                    );
+                }
+            }
+            return;
+        }
+
+        if (rotation == 0.75f) {
+            for (int y = 0; y < srcRect.height; y++) {
+                for (int x = 0; x < srcRect.width; x++) {
+                    pntr_draw_pixel(dst,
+                        posX - (int)offsetX + srcRect.height - y,
+                        posY - (int)offsetY + x,
+                        pntr_image_get_color_unsafe(src, x, y)
+                    );
+                }
+            }
+            return;
+        }
+    }
+
+    // Rotation by off 90 degrees
     float offsetXRatio = offsetX / (float)srcRect.width;
     float offsetYRatio = offsetY / (float)srcRect.height;
 
