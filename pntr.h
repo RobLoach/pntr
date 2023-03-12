@@ -403,10 +403,12 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
-PNTR_API void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_image_rotate_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical);
 PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
+PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
@@ -1750,9 +1752,9 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
             int yRatio = (image->height << 16) / newHeight + 1;
 
             for (int y = 0; y < newHeight; y++) {
+                int y2 = (y * yRatio) >> 16;
                 for (int x = 0; x < newWidth; x++) {
                     int x2 = (x * xRatio) >> 16;
-                    int y2 = (y * yRatio) >> 16;
                     pntr_put_pixel_unsafe(output, x, y, image->data[(y2 * image->width) + x2]);
                 }
             }
@@ -3229,6 +3231,98 @@ void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangl
     }
 }
 
+void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+    if (dst == NULL || src == NULL) {
+        return;
+    }
+
+    pntr_draw_image_rec_scaled(dst, src,
+        CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
+        posX, posY,
+        scaleX, scaleY,
+        offsetX, offsetY,
+        filter);
+}
+
+void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+    if (dst == NULL || src == NULL) {
+        return;
+    }
+
+    if (scaleX <= 0.0f || scaleY <= 0.0f) {
+        return;
+    }
+
+    pntr_rectangle rect = CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
+    srcRect = _pntr_rectangle_intersect(&srcRect, &rect);
+
+    int newWidth = (int)((float)srcRect.width * scaleX);
+    int newHeight = (int)((float)srcRect.height * scaleY);
+    int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newHeight);
+    int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newWidth);
+
+    switch (filter) {
+        case PNTR_FILTER_BILINEAR: {
+            float xRatio = (float)srcRect.width / (float)newWidth;
+            float yRatio = (float)srcRect.height / (float)newHeight;
+
+            for (int y = 0; y < newHeight; y++) {
+                int yPosition = posY + y - offsetYRatio;
+                if (yPosition < 0 || yPosition >= dst->height) {
+                    continue;
+                }
+                float srcY = (float)y * yRatio;
+                int srcYPixel = srcRect.y + (int)srcY;
+                int srcYPixelPlusOne = y == newHeight - 1 ? (int)srcYPixel : (int)srcYPixel + 1;
+                for (int x = 0; x < newWidth; x++) {
+                    int xPosition = posX + x - offsetXRatio;
+                    if (xPosition < 0 || xPosition >= dst->width) {
+                        continue;
+                    }
+                    float srcX = (float)x * xRatio;
+                    int srcXPixel = srcRect.y + (int)srcX;
+                    int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcXPixel : (int)srcXPixel + 1;
+                    pntr_draw_pixel_unsafe(dst, xPosition, yPosition, pntr_color_bilinear_interpolate(
+                        src->data[srcYPixel * (src->pitch >> 2) + srcXPixel],
+                        src->data[srcYPixelPlusOne * (src->pitch >> 2) + srcXPixel],
+                        src->data[srcYPixel * (src->pitch >> 2) + srcXPixelPlusOne],
+                        src->data[srcYPixelPlusOne * (src->pitch >> 2) + srcXPixelPlusOne],
+                        srcX - PNTR_FLOORF(srcX),
+                        srcY - PNTR_FLOORF(srcY)
+                    ));
+                }
+            }
+        }
+        break;
+        case PNTR_FILTER_NEARESTNEIGHBOR:
+        default: {
+            int xRatio = (srcRect.width << 16) / newWidth + 1;
+            int yRatio = (srcRect.height << 16) / newHeight + 1;
+
+            for (int y = 0; y < newHeight; y++) {
+                int yPosition = posY + y - offsetYRatio;
+                if (yPosition < 0 || yPosition >= dst->height) {
+                    continue;
+                }
+                int y2 = (y * yRatio) >> 16;
+                for (int x = 0; x < newWidth; x++) {
+                    int xPosition = posX + x - offsetXRatio;
+                    if (xPosition < 0 || xPosition >= dst->width) {
+                        continue;
+                    }
+                    int x2 = (x * xRatio) >> 16;
+                    pntr_draw_pixel_unsafe(dst,
+                        xPosition,
+                        yPosition,
+                        pntr_image_get_color_unsafe(src, srcRect.x + x2, srcRect.y + y2)
+                    );
+                }
+            }
+        }
+        break;
+    }
+}
+
 /**
  * Creates a new image based off the given image, that's rotated by the given rotation.
  *
@@ -3372,12 +3466,12 @@ inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color
     };
 }
 
-void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
+void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
 
-    pntr_draw_image_rotate_rec(dst, src,
+    pntr_draw_image_rec_rotated(dst, src,
         CLITERAL(pntr_rectangle) {.x = 0, .y = 0, .width = src->width, .height = src->height},
         posX, posY,
         rotation,
@@ -3385,7 +3479,7 @@ void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, int posX, int posY
         filter);
 }
 
-void pntr_draw_image_rotate_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
+void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
         return;
     }

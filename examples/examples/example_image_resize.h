@@ -30,6 +30,9 @@ const char* example_image_resize_update(pntr_image* canvas) {
     pntr_draw_image(canvas, nearestNeighbor, canvas->width / 4 - nearestNeighbor->width / 2, canvas->height / 2 - nearestNeighbor->height / 2);
     pntr_draw_image(canvas, smooth, canvas->width / 4 - smooth->width / 2 + canvas->width / 2, canvas->height / 2 - smooth->height / 2);
 
+
+    pntr_draw_image_scaled(canvas, originalImage, canvas->width / 2, canvas->height / 2, size, size, originalImage->width / 2, originalImage->width / 2, PNTR_FILTER_BILINEAR);
+
     // Unload the resized image
     pntr_unload_image(nearestNeighbor);
     pntr_unload_image(smooth);
