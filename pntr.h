@@ -405,6 +405,8 @@ PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int po
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API void pntr_draw_image_rotate(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_rotate_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical);
+PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
@@ -474,6 +476,11 @@ PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pnt
 PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
 PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
+
+// Internal
+void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
+void pntr_draw_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color);
+void pntr_put_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color);
 
 #ifdef __cplusplus
 }
@@ -784,13 +791,6 @@ extern "C" {
         #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
     #endif
 #endif  // PNTR_PIXELFORMAT
-
-/**
- * Draws a pixel on the canvas, ignoring sanity checks.
- *
- * TODO: Convert pntr_draw_pixel_unsafe to a method?
- */
-#define pntr_draw_pixel_unsafe(dst, x, y, color) dst->data[((y) * (dst->pitch >> 2)) + (x)] = (color)
 
 /**
  * Gets the color of the (x, y) coordinate of the image, ignoring sanity checks.
@@ -1148,10 +1148,10 @@ void pntr_unload_image(pntr_image* image) {
 /**
  * Draws a line on the destination image.
  */
-void pntr_draw_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    pntr_color *row = dst->data + posY * (dst->pitch >> 2);
-    for (int x = posX; x < posX + width; ++x) {
-        row[x] = color;
+inline void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
+    pntr_color *row = dst->data + posY * (dst->pitch >> 2) + posX;
+    while (--width >= 0) {
+        row[width] = color;
     }
 }
 
@@ -1173,9 +1173,9 @@ void pntr_clear_background(pntr_image* image, pntr_color color) {
     }
 
     // Draw the first line
-    pntr_draw_horizontal_line_unsafe(image, 0, 0, image->width, color);
+    pntr_put_horizontal_line_unsafe(image, 0, 0, image->width, color);
 
-    // Copy the line for the rest of the screen
+    // Copy the line for the rest of the background
     for (int y = 1; y < image->height; y++) {
         PNTR_MEMCPY(pntr_image_get_color_pointer(image, 0, y), image->data, image->pitch);
     }
@@ -1256,10 +1256,20 @@ inline void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned cha
 }
 
 /**
+ * Draws a pixel on the given image, without safety checks.
+ */
+inline void pntr_draw_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
+    _pntr_set_pixel_alpha_blend(dst->data + y * (dst->pitch >> 2) + x, color);
+}
+
+inline void pntr_put_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
+    dst->data[y * (dst->pitch >> 2) + x] = color;
+}
+
+/**
  * Draws a pixel on the given image.
  */
 inline void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
-    // TODO: Allow drawing Alpha-Transparency pixels
     if ((color.a == 0) || (dst == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
         return;
     }
@@ -1374,7 +1384,7 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
     }
 
     if (color.a == 255) {
-        pntr_draw_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
+        pntr_put_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
         pntr_color* srcPixel = pntr_image_get_color_pointer(dst, rect.x, rect.y);
         for (int y = rect.y + 1; y < rect.y + rect.height; y++) {
@@ -1405,10 +1415,10 @@ void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pnt
         int y2 = y * y;
         for (int x = largestX; x >= 0; --x) {
             if (x * x + y2 <= r2) {
-                pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY + y, x, color);
-                pntr_draw_horizontal_line_unsafe(dst, centerX - x, centerY - y, x, color);
-                pntr_draw_horizontal_line_unsafe(dst, centerX, centerY + y, x, color);
-                pntr_draw_horizontal_line_unsafe(dst, centerX, centerY - y, x, color);
+                pntr_put_horizontal_line_unsafe(dst, centerX - x, centerY + y, x, color);
+                pntr_put_horizontal_line_unsafe(dst, centerX - x, centerY - y, x, color);
+                pntr_put_horizontal_line_unsafe(dst, centerX, centerY + y, x, color);
+                pntr_put_horizontal_line_unsafe(dst, centerX, centerY - y, x, color);
                 largestX = x;
                 break;
             }
@@ -1515,34 +1525,10 @@ inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY
  * @return The new alpha-blended color.
  *
  * @see PNTR_DISABLE_ALPHABLEND
- * @see _pntr_set_pixel_alpha_blend()
  */
-#ifdef PNTR_DISABLE_ALPHABLEND
-inline
-#endif
-pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
-    if (src.a == 0) {
-        return dst;
-    }
-    else if (src.a == 255) {
-        return src;
-    }
-
-    #ifdef PNTR_DISABLE_ALPHABLEND
-        return src;
-    #else
-        pntr_color out;
-        unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
-        out.a = (unsigned char)(((unsigned int)alpha * 256 + (unsigned int)dst.a * (256 - alpha)) >> 8);
-
-        if (out.a > 0) {
-            out.r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst.r * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-            out.g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst.g * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-            out.b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst.b * (unsigned int)dst.a * (256 - alpha)) / out.a) >> 8);
-        }
-
-        return out;
-    #endif
+inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
+    _pntr_set_pixel_alpha_blend(&dst, src);
+    return dst;
 }
 
 /**
@@ -1746,13 +1732,14 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
                     float srcX = (float)x * xRatio;
                     int srcXPixel = (int)srcX;
                     int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcX : (int)srcX + 1;
-                    output->data[(y * (output->pitch >> 2)) + x] = pntr_color_bilinear_interpolate(
+                    pntr_put_pixel_unsafe(output, x, y, pntr_color_bilinear_interpolate(
                         image->data[srcYPixel * (image->pitch >> 2) + srcXPixel],
                         image->data[srcYPixelPlusOne * (image->pitch >> 2) + srcXPixel],
                         image->data[srcYPixel * (image->pitch >> 2) + srcXPixelPlusOne],
                         image->data[srcYPixelPlusOne * (image->pitch >> 2) + srcXPixelPlusOne],
                         srcX - PNTR_FLOORF(srcX),
-                        srcY - PNTR_FLOORF(srcY));
+                        srcY - PNTR_FLOORF(srcY)
+                    ));
                 }
             }
         }
@@ -1766,7 +1753,7 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
                 for (int x = 0; x < newWidth; x++) {
                     int x2 = (x * xRatio) >> 16;
                     int y2 = (y * yRatio) >> 16;
-                    output->data[(y * (output->pitch >> 2)) + x] = image->data[(y2 * image->width) + x2];
+                    pntr_put_pixel_unsafe(output, x, y, image->data[(y2 * image->width) + x2]);
                 }
             }
         }
@@ -3200,6 +3187,48 @@ void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, in
     PNTR_FREE(newImage);
 }
 
+void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+    if (dst == NULL || src == NULL) {
+        return;
+    }
+
+    pntr_draw_image_rec_flipped(dst, src,
+        CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
+        posX, posY,
+        flipHorizontal,
+        flipVertical
+    );
+}
+
+void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+    if (dst == NULL || src == NULL) {
+        return;
+    }
+
+    pntr_rectangle dstRec = CLITERAL(pntr_rectangle) {
+        .x = 0,
+        .y = 0,
+        .width = src->width,
+        .height = src->height
+    };
+    srcRec = _pntr_rectangle_intersect(&dstRec, &srcRec);
+
+    for (int x = 0; x < srcRec.width; x++) {
+        if (posX + x < 0 || posX + x > dst->width) {
+            continue;
+        }
+        for (int y = 0; y < srcRec.height; y++) {
+            if (posY + y < 0 || posY + y > dst->height) {
+                continue;
+            }
+            pntr_color source = pntr_image_get_color(src,
+                flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
+                flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y);
+            pntr_draw_pixel_unsafe(dst, posX + x, posY + y, source);
+        }
+    }
+}
+
 /**
  * Creates a new image based off the given image, that's rotated by the given rotation.
  *
@@ -3287,25 +3316,29 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
 
         float centerX = (float)image->width / 2.0f;
         float centerY = (float)image->height / 2.0f;
+        int srcXint, srcYint;
+        float srcX, srcY;
 
         for (int y = 0; y < newHeight; y++) {
             for (int x = 0; x < newWidth; x++) {
-                float srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
-                float srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+                srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
+                srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+                srcXint = (int)srcX;
+                srcYint = (int)srcY;
 
                 if (srcX >= 0 && srcX < image->width - 1 && srcY >= 0 && srcY < image->height - 1) {
                     if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
-                        rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = image->data[(int)srcY * (image->pitch >> 2) + (int)srcX];
+                        pntr_put_pixel_unsafe(rotatedImage, x, y, pntr_image_get_color_unsafe(image, srcXint, srcYint));
                     }
                     else {
-                        rotatedImage->data[y * (rotatedImage->pitch >> 2) + x] = pntr_color_bilinear_interpolate(
-                            image->data[(int)srcY * (image->pitch >> 2) + (int)srcX],
-                            image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX],
-                            image->data[(int)srcY * (image->pitch >> 2) + (int)srcX + 1],
-                            image->data[((int)srcY + 1) * (image->pitch >> 2) + (int)srcX + 1],
+                        pntr_put_pixel_unsafe(rotatedImage, x, y, pntr_color_bilinear_interpolate(
+                            pntr_image_get_color_unsafe(image, srcXint, srcYint),
+                            pntr_image_get_color_unsafe(image, srcXint, srcYint + 1),
+                            pntr_image_get_color_unsafe(image, srcXint + 1, srcYint),
+                            pntr_image_get_color_unsafe(image, srcXint + 1, srcYint + 1),
                             srcX - PNTR_FLOORF(srcX),
                             srcY - PNTR_FLOORF(srcY)
-                        );
+                        ));
                     }
                 }
             }
@@ -3478,7 +3511,14 @@ pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, p
     for (int x = 0; x < width; x++) {
         float factorX = (float)x / (float)width;
         for (int y = 0; y < height; y++) {
-            image->data[y * width + x] = pntr_color_bilinear_interpolate(topLeft, bottomLeft, topRight, bottomRight, factorX, (float)y / (float)height);
+            pntr_put_pixel_unsafe(image, x, y,
+                pntr_color_bilinear_interpolate(
+                    topLeft, bottomLeft,
+                    topRight, bottomRight,
+                    factorX,
+                    (float)y / (float)height
+                )
+            );
         }
     }
 

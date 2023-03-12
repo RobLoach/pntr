@@ -34,7 +34,7 @@ const char* example_image_update(pntr_image* canvas) {
     pntr_draw_image(canvas, resized, 170, 100);
 
     // Draw the resized image
-    pntr_draw_image_rotate(canvas, image, 320, 100, 0.25f, image->width / 2.0f, image->height / 2.0f, PNTR_FILTER_BILINEAR);
+    pntr_draw_image_flipped(canvas, image, 240, 30, false, true);
 
     return "Image";
 }
