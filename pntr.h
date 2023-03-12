@@ -3352,19 +3352,19 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
     }
 
     if (rotation == 0.25f || rotation == 0.5f || rotation == 0.75f) {
-        pnt_image* output;
+        pntr_image* output;
         if (rotation == 0.5f) {
-            pntr_image* output = pntr_gen_image_color(image->width, image->height, PNTR_BLANK);
+            output = pntr_gen_image_color(image->width, image->height, PNTR_BLANK);
         }
         else {
-            pntr_image* output = pntr_gen_image_color(image->height, image->width, PNTR_BLANK);
+            output = pntr_gen_image_color(image->height, image->width, PNTR_BLANK);
         }
 
         if (output == NULL) {
-            return;
+            return NULL;
         }
 
-        pntr_draw_image_rec_rotated(output, image, 0, 0, rotation, 0.0f, 0.0f, filter);
+        pntr_draw_image_rotated(output, image, 0, 0, rotation, 0.0f, 0.0f, filter);
         return output;
     }
 
