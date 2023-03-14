@@ -3281,6 +3281,8 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newWidth);
 
     switch (filter) {
+        case PNTR_FILTER_DEFAULT:
+        case PNTR_FILTER_SMOOTH:
         case PNTR_FILTER_BILINEAR: {
             float xRatio = (float)srcRect.width / (float)newWidth;
             float yRatio = (float)srcRect.height / (float)newHeight;
