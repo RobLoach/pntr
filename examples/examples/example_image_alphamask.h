@@ -1,37 +1,32 @@
 #include "../../pntr.h"
 
-pntr_image* imageToAlphaMask;
-pntr_image* alphaMaskOriginalImage;
+pntr_image* output;
 
 void example_image_alphamask_init() {
-    // Load an image
-    imageToAlphaMask = pntr_load_image("resources/logo-128x128.png");
-    alphaMaskOriginalImage = pntr_image_copy(imageToAlphaMask);
+    // Load the Tuffy font, and find the size of the text output.
+    pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 80, PNTR_BLACK);
+    pntr_vector textSize = pntr_measure_text_ex(font, "Alpha Mask!");
+
+    // Create a background to use as the alphamask.
+    output = pntr_gen_image_gradient(textSize.x, textSize.y, PNTR_RED, PNTR_DARKGREEN, PNTR_BLUE, PNTR_PURPLE);
 
     // Create an alpha mask of text
-    pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 23, PNTR_BLACK);
-    pntr_image* alphaMask = pntr_gen_image_text(font, "Alpha Mask!");
+    pntr_image* imageText = pntr_gen_image_text(font, "Alpha Mask!");
 
     // Apply the alpha mask to the image.
-    pntr_image_alpha_mask(imageToAlphaMask, alphaMask, 10, 50);
-
-    // Crop a section of the image that we arn't using
-    pntr_image_crop(imageToAlphaMask, 10, 50, alphaMask->width, alphaMask->height);
+    pntr_image_alpha_mask(output, imageText, 0, 0);
 
     // Clean up
     pntr_unload_font(font);
-    pntr_unload_image(alphaMask);
-
+    pntr_unload_image(imageText);
 }
 
 const char* example_image_alphamask_update(pntr_image* canvas) {
-    pntr_draw_image(canvas, imageToAlphaMask, 100, 50);
-    pntr_draw_image(canvas, alphaMaskOriginalImage, 200, 50);
+    pntr_draw_image(canvas, output, 10, 50);
 
     return "Image Alpha Mask";
 }
 
 void example_image_alphamask_unload() {
-    pntr_unload_image(imageToAlphaMask);
-    pntr_unload_image(alphaMaskOriginalImage);
+    pntr_unload_image(output);
 }

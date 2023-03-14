@@ -3134,9 +3134,9 @@ void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, i
         return;
     }
 
-    pntr_rectangle srcRect = CLITERAL(pntr_rectangle){0, 0, alphaMask->width, alphaMask->height};
-    pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, alphaMask->width, alphaMask->height};
-    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle){0, 0, image->width, image->height};
+    pntr_rectangle srcRect = CLITERAL(pntr_rectangle) { 0, 0, alphaMask->width, alphaMask->height };
+    pntr_rectangle dstRect = CLITERAL(pntr_rectangle) { posX, posY, alphaMask->width, alphaMask->height };
+    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle) { 0, 0, image->width, image->height };
 
     // Update the source coordinates based on the destination
     if (dstRect.x < 0) {
