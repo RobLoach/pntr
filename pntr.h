@@ -3365,6 +3365,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
         }
 
         pntr_draw_image_rotated(output, image, 0, 0, rotation, 0.0f, 0.0f, filter);
+        
         return output;
     }
 
@@ -3456,7 +3457,7 @@ void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int pos
 }
 
 void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
-    if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
+    if (dst == NULL || src == NULL) {
         return;
     }
 
@@ -3488,56 +3489,53 @@ void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangl
         srcRect.height = src->height - srcRect.y;
     }
 
-    // Simple rotation by 90 degrees.
+    // Simple rotation by 90 degrees can be fast.
     if (rotation == 0.25f || rotation == 0.5f || rotation == 0.75f) {
+        // Build the destination coordinates of the image.
         pntr_rectangle dstRect = CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
         if (rotation == 0.25f || rotation == 0.75f) {
             dstRect.width = srcRect.height;
             dstRect.height = srcRect.width;
+            dstRect.x -= (int)offsetY;
+            dstRect.y -= (int)offsetX;
+        }
+        else {
+            dstRect.x -= (int)offsetX;
+            dstRect.y -= (int)offsetY;
         }
 
+        // Exit if it's not even on the screen.
         if (dstRect.x + dstRect.width < 0 || dstRect.y + dstRect.height < 0 || dstRect.x > dst->width || dstRect.y > dst->height) {
             return;
         }
 
-        if (rotation == 0.25f) {
-            for (int y = 0; y < srcRect.height; y++) {
-                for (int x = 0; x < srcRect.width; x++) {
+        // Draw the source portion on the destination.
+        for (int y = 0; y < srcRect.height; y++) {
+            for (int x = 0; x < srcRect.width; x++) {
+                if (rotation == 0.25f) {
                     pntr_draw_pixel(dst,
-                        posX - (int)offsetX + y,
-                        posY - (int)offsetY + srcRect.width - x,
-                        pntr_image_get_color_unsafe(src, x, y)
+                        dstRect.x + y,
+                        dstRect.y + srcRect.width - x,
+                        pntr_image_get_color_unsafe(src, srcRect.x + x, srcRect.y + y)
+                    );
+                } else if (rotation == 0.5f) {
+                    pntr_draw_pixel(dst,
+                        dstRect.x + srcRect.width - x,
+                        dstRect.y + srcRect.height - y,
+                        pntr_image_get_color_unsafe(src, srcRect.x + x, srcRect.y + y)
+                    );
+                }
+                else {
+                    pntr_draw_pixel(dst,
+                        dstRect.x + srcRect.height - y,
+                        dstRect.y + x,
+                        pntr_image_get_color_unsafe(src, srcRect.x + x, srcRect.y + y)
                     );
                 }
             }
-            return;
         }
 
-        if (rotation == 0.5f) {
-            for (int y = 0; y < srcRect.height; y++) {
-                for (int x = 0; x < srcRect.width; x++) {
-                    pntr_draw_pixel(dst,
-                        posX - (int)offsetX + srcRect.width - x,
-                        posY - (int)offsetY + srcRect.height - y,
-                        pntr_image_get_color_unsafe(src, x, y)
-                    );
-                }
-            }
-            return;
-        }
-
-        if (rotation == 0.75f) {
-            for (int y = 0; y < srcRect.height; y++) {
-                for (int x = 0; x < srcRect.width; x++) {
-                    pntr_draw_pixel(dst,
-                        posX - (int)offsetX + srcRect.height - y,
-                        posY - (int)offsetY + x,
-                        pntr_image_get_color_unsafe(src, x, y)
-                    );
-                }
-            }
-            return;
-        }
+        return;
     }
 
     // Rotation by off 90 degrees
