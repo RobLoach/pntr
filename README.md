@@ -76,7 +76,6 @@ void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangl
 void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 pntr_color pntr_get_color(unsigned int hexValue);
-void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
 unsigned char pntr_color_get_r(pntr_color color);
 unsigned char pntr_color_get_g(pntr_color color);
 unsigned char pntr_color_get_b(pntr_color color);

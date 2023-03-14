@@ -412,7 +412,6 @@ PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX,
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
-PNTR_API void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a);
 PNTR_API unsigned char pntr_color_get_r(pntr_color color);
 PNTR_API unsigned char pntr_color_get_g(pntr_color color);
 PNTR_API unsigned char pntr_color_get_b(pntr_color color);
@@ -1205,7 +1204,7 @@ inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigne
 /**
  * Get a pntr_color from a RGBA hexadecimal value
  *
- * @param hexValue The hexadecimal value representing the color. For example: 0x052c46ff.
+ * @param hexValue The RGBA hexadecimal value representing the color. For example: 0x052c46ff.
  *
  * @return The color representing the given hex value.
  */
@@ -1248,13 +1247,6 @@ inline void pntr_color_set_b(pntr_color* color, unsigned char b) {
 
 inline void pntr_color_set_a(pntr_color* color, unsigned char a) {
     color->a = a;
-}
-
-inline void pntr_color_get_rgba(pntr_color color, unsigned char* r, unsigned char* g, unsigned char* b, unsigned char* a) {
-    *r = color.r;
-    *g = color.g;
-    *b = color.b;
-    *a = color.a;
 }
 
 /**
@@ -1368,14 +1360,14 @@ void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, 
  * Draws a rectangle on the given image.
  */
 inline void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
-    pntr_draw_rectangle_rec(dst, CLITERAL(pntr_rectangle){posX, posY, width, height}, color);
+    pntr_draw_rectangle_rec(dst, CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
 }
 
 /**
  * Draws a rectangle on the given image, using a rectangle as input data.
  */
 void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
-    if (dst == NULL) {
+    if (color.a == 0 || dst == NULL) {
         return;
     }
 
@@ -1385,6 +1377,7 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
         return;
     }
 
+    // When the color is solid, we can do some performance improvements.
     if (color.a == 255) {
         pntr_put_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
@@ -1548,7 +1541,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     }
 
     // Scaling is not supported
-    pntr_rectangle dstRect = CLITERAL(pntr_rectangle){posX, posY, srcRect.width, srcRect.height};
+    pntr_rectangle dstRect = CLITERAL(pntr_rectangle) { posX, posY, srcRect.width, srcRect.height };
 
     // Update the source coordinates based on the destination
     if (dstRect.x < 0) {
@@ -1567,7 +1560,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
 
     // Final sanity checks
-    if (dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= dst->width || dstRect.y >= dst->height) {
+    if (dstRect.width <= 0 || dstRect.height <= 0) {
         return;
     }
 
@@ -1579,11 +1572,8 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-    int rows_left = dstRect.height;
-    int cols = dstRect.width;
-
-    while (rows_left-- > 0) {
-        for (int x = 0; x < cols; ++x) {
+    while (dstRect.height-- > 0) {
+        for (int x = 0; x < dstRect.width; ++x) {
             _pntr_set_pixel_alpha_blend(dstPixel + x, srcPixel[x]);
         }
 
@@ -1694,6 +1684,13 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
         #endif
     }
 
+    // Otherwise, if we want to use PNTR_FILTER_SMOOTH, but it's not enabled, force bilinear.
+    #ifndef PNTR_ENABLE_FILTER_SMOOTH
+    else if (filter == PNTR_FILTER_SMOOTH)
+        filter = PNTR_FILTER_BILINEAR;
+    }
+    #endif
+
     switch (filter) {
         case PNTR_FILTER_SMOOTH: {
             #ifndef PNTR_ENABLE_FILTER_SMOOTH
@@ -1704,7 +1701,9 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
                     (const unsigned char*)image->data,
                     image->width, image->height,
                     0, // Input stride
-                    (unsigned char*)output->data, output->width, output->height,
+                    (unsigned char*)output->data,
+                    output->width,
+                    output->height,
                     0, // Output stride
                     4, // Number of channels
                     // TODO: pntr_image_resize() - Is the alpha channel always 3?
@@ -1948,8 +1947,7 @@ void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPi
             *((uint32_t*)(dstPtr)) = ((uint32_t)color.a << 24) | ((uint32_t)color.b << 16) | ((uint32_t)color.g << 8) | (uint32_t)color.r;
         break;
         case PNTR_PIXELFORMAT_ARGB8888:
-            // TODO: pntr_set_pixel_color() Verify the ARGB conversion.
-            *((uint32_t*)(dstPtr)) = ((int)color.b << 24) | ((int)color.g << 16) | ((int)color.r << 8) | (int)color.a;
+            *((uint32_t*)(dstPtr)) = ((uint32_t)color.b << 24) | ((uint32_t)color.g << 16) | ((uint32_t)color.r << 8) | (uint32_t)color.a;
         break;
         case PNTR_PIXELFORMAT_GRAYSCALE: {
             float r = (float)color.r / 255.0f;
@@ -2235,6 +2233,8 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
  * Unloads the given font from memory.
  *
  * @param font The font to unload from memory.
+ *
+ * @see pntr_load_font()
  */
 void pntr_unload_font(pntr_font* font) {
     if (font == NULL) {
@@ -2270,6 +2270,8 @@ void pntr_unload_font(pntr_font* font) {
  * @param font The font to copy.
  *
  * @return A new font that is a copy of the given font.
+ *
+ * @see pntr_load_font()
  */
 pntr_font* pntr_font_copy(pntr_font* font) {
     if (font == NULL) {
@@ -2389,7 +2391,7 @@ pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
         return CLITERAL(pntr_vector){0, 0};
     }
 
-    pntr_vector output = CLITERAL(pntr_vector) {.x = 0, .y = 0};
+    pntr_vector output = CLITERAL(pntr_vector) { .x = 0, .y = 0 };
     int currentX = 0;
     int currentY = 0;
     const char * currentChar = text;
@@ -2493,6 +2495,8 @@ pntr_font* pntr_load_default_font(void) {
 /**
  * Loads a truetype font from the file system.
  *
+ * This needs to be compiled with `PNTR_ENABLE_TTF` to be supported.
+ *
  * @param fileName The name of the .ttf file.
  * @param fontSize The size of the font, in pixels.
  * @param fontColor The color of the font.
@@ -2500,6 +2504,8 @@ pntr_font* pntr_load_default_font(void) {
  * @return The newly loaded truetype font.
  *
  * @example examples/resources/tuffy.ttf
+ *
+ * @see PNTR_ENABLE_TTF
  */
 pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor) {
     if (fileName == NULL || fontSize <= 0) {
@@ -2732,6 +2738,8 @@ unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
  * @param bytesToWrite The size of the data in memory.
  *
  * @return True if the file saved properly, false otherwise.
+ *
+ * @see PNTR_SAVE_FILE
  */
 bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite) {
     if (fileName == NULL || data == NULL) {
@@ -2763,7 +2771,7 @@ bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesTo
 }
 
 /**
- * Retrieve the size of the image data in memory, depending on the given pixel format.
+ * Retrieve the size of the image data in memory in bytes, depending on the given pixel format.
  *
  * @param width The width of the image data.
  * @param height The height of the image data.
@@ -2892,12 +2900,15 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
  * @param fileName The name of the file to save.
  *
  * @return True when the file was saved successfully, false otherwise.
+ *
+ * @see pntr_save_image_to_memory()
+ * @see pntr_save_file()
  */
 bool pntr_save_image(pntr_image* image, const char* fileName) {
     unsigned int dataSize;
     unsigned char* data = pntr_save_image_to_memory(image, &dataSize);
     if (data == NULL) {
-        return pntr_set_error("Failed to save image");
+        return false;
     }
 
     bool result = pntr_save_file(fileName, data, dataSize);
@@ -2910,6 +2921,8 @@ bool pntr_save_image(pntr_image* image, const char* fileName) {
  * Unloads the given file data.
  *
  * @param fileData The data of the file to unload from memory.
+ *
+ * @see pntr_load_file()
  */
 inline void pntr_unload_file(unsigned char* fileData) {
     if (fileData != NULL) {
@@ -3189,7 +3202,7 @@ void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, in
     PNTR_FREE(newImage);
 }
 
-void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -3204,6 +3217,12 @@ void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int pos
 
 void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical) {
     if (dst == NULL || src == NULL) {
+        return;
+    }
+
+    // If we are not flipping at all, use the simpler draw function.
+    if (flipHorizontal == false && flipVertical == false) {
+        pntr_draw_image_rec(dst, src, srcRec, posX, posY);
         return;
     }
 
@@ -3231,7 +3250,7 @@ void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangl
     }
 }
 
-void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -3328,12 +3347,16 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
  *
  * When the rotation is not 90 degrees, it will rotate using bilinear filtering.
  *
+ * If PNTR_DISABLE_MATH is defined, this is limited to rotation by 0.25f increments.
+ *
  * @param image The image to rotate.
  * @param rotation The desired rotation from 0.0f to 1.0f. 0.25f == 90 degrees. 0.5f == 180 degress.
  *
  * @return The new rotated image.
  *
  * @see pntr_image_rotate_ex()
+ *
+ * @see PNTR_DISABLE_MATH
  */
 pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter filter) {
     if (image == NULL) {
@@ -3359,13 +3382,12 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
         else {
             output = pntr_gen_image_color(image->height, image->width, PNTR_BLANK);
         }
-
         if (output == NULL) {
             return NULL;
         }
 
         pntr_draw_image_rotated(output, image, 0, 0, rotation, 0.0f, 0.0f, filter);
-        
+
         return output;
     }
 
@@ -3443,13 +3465,13 @@ inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color
     };
 }
 
-void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
+inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
 
     pntr_draw_image_rec_rotated(dst, src,
-        CLITERAL(pntr_rectangle) {.x = 0, .y = 0, .width = src->width, .height = src->height},
+        CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         rotation,
         offsetX, offsetY,
@@ -3538,6 +3560,7 @@ void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangl
         return;
     }
 
+    // TODO: pntr_draw_image_rec_rotated(): Performance improvement: Draw a section of an image rotated directly on the screen.
     // Rotation by off 90 degrees
     float offsetXRatio = offsetX / (float)srcRect.width;
     float offsetYRatio = offsetY / (float)srcRect.height;
@@ -3622,6 +3645,19 @@ pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color
     return image;
 }
 
+/**
+ * Generate image: vertical and horizontal gradient.
+ *
+ * @param width The width of the new image.
+ * @param height The height of the new image.
+ * @param left The color at the left of the image.
+ * @param topLeft The color at the top left of the image.
+ * @param topRight The color at the top right of the image.
+ * @param bottomLeft The color at the bottom left of the image.
+ * @param bottomRight The color at the bottom right of the image.
+ *
+ * @return A pointer to the new image.
+ */
 pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
     pntr_image* image = pntr_new_image(width, height);
     if (image == NULL) {

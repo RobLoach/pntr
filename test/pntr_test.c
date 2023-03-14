@@ -54,15 +54,6 @@ MODULE(pntr, {
         EQUALS(blank.a, 40);
     });
 
-    IT("pntr_color_get_rgba()", {
-        unsigned char color_r, color_g, color_b, color_a;
-        pntr_color_get_rgba(PNTR_RED, &color_r, &color_g, &color_b, &color_a);
-        EQUALS(color_r, 230);
-        EQUALS(color_g, 41);
-        EQUALS(color_b, 55);
-        EQUALS(color_a, 255);
-    });
-
     IT("pntr_get_color()", {
         pntr_color color = pntr_get_color(0x052c46ff);
         EQUALS(color.r, 5);
