@@ -1,7 +1,7 @@
 {
   "name": "pntr",
   "version": "0.0.1",
-  "description": "Image manipulation library",
+  "description": "Image manipulation library, with a focus on ease-of-use.",
   "private": true,
   "directories": {
     "example": "examples",

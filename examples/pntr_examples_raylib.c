@@ -96,6 +96,8 @@ int main() {
             Vector2 origin = {0, 0};
             DrawTexturePro(texture, source, destRec, origin, 0, WHITE);
 
+            DrawFPS(0, 0);
+
         EndDrawing();
     }
 
