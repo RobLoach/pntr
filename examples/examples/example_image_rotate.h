@@ -30,7 +30,7 @@ const char* example_image_rotate_update(pntr_image* canvas) {
     }
 
     // Simply draw on the screen
-    pntr_draw_image_rotated(canvas, imageToRotate, canvas->width / 2, canvas->height / 2, rotation, imageToRotate->width / 2.0f, imageToRotate->height / 2.0f, PNTR_FILTER_BILINEAR);
+    pntr_draw_image_rotated(canvas, imageToRotate, canvas->width / 2, canvas->height / 2, rotation * 2, imageToRotate->width / 2.0f, imageToRotate->height / 2.0f, PNTR_FILTER_BILINEAR);
 
     return "Image Rotate";
 }

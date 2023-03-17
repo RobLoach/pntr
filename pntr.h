@@ -3356,7 +3356,7 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
  *
  * @return The new rotated image.
  *
- * @see pntr_image_rotate_ex()
+ * @see pntr_draw_image_rotated()
  *
  * @see PNTR_DISABLE_MATH
  */
@@ -3395,7 +3395,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
 
     #ifdef PNTR_DISABLE_MATH
         (void)filter;
-        return pntr_set_error("pntr_image_rotate requires the math library, without PNTR_DISABLE_MATH");
+        return pntr_set_error("pntr_image_rotate off 90' requires the math library, without PNTR_DISABLE_MATH");
     #else
         float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
         float cosTheta = PNTR_COSF(radians);
@@ -3409,35 +3409,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
             return NULL;
         }
 
-        float centerX = (float)image->width / 2.0f;
-        float centerY = (float)image->height / 2.0f;
-        int srcXint, srcYint;
-        float srcX, srcY;
-
-        for (int y = 0; y < newHeight; y++) {
-            for (int x = 0; x < newWidth; x++) {
-                srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
-                srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
-                srcXint = (int)srcX;
-                srcYint = (int)srcY;
-
-                if (srcX >= 0 && srcX < image->width - 1 && srcY >= 0 && srcY < image->height - 1) {
-                    if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
-                        pntr_put_pixel_unsafe(rotatedImage, x, y, pntr_image_get_color_unsafe(image, srcXint, srcYint));
-                    }
-                    else {
-                        pntr_put_pixel_unsafe(rotatedImage, x, y, pntr_color_bilinear_interpolate(
-                            pntr_image_get_color_unsafe(image, srcXint, srcYint),
-                            pntr_image_get_color_unsafe(image, srcXint, srcYint + 1),
-                            pntr_image_get_color_unsafe(image, srcXint + 1, srcYint),
-                            pntr_image_get_color_unsafe(image, srcXint + 1, srcYint + 1),
-                            srcX - PNTR_FLOORF(srcX),
-                            srcY - PNTR_FLOORF(srcY)
-                        ));
-                    }
-                }
-            }
-        }
+        pntr_draw_image_rotated(rotatedImage, image, 0, 0, rotation, 0.0f, 0.0f, filter);
 
         return rotatedImage;
     #endif
@@ -3562,31 +3534,86 @@ void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangl
         return;
     }
 
-    // TODO: pntr_draw_image_rec_rotated(): Performance improvement: Draw a section of an image rotated directly on the screen.
-    // Rotation by off 90 degrees
-    float offsetXRatio = offsetX / (float)srcRect.width;
-    float offsetYRatio = offsetY / (float)srcRect.height;
-
-    // Drawing the whole image?
-    if (srcRect.x == 0 && srcRect.y == 0 && srcRect.width == src->width && srcRect.height == src->height) {
-        pntr_image* rotated = pntr_image_rotate(src, rotation, filter);
-        pntr_draw_image(dst, rotated,
-            posX - (int)(offsetXRatio * (float)rotated->width),
-            posY - (int)(offsetYRatio * (float)rotated->height)
-        );
-        pntr_unload_image(rotated);
+    #ifdef PNTR_DISABLE_MATH
+        (void)filter;
+        pntr_set_error("pntr_draw_image_rec_rotated requires the math library, without PNTR_DISABLE_MATH");
         return;
-    }
+    #else
+        float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+        float cosTheta = PNTR_COSF(radians);
+        float sinTheta = PNTR_SINF(radians);
 
-    // Drawing a clip of the image.
-    pntr_image* clipped = pntr_image_from_image(src, srcRect.x, srcRect.y, srcRect.width, srcRect.height);
-    pntr_image* rotated = pntr_image_rotate(clipped, rotation, filter);
-    pntr_draw_image(dst, rotated,
-        posX - (int)(offsetXRatio * (float)rotated->width),
-        posY - (int)(offsetYRatio * (float)rotated->height)
-    );
-    pntr_unload_image(rotated);
-    pntr_unload_image(clipped);
+        int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.width * sinTheta));
+        int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.width * cosTheta));
+
+        int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newHeight);
+        int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newWidth);
+
+        // Make sure we're actually drawing on the screen.
+        if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
+            return;
+        }
+
+        float centerX = (float)srcRect.width / 2.0f;
+        float centerY = (float)srcRect.height / 2.0f;
+        int srcXint, srcYint;
+        float srcX, srcY;
+        int destX, destY;
+
+        for (int y = 0; y < newHeight; y++) {
+            // Only draw onto the screen.
+            destY = posY + y - offsetYRatio;
+            if (destY < 0 || destY >= dst->height) {
+                continue;
+            }
+
+            for (int x = 0; x < newWidth; x++) {
+                // Make sure we're actually drawing onto the screen.
+                destX = posX + x - offsetXRatio;
+                if (destX < 0 || destX >= dst->width ) {
+                    continue;
+                }
+
+                srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
+                srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+
+                // Only draw from the source rectangle.
+                if (srcX < 0 || srcX >= srcRect.width || srcY < 0 || srcY >= srcRect.height) {
+                    continue;
+                }
+
+                srcXint = (int)srcX + srcRect.x;
+                srcYint = (int)srcY + srcRect.y;
+
+                if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
+                    pntr_draw_pixel_unsafe(dst,
+                        destX,
+                        destY,
+                        pntr_image_get_color_unsafe(src, srcXint, srcYint)
+                    );
+                }
+                else {
+                    // For bilinear, don't overscan.
+                    if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
+                        continue;
+                    }
+
+                    pntr_draw_pixel_unsafe(dst,
+                        destX,
+                        destY,
+                        pntr_color_bilinear_interpolate(
+                            pntr_image_get_color_unsafe(src, srcXint, srcYint),
+                            pntr_image_get_color_unsafe(src, srcXint, srcYint + 1),
+                            pntr_image_get_color_unsafe(src, srcXint + 1, srcYint),
+                            pntr_image_get_color_unsafe(src, srcXint + 1, srcYint + 1),
+                            srcX - PNTR_FLOORF(srcX),
+                            srcY - PNTR_FLOORF(srcY)
+                        )
+                    );
+                }
+            }
+        }
+    #endif
 }
 
 /**
