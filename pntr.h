@@ -2989,6 +2989,8 @@ pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
  * @param y The y coordinate to crop from.
  * @param width The width of the desired crop.
  * @param height The height of the desired crop.
+ *
+ * @see pntr_image_from_image()
  */
 void pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
@@ -3347,8 +3349,6 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
 /**
  * Creates a new image based off the given image, that's rotated by the given rotation.
  *
- * When the rotation is not 90 degrees, it will rotate using bilinear filtering.
- *
  * If PNTR_DISABLE_MATH is defined, this is limited to rotation by 0.25f increments.
  *
  * @param image The image to rotate.
@@ -3357,6 +3357,7 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
  * @return The new rotated image.
  *
  * @see pntr_draw_image_rotated()
+ * @see pntr_draw_image_rec_rotated()
  *
  * @see PNTR_DISABLE_MATH
  */
@@ -3429,6 +3430,8 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
  * @param color11 The bottom right color.
  * @param coordinateX A 0.0f to 1.0f fraction between color00 and color 10.
  * @param coordinateY A 0.0f to 1.0f fraction between color00 and color 01.
+ *
+ * @return The bilinear interpolated color.
  */
 inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
     return CLITERAL(pntr_color) {
@@ -3439,6 +3442,21 @@ inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color
     };
 }
 
+/**
+ * Draw a rotated image onto another image.
+ *
+ * @param dst Pointer to the destination image where the output will be stored.
+ * @param src Pointer to the source image that will be drawn onto the destination image.
+ * @param posX Where to draw the rotated image, at the X coordinate.
+ * @param posY Where to draw the rotated image, at the Y coordinate.
+ * @param rotation Angle of rotation via a value from 0 to 1.
+ * @param offsetX Offset in the X direction after rotation.
+ * @param offsetY Offset in the Y direction after rotation.
+ * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
+ *
+ * @see pntr_draw_image_rec_rotated()
+ * @see pntr_image_rotate()
+ */
 inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
@@ -3452,6 +3470,21 @@ inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, 
         filter);
 }
 
+/**
+ * Draw a rotated portion of an image onto another image.
+ *
+ * @param dst Pointer to the destination image where the output will be stored.
+ * @param src Pointer to the source image that will be drawn onto the destination image.
+ * @param srcRect The portion of the source image to draw.
+ * @param posX Where to draw the rotated image, at the X coordinate.
+ * @param posY Where to draw the rotated image, at the Y coordinate.
+ * @param rotation Angle of rotation via a value from 0 to 1.
+ * @param offsetX Offset in the X direction after rotation.
+ * @param offsetY Offset in the Y direction after rotation.
+ * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
+ *
+ * @see pntr_draw_image_rotated()
+ */
 void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
