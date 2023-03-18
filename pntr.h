@@ -488,166 +488,166 @@ void pntr_put_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color);
 #endif
 
 #if defined(__cplusplus)
-    #define CLITERAL(type)      type
+    #define PNTR_CLITERAL(type) type
 #else
-    #define CLITERAL(type)      (type)
+    #define PNTR_CLITERAL(type) (type)
 #endif
 
 #ifndef PNTR_LIGHTGRAY
 /**
  * Light gray.
  */
-#define PNTR_LIGHTGRAY  CLITERAL(pntr_color) { .r = 200, .g = 200, .b = 200, .a = 255 }
+#define PNTR_LIGHTGRAY  PNTR_CLITERAL(pntr_color) { .r = 200, .g = 200, .b = 200, .a = 255 }
 #endif
 #ifndef PNTR_GRAY
 /**
  * Gray.
  */
-#define PNTR_GRAY       CLITERAL(pntr_color) { .r = 130, .g = 130, .b = 130, .a = 255 }
+#define PNTR_GRAY       PNTR_CLITERAL(pntr_color) { .r = 130, .g = 130, .b = 130, .a = 255 }
 #endif
 #ifndef PNTR_DARKGRAY
 /**
  * Dark gray.
  */
-#define PNTR_DARKGRAY   CLITERAL(pntr_color) { .r = 80,  .g = 80,  .b = 80,  .a = 255 }
+#define PNTR_DARKGRAY   PNTR_CLITERAL(pntr_color) { .r = 80,  .g = 80,  .b = 80,  .a = 255 }
 #endif
 #ifndef PNTR_YELLOW
 /**
  * Yellow.
  */
-#define PNTR_YELLOW     CLITERAL(pntr_color) { .r = 253, .g = 249, .b = 0,   .a = 255 }
+#define PNTR_YELLOW     PNTR_CLITERAL(pntr_color) { .r = 253, .g = 249, .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_GOLD
 /**
  * Gold.
  */
-#define PNTR_GOLD       CLITERAL(pntr_color) { .r = 255, .g = 203, .b = 0,   .a = 255 }
+#define PNTR_GOLD       PNTR_CLITERAL(pntr_color) { .r = 255, .g = 203, .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_ORANGE
 /**
  * Orange.
  */
-#define PNTR_ORANGE     CLITERAL(pntr_color) { .r = 255, .g = 161, .b = 0,   .a = 255 }
+#define PNTR_ORANGE     PNTR_CLITERAL(pntr_color) { .r = 255, .g = 161, .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_PINK
 /**
  * Pink.
  */
-#define PNTR_PINK       CLITERAL(pntr_color) { .r = 255, .g = 109, .b = 194, .a = 255 }
+#define PNTR_PINK       PNTR_CLITERAL(pntr_color) { .r = 255, .g = 109, .b = 194, .a = 255 }
 #endif
 #ifndef PNTR_RED
 /**
  * Red.
  */
-#define PNTR_RED        CLITERAL(pntr_color) { .r = 230, .g = 41,  .b = 55,  .a = 255 }
+#define PNTR_RED        PNTR_CLITERAL(pntr_color) { .r = 230, .g = 41,  .b = 55,  .a = 255 }
 #endif
 #ifndef PNTR_MAROON
 /**
  * Maroon.
  */
-#define PNTR_MAROON     CLITERAL(pntr_color) { .r = 190, .g = 33,  .b = 55,  .a = 255 }
+#define PNTR_MAROON     PNTR_CLITERAL(pntr_color) { .r = 190, .g = 33,  .b = 55,  .a = 255 }
 #endif
 #ifndef PNTR_GREEN
 /**
  * Green.
  */
-#define PNTR_GREEN      CLITERAL(pntr_color) { .r = 0,   .g = 228, .b = 48,  .a = 255 }
+#define PNTR_GREEN      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 228, .b = 48,  .a = 255 }
 #endif
 #ifndef PNTR_LIME
 /**
  * Lime.
  */
-#define PNTR_LIME       CLITERAL(pntr_color) { .r = 0,   .g = 158, .b = 47,  .a = 255 }
+#define PNTR_LIME       PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 158, .b = 47,  .a = 255 }
 #endif
 #ifndef PNTR_DARKGREEN
 /**
  * Dark green.
  */
-#define PNTR_DARKGREEN  CLITERAL(pntr_color) { .r = 0,   .g = 117, .b = 44,  .a = 255 }
+#define PNTR_DARKGREEN  PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 117, .b = 44,  .a = 255 }
 #endif
 #ifndef PNTR_SKYBLUE
 /**
  * Sky blue.
  */
-#define PNTR_SKYBLUE    CLITERAL(pntr_color) { .r = 102, .g = 191, .b = 255, .a = 255 }
+#define PNTR_SKYBLUE    PNTR_CLITERAL(pntr_color) { .r = 102, .g = 191, .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_BLUE
 /**
  * Blue.
  */
-#define PNTR_BLUE       CLITERAL(pntr_color) { .r = 0,   .g = 121, .b = 241, .a = 255 }
+#define PNTR_BLUE       PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 121, .b = 241, .a = 255 }
 #endif
 #ifndef PNTR_DARKBLUE
 /**
  * Dark blue.
  */
-#define PNTR_DARKBLUE   CLITERAL(pntr_color) { .r = 0,   .g = 82,  .b = 172, .a = 255 }
+#define PNTR_DARKBLUE   PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 82,  .b = 172, .a = 255 }
 #endif
 #ifndef PNTR_PURPLE
 /**
  * Purple.
  */
-#define PNTR_PURPLE     CLITERAL(pntr_color) { .r = 200, .g = 122, .b = 255, .a = 255 }
+#define PNTR_PURPLE     PNTR_CLITERAL(pntr_color) { .r = 200, .g = 122, .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_VIOLET
 /**
  * Violet.
  */
-#define PNTR_VIOLET     CLITERAL(pntr_color) { .r = 135, .g = 60,  .b = 190, .a = 255 }
+#define PNTR_VIOLET     PNTR_CLITERAL(pntr_color) { .r = 135, .g = 60,  .b = 190, .a = 255 }
 #endif
 #ifndef PNTR_DARKPURPLE
 /**
  * Dark purple.
  */
-#define PNTR_DARKPURPLE CLITERAL(pntr_color) { .r = 112, .g = 31,  .b = 126, .a = 255 }
+#define PNTR_DARKPURPLE PNTR_CLITERAL(pntr_color) { .r = 112, .g = 31,  .b = 126, .a = 255 }
 #endif
 #ifndef PNTR_BEIGE
 /**
  * Beige.
  */
-#define PNTR_BEIGE      CLITERAL(pntr_color) { .r = 211, .g = 176, .b = 131, .a = 255 }
+#define PNTR_BEIGE      PNTR_CLITERAL(pntr_color) { .r = 211, .g = 176, .b = 131, .a = 255 }
 #endif
 #ifndef PNTR_BROWN
 /**
  * Brown.
  */
-#define PNTR_BROWN      CLITERAL(pntr_color) { .r = 127, .g = 106, .b = 79,  .a = 255 }
+#define PNTR_BROWN      PNTR_CLITERAL(pntr_color) { .r = 127, .g = 106, .b = 79,  .a = 255 }
 #endif
 #ifndef PNTR_DARKBROWN
 /**
  * Dark brown.
  */
-#define PNTR_DARKBROWN  CLITERAL(pntr_color) { .r = 76,  .g = 63,  .b = 47,  .a = 255 }
+#define PNTR_DARKBROWN  PNTR_CLITERAL(pntr_color) { .r = 76,  .g = 63,  .b = 47,  .a = 255 }
 #endif
 #ifndef PNTR_WHITE
 /**
  * White.
  */
-#define PNTR_WHITE      CLITERAL(pntr_color) { .r = 255, .g = 255, .b = 255, .a = 255 }
+#define PNTR_WHITE      PNTR_CLITERAL(pntr_color) { .r = 255, .g = 255, .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_BLACK
 /**
  * Black.
  */
-#define PNTR_BLACK      CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 255 }
+#define PNTR_BLACK      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 255 }
 #endif
 #ifndef PNTR_BLANK
 /**
  * Blank, or transparent.
  */
-#define PNTR_BLANK      CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 0   }
+#define PNTR_BLANK      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 0   }
 #endif
 #ifndef PNTR_MAGENTA
 /**
  * Magenta.
  */
-#define PNTR_MAGENTA    CLITERAL(pntr_color) { .r = 255, .g = 0,   .b = 255, .a = 255 }
+#define PNTR_MAGENTA    PNTR_CLITERAL(pntr_color) { .r = 255, .g = 0,   .b = 255, .a = 255 }
 #endif
 #ifndef PNTR_RAYWHITE
 /**
  * The white used in raylib.
  */
-#define PNTR_RAYWHITE   CLITERAL(pntr_color) { .r = 245, .g = 245, .b = 245, .a = 255 }
+#define PNTR_RAYWHITE   PNTR_CLITERAL(pntr_color) { .r = 245, .g = 245, .b = 245, .a = 255 }
 #endif
 
 #endif  // PNTR_H__
@@ -1095,7 +1095,7 @@ pntr_rectangle _pntr_rectangle_intersect(pntr_rectangle *rec1, pntr_rectangle *r
     int bottom = PNTR_MIN(rec1->y + rec1->height, rec2->y + rec2->height);
     int width  = right - left;
     int height = bottom - top;
-    return CLITERAL(pntr_rectangle) { left, top, PNTR_MAX(width, 0), PNTR_MAX(height, 0) };
+    return PNTR_CLITERAL(pntr_rectangle) { left, top, PNTR_MAX(width, 0), PNTR_MAX(height, 0) };
 }
 
 /**
@@ -1106,8 +1106,8 @@ pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, in
         return pntr_set_error("pntr_image_from_image() requires valid source image");
     }
 
-    pntr_rectangle srcRect = CLITERAL(pntr_rectangle){x, y, width, height};
-    pntr_rectangle imgRect = CLITERAL(pntr_rectangle){0, 0, image->width, image->height};
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle){x, y, width, height};
+    pntr_rectangle imgRect = PNTR_CLITERAL(pntr_rectangle){0, 0, image->width, image->height};
     srcRect = _pntr_rectangle_intersect(&imgRect, &srcRect);
 
     if (srcRect.width <= 0 || srcRect.height <= 0) {
@@ -1193,7 +1193,7 @@ void pntr_clear_background(pntr_image* image, pntr_color color) {
  * @return The color with the given red, green, blue, and alpha components.
  */
 inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
-    return CLITERAL(pntr_color){
+    return PNTR_CLITERAL(pntr_color){
         .r = red,
         .g = green,
         .b = blue,
@@ -1209,7 +1209,7 @@ inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigne
  * @return The color representing the given hex value.
  */
 inline pntr_color pntr_get_color(unsigned int hexValue) {
-    return CLITERAL(pntr_color){
+    return PNTR_CLITERAL(pntr_color){
         .r = (unsigned char)(hexValue >> 24) & 0xFF,
         .g = (unsigned char)(hexValue >> 16) & 0xFF,
         .b = (unsigned char)(hexValue >> 8) & 0xFF,
@@ -1360,7 +1360,7 @@ void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, 
  * Draws a rectangle on the given image.
  */
 inline void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
-    pntr_draw_rectangle_rec(dst, CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
+    pntr_draw_rectangle_rec(dst, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
 }
 
 /**
@@ -1371,7 +1371,7 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
         return;
     }
 
-    pntr_rectangle dstRect = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
     rect = _pntr_rectangle_intersect(&rect, &dstRect);
     if (rect.width <= 0 || rect.height <= 0) {
         return;
@@ -1508,7 +1508,7 @@ pntr_image* pntr_load_image(const char* fileName) {
  * Draw an image onto the destination image.
  */
 inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
-    pntr_draw_image_rec(dst, src, CLITERAL(pntr_rectangle){0, 0, src->width, src->height}, posX, posY);
+    pntr_draw_image_rec(dst, src, PNTR_CLITERAL(pntr_rectangle){0, 0, src->width, src->height}, posX, posY);
 }
 
 /**
@@ -1541,7 +1541,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     }
 
     // Scaling is not supported
-    pntr_rectangle dstRect = CLITERAL(pntr_rectangle) { posX, posY, srcRect.width, srcRect.height };
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, srcRect.width, srcRect.height };
 
     // Update the source coordinates based on the destination
     if (dstRect.x < 0) {
@@ -1554,7 +1554,7 @@ void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec
     }
 
     // Figure out the final desintation
-    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
+    pntr_rectangle dstCanvas = PNTR_CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
     dstRect = _pntr_rectangle_intersect(&dstRect, &dstCanvas);
     dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
     dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
@@ -1835,7 +1835,7 @@ void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color re
  * @see pntr_image_color_tint()
  */
 inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
-    return CLITERAL(pntr_color) {
+    return PNTR_CLITERAL(pntr_color) {
         .r = (unsigned char)(((float)color.r / 255.0f * (float)tint.r / 255.0f) * 255.0f),
         .g = (unsigned char)(((float)color.g / 255.0f * (float)tint.g / 255.0f) * 255.0f),
         .b = (unsigned char)(((float)color.b / 255.0f * (float)tint.b / 255.0f) * 255.0f),
@@ -1970,14 +1970,14 @@ void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPi
 pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
     switch (srcPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-            return CLITERAL(pntr_color) {
+            return PNTR_CLITERAL(pntr_color) {
                 .r = ((unsigned char *)srcPtr)[0],
                 .g = ((unsigned char *)srcPtr)[1],
                 .b = ((unsigned char *)srcPtr)[2],
                 .a = ((unsigned char *)srcPtr)[3]
             };
         case PNTR_PIXELFORMAT_ARGB8888:
-            return CLITERAL(pntr_color) {
+            return PNTR_CLITERAL(pntr_color) {
                 .a = ((unsigned char *)srcPtr)[0],
                 .r = ((unsigned char *)srcPtr)[1],
                 .g = ((unsigned char *)srcPtr)[2],
@@ -1985,7 +1985,7 @@ pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
             };
         case PNTR_PIXELFORMAT_GRAYSCALE:
             // White, with alpha determining grayscale value. Use tint to change color afterwards.
-            return CLITERAL(pntr_color) {
+            return PNTR_CLITERAL(pntr_color) {
                 .r = 255,
                 .g = 255,
                 .b = 255,
@@ -2102,7 +2102,7 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
     }
 
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
-    pntr_rectangle currentRectangle = CLITERAL(pntr_rectangle){1, 0, 0, image->height};
+    pntr_rectangle currentRectangle = PNTR_CLITERAL(pntr_rectangle){1, 0, 0, image->height};
 
     // Find out how many characters there are.
     int numCharacters = 0;
@@ -2123,7 +2123,7 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
         if (pntr_image_get_color(image, i, 0).data == seperator.data) {
             font->characters[currentCharacter] = characters[currentCharacter];
             font->srcRects[currentCharacter] = currentRectangle;
-            font->glyphRects[currentCharacter] = CLITERAL(pntr_rectangle) {
+            font->glyphRects[currentCharacter] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = 0,
                 .y = 0,
                 .width = currentRectangle.width,
@@ -2207,7 +2207,7 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
     // Set up the font data.
     for (int currentCharIndex = 0; currentCharIndex < font->charactersLen; currentCharIndex++) {
         // Source rectangle
-        font->srcRects[currentCharIndex] = CLITERAL(pntr_rectangle) {
+        font->srcRects[currentCharIndex] = PNTR_CLITERAL(pntr_rectangle) {
             .x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth,
             .y = (currentCharIndex / (image->width / glyphWidth)) * glyphHeight,
             .width = glyphWidth,
@@ -2215,7 +2215,7 @@ pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int g
         };
 
         // Where the glyph will be rendered.
-        font->glyphRects[currentCharIndex] = CLITERAL(pntr_rectangle) {
+        font->glyphRects[currentCharIndex] = PNTR_CLITERAL(pntr_rectangle) {
             .x = 0,
             .y = 0,
             .width = glyphWidth,
@@ -2388,10 +2388,10 @@ inline int pntr_measure_text(pntr_font* font, const char* text) {
 
 pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
     if (font == NULL || text == NULL) {
-        return CLITERAL(pntr_vector){0, 0};
+        return PNTR_CLITERAL(pntr_vector){0, 0};
     }
 
-    pntr_vector output = CLITERAL(pntr_vector) { .x = 0, .y = 0 };
+    pntr_vector output = PNTR_CLITERAL(pntr_vector) { .x = 0, .y = 0 };
     int currentX = 0;
     int currentY = 0;
     const char * currentChar = text;
@@ -2582,7 +2582,7 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
         // Capture each glyph data
         for (int i = 0; i < PNTR_NUM_GLYPHS; i++) {
             // Calculate the source rectangles.
-            font->srcRects[i] = CLITERAL(pntr_rectangle) {
+            font->srcRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = characterData[i].x0,
                 .y = characterData[i].y0,
                 .width = characterData[i].x1 - characterData[i].x0,
@@ -2590,7 +2590,7 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
             };
 
             // Find where the glyphs will be rendered.
-            font->glyphRects[i] = CLITERAL(pntr_rectangle) {
+            font->glyphRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
                 .y = (int)characterData[i].yoff + (int)((float)fontSize / 1.5f), // TODO: Determine correct y glyph value
                 .width = (int)characterData[i].xadvance,
@@ -2615,7 +2615,7 @@ pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned
  * @see pntr_image_color_invert()
  */
 inline pntr_color pntr_color_invert(pntr_color color) {
-    return CLITERAL(pntr_color) {
+    return PNTR_CLITERAL(pntr_color) {
         .r = 255 - color.r,
         .g = 255 - color.g,
         .b = 255 - color.b,
@@ -2865,7 +2865,7 @@ unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSi
         }
         return pntr_set_error("Saving images requires to not define PNTR_DISABLE_PNG");
     #else
-        cp_image_t cpImage = CLITERAL(cp_image_t) {
+        cp_image_t cpImage = PNTR_CLITERAL(cp_image_t) {
             .w = image->width,
             .h = image->height
         };
@@ -2940,7 +2940,7 @@ inline void pntr_unload_file(unsigned char* fileData) {
  */
 pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
     if (image == NULL) {
-        return CLITERAL(pntr_rectangle) {0, 0, 0, 0};
+        return PNTR_CLITERAL(pntr_rectangle) {0, 0, 0, 0};
     }
 
     unsigned char alphaThreshold = (unsigned char)(threshold * 255.0f);
@@ -2970,7 +2970,7 @@ pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
 
     // Check for empty blank image
     if ((xMin != 9999999) && (xMax != 9999999)) {
-        return CLITERAL(pntr_rectangle) {
+        return PNTR_CLITERAL(pntr_rectangle) {
             .x = xMin,
             .y = yMin,
             .width = xMax + 1 - xMin,
@@ -2978,7 +2978,7 @@ pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
         };
     }
 
-    return CLITERAL(pntr_rectangle) {0, 0, 0, 0};
+    return PNTR_CLITERAL(pntr_rectangle) {0, 0, 0, 0};
 }
 
 /**
@@ -2997,8 +2997,8 @@ void pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
         return;
     }
 
-    pntr_rectangle destination = CLITERAL(pntr_rectangle) {0, 0, image->width, image->height};
-    pntr_rectangle source = CLITERAL(pntr_rectangle) {x, y, width, height};
+    pntr_rectangle destination = PNTR_CLITERAL(pntr_rectangle) {0, 0, image->width, image->height};
+    pntr_rectangle source = PNTR_CLITERAL(pntr_rectangle) {x, y, width, height};
     source = _pntr_rectangle_intersect(&source, &destination);
 
     if (source.width <= 0 || source.height <= 0 || source.width > image->width || source.height > image->height) {
@@ -3090,7 +3090,7 @@ pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         pB = 255;
     }
 
-    return CLITERAL(pntr_color) {
+    return PNTR_CLITERAL(pntr_color) {
         .r = (unsigned char)pR,
         .g = (unsigned char)pG,
         .b = (unsigned char)pB,
@@ -3136,9 +3136,9 @@ void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, i
         return;
     }
 
-    pntr_rectangle srcRect = CLITERAL(pntr_rectangle) { 0, 0, alphaMask->width, alphaMask->height };
-    pntr_rectangle dstRect = CLITERAL(pntr_rectangle) { posX, posY, alphaMask->width, alphaMask->height };
-    pntr_rectangle dstCanvas = CLITERAL(pntr_rectangle) { 0, 0, image->width, image->height };
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { 0, 0, alphaMask->width, alphaMask->height };
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, alphaMask->width, alphaMask->height };
+    pntr_rectangle dstCanvas = PNTR_CLITERAL(pntr_rectangle) { 0, 0, image->width, image->height };
 
     // Update the source coordinates based on the destination
     if (dstRect.x < 0) {
@@ -3210,7 +3210,7 @@ inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, 
     }
 
     pntr_draw_image_rec_flipped(dst, src,
-        CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
+        PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         flipHorizontal,
         flipVertical
@@ -3228,7 +3228,7 @@ void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangl
         return;
     }
 
-    pntr_rectangle dstRec = CLITERAL(pntr_rectangle) {
+    pntr_rectangle dstRec = PNTR_CLITERAL(pntr_rectangle) {
         .x = 0,
         .y = 0,
         .width = src->width,
@@ -3258,7 +3258,7 @@ inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, i
     }
 
     pntr_draw_image_rec_scaled(dst, src,
-        CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
+        PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         scaleX, scaleY,
         offsetX, offsetY,
@@ -3274,7 +3274,7 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
         return;
     }
 
-    pntr_rectangle rect = CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
+    pntr_rectangle rect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
     srcRect = _pntr_rectangle_intersect(&srcRect, &rect);
 
     int newWidth = (int)((float)srcRect.width * scaleX);
@@ -3434,7 +3434,7 @@ pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter fil
  * @return The bilinear interpolated color.
  */
 inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
-    return CLITERAL(pntr_color) {
+    return PNTR_CLITERAL(pntr_color) {
         .r = (uint8_t)(color00.r * (1 - coordinateX) * (1 - coordinateY) + color01.r * (1 - coordinateX) * coordinateY + color10.r * coordinateX * (1 - coordinateY) + color11.r * coordinateX * coordinateY),
         .g = (uint8_t)(color00.g * (1 - coordinateX) * (1 - coordinateY) + color01.g * (1 - coordinateX) * coordinateY + color10.g * coordinateX * (1 - coordinateY) + color11.g * coordinateX * coordinateY),
         .b = (uint8_t)(color00.b * (1 - coordinateX) * (1 - coordinateY) + color01.b * (1 - coordinateX) * coordinateY + color10.b * coordinateX * (1 - coordinateY) + color11.b * coordinateX * coordinateY),
@@ -3463,7 +3463,7 @@ inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, 
     }
 
     pntr_draw_image_rec_rotated(dst, src,
-        CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
+        PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         rotation,
         offsetX, offsetY,
@@ -3521,7 +3521,7 @@ void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangl
     // Simple rotation by 90 degrees can be fast.
     if (rotation == 0.25f || rotation == 0.5f || rotation == 0.75f) {
         // Build the destination coordinates of the image.
-        pntr_rectangle dstRect = CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
+        pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
         if (rotation == 0.25f || rotation == 0.75f) {
             dstRect.width = srcRect.height;
             dstRect.height = srcRect.width;
