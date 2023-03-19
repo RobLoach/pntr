@@ -3684,11 +3684,12 @@ void pntr_draw_image_rec_ex(pntr_image* dst, pntr_image* src, pntr_rectangle src
         float cosTheta = PNTR_COSF(radians);
         float sinTheta = PNTR_SINF(radians);
 
-        int newWidth = (int)(PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.height * sinTheta)) * scaleX);
-        int newHeight = (int)(PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.height * cosTheta)) * scaleY);
+        int newWidth = (int)(PNTR_CEILF(PNTR_FABSF((float)srcRect.width * scaleX * cosTheta) + PNTR_FABSF((float)srcRect.height * scaleY * sinTheta)));
+        int newHeight = (int)(PNTR_CEILF(PNTR_FABSF((float)srcRect.width * scaleX * sinTheta) + PNTR_FABSF((float)srcRect.height * scaleY * cosTheta)));
 
         int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
         int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
+        pntr_draw_rectangle(dst, posX-offsetXRatio, posY-offsetYRatio, newWidth, newHeight, PNTR_RED);
 
         // Make sure we're actually drawing on the screen.
         if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {

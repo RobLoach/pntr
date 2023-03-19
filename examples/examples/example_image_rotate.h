@@ -36,18 +36,18 @@ const char* example_image_rotate_update(pntr_image* canvas) {
     pntr_draw_image_rotated(canvas, imageToRotate, canvas->width / 2, canvas->height / 2, rotation * 2, imageToRotate->width / 2.0f, imageToRotate->height / 2.0f, PNTR_FILTER_BILINEAR);
 
 
-    float scalex = 1.0f;
-    float scaley = 2.0f;
+    float scalex = 2.0f;
+    float scaley = 1.0f;
     pntr_rectangle rect;
-    rect.x = 0;
     rect.y = 0;
     rect.width = something->width / 6;
     rect.height = something->height;
+    rect.x = rect.width;
     pntr_draw_image_rec_ex(canvas, something, rect,
         canvas->width / 2, canvas->height / 2,
-        0.0f,
+        0.4f,
         scalex, scaley,
-        (something->width / 6) / 2, something->height / 2,
+        rect.width / 2, rect.height / 2,
         false, false,
         PNTR_FILTER_NEARESTNEIGHBOR);
 
