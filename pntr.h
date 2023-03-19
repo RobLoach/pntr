@@ -3279,8 +3279,8 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
 
     int newWidth = (int)((float)srcRect.width * scaleX);
     int newHeight = (int)((float)srcRect.height * scaleY);
-    int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newHeight);
-    int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newWidth);
+    int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
+    int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
     switch (filter) {
         case PNTR_FILTER_DEFAULT:
@@ -3576,11 +3576,11 @@ void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangl
         float cosTheta = PNTR_COSF(radians);
         float sinTheta = PNTR_SINF(radians);
 
-        int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.width * sinTheta));
-        int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.width * cosTheta));
+        int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.height * sinTheta));
+        int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.height * cosTheta));
 
-        int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newHeight);
-        int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newWidth);
+        int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
+        int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
         // Make sure we're actually drawing on the screen.
         if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
