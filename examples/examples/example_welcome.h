@@ -17,7 +17,7 @@ const char* example_welcome_update(pntr_image* canvas) {
     }
 
     // Rectangle
-    pntr_draw_rectangle(canvas, 10, 22, canvas->width - 20, 2, PNTR_DARKBROWN);
+    pntr_draw_rectangle_fill(canvas, 10, 22, canvas->width - 20, 2, PNTR_DARKBROWN);
 
     // Welcome text
     pntr_draw_text(canvas, welcomeFont, "Image manipulation library for C", 10, 38);
@@ -29,8 +29,8 @@ const char* example_welcome_update(pntr_image* canvas) {
     int y = 130;
     int padding = 2;
     int height = 8;
-    pntr_draw_rectangle(canvas, x, y, width + padding * 4, height + padding * 4, PNTR_BLACK);
-    pntr_draw_rectangle(canvas, x + padding, y + padding, width + padding * 2, height + padding * 2, PNTR_GREEN);
+    pntr_draw_rectangle_fill(canvas, x, y, width + padding * 4, height + padding * 4, PNTR_BLACK);
+    pntr_draw_rectangle_fill(canvas, x + padding, y + padding, width + padding * 2, height + padding * 2, PNTR_GREEN);
     pntr_draw_text(canvas, welcomeFont, buttonText, x + padding * 2, y + padding * 2);
 
     // Display the logo

@@ -89,7 +89,7 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
-    IT("pntr_clear_background(), pntr_draw_rectangle()", {
+    IT("pntr_clear_background(), pntr_draw_rectangle_fill()", {
         pntr_image* image = pntr_new_image(100, 100);
         NEQUALS(image, NULL);
         pntr_clear_background(image, PNTR_RED);
@@ -101,7 +101,7 @@ MODULE(pntr, {
         color = pntr_image_get_color(image, 10, 10);
         COLOREQUALS(color, PNTR_BLANK);
 
-        pntr_draw_rectangle(image, 9, 9, 3, 3, PNTR_BLUE);
+        pntr_draw_rectangle_fill(image, 9, 9, 3, 3, PNTR_BLUE);
         color = pntr_image_get_color(image, 10, 10);
         COLOREQUALS(color, PNTR_BLUE);
         pntr_unload_image(image);
@@ -304,8 +304,8 @@ MODULE(pntr, {
         int height = 300;
         pntr_image* saveImage = pntr_gen_image_color(width, height, PNTR_RED);
         NEQUALS(saveImage, NULL);
-        pntr_draw_circle(saveImage, 200, 150, 80, PNTR_BLUE);
-        pntr_draw_rectangle(saveImage, 10, 10, 20, 20, PNTR_GREEN);
+        pntr_draw_circle_fill(saveImage, 200, 150, 80, PNTR_BLUE);
+        pntr_draw_rectangle_fill(saveImage, 10, 10, 20, 20, PNTR_GREEN);
         bool result = pntr_save_image(saveImage, "saveImage.png");
         EQUALS(result, true);
         pntr_unload_image(saveImage);
@@ -330,7 +330,7 @@ MODULE(pntr, {
         EQUALS(image->width, 400);
         EQUALS(image->height, 400);
 
-        pntr_draw_rectangle(image, 100, 100, 200, 200, PNTR_BLUE);
+        pntr_draw_rectangle_fill(image, 100, 100, 200, 200, PNTR_BLUE);
 
         pntr_rectangle crop = pntr_image_alpha_border(image, 0);
         EQUALS(crop.x, 100);
@@ -380,7 +380,7 @@ MODULE(pntr, {
     IT("pntr_image_rotate()", {
         pntr_image* image = pntr_gen_image_color(40, 30, PNTR_BLUE);
         NEQUALS(image, NULL);
-        pntr_draw_rectangle(image, 9, 9, 3, 3, PNTR_RED);
+        pntr_draw_rectangle_fill(image, 9, 9, 3, 3, PNTR_RED);
 
         IT("pntr_image_rotate(image, 0.0f)", {
             pntr_image* rotated = pntr_image_rotate(image, 0.0f, PNTR_FILTER_DEFAULT);

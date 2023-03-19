@@ -398,9 +398,14 @@ PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
-PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
-PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
+PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
+PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
+PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thick, pntr_color color);
+PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thick, pntr_color color);
+PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
+PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
@@ -1273,6 +1278,11 @@ inline void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
 
 /**
  * Draws a line on the given image.
+ *
+ * TODO: pntr_draw_line: Add anti-aliased, and thickness to the lines.
+ *
+ * @see pntr_draw_line_horizontal()
+ * @see pntr_draw_line_vertical()
  */
 void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
     if (dst == NULL) {
@@ -1356,22 +1366,94 @@ void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, 
     }
 }
 
+void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
+    if (color.a == 0 || dst == NULL || posY < 0 || posY >= dst->height) {
+        return;
+    }
+
+    if (posX < 0) {
+        width -= posX;
+        posX = 0;
+    }
+    if (posX + width >= dst->width) {
+        width = dst->width - posX;
+    }
+
+    if (color.a == 255) {
+        pntr_put_horizontal_line_unsafe(dst, posX, posY, width, color);
+    }
+    else {
+        pntr_color *row = dst->data + posY * (dst->pitch >> 2) + posX;
+        while (--width >= 0) {
+            _pntr_set_pixel_alpha_blend(row + width, color);
+        }
+    }
+}
+
+void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
+    if (color.a == 0 || dst == NULL || posX < 0 || posX >= dst->height) {
+        return;
+    }
+
+    if (posY < 0) {
+        height -= posY;
+        posY = 0;
+    }
+    if (posY + height >= dst->height) {
+        height = dst->height - posY;
+    }
+
+    if (color.a == 255) {
+        for (int y = 0; y < height; y++) {
+            dst->data[(posY + y) * (dst->pitch >> 2) + posX] = color;
+        }
+    }
+    else {
+        for (int y = 0; y < height; y++) {
+            _pntr_set_pixel_alpha_blend(pntr_image_get_color_pointer(dst, posX, posY + y), color);
+        }
+    }
+}
+
+inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thick, pntr_color color) {
+    pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, thick, color);
+}
+
+void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thick, pntr_color color) {
+    if (color.a == 0 || thick <= 0 || dst == NULL || width <= 0 || height <= 0) {
+        return;
+    }
+
+    if (thick == 1) {
+        pntr_draw_line_horizontal(dst, posX, posY, width, color);
+        pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
+        pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
+        pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
+    }
+    else {
+        pntr_draw_rectangle_fill(dst, posX, posY, width, thick, color);
+        pntr_draw_rectangle_fill(dst, posX, posY + thick, thick, height - thick * 2, color);
+        pntr_draw_rectangle_fill(dst, posX + width - thick, posY + thick, thick, height - thick * 2, color);
+        pntr_draw_rectangle_fill(dst, posX, posY + height - thick, width, thick, color);
+    }
+}
+
 /**
  * Draws a rectangle on the given image.
  */
-inline void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
-    pntr_draw_rectangle_rec(dst, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
+inline void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
+    pntr_draw_rectangle_fill_rec(dst, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
 }
 
 /**
  * Draws a rectangle on the given image, using a rectangle as input data.
  */
-void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
+void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
     if (color.a == 0 || dst == NULL) {
         return;
     }
 
-    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { 0, 0, dst->width, dst->height };
     rect = _pntr_rectangle_intersect(&rect, &dstRect);
     if (rect.width <= 0 || rect.height <= 0) {
         return;
@@ -1397,9 +1479,61 @@ void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color co
 }
 
 /**
- * Draws a circle on the given image.
+ * Draws a circle from the given center, with the given radius.
+ *
+ * This uses the Midpoint Circle Algorithm:
+ *   https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
+ *
+ * TODO: pntr_draw_circle: Add anti-aliased, and thickness.
+ *
+ * @param dst The image to draw the circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerX The center of the circle at the Y coordinate.
+ * @param radius The radius of the circle.
+ * @param color The desired color of the circle.
+ *
+ * @see pntr_draw_circle_fill()
  */
 void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+    int x = radius < 0 ? radius * -1 : radius;
+    int y = 0;
+    int skip = 0;
+    while (x >= y) {
+        pntr_draw_pixel(dst, centerX + x, centerY + y, color);
+        pntr_draw_pixel(dst, centerX + y, centerY + x, color);
+        pntr_draw_pixel(dst, centerX - y, centerY + x, color);
+        pntr_draw_pixel(dst, centerX - x, centerY + y, color);
+        pntr_draw_pixel(dst, centerX - x, centerY - y, color);
+        pntr_draw_pixel(dst, centerX - y, centerY - x, color);
+        pntr_draw_pixel(dst, centerX + y, centerY - x, color);
+        pntr_draw_pixel(dst, centerX + x, centerY - y, color);
+
+        if (skip <= 0) {
+            y += 1;
+            skip += 2 * y + 1;
+        }
+
+        if (skip > 0) {
+            x -= 1;
+            skip -= 2 * x + 1;
+        }
+    }
+}
+
+/**
+ * Draws a filled circle on the given image.
+ *
+ * TODO: pntr_draw_circle_fill: Add anti-aliased.
+ *
+ * @param dst The image to draw the filled circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerX The center of the circle at the Y coordinate.
+ * @param radius The radius of the circle.
+ * @param color The desired fill color of the circle.
+ *
+ * @see pntr_draw_circle()
+ */
+void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
     if (dst == NULL) {
         return;
     }
@@ -1410,10 +1544,10 @@ void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pnt
         int y2 = y * y;
         for (int x = largestX; x >= 0; --x) {
             if (x * x + y2 <= r2) {
-                pntr_put_horizontal_line_unsafe(dst, centerX - x, centerY + y, x, color);
-                pntr_put_horizontal_line_unsafe(dst, centerX - x, centerY - y, x, color);
-                pntr_put_horizontal_line_unsafe(dst, centerX, centerY + y, x, color);
-                pntr_put_horizontal_line_unsafe(dst, centerX, centerY - y, x, color);
+                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x, color);
+                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x, color);
+                pntr_draw_line_horizontal(dst, centerX, centerY + y, x, color);
+                pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
                 largestX = x;
                 break;
             }
@@ -1508,7 +1642,10 @@ pntr_image* pntr_load_image(const char* fileName) {
  * Draw an image onto the destination image.
  */
 inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
-    pntr_draw_image_rec(dst, src, PNTR_CLITERAL(pntr_rectangle){0, 0, src->width, src->height}, posX, posY);
+    pntr_draw_image_rec(dst, src,
+        PNTR_CLITERAL(pntr_rectangle) { 0, 0, src->width, src->height },
+        posX, posY
+    );
 }
 
 /**
