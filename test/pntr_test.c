@@ -9,14 +9,14 @@
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
-#define COLOREQUALS(actual, expected) { \
+#define COLOREQUALS(actual, expected) do { \
     pntr_color actualColor = (actual); \
     pntr_color expectedColor = (expected); \
     EQUALS(actualColor.r, expectedColor.r); \
     EQUALS(actualColor.g, expectedColor.g); \
     EQUALS(actualColor.b, expectedColor.b); \
     EQUALS(actualColor.a, expectedColor.a); \
-}
+} while (0)
 
 MODULE(pntr, {
     IT("pntr_set_error(), pntr_get_error()", {
@@ -68,23 +68,10 @@ MODULE(pntr, {
         EQUALS(image->width, 640);
         EQUALS(image->height, 480);
 
-        pntr_color color = pntr_image_get_color(image, 10, 10);
-        COLOREQUALS(color, PNTR_SKYBLUE);
-        pntr_unload_image(image);
-    });
-
-    IT("pntr_image_get_color_pointer(), pntr_draw_pixel()", {
-        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_SKYBLUE);
-        NEQUALS(image, NULL);
-        EQUALS(image->width, 100);
-        EQUALS(image->height, 100);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_SKYBLUE);
 
         pntr_draw_pixel(image, 10, 10, PNTR_PURPLE);
-        pntr_color color = pntr_image_get_color(image, 10, 10);
-        COLOREQUALS(color, PNTR_PURPLE);
-
-        pntr_color* colorPointer = pntr_image_get_color_pointer(image, 50, 50);
-        COLOREQUALS(*colorPointer, PNTR_SKYBLUE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_PURPLE);
 
         pntr_unload_image(image);
     });
@@ -314,7 +301,7 @@ MODULE(pntr, {
         NEQUALS(loadedImage, NULL);
         EQUALS(loadedImage->width, 400);
         EQUALS(loadedImage->height, height);
-        COLOREQUALS(pntr_image_get_color(loadedImage, 15, 15), PNTR_GREEN)
+        COLOREQUALS(pntr_image_get_color(loadedImage, 15, 15), PNTR_GREEN);
         pntr_unload_image(loadedImage);
     });
 
