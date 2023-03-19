@@ -8,7 +8,7 @@ void example_welcome_init() {
     welcomeLogo = pntr_load_image("resources/logo-128x128.png");
 
     // Load the default font
-    welcomeFont = pntr_load_default_font();
+    welcomeFont = pntr_load_font_default();
 }
 
 const char* example_welcome_update(pntr_image* canvas) {

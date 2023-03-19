@@ -19,7 +19,7 @@ pntr_font* font;
 
 void examples_init() {
     canvas = pntr_new_image(400, 225);
-    font = pntr_load_default_font();
+    font = pntr_load_font_default();
     example_welcome_init();
     example_shapes_init();
     example_fonts_init();

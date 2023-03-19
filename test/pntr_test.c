@@ -133,8 +133,8 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
-    IT("pntr_load_bmfont(), pntr_unload_font(), pntr_draw_text()", {
-        pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+    IT("pntr_load_font_bmf(), pntr_unload_font(), pntr_draw_text()", {
+        pntr_font* font = pntr_load_font_bmf("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         NEQUALS(font, NULL);
         GREATER(font->charactersLen, 10);
 
@@ -148,7 +148,7 @@ MODULE(pntr, {
     });
 
     IT("pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()", {
-        pntr_font* font = pntr_load_bmfont("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+        pntr_font* font = pntr_load_font_bmf("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         GREATER(pntr_measure_text(font, "Hello World!"), 50);
         pntr_vector size = pntr_measure_text_ex(font, "Hello World!");
         GREATER(size.x, 50);
@@ -166,15 +166,15 @@ MODULE(pntr, {
         pntr_unload_font(font);
     });
 
-    IT("pntr_load_ttyfont()", {
-        pntr_font* font = pntr_load_ttyfont("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    IT("pntr_load_font_tty()", {
+        pntr_font* font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
         NEQUALS(font, NULL);
         GREATER(font->charactersLen, 20);
         pntr_unload_font(font);
     });
 
-    IT("pntr_load_default_font()", {
-        pntr_font* font = pntr_load_default_font();
+    IT("pntr_load_font_default()", {
+        pntr_font* font = pntr_load_font_default();
         NEQUALS(font, NULL);
         NEQUALS(font->atlas, NULL);
         GREATER(font->charactersLen, 10);
@@ -261,8 +261,8 @@ MODULE(pntr, {
     });
 
     #ifdef PNTR_ENABLE_TTF
-        IT("pntr_load_ttffont()", {
-            pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 20, PNTR_BLACK);
+        IT("pntr_load_font_ttf()", {
+            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20, PNTR_BLACK);
             NEQUALS(font, NULL);
             GREATER(font->charactersLen, 20);
 
@@ -271,7 +271,7 @@ MODULE(pntr, {
             GREATER(canvas->width, 10);
             GREATER(canvas->height, 10);
 
-            IT("pntr_load_ttffont() - pntr_measure_text_ex()", {
+            IT("pntr_load_font_ttf() - pntr_measure_text_ex()", {
                 pntr_vector size = pntr_measure_text_ex(font, "Hello!!");
                 GREATER(size.x, 20);
                 GREATER(size.y, 5);
@@ -281,7 +281,7 @@ MODULE(pntr, {
             pntr_unload_font(font);
         });
     #else
-        IT("pntr_load_ttffont(): PNTR_ENABLE_TTF is disabled, unable to test.", {
+        IT("pntr_load_font_ttf(): PNTR_ENABLE_TTF is disabled, unable to test.", {
             // Nothing
         });
     #endif  // PNTR_ENABLE_TTF
@@ -472,7 +472,7 @@ MODULE(pntr, {
     });
 
     IT("pntr_font_copy()", {
-        pntr_font* font = pntr_load_default_font();
+        pntr_font* font = pntr_load_font_default();
         NEQUALS(font, NULL);
 
         pntr_font* copy = pntr_font_copy(font);
@@ -488,7 +488,7 @@ MODULE(pntr, {
     });
 
     IT("pntr_font_scale()", {
-        pntr_font* font = pntr_load_default_font();
+        pntr_font* font = pntr_load_font_default();
         NEQUALS(font, NULL);
 
         int scaleX = 5;

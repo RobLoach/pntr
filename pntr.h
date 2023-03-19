@@ -81,14 +81,14 @@
     /**
      * Enables support for pntr's default font. It's a small 8x8 font.
      *
-     * @see pntr_load_default_font()
+     * @see pntr_load_font_default()
      */
     #define PNTR_ENABLE_DEFAULT_FONT
 
     /**
      * Enables TTF font loading via stb_truetype.
      *
-     * @see pntr_load_ttffont()
+     * @see pntr_load_font_ttf()
      */
     #define PNTR_ENABLE_TTF
 
@@ -306,9 +306,9 @@ typedef struct pntr_rectangle {
 /**
  * Font.
  *
- * @see pntr_load_ttyfont()
- * @see pntr_load_ttffont()
- * @see pntr_load_bmfont()
+ * @see pntr_load_font_tty()
+ * @see pntr_load_font_ttf()
+ * @see pntr_load_font_bmf()
  */
 typedef struct pntr_font {
     /**
@@ -442,23 +442,23 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float alpha);
 PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor);
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
 PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
-PNTR_API pntr_font* pntr_load_default_font(void);
+PNTR_API pntr_font* pntr_load_font_default(void);
 PNTR_API void pntr_unload_font(pntr_font* font);
 PNTR_API pntr_font* pntr_font_copy(pntr_font* font);
 PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY, pntr_filter filter);
-PNTR_API pntr_font* pntr_load_bmfont(const char* fileName, const char* characters);
-PNTR_API pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters);
-PNTR_API pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
+PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* characters);
+PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters);
+PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
-PNTR_API pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
-PNTR_API pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
-PNTR_API pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
+PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API unsigned char* pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API void pntr_unload_file(unsigned char* fileData);
-PNTR_API pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor);
-PNTR_API pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor);
+PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize, pntr_color fontColor);
+PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor);
 PNTR_API pntr_color pntr_color_invert(pntr_color color);
 PNTR_API void pntr_image_color_invert(pntr_image* image);
 PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);
@@ -2024,18 +2024,18 @@ void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
  *
  * @example examples/resources/bmfont.png
  */
-pntr_font* pntr_load_bmfont(const char* fileName, const char* characters) {
+pntr_font* pntr_load_font_bmf(const char* fileName, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
     if (image == NULL) {
         return NULL;
     }
 
-    return pntr_load_bmfont_from_image(image, characters);
+    return pntr_load_font_bmf_from_image(image, characters);
 }
 
-pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
+pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL) {
-        return pntr_set_error("pntr_load_bmfont_from_memory() requires valid file data, size and characters");
+        return pntr_set_error("pntr_load_font_bmf_from_memory() requires valid file data, size and characters");
     }
 
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
@@ -2043,7 +2043,7 @@ pntr_font* pntr_load_bmfont_from_memory(const unsigned char* fileData, unsigned 
         return NULL;
     }
 
-    return pntr_load_bmfont_from_image(image, characters);
+    return pntr_load_font_bmf_from_image(image, characters);
 }
 
 /**
@@ -2096,9 +2096,9 @@ pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
     return font;
 }
 
-pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters) {
+pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters) {
     if (image == NULL || characters == NULL) {
-        return pntr_set_error("pntr_load_bmfont_from_image() requires a valid image and characters");
+        return pntr_set_error("pntr_load_font_bmf_from_image() requires a valid image and characters");
     }
 
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
@@ -2154,13 +2154,13 @@ pntr_font* pntr_load_bmfont_from_image(pntr_image* image, const char* characters
  *
  * @example examples/resources/ttyfont-16x16.png
  */
-pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
+pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
     if (image == NULL) {
         return NULL;
     }
 
-    pntr_font* output = pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+    pntr_font* output = pntr_load_font_tty_from_image(image, glyphWidth, glyphHeight, characters);
     if (output == NULL) {
         pntr_unload_image(image);
     }
@@ -2168,9 +2168,9 @@ pntr_font* pntr_load_ttyfont(const char* fileName, int glyphWidth, int glyphHeig
     return output;
 }
 
-pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
+pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
     if (fileData == NULL || dataSize <= 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
-        return pntr_set_error("pntr_load_ttyfont_from_memory() requires valid file data, size, glyph size, and characters");
+        return pntr_set_error("pntr_load_font_tty_from_memory() requires valid file data, size, glyph size, and characters");
     }
 
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
@@ -2178,7 +2178,7 @@ pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned
         return NULL;
     }
 
-    pntr_font* output = pntr_load_ttyfont_from_image(image, glyphWidth, glyphHeight, characters);
+    pntr_font* output = pntr_load_font_tty_from_image(image, glyphWidth, glyphHeight, characters);
     if (output == NULL) {
         pntr_unload_image(image);
     }
@@ -2186,9 +2186,9 @@ pntr_font* pntr_load_ttyfont_from_memory(const unsigned char* fileData, unsigned
     return output;
 }
 
-pntr_font* pntr_load_ttyfont_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
+pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
     if (image == NULL || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
-        return pntr_set_error("pntr_load_ttyfont_from_image() requires a valid image and characters");
+        return pntr_set_error("pntr_load_font_tty_from_image() requires a valid image and characters");
     }
 
     // Find out how many characters there are.
@@ -2456,7 +2456,7 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  *
  * Define PNTR_ENABLE_DEFAULT_FONT to allow using the default 8x8 font.
  *
- * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_default_font()
+ * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_font_default()
  *
  * #define PNTR_DEFAULT_FONT load_my_font
  *
@@ -2466,7 +2466,7 @@ pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
  * @see PNTR_ENABLE_DEFAULT_FONT
  * @see PNTR_DEFAULT_FONT
  */
-pntr_font* pntr_load_default_font(void) {
+pntr_font* pntr_load_font_default(void) {
     #ifdef PNTR_DEFAULT_FONT
         return PNTR_DEFAULT_FONT();
     #elif defined(PNTR_ENABLE_DEFAULT_FONT)
@@ -2476,11 +2476,11 @@ pntr_font* pntr_load_default_font(void) {
         // Port the font8x8 data to a pntr_image
         pntr_image* atlas = pntr_image_from_pixelformat((const void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
         if (atlas == NULL) {
-            return pntr_set_error("pntr_load_default_font() failed to convert default image");
+            return pntr_set_error("pntr_load_font_default() failed to convert default image");
         }
 
         // Load the font from the new image.
-        pntr_font* font = pntr_load_ttyfont_from_image(atlas, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
+        pntr_font* font = pntr_load_font_tty_from_image(atlas, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return pntr_set_error("Failed to load default font from image");
@@ -2488,7 +2488,7 @@ pntr_font* pntr_load_default_font(void) {
 
         return font;
     #else
-        return pntr_set_error("pntr_load_default_font() requires PNTR_ENABLE_DEFAULT_FONT");
+        return pntr_set_error("pntr_load_font_default() requires PNTR_ENABLE_DEFAULT_FONT");
     #endif
 }
 
@@ -2507,14 +2507,14 @@ pntr_font* pntr_load_default_font(void) {
  *
  * @see PNTR_ENABLE_TTF
  */
-pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color fontColor) {
+pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize, pntr_color fontColor) {
     if (fileName == NULL || fontSize <= 0) {
-        return pntr_set_error("pntr_load_ttffont() requires a valid fileName and font size.");
+        return pntr_set_error("pntr_load_font_ttf() requires a valid fileName and font size.");
     }
 
     #ifndef PNTR_ENABLE_TTF
         (void)fontColor;
-        return pntr_set_error("pntr_load_ttffont requires PNTR_ENABLE_TTF");
+        return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
     #else
         unsigned int bytesRead;
         unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
@@ -2522,21 +2522,21 @@ pntr_font* pntr_load_ttffont(const char* fileName, int fontSize, pntr_color font
             return NULL;
         }
 
-        pntr_font* output = pntr_load_ttffont_from_memory(fileData, bytesRead, fontSize, fontColor);
+        pntr_font* output = pntr_load_font_ttf_from_memory(fileData, bytesRead, fontSize, fontColor);
         pntr_unload_file(fileData);
 
         return output;
     #endif
 }
 
-pntr_font* pntr_load_ttffont_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor) {
+pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor) {
     if (fileData == NULL || dataSize == 0 || fontSize <= 0) {
         return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
     }
 
     #ifndef PNTR_ENABLE_TTF
         (void)fontColor;
-        return pntr_set_error("pntr_load_ttffont requires PNTR_ENABLE_TTF");
+        return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
     #else
         // Create the bitmap data with ample space based on the font size
         int width = fontSize * 10;

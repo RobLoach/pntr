@@ -4,7 +4,7 @@ pntr_image* output;
 
 void example_image_alphamask_init() {
     // Load the Tuffy font, and find the size of the text output.
-    pntr_font* font = pntr_load_ttffont("resources/tuffy.ttf", 80, PNTR_BLACK);
+    pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 80, PNTR_BLACK);
     pntr_vector textSize = pntr_measure_text_ex(font, "Alpha Mask!");
 
     // Create a background to use as the alphamask.

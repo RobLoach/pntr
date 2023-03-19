@@ -8,17 +8,17 @@ pntr_font* resizedFont;
 
 void example_fonts_init() {
     // Default Font
-    defaultFont = pntr_load_default_font();
+    defaultFont = pntr_load_font_default();
 
     // BM Font
-    bmFont = pntr_load_bmfont("resources/bmfont.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+    bmFont = pntr_load_font_bmf("resources/bmfont.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
 
     // TTY Font
-    ttyFont = pntr_load_ttyfont("resources/ttyfont-16x16.png", 16, 16,
+    ttyFont = pntr_load_font_tty("resources/ttyfont-16x16.png", 16, 16,
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
 
     // TTF Font
-    ttfFont = pntr_load_ttffont("resources/tuffy.ttf", 28, PNTR_DARKPURPLE);
+    ttfFont = pntr_load_font_ttf("resources/tuffy.ttf", 28, PNTR_DARKPURPLE);
 
     // Resize the default font
     resizedFont = pntr_font_scale(defaultFont, 2.0f, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
