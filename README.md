@@ -11,7 +11,7 @@ Image manipulation library for C99 or C++, with a focus on ease-of-use.
 
 int main() {
     pntr_image* image = pntr_new_image(200, 200);
-    pntr_draw_circle(image, 100, 100, 80, PNTR_RED);
+    pntr_draw_circle_fill(image, 100, 100, 80, PNTR_RED);
     pntr_save_image(image, "output.png");
     pntr_unload_image(image);
 
@@ -64,9 +64,9 @@ void pntr_unload_image(pntr_image* image);
 void pntr_clear_background(pntr_image* image, pntr_color color);
 void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
 void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
-void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
-void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
-void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
+void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
+void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
@@ -107,7 +107,7 @@ pntr_color pntr_color_fade(pntr_color color, float alpha);
 void pntr_image_color_fade(pntr_image* image, float alpha);
 pntr_color pntr_color_brightness(pntr_color color, float factor);
 pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
-void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
+void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat, pntr_color color);
 pntr_font* pntr_load_font_default(void);
 void pntr_unload_font(pntr_font* font);
 pntr_font* pntr_font_copy(pntr_font* font);
