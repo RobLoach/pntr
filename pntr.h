@@ -445,7 +445,7 @@ PNTR_API pntr_color pntr_color_fade(pntr_color color, float alpha);
 PNTR_API void pntr_image_color_fade(pntr_image* image, float alpha);
 PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor);
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
-PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
+PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat, pntr_color color);
 PNTR_API pntr_font* pntr_load_font_default(void);
 PNTR_API void pntr_unload_font(pntr_font* font);
 PNTR_API pntr_font* pntr_font_copy(pntr_font* font);
@@ -1362,6 +1362,15 @@ void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, 
     }
 }
 
+/**
+ * Draw a horizontal line at the given x, y coordinates.
+ *
+ * @param dst The destination image.
+ * @param posX The X position.
+ * @param posY The Y position.
+ * @param width How long the line should be.
+ * @param color The color of the line.
+ */
 void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
     if (color.a == 0 || dst == NULL || posY < 0 || posY >= dst->height) {
         return;
@@ -1386,6 +1395,15 @@ void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, p
     }
 }
 
+/**
+ * Draw a horizontal line at the given x, y coordinates.
+ *
+ * @param dst The destination image.
+ * @param posX The X position.
+ * @param posY The Y position.
+ * @param height How tall the line should be.
+ * @param color The color of the line.
+ */
 void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
     if (color.a == 0 || dst == NULL || posX < 0 || posX >= dst->height) {
         return;
@@ -1415,6 +1433,20 @@ inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thi
     pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, thick, color);
 }
 
+/**
+ * Draw a rectangle on the given image.
+ *
+ * @param dst The destination image.
+ * @param posX The X position.
+ * @param posY The Y position.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param thick The thickness of the lines.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_rectangle_rec()
+ * @see pntr_draw_rectangle_fill()
+ */
 void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thick, pntr_color color) {
     if (color.a == 0 || thick <= 0 || dst == NULL || width <= 0 || height <= 0) {
         return;
@@ -1435,14 +1467,29 @@ void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int hei
 }
 
 /**
- * Draws a rectangle on the given image.
+ * Draws a filled rectangle on the given image.
+ *
+ * @param dst The destination image.
+ * @param posX The X position.
+ * @param posY The Y position.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param color The color of the rectangle.
+ *
+ * @see pntr_draw_rectangle()
  */
 inline void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
     pntr_draw_rectangle_fill_rec(dst, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
 }
 
 /**
- * Draws a rectangle on the given image, using a rectangle as input data.
+ * Draws a filled rectangle on the given image, using a rectangle as input data.
+ *
+ * @param dst The destination image.
+ * @param rect The rectangle of which to draw.
+ * @param color The color of the rectangle.
+ *
+ * @see pntr_draw_rectangle_fill()
  */
 void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
     if (color.a == 0 || dst == NULL) {
@@ -1567,7 +1614,8 @@ pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     if (x < 0 || y < 0 || x >= image->width || y >= image->height) {
         return PNTR_BLANK;
     }
-    return image->data[y * (image->pitch >> 2) + x];
+
+    return PNTR_PIXEL(image, x, y);
 }
 
 /**
@@ -1654,6 +1702,8 @@ inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
  * @param srcRect The source rectangle of what to draw from the source image.
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
+ *
+ * @see pntr_draw_image()
  */
 void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
@@ -1762,6 +1812,8 @@ pntr_image* pntr_image_from_pixelformat(const void* imageData, int width, int he
  * @param filter The filter to apply when resizing. If you're unsure, use PNTR_FILTER_DEFAULT.
  *
  * @return The newly scaled image.
+ *
+ * @see pntr_image_resize()
  */
 pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter) {
     if (image == NULL) {
@@ -1784,6 +1836,8 @@ pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr
  * @param filter Which filter to apply when resizing. If you're unsure, use PNTR_FILTER_DEFAULT.
  *
  * @return The newly resized image.
+ *
+ * @see pntr_image_scale()
  */
 pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
     if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0) {
@@ -1888,6 +1942,8 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
  * Flip an image vertically.
  *
  * @param image The image to flip.
+ *
+ * @see pntr_image_flip_horizontal()
  */
 void pntr_image_flip_vertical(pntr_image* image) {
     if (image == NULL) {
@@ -1908,6 +1964,8 @@ void pntr_image_flip_vertical(pntr_image* image) {
  * Flip an image horizontally.
  *
  * @param image The image to flip.
+ *
+ * @see pntr_image_flip_vertical()
  */
 void pntr_image_flip_horizontal(pntr_image* image) {
     if (image == NULL) {
@@ -2053,10 +2111,10 @@ void pntr_image_color_fade(pntr_image* image, float factor) {
  * Set the pixel color of the given pixel color pointer.
  *
  * @param dstPtr A pointer to the pixel in memory.
- * @param color The color to apply.
  * @param dstPixelFormat The desired destination pixel format.
+ * @param color The color to apply.
  */
-void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat) {
+void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat, pntr_color color) {
     if (PNTR_PIXELFORMAT == dstPixelFormat) {
         *((pntr_color*)dstPtr) = color;
         return;
@@ -2924,7 +2982,7 @@ int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat
 }
 
 /**
- * Convert the given image to a new image using the provied pixel format.
+ * Convert the given image to a new image using the provided pixel format.
  *
  * @param image The image to convert.
  * @param dataSize Where to put the resulting size of the image data. Use NULL if you have no need for the resulting data size.
@@ -2951,7 +3009,7 @@ void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_
 
     for (int i = 0; i < image->width * image->height; i++) {
         void* dstPtr = ((unsigned char*)data) + (i * pixelSize) ;
-        pntr_set_pixel_color(dstPtr, image->data[i], pixelFormat);
+        pntr_set_pixel_color(dstPtr, pixelFormat, image->data[i]);
     }
 
     // Output the data size
@@ -3787,10 +3845,11 @@ pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color t
     for (int y = 0; y < height; y++) {
         float factor = (float)y / (float)height;
         for (int x = 0; x < width; x++) {
-            image->data[y * width + x].r = (unsigned char)((float)bottom.r * factor + (float)top.r * (1.0f - factor));
-            image->data[y * width + x].g = (unsigned char)((float)bottom.g * factor + (float)top.g * (1.0f - factor));
-            image->data[y * width + x].b = (unsigned char)((float)bottom.b * factor + (float)top.b * (1.0f - factor));
-            image->data[y * width + x].a = (unsigned char)((float)bottom.a * factor + (float)top.a * (1.0f - factor));
+            pntr_color* pixel = &PNTR_PIXEL(image, x, y);
+            pixel->r = (unsigned char)((float)bottom.r * factor + (float)top.r * (1.0f - factor));
+            pixel->g = (unsigned char)((float)bottom.g * factor + (float)top.g * (1.0f - factor));
+            pixel->b = (unsigned char)((float)bottom.b * factor + (float)top.b * (1.0f - factor));
+            pixel->a = (unsigned char)((float)bottom.a * factor + (float)top.a * (1.0f - factor));
         }
     }
 
@@ -3816,10 +3875,11 @@ pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color
     for (int x = 0; x < width; x++) {
         float factor = (float)x / (float)width;
         for (int y = 0; y < height; y++) {
-            image->data[y * width + x].r = (unsigned char)((float)right.r * factor + (float)left.r * (1.0f - factor));
-            image->data[y * width + x].g = (unsigned char)((float)right.g * factor + (float)left.g * (1.0f - factor));
-            image->data[y * width + x].b = (unsigned char)((float)right.b * factor + (float)left.b * (1.0f - factor));
-            image->data[y * width + x].a = (unsigned char)((float)right.a * factor + (float)left.a * (1.0f - factor));
+            pntr_color* pixel = &PNTR_PIXEL(image, x, y);
+            pixel->r = (unsigned char)((float)right.r * factor + (float)left.r * (1.0f - factor));
+            pixel->g = (unsigned char)((float)right.g * factor + (float)left.g * (1.0f - factor));
+            pixel->b = (unsigned char)((float)right.b * factor + (float)left.b * (1.0f - factor));
+            pixel->a = (unsigned char)((float)right.a * factor + (float)left.a * (1.0f - factor));
         }
     }
 

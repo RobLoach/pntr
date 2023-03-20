@@ -107,7 +107,7 @@ pntr_color pntr_color_fade(pntr_color color, float alpha);
 void pntr_image_color_fade(pntr_image* image, float alpha);
 pntr_color pntr_color_brightness(pntr_color color, float factor);
 pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
-void pntr_set_pixel_color(void* dstPtr, pntr_color color, pntr_pixelformat dstPixelFormat);
+void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat, pntr_color color);
 pntr_font* pntr_load_font_default(void);
 void pntr_unload_font(pntr_font* font);
 pntr_font* pntr_font_copy(pntr_font* font);
