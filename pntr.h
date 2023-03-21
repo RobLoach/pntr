@@ -362,24 +362,23 @@ typedef enum pntr_pixelformat {
  */
 typedef enum pntr_filter {
     /**
-     * The default filter will use PNTR_FILTER_SMOOTH when available, but fall back to PNTR_FILTER_BILINEAR when needed.
-     */
-    PNTR_FILTER_DEFAULT = 0,
-
-    /**
      * Nearest-neighbor interpolation for fast processing.
+     *
+     * This is good for scaling up pixel art when you want to keep the pixel art look.
      */
-    PNTR_FILTER_NEARESTNEIGHBOR,
+    PNTR_FILTER_NEARESTNEIGHBOR = 0,
 
     /**
-     * Bilinear interpolation will combine multiple pixels together when processing.
+     * Bilinear interpolation will combine multiple pixels together when processing for smoother scaling.
      *
      * @see pntr_color_bilinear_interpolate()
      */
     PNTR_FILTER_BILINEAR,
 
     /**
-     * Smooth filter will use stb_image_resize, which combines a number of different filtering algorithms.
+     * The smooth filter will use stb_image_resize, which combines a number of different filtering algorithms.
+     *
+     * If the smooth filter is not available with PNTR_DISABLE_FILTER_SMOOTH, will fall back to PNTR_FILTER_BILINEAR.
      *
      * @see PNTR_DISABLE_FILTER_SMOOTH
      */
@@ -1809,7 +1808,7 @@ pntr_image* pntr_image_from_pixelformat(const void* imageData, int width, int he
  * @param image The image to scale up or down.
  * @param scaleX The scale of which to apply to the width of the image.
  * @param scaleY The scale of which to apply to the height of the image.
- * @param filter The filter to apply when resizing. If you're unsure, use PNTR_FILTER_DEFAULT.
+ * @param filter The filter to apply when resizing.
  *
  * @return The newly scaled image.
  *
@@ -1833,11 +1832,12 @@ pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr
  * @param image The image to resize.
  * @param newWidth The desired width of the new image.
  * @param newHeight THe desired height of the new image.
- * @param filter Which filter to apply when resizing. If you're unsure, use PNTR_FILTER_DEFAULT.
+ * @param filter Which filter to apply when resizing.
  *
  * @return The newly resized image.
  *
  * @see pntr_image_scale()
+ * @see PNTR_ENABLE_FILTER_SMOOTH
  */
 pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
     if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0) {
@@ -1849,27 +1849,16 @@ pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pn
         return NULL;
     }
 
-    // The default uses the smooth filter if it's available, but falls back to bilinear.
-    if (filter == PNTR_FILTER_DEFAULT) {
-        #ifdef PNTR_ENABLE_FILTER_SMOOTH
-            filter = PNTR_FILTER_SMOOTH;
-        #else
-            filter = PNTR_FILTER_BILINEAR;
-        #endif
-    }
-
-    // Otherwise, if we want to use PNTR_FILTER_SMOOTH, but it's not enabled, force bilinear.
     #ifndef PNTR_ENABLE_FILTER_SMOOTH
-    else if (filter == PNTR_FILTER_SMOOTH)
-        filter = PNTR_FILTER_BILINEAR;
-    }
+        if (filter == PNTR_FILTER_SMOOTH) {
+            filter = PNTR_FILTER_BILINEAR;
+        }
     #endif
 
     switch (filter) {
         case PNTR_FILTER_SMOOTH: {
             #ifndef PNTR_ENABLE_FILTER_SMOOTH
-                pntr_unload_image(output);
-                return pntr_set_error("To use the Smooth filter, define PNTR_ENABLE_FILTER_SMOOTH, or use PNTR_FILTER_DEFAULT to have a fallback to PNTR_FILTER_B");
+                return NULL;
             #else
                 int result = stbir_resize_uint8_srgb(
                     (const unsigned char*)image->data,
@@ -3460,7 +3449,6 @@ void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
     switch (filter) {
-        case PNTR_FILTER_DEFAULT:
         case PNTR_FILTER_SMOOTH:
         case PNTR_FILTER_BILINEAR: {
             float xRatio = (float)srcRect.width / (float)newWidth;

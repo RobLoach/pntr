@@ -24,7 +24,7 @@ const char* example_image_resize_update(pntr_image* canvas) {
 
     // Resize the image
     pntr_image* nearestNeighbor = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_NEARESTNEIGHBOR);
-    pntr_image* smooth = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_DEFAULT);
+    pntr_image* smooth = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_SMOOTH);
 
     // Draw an image on the canvas
     pntr_draw_image(canvas, nearestNeighbor, canvas->width / 4 - nearestNeighbor->width / 2, canvas->height / 2 - nearestNeighbor->height / 2);

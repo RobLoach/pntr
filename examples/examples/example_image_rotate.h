@@ -17,7 +17,7 @@ const char* example_image_rotate_update(pntr_image* canvas) {
 
     // Resize the image
     pntr_image* notSmooth = pntr_image_rotate(imageToRotate, rotation, PNTR_FILTER_NEARESTNEIGHBOR);
-    pntr_image* rotatedImage = pntr_image_rotate(imageToRotate, rotation, PNTR_FILTER_DEFAULT);
+    pntr_image* rotatedImage = pntr_image_rotate(imageToRotate, rotation, PNTR_FILTER_BILINEAR);
     if (rotatedImage != NULL) {
 
         // Draw an image on the canvas

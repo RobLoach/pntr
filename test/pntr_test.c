@@ -172,14 +172,6 @@ MODULE(pntr, {
         pntr_image* image = pntr_new_image(300, 100);
         NEQUALS(image, NULL);
 
-        IT("pntr_image_resize() same size", {
-            pntr_image* resized = pntr_image_resize(image, 300, 100, PNTR_FILTER_DEFAULT);
-            NEQUALS(resized, NULL);
-            EQUALS(resized->width, 300);
-            EQUALS(resized->height, 100);
-            pntr_unload_image(resized);
-        });
-
         IT("pntr_image_resize() nearest neighbor", {
             pntr_image* resized = pntr_image_resize(image, 100, 100, PNTR_FILTER_NEARESTNEIGHBOR);
             NEQUALS(resized, NULL);
@@ -370,7 +362,7 @@ MODULE(pntr, {
         pntr_draw_rectangle_fill(image, 9, 9, 3, 3, PNTR_RED);
 
         IT("pntr_image_rotate(image, 0.0f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.0f, PNTR_FILTER_DEFAULT);
+            pntr_image* rotated = pntr_image_rotate(image, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, 40);
             EQUALS(rotated->height, 30);
@@ -378,7 +370,7 @@ MODULE(pntr, {
         });
 
         IT("pntr_image_rotate(image, 0.25f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.25f, PNTR_FILTER_DEFAULT);
+            pntr_image* rotated = pntr_image_rotate(image, 0.25f, PNTR_FILTER_BILINEAR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -391,7 +383,7 @@ MODULE(pntr, {
         })
 
         IT("pntr_image_rotate(image, 0.5f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.5f, PNTR_FILTER_DEFAULT);
+            pntr_image* rotated = pntr_image_rotate(image, 0.5f, PNTR_FILTER_SMOOTH);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->width);
             EQUALS(rotated->height, image->height);
@@ -403,7 +395,7 @@ MODULE(pntr, {
         });
 
         IT("pntr_image_rotate(image, 0.75f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.75f, PNTR_FILTER_DEFAULT);
+            pntr_image* rotated = pntr_image_rotate(image, 0.75f, PNTR_FILTER_NEARESTNEIGHBOR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -416,7 +408,7 @@ MODULE(pntr, {
 
         #ifndef PNTR_DISABLE_MATH
             IT("pntr_image_rotate(image, 0.33f)", {
-                pntr_image* rotated = pntr_image_rotate(image, 0.33f, PNTR_FILTER_DEFAULT);
+                pntr_image* rotated = pntr_image_rotate(image, 0.33f, PNTR_FILTER_BILINEAR);
                 NEQUALS(rotated, NULL);
                 NEQUALS(rotated->width, image->height);
                 NEQUALS(rotated->height, image->width);
