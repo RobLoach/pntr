@@ -1145,9 +1145,9 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
     }
 
     for (int y = 0; y < srcRect.height; y++) {
-        PNTR_MEMCPY(((unsigned char *)result->data) + y * srcRect.width * (int)sizeof(pntr_color),
-            ((unsigned char *)image->data) + ((y + srcRect.y) * image->width + srcRect.x) * (int)sizeof(pntr_color),
-            srcRect.width * (int)sizeof(pntr_color));
+        PNTR_MEMCPY(&PNTR_PIXEL(result, 0, y),
+            &PNTR_PIXEL(image, srcRect.x, y + srcRect.y),
+            result->pitch);
     }
 
     return result;
@@ -1219,7 +1219,7 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
  * Draws a line on the destination image.
  */
 PNTR_API inline void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    pntr_color *row = dst->data + posY * (dst->pitch >> 2) + posX;
+    pntr_color *row = &PNTR_PIXEL(dst, posX, posY);
     while (--width >= 0) {
         row[width] = color;
     }
@@ -1452,7 +1452,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
         pntr_put_horizontal_line_unsafe(dst, posX, posY, width, color);
     }
     else {
-        pntr_color *row = dst->data + posY * (dst->pitch >> 2) + posX;
+        pntr_color *row = &PNTR_PIXEL(dst, posX, posY);
         while (--width >= 0) {
             pntr_blend_color(row + width, color);
         }
@@ -1483,7 +1483,7 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
 
     if (color.a == 255) {
         for (int y = 0; y < height; y++) {
-            dst->data[(posY + y) * (dst->pitch >> 2) + posX] = color;
+            PNTR_PIXEL(dst, posX, posY + y) = color;
         }
     }
     else {
@@ -2032,8 +2032,8 @@ PNTR_API void pntr_image_flip_horizontal(pntr_image* image) {
     pntr_color swap;
     for (int y = 0; y < image->height; y++) {
         for (int x = 0; x < image->width / 2; x++) {
-            swap = data[y * image->width + x];
-            data[y * image->width + x] = data[y * image->width + (image->width - 1 - x)];
+            swap = PNTR_PIXEL(image, x, y);
+            PNTR_PIXEL(image, x, y) = data[y * image->width + (image->width - 1 - x)];
             data[y * image->width + (image->width - 1 - x)] = swap;
         }
     }
@@ -2051,9 +2051,13 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
         return;
     }
 
-    for (int i = 0; i < image->width * image->height; i++) {
-        if (image->data[i].data == color.data) {
-            image->data[i].data = replace.data;
+    for (int y = 0; y < image->height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
+        for (int x = 0; x < image->width; x++) {
+            if (pixel->data == color.data) {
+                *pixel = replace;
+            }
+            pixel++;
         }
     }
 }
@@ -2156,9 +2160,13 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float factor) {
         factor = 1.0f;
     }
 
-    for (int i = 0; i < image->width * image->height; i++) {
-        if (image->data[i].a > 0) {
-            image->data[i] = pntr_color_fade(image->data[i], factor);
+    for (int y = 0; y < image->height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
+        for (int x = 0; x < image->width; x++) {
+            if (pixel->a > 0) {
+                *pixel = pntr_color_fade(*pixel, factor);
+            }
+            pixel++;
         }
     }
 }
@@ -2243,8 +2251,12 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
         return;
     }
 
-    for (int i = 0; i < image->width * image->height; i++) {
-        image->data[i] = pntr_color_tint(image->data[i], tint);
+    for (int y = 0; y < image->height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
+        for (int x = 0; x < image->width; x++) {
+            *pixel = pntr_color_tint(*pixel, tint);
+            pixel++;
+        }
     }
 }
 
@@ -2869,8 +2881,12 @@ PNTR_API void pntr_image_color_invert(pntr_image* image) {
         return;
     }
 
-    for (int i = 0; i < image->width * image->height; i++) {
-        image->data[i] = pntr_color_invert(image->data[i]);
+    for (int y = 0; y < image->height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
+        for (int x = 0; x < image->width; x++) {
+            *pixel = pntr_color_invert(*pixel);
+            pixel++;
+        }
     }
 }
 
@@ -2894,8 +2910,12 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
         factor = 1.0f;
     }
 
-    for (int i = 0; i < image->width * image->height; i++) {
-        image->data[i] = pntr_color_brightness(image->data[i], factor);
+    for (int y = 0; y < image->height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
+        for (int x = 0; x < image->width; x++) {
+            *pixel = pntr_color_brightness(*pixel, factor);
+            pixel++;
+        }
     }
 }
 
@@ -3063,9 +3083,15 @@ PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSi
 
     int pixelSize = pntr_get_pixel_data_size(1, 1, pixelFormat);
 
-    for (int i = 0; i < image->width * image->height; i++) {
-        void* dstPtr = ((unsigned char*)data) + (i * pixelSize) ;
-        pntr_set_pixel_color(dstPtr, pixelFormat, image->data[i]);
+    int i = 0;
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            pntr_set_pixel_color(
+                ((unsigned char*)data) + (i++ * pixelSize),
+                pixelFormat,
+                PNTR_PIXEL(image, x, y)
+            );
+        }
     }
 
     // Output the data size
@@ -3353,8 +3379,12 @@ PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast) {
         contrast = 1.0f;
     }
 
-    for (int i = 0; i < image->width * image->height; i++) {
-        image->data[i] = pntr_color_contrast(image->data[i], contrast);
+    for (int y = 0; y < image->height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
+        for (int x = 0; x < image->width; x++) {
+            *pixel = pntr_color_contrast(*pixel, contrast);
+            pixel++;
+        }
     }
 }
 
@@ -3396,11 +3426,12 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
     }
 
     for (int y = 0; y < dstRect.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, posX, posY + y);
         for (int x = 0; x < dstRect.width; x++) {
-            pntr_color* pixel = &PNTR_PIXEL(image, posX + x, posY + y);
             if (pixel->a > 0) {
                 pixel->a = PNTR_PIXEL(alphaMask, x, y).a;
             }
+            pixel++;
         }
     }
 }
