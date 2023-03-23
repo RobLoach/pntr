@@ -1170,11 +1170,11 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
     }
 
     // Only clear full image data.
-    if (image->subcanvas == false && image->data != NULL) {
+    if (!image->subcanvas && image->data != NULL) {
         PNTR_FREE(image->data);
+        image->data = NULL;
     }
 
-    image->data = NULL;
     PNTR_FREE(image);
 }
 

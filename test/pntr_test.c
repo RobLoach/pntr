@@ -485,6 +485,20 @@ MODULE(pntr, {
         pntr_unload_font(resized);
     });
 
+    IT("pntr_image_subcanvas", {
+        pntr_image* image = pntr_gen_image_color(300, 300, PNTR_RED);
+        pntr_draw_rectangle_fill(image, 100, 100, 100, 100, PNTR_BLUE);
+
+        COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 150, 150), PNTR_BLUE);
+
+        pntr_image* subcanvas = pntr_image_subcanvas(image, 100, 100, 100, 100);
+        COLOREQUALS(pntr_image_get_color(subcanvas, 50, 50), PNTR_BLUE);
+
+        pntr_unload_image(subcanvas);
+        pntr_unload_image(image);
+    });
+
     IT("No reported errors", {
         const char* err = "";
         if (pntr_get_error() != NULL) {
