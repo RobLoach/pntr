@@ -261,6 +261,11 @@ typedef struct pntr_image {
      * The amount of bytes of one row of the image.
      */
     int pitch;
+
+    /**
+     * Determines whether the image is a portion of another image.
+     */
+    bool subcanvas;
 } pntr_image;
 
 /**
@@ -393,6 +398,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height);
 PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color color);
 PNTR_API pntr_image* pntr_image_copy(pntr_image* image);
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height);
+PNTR_API pntr_image* pntr_image_subcanvas(pntr_image* image, int x, int y, int width, int height);
 PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
@@ -1003,6 +1009,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->pitch = width * (int)sizeof(pntr_color);
     image->width = width;
     image->height = height;
+    image->subcanvas = false;
     image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
     if (image->data == NULL) {
         PNTR_FREE(image);
@@ -1133,6 +1140,25 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
     return result;
 }
 
+PNTR_API pntr_image* pntr_image_subcanvas(pntr_image* image, int x, int y, int width, int height) {
+    if (image == NULL) {
+        return pntr_set_error("pntr_image_subcanvas requires a valid image");
+    }
+
+    pntr_image* subcanvas = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
+    if (subcanvas == NULL) {
+        return pntr_set_error("pntr_image_subcanvas() failed to allocate memory for pntr_image");
+    }
+
+    subcanvas->pitch = image->pitch;
+    subcanvas->width = width;
+    subcanvas->height = height;
+    subcanvas->subcanvas = true;
+    subcanvas->data = &PNTR_PIXEL(image, x, y);
+
+    return subcanvas;
+}
+
 /**
  * Unloads the given image from memory.
  *
@@ -1143,11 +1169,12 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
         return;
     }
 
-    if (image->data != NULL) {
+    // Only clear full image data.
+    if (image->subcanvas == false && image->data != NULL) {
         PNTR_FREE(image->data);
-        image->data = NULL;
     }
 
+    image->data = NULL;
     PNTR_FREE(image);
 }
 
