@@ -81,16 +81,13 @@ MODULE(pntr, {
         NEQUALS(image, NULL);
         pntr_clear_background(image, PNTR_RED);
 
-        pntr_color color = pntr_image_get_color(image, 10, 10);
-        COLOREQUALS(color, PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_RED);
 
         pntr_clear_background(image, PNTR_BLANK);
-        color = pntr_image_get_color(image, 10, 10);
-        COLOREQUALS(color, PNTR_BLANK);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_BLANK);
 
         pntr_draw_rectangle_fill(image, 9, 9, 3, 3, PNTR_BLUE);
-        color = pntr_image_get_color(image, 10, 10);
-        COLOREQUALS(color, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_BLUE);
         pntr_unload_image(image);
     });
 
@@ -204,11 +201,11 @@ MODULE(pntr, {
     IT("pntr_image_color_replace()", {
         pntr_image* image = pntr_gen_image_color(100, 100, PNTR_BLUE);
         NEQUALS(image, NULL);
-        pntr_color color = pntr_image_get_color(image, 10, 10);
-        COLOREQUALS(color, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_BLUE);
+
         pntr_image_color_replace(image, PNTR_BLUE, PNTR_RED);
-        color = pntr_image_get_color(image, 10, 10);
-        COLOREQUALS(color, PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_RED);
+
         pntr_unload_image(image);
     });
 
@@ -216,6 +213,7 @@ MODULE(pntr, {
         pntr_color color = PNTR_RED;
         EQUALS(color.a, 255);
         EQUALS(color.r, 230);
+
         pntr_color faded = pntr_color_fade(color, -0.5f);
         EQUALS(faded.a, 127);
         EQUALS(faded.r, 230);
@@ -322,8 +320,7 @@ MODULE(pntr, {
         EQUALS(image->width, 200);
         EQUALS(image->height, 200);
 
-        pntr_color color = pntr_image_get_color(image, 50, 50);
-        COLOREQUALS(color, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_BLUE);
 
         pntr_unload_image(image);
     });
@@ -335,8 +332,7 @@ MODULE(pntr, {
         NEQUALS(image, NULL);
         EQUALS(image->width, 20);
         EQUALS(image->height, 50);
-        pntr_color color = pntr_image_get_color(image, 10, 20);
-        COLOREQUALS(color, PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 20), PNTR_RED);
         pntr_unload_image(image);
     });
 
@@ -349,10 +345,8 @@ MODULE(pntr, {
         NEQUALS(image, NULL);
         EQUALS(image->width, 400);
         EQUALS(image->height, 400);
-        pntr_color color = pntr_image_get_color(image, 50, 50);
-        COLOREQUALS(color, PNTR_RED);
-        color = pntr_image_get_color(image, 150, 150);
-        COLOREQUALS(color, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 150, 150), PNTR_BLUE);
         pntr_unload_image(image);
     });
 
@@ -374,11 +368,8 @@ MODULE(pntr, {
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
-            pntr_color color = pntr_image_get_color(rotated, 10, 10);
-            COLOREQUALS(color, PNTR_BLUE);
-            color = pntr_image_get_color(rotated, 10, 30);
-            pntr_save_image(rotated, "rotate2.png");
-            COLOREQUALS(color, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(rotated, 10, 10), PNTR_BLUE);
+            COLOREQUALS(pntr_image_get_color(rotated, 10, 30), PNTR_RED);
             pntr_unload_image(rotated);
         })
 
@@ -387,10 +378,8 @@ MODULE(pntr, {
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->width);
             EQUALS(rotated->height, image->height);
-            pntr_color color = pntr_image_get_color(rotated, 10, 10);
-            COLOREQUALS(color, PNTR_BLUE);
-            color = pntr_image_get_color(rotated, 30, 20);
-            COLOREQUALS(color, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(rotated, 10, 10), PNTR_BLUE);
+            COLOREQUALS(pntr_image_get_color(rotated, 30, 20), PNTR_RED);
             pntr_unload_image(rotated);
         });
 
@@ -399,10 +388,8 @@ MODULE(pntr, {
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
-            pntr_color color = pntr_image_get_color(rotated, 10, 10);
-            COLOREQUALS(color, PNTR_BLUE);
-            color = pntr_image_get_color(rotated, 20, 10);
-            COLOREQUALS(color, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(rotated, 10, 10), PNTR_BLUE);
+            COLOREQUALS(pntr_image_get_color(rotated, 20, 10), PNTR_RED);
             pntr_unload_image(rotated);
         });
 
@@ -412,10 +399,8 @@ MODULE(pntr, {
                 NEQUALS(rotated, NULL);
                 NEQUALS(rotated->width, image->height);
                 NEQUALS(rotated->height, image->width);
-                pntr_color color = pntr_image_get_color(rotated, 5, 5);
-                COLOREQUALS(color, PNTR_BLANK);
-                color = pntr_image_get_color(rotated, rotated->width / 2, rotated->height / 2);
-                COLOREQUALS(color, PNTR_BLUE);
+                COLOREQUALS(pntr_image_get_color(rotated, 5, 5), PNTR_BLANK);
+                COLOREQUALS(pntr_image_get_color(rotated, rotated->width / 2, rotated->height / 2), PNTR_BLUE);
                 pntr_unload_image(rotated);
             });
         #else
