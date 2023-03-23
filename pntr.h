@@ -263,9 +263,9 @@ typedef struct pntr_image {
     int pitch;
 
     /**
-     * Determines whether the image is a portion of another image.
+     * Whether or not the image is a portion of another image.
      */
-    bool subcanvas;
+    bool subimage;
 } pntr_image;
 
 /**
@@ -398,7 +398,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height);
 PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color color);
 PNTR_API pntr_image* pntr_image_copy(pntr_image* image);
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height);
-PNTR_API pntr_image* pntr_image_subcanvas(pntr_image* image, int x, int y, int width, int height);
+PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height);
 PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
@@ -1009,7 +1009,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->pitch = width * (int)sizeof(pntr_color);
     image->width = width;
     image->height = height;
-    image->subcanvas = false;
+    image->subimage = false;
     image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
     if (image->data == NULL) {
         PNTR_FREE(image);
@@ -1112,14 +1112,27 @@ PNTR_API pntr_rectangle _pntr_rectangle_intersect(pntr_rectangle *rec1, pntr_rec
 
 /**
  * Creates a new image from a section of the original image.
+ *
+ * The new image must be cleared with pntr_unload_image().
+ *
+ * @param image The original image to build the new image from.
+ * @param x The x coordinate to build the new image from.
+ * @param y The y coordinate to build the new image from.
+ * @param width The width of the new image.
+ * @param height The height of the new image.
+ *
+ * @return A new image that is based off of the section of the original image.
+ *
+ * @see pntr_image_subimage()
+ * @see pntr_unload_image()
  */
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
         return pntr_set_error("pntr_image_from_image() requires valid source image");
     }
 
-    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle){x, y, width, height};
-    pntr_rectangle imgRect = PNTR_CLITERAL(pntr_rectangle){0, 0, image->width, image->height};
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle){ .x = x, .y = y, .width = width, .height = height };
+    pntr_rectangle imgRect = PNTR_CLITERAL(pntr_rectangle){ .x = 0, .y = 0, .width = image->width, .height = image->height };
     srcRect = _pntr_rectangle_intersect(&imgRect, &srcRect);
 
     if (srcRect.width <= 0 || srcRect.height <= 0) {
@@ -1140,23 +1153,48 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
     return result;
 }
 
-PNTR_API pntr_image* pntr_image_subcanvas(pntr_image* image, int x, int y, int width, int height) {
+/**
+ * Creates an image that references a section of another image.
+ *
+ * This is useful to have images reference a sprite in a tileset. Sub-images still need to be cleared with pntr_unload_image().
+ *
+ * @param image The original image to reference for the new portion of the image.
+ * @param x The X coorindate of the subimage.
+ * @param y The Y coordinate of the subimage.
+ * @param width The width of the subimage.
+ * @param height The height of the subimage.
+ *
+ * @return The pntr_image referencing the section of the given image.
+ *
+ * @see pntr_image_from_image()
+ * @see pntr_unload_image()
+ */
+PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
-        return pntr_set_error("pntr_image_subcanvas requires a valid image");
+        return pntr_set_error("pntr_image_subimage requires a valid image");
     }
 
-    pntr_image* subcanvas = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
-    if (subcanvas == NULL) {
-        return pntr_set_error("pntr_image_subcanvas() failed to allocate memory for pntr_image");
+    // Ensure we are referencing an actual portion of the image.
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = x, .y = y, .width = width, .height = height };
+    pntr_rectangle canvas = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = image->width, .height = image->height };
+    srcRect = _pntr_rectangle_intersect(&canvas, &srcRect);
+    if (srcRect.width <= 0 || srcRect.height <= 0) {
+        return pntr_set_error("pntr_image_subimage needs an actual section of the given image");
     }
 
-    subcanvas->pitch = image->pitch;
-    subcanvas->width = width;
-    subcanvas->height = height;
-    subcanvas->subcanvas = true;
-    subcanvas->data = &PNTR_PIXEL(image, x, y);
+    // Build the subimage.
+    pntr_image* subimage = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
+    if (subimage == NULL) {
+        return pntr_set_error("pntr_image_subimage() failed to allocate memory for pntr_image");
+    }
 
-    return subcanvas;
+    subimage->pitch = image->pitch;
+    subimage->width = srcRect.width;
+    subimage->height = srcRect.height;
+    subimage->subimage = true;
+    subimage->data = &PNTR_PIXEL(image, srcRect.x, srcRect.y);
+
+    return subimage;
 }
 
 /**
@@ -1170,9 +1208,8 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
     }
 
     // Only clear full image data.
-    if (!image->subcanvas && image->data != NULL) {
+    if (!image->subimage && image->data != NULL) {
         PNTR_FREE(image->data);
-        image->data = NULL;
     }
 
     PNTR_FREE(image);
@@ -1967,6 +2004,7 @@ PNTR_API void pntr_image_flip_vertical(pntr_image* image) {
         return;
     }
 
+    // TODO: Don't create a whole new image data as part of pntr_image_flip_vertical.
     unsigned char *flippedData = (unsigned char*)PNTR_MALLOC(image->height * image->pitch);
     for (int y = image->height - 1, offsetSize = 0; y >= 0; y--) {
         memcpy(flippedData + offsetSize, ((unsigned char*)image->data) + y * image->pitch, (size_t)image->pitch);
@@ -1974,6 +2012,7 @@ PNTR_API void pntr_image_flip_vertical(pntr_image* image) {
     }
 
     PNTR_FREE(image->data);
+    image->subimage = false;
     image->data = (pntr_color*)flippedData;
 }
 
@@ -3210,6 +3249,7 @@ PNTR_API void pntr_image_crop(pntr_image* image, int x, int y, int width, int he
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
+    image->subimage = false;
     PNTR_FREE(newImage);
 }
 
@@ -3393,6 +3433,7 @@ PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
+    image->subimage = false;
 
     PNTR_FREE(oldData);
     PNTR_FREE(newImage);
