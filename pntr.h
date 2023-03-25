@@ -1107,7 +1107,12 @@ PNTR_API pntr_rectangle _pntr_rectangle_intersect(pntr_rectangle *rec1, pntr_rec
     int right  = PNTR_MIN(rec1->x + rec1->width, rec2->x + rec2->width) - left;
     int top    = PNTR_MAX(rec1->y, rec2->y);
     int bottom = PNTR_MIN(rec1->y + rec1->height, rec2->y + rec2->height) - top;
-    return PNTR_CLITERAL(pntr_rectangle) { left, top, PNTR_MAX(right, 0), PNTR_MAX(bottom, 0) };
+    return PNTR_CLITERAL(pntr_rectangle) {
+        .x = left,
+        .y = top,
+        .width = PNTR_MAX(right, 0),
+        .height = PNTR_MAX(bottom, 0)
+    };
 }
 
 /**
@@ -1981,8 +1986,7 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
             for (int y = 0; y < newHeight; y++) {
                 int y2 = (y * yRatio) >> 16;
                 for (int x = 0; x < newWidth; x++) {
-                    int x2 = (x * xRatio) >> 16;
-                    PNTR_PIXEL(output, x, y) = image->data[(y2 * image->width) + x2];
+                    PNTR_PIXEL(output, x, y) = PNTR_PIXEL(image, (x * xRatio) >> 16, y2);
                 }
             }
         }
@@ -2004,16 +2008,14 @@ PNTR_API void pntr_image_flip_vertical(pntr_image* image) {
         return;
     }
 
-    // TODO: Don't create a whole new image data as part of pntr_image_flip_vertical.
-    unsigned char *flippedData = (unsigned char*)PNTR_MALLOC(image->height * image->pitch);
-    for (int y = image->height - 1, offsetSize = 0; y >= 0; y--) {
-        memcpy(flippedData + offsetSize, ((unsigned char*)image->data) + y * image->pitch, (size_t)image->pitch);
-        offsetSize += image->pitch;
+    pntr_color swap;
+    for (int y = 0; y < image->height / 2; y++) {
+        for (int x = 0; x < image->width; x++) {
+            swap = PNTR_PIXEL(image, x, y);
+            PNTR_PIXEL(image, x, y) = PNTR_PIXEL(image, x, image->height - 1 - y);
+            PNTR_PIXEL(image, x, image->height - 1 - y) = swap;
+        }
     }
-
-    PNTR_FREE(image->data);
-    image->subimage = false;
-    image->data = (pntr_color*)flippedData;
 }
 
 /**
@@ -2028,13 +2030,12 @@ PNTR_API void pntr_image_flip_horizontal(pntr_image* image) {
         return;
     }
 
-    pntr_color* data = (pntr_color*)image->data;
     pntr_color swap;
     for (int y = 0; y < image->height; y++) {
         for (int x = 0; x < image->width / 2; x++) {
             swap = PNTR_PIXEL(image, x, y);
-            PNTR_PIXEL(image, x, y) = data[y * image->width + (image->width - 1 - x)];
-            data[y * image->width + (image->width - 1 - x)] = swap;
+            PNTR_PIXEL(image, x, y) = PNTR_PIXEL(image, image->width - 1 - x, y);
+            PNTR_PIXEL(image, image->width - 1 - x, y) = swap;
         }
     }
 }
