@@ -1611,7 +1611,7 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
  *
  * @see pntr_draw_circle_fill()
  */
-PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
     pntr_draw_ellipse(dst, centerX, centerY, radius, radius, color);
 }
 
