@@ -413,6 +413,7 @@ PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2
 PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color);
 PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
 PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color);
+PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color);
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
@@ -1611,27 +1612,41 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
  * @see pntr_draw_circle_fill()
  */
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-    int x = radius < 0 ? radius * -1 : radius;
-    int y = 0;
-    int skip = 0;
-    while (x >= y) {
-        pntr_draw_pixel(dst, centerX + x, centerY + y, color);
-        pntr_draw_pixel(dst, centerX + y, centerY + x, color);
-        pntr_draw_pixel(dst, centerX - y, centerY + x, color);
-        pntr_draw_pixel(dst, centerX - x, centerY + y, color);
-        pntr_draw_pixel(dst, centerX - x, centerY - y, color);
-        pntr_draw_pixel(dst, centerX - y, centerY - x, color);
-        pntr_draw_pixel(dst, centerX + y, centerY - x, color);
-        pntr_draw_pixel(dst, centerX + x, centerY - y, color);
+    pntr_draw_ellipse(dst, centerX, centerY, radius, radius, color);
+}
 
-        if (skip <= 0) {
-            y += 1;
-            skip += 2 * y + 1;
+PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0) {
+        return;
+    }
+
+    int x = 0;
+    if (radiusX < 0) {
+        radiusX = -radiusX;
+    }
+    if (radiusY < 0) {
+        radiusY = -radiusY;
+    }
+
+    int radiusXSquared = radiusX * radiusX;
+    int radiusXSquared2 = radiusXSquared * 2;
+    int radiusYSquared = radiusY * radiusY;
+    int radiusYSquared2 = radiusYSquared * 2;
+    int error = radiusYSquared - radiusXSquared * radiusY;
+
+    while (radiusY >= 0) {
+        pntr_draw_pixel(dst, centerX + x, centerY + radiusY, color);
+        pntr_draw_pixel(dst, centerX - x, centerY + radiusY, color);
+        pntr_draw_pixel(dst, centerX - x, centerY - radiusY, color);
+        pntr_draw_pixel(dst, centerX + x, centerY - radiusY, color);
+
+        if (error <= 0) {
+            x++;
+            error += radiusYSquared2 * x + radiusYSquared;
         }
-
-        if (skip > 0) {
-            x -= 1;
-            skip -= 2 * x + 1;
+        if (error > 0) {
+            radiusY--;
+            error -= radiusXSquared2 * radiusY - radiusXSquared;
         }
     }
 }
