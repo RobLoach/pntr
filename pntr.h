@@ -405,10 +405,14 @@ PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
-PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thick, pntr_color color);
-PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thick, pntr_color color);
+PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
+PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
+PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
+PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color);
+PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
+PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color);
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
@@ -1498,8 +1502,8 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
     }
 }
 
-PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thick, pntr_color color) {
-    pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, thick, color);
+PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color) {
+    pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, thickness, color);
 }
 
 /**
@@ -1510,28 +1514,28 @@ PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec
  * @param posY The Y position.
  * @param width How wide the rectangle should be.
  * @param height How tall the rectangle should be.
- * @param thick The thickness of the lines.
+ * @param thickness How thick the line border should be.
  * @param color The color of the line.
  *
  * @see pntr_draw_rectangle_rec()
  * @see pntr_draw_rectangle_fill()
  */
-PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thick, pntr_color color) {
-    if (color.a == 0 || thick <= 0 || dst == NULL || width <= 0 || height <= 0) {
+PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
+    if (color.a == 0 || thickness <= 0 || dst == NULL || width <= 0 || height <= 0) {
         return;
     }
 
-    if (thick == 1) {
+    if (thickness == 1) {
         pntr_draw_line_horizontal(dst, posX, posY, width, color);
         pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
         pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
         pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
     }
     else {
-        pntr_draw_rectangle_fill(dst, posX, posY, width, thick, color);
-        pntr_draw_rectangle_fill(dst, posX, posY + thick, thick, height - thick * 2, color);
-        pntr_draw_rectangle_fill(dst, posX + width - thick, posY + thick, thick, height - thick * 2, color);
-        pntr_draw_rectangle_fill(dst, posX, posY + height - thick, width, thick, color);
+        pntr_draw_rectangle_fill(dst, posX, posY, width, thickness, color);
+        pntr_draw_rectangle_fill(dst, posX, posY + thickness, thickness, height - thickness * 2, color);
+        pntr_draw_rectangle_fill(dst, posX + width - thickness, posY + thickness, thickness, height - thickness * 2, color);
+        pntr_draw_rectangle_fill(dst, posX, posY + height - thickness, width, thickness, color);
     }
 }
 
@@ -1662,6 +1666,75 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
                 pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
                 largestX = x;
                 break;
+            }
+        }
+    }
+}
+
+PNTR_API inline void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
+    pntr_draw_triangle(dst, point1.x, point1.y, point2.x, point2.y, point3.x, point3.y, color);
+}
+
+PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
+    pntr_draw_line(dst, x1, y1, x2, y2, color);
+    pntr_draw_line(dst, x2, y2, x3, y3, color);
+    pntr_draw_line(dst, x3, y3, x1, y1, color);
+}
+
+PNTR_API inline void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
+    pntr_draw_triangle_fill_vec(dst,
+        PNTR_CLITERAL(pntr_vector) { .x = x1, .y = y1 },
+        PNTR_CLITERAL(pntr_vector) { .x = x2, .y = y2 },
+        PNTR_CLITERAL(pntr_vector) { .x = x3, .y = y3 },
+        color
+    );
+}
+
+/**
+ * Calculates if a point is within the given triangle.
+ *
+ * @private
+ * @internal
+ */
+PNTR_API bool _pntr_point_in_triangle(int x, int y, pntr_vector p0, pntr_vector p1, pntr_vector p2) {
+    float s = p0.y * p2.x - p0.x * p2.y + (p2.y - p0.y) * x + (p0.x - p2.x) * y;
+    float t = p0.x * p1.y - p0.y * p1.x + (p0.y - p1.y) * x + (p1.x - p0.x) * y;
+    if ((s < 0) != (t < 0)) {
+        return false;
+    }
+
+    float A = -p1.y * p2.x + p0.y * (-p1.x + p2.x) + p0.x * (p1.y - p2.y) + p1.x * p2.y;
+    if (A < 0.0) {
+        s = -s;
+        t = -t;
+        A = -A;
+    }
+
+    return s > 0 && t > 0 && (s + t) < A;
+}
+
+PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
+    if (dst == NULL) {
+        return;
+    }
+
+    // Find the bounding box of the triangle
+    pntr_rectangle canvas = PNTR_CLITERAL(pntr_rectangle) { 0, 0, dst->width, dst->height };
+    pntr_rectangle dest;
+    dest.x = PNTR_MIN(point1.x, point2.x);
+    dest.x = PNTR_MIN(dest.x, point3.x);
+    dest.y = PNTR_MIN(point1.y, point2.y);
+    dest.y = PNTR_MIN(dest.y, point3.y);
+    dest.width = PNTR_MAX(point1.x, point2.x);
+    dest.width = PNTR_MAX(dest.width, point3.x) - dest.x;
+    dest.height = PNTR_MAX(point1.y, point2.y);
+    dest.height = PNTR_MAX(dest.height, point3.y) - dest.y;
+    dest = _pntr_rectangle_intersect(&canvas, &dest);
+
+    for (int x = 0; x < dest.width; x++) {
+        for (int y = 0; y < dest.height; y++) {
+            if (_pntr_point_in_triangle(dest.x + x, dest.y + y, point1, point2, point3)) {
+                pntr_draw_pixel_unsafe(dst, dest.x + x, dest.y + y, color);
             }
         }
     }
@@ -3934,11 +4007,12 @@ PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pnt
     for (int y = 0; y < height; y++) {
         float factor = (float)y / (float)height;
         for (int x = 0; x < width; x++) {
-            pntr_color* pixel = &PNTR_PIXEL(image, x, y);
-            pixel->r = (unsigned char)((float)bottom.r * factor + (float)top.r * (1.0f - factor));
-            pixel->g = (unsigned char)((float)bottom.g * factor + (float)top.g * (1.0f - factor));
-            pixel->b = (unsigned char)((float)bottom.b * factor + (float)top.b * (1.0f - factor));
-            pixel->a = (unsigned char)((float)bottom.a * factor + (float)top.a * (1.0f - factor));
+            PNTR_PIXEL(image, x, y) = PNTR_CLITERAL(pntr_color) {
+                .r = (unsigned char)((float)bottom.r * factor + (float)top.r * (1.0f - factor)),
+                .g = (unsigned char)((float)bottom.g * factor + (float)top.g * (1.0f - factor)),
+                .b = (unsigned char)((float)bottom.b * factor + (float)top.b * (1.0f - factor)),
+                .a = (unsigned char)((float)bottom.a * factor + (float)top.a * (1.0f - factor))
+            };
         }
     }
 
@@ -3964,11 +4038,12 @@ PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, p
     for (int x = 0; x < width; x++) {
         float factor = (float)x / (float)width;
         for (int y = 0; y < height; y++) {
-            pntr_color* pixel = &PNTR_PIXEL(image, x, y);
-            pixel->r = (unsigned char)((float)right.r * factor + (float)left.r * (1.0f - factor));
-            pixel->g = (unsigned char)((float)right.g * factor + (float)left.g * (1.0f - factor));
-            pixel->b = (unsigned char)((float)right.b * factor + (float)left.b * (1.0f - factor));
-            pixel->a = (unsigned char)((float)right.a * factor + (float)left.a * (1.0f - factor));
+            PNTR_PIXEL(image, x, y) = PNTR_CLITERAL(pntr_color) {
+                .r = (unsigned char)((float)right.r * factor + (float)left.r * (1.0f - factor)),
+                .g = (unsigned char)((float)right.g * factor + (float)left.g * (1.0f - factor)),
+                .b = (unsigned char)((float)right.b * factor + (float)left.b * (1.0f - factor)),
+                .a = (unsigned char)((float)right.a * factor + (float)left.a * (1.0f - factor))
+            };
         }
     }
 

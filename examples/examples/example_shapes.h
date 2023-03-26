@@ -27,6 +27,12 @@ const char* example_shapes_update(pntr_image* canvas) {
     // Line
     pntr_draw_line(canvas, 200, 50, 250, 80, PNTR_DARKGREEN);
 
+    // Triangle
+    pntr_draw_triangle_fill(canvas,
+        250, 50,
+        300, 80,
+        350, 20, PNTR_PURPLE);
+
     return "Shapes";
 }
 
