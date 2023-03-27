@@ -21,10 +21,11 @@ const char* example_shapes_update(pntr_image* canvas) {
     pntr_draw_rectangle(canvas, 30, 140, 50, 50, 5, PNTR_BLUE);
 
     // Circle
-    pntr_draw_circle(canvas, 110, 60, 20, PNTR_RED);
-    pntr_draw_circle_fill(canvas, 160, 60, 20, PNTR_BLUE);
+    pntr_draw_circle(canvas, 110, 60, 21, PNTR_RED);
+    pntr_draw_circle_fill(canvas, 160, 60, 21, PNTR_BLUE);
 
     pntr_draw_ellipse(canvas, 110, 100, 20, 10, PNTR_GREEN);
+    pntr_draw_ellipse_fill(canvas, 160, 100, 20, 10, PNTR_ORANGE);
 
     // Line
     pntr_draw_line(canvas, 200, 50, 250, 80, PNTR_DARKGREEN);

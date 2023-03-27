@@ -414,6 +414,7 @@ PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_v
 PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
 PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color);
 PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color);
+PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color);
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
@@ -1665,7 +1666,11 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
  * @see pntr_draw_circle()
  */
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-    if (dst == NULL) {
+    if (radius < 0) {
+        radius = -radius;
+    }
+
+    if (dst == NULL || color.a == 0 || radius == 0 || centerX + radius < 0 || centerX - radius >= dst->width || centerY + radius < 0 || centerY - radius > dst->height) {
         return;
     }
 
@@ -1682,6 +1687,42 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
                 largestX = x;
                 break;
             }
+        }
+    }
+}
+
+PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    if (radiusX < 0) {
+        radiusX = -radiusX;
+    }
+    if (radiusY < 0) {
+        radiusY = -radiusY;
+    }
+
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0 || centerX + radiusX < 0 || centerX - radiusX > dst->width || centerY + radiusY < 0 || centerY - radiusY > dst->height) {
+        return;
+    }
+
+    int x = 0;
+    int radiusXSquared = radiusX * radiusX;
+    int radiusXSquared2 = radiusXSquared * 2;
+    int radiusYSquared = radiusY * radiusY;
+    int radiusYSquared2 = radiusYSquared * 2;
+    int error = radiusYSquared - radiusXSquared * radiusY;
+
+    while (radiusY >= 0) {
+        pntr_draw_line_horizontal(dst, centerX - x, centerY + radiusY, x, color);
+        pntr_draw_line_horizontal(dst, centerX - x, centerY - radiusY, x, color);
+        pntr_draw_line_horizontal(dst, centerX, centerY + radiusY, x, color);
+        pntr_draw_line_horizontal(dst, centerX, centerY - radiusY, x, color);
+
+        if (error <= 0) {
+            x++;
+            error += radiusYSquared2 * x + radiusYSquared;
+        }
+        if (error > 0) {
+            radiusY--;
+            error -= radiusXSquared2 * radiusY - radiusXSquared;
         }
     }
 }
