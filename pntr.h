@@ -1504,6 +1504,14 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
     }
 }
 
+/**
+ * Draws a rectangle using a rectangle.
+ *
+ * @param dst Where to draw the rectangle.
+ * @param rec The rectangle of which to draw.
+ * @param thickness How thick the border of the rectangle should be.
+ * @param color The color of the lines for the rectangle.
+ */
 PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color) {
     pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, thickness, color);
 }
