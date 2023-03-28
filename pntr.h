@@ -1616,6 +1616,18 @@ PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY,
     pntr_draw_ellipse(dst, centerX, centerY, radius, radius, color);
 }
 
+/**
+ * Draws an ellipse on the given image.
+ *
+ * @param dst The image to draw the filled circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerX The center of the circle at the Y coordinate.
+ * @param radiusX The  horizontal radius of the circle.
+ * @param radiusY The vertical radius of the circle.
+ * @param color The desired color of the circle.
+ *
+ * @see pntr_draw_ellipse_fill()
+ */
 PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
     if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0) {
         return;
@@ -1691,6 +1703,20 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
     }
 }
 
+/**
+ * Draws a filled ellipse on the given image.
+ *
+ * TODO: pntr_draw_ellipse_fill: Add anti-aliased.
+ *
+ * @param dst The image to draw the filled circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerX The center of the circle at the Y coordinate.
+ * @param radiusX The  horizontal radius of the circle.
+ * @param radiusY The vertical radius of the circle.
+ * @param color The desired fill color of the circle.
+ *
+ * @see pntr_draw_circle_fill()
+ */
 PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
     if (radiusX < 0) {
         radiusX = -radiusX;
@@ -1727,16 +1753,49 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
     }
 }
 
+/**
+ * Draw a triangle using vectors.
+ *
+ * @param dst Where to draw the triangle.
+ * @param point1 The first point in the triangle.
+ * @param point2 The second point in the triangle.
+ * @param point3 The third point in the triangle.
+ * @param color What color to draw the triangle.
+ */
 PNTR_API inline void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
     pntr_draw_triangle(dst, point1.x, point1.y, point2.x, point2.y, point3.x, point3.y, color);
 }
 
+/**
+ * Draw a triangle on an image.
+ *
+ * @param dst The image of which to draw the triangle.
+ * @param x1 The x coordinate of the first point.
+ * @param y1 The y coordinate of the first point.
+ * @param x2 The x coordinate of the second point.
+ * @param y2 The y coordinate of the second point.
+ * @param x3 The x coordinate of the third point.
+ * @param y3 The y coordinate of the third point.
+ * @param color The line color for the triangle.
+ */
 PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
     pntr_draw_line(dst, x1, y1, x2, y2, color);
     pntr_draw_line(dst, x2, y2, x3, y3, color);
     pntr_draw_line(dst, x3, y3, x1, y1, color);
 }
 
+/**
+ * Draw a filled triangle on an image.
+ *
+ * @param dst The image of which to draw the triangle.
+ * @param x1 The x coordinate of the first point.
+ * @param y1 The y coordinate of the first point.
+ * @param x2 The x coordinate of the second point.
+ * @param y2 The y coordinate of the second point.
+ * @param x3 The x coordinate of the third point.
+ * @param y3 The y coordinate of the third point.
+ * @param color The fill color of the triangle.
+ */
 PNTR_API inline void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
     pntr_draw_triangle_fill_vec(dst,
         PNTR_CLITERAL(pntr_vector) { .x = x1, .y = y1 },
@@ -1769,6 +1828,15 @@ PNTR_API bool _pntr_point_in_triangle(int x, int y, pntr_vector p0, pntr_vector 
     return s > 0 && t > 0 && (s + t) < A;
 }
 
+/**
+ * Draw a filled triangle using vectors.
+ *
+ * @param dst Where to draw the triangle.
+ * @param point1 The first point in the triangle.
+ * @param point2 The second point in the triangle.
+ * @param point3 The third point in the triangle.
+ * @param color What color to draw the triangle.
+ */
 PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
     if (dst == NULL) {
         return;
