@@ -425,6 +425,7 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
 PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
 PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_rec_ex(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float offsetX, float offsetY, bool flipHorizontal, bool flipVertical, pntr_filter filter);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
@@ -4110,6 +4111,118 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
                             PNTR_PIXEL(src, srcXint, srcYint + 1),
                             PNTR_PIXEL(src, srcXint + 1, srcYint),
                             PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
+                            srcX - PNTR_FLOORF(srcX),
+                            srcY - PNTR_FLOORF(srcY)
+                        )
+                    );
+                }
+            }
+        }
+    #endif
+}
+
+void pntr_draw_image_rec_ex(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect,
+        int posX, int posY,
+        float rotation,
+        float scaleX, float scaleY,
+        float offsetX, float offsetY,
+        bool flipHorizontal, bool flipVertical,
+        pntr_filter filter) {
+    if (dst == NULL || src == NULL) {
+        return;
+    }
+
+    // Clean up the source rectangle.
+    if (srcRect.x < 0) {
+        srcRect.x = 0;
+    }
+    if (srcRect.y < 0) {
+        srcRect.y = 0;
+    }
+    if (srcRect.width <= 0 || srcRect.width > src->width) {
+        srcRect.width = src->width - srcRect.x;
+    }
+    if (srcRect.height <= 0 || srcRect.height > src->height) {
+        srcRect.height = src->height - srcRect.y;
+    }
+
+    #ifdef PNTR_DISABLE_MATH
+        (void)filter;
+        pntr_set_error("pntr_draw_image_rec_ex requires the math library, without PNTR_DISABLE_MATH");
+        return;
+    #else
+        float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+        float cosTheta = PNTR_COSF(radians);
+        float sinTheta = PNTR_SINF(radians);
+
+        int newWidth = (int)(PNTR_CEILF(PNTR_FABSF((float)srcRect.width * scaleX * cosTheta) + PNTR_FABSF((float)srcRect.height * scaleY * sinTheta)));
+        int newHeight = (int)(PNTR_CEILF(PNTR_FABSF((float)srcRect.width * scaleX * sinTheta) + PNTR_FABSF((float)srcRect.height * scaleY * cosTheta)));
+
+        int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
+        int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
+        pntr_draw_rectangle(dst, posX-offsetXRatio, posY-offsetYRatio, newWidth, newHeight, PNTR_RED);
+
+        // Make sure we're actually drawing on the screen.
+        if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
+            return;
+        }
+
+        float centerX = (float)srcRect.width / 2.0f;
+        float centerY = (float)srcRect.height / 2.0f;
+        int srcXint, srcYint;
+        float srcX, srcY;
+        int destX, destY;
+
+        for (int y = 0; y < newHeight; y++) {
+            // Only draw onto the screen.
+            destY = posY + y - offsetYRatio;
+
+            if (destY < 0 || destY >= dst->height) {
+                continue;
+            }
+
+            for (int x = 0; x < newWidth; x++) {
+                // Make sure we're actually drawing onto the screen.
+                destX = posX + x - offsetXRatio;
+                if (destX < 0 || destX >= dst->width ) {
+                    continue;
+                }
+
+                srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
+                srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+
+                // Only draw from the source rectangle.
+                if (srcX < 0 || srcX >= srcRect.width || srcY < 0 || srcY >= srcRect.height) {
+                    continue;
+                }
+
+                srcXint = (int)srcX + srcRect.x;
+                srcYint = (int)srcY + srcRect.y;
+
+                srcXint = flipHorizontal ? srcRect.x + srcRect.width - (int)srcX : srcRect.x + (int)srcX;
+                srcYint = flipVertical ? srcRect.y + srcRect.height - (int)srcY: srcRect.y + (int)srcY;
+
+                if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
+                    pntr_draw_pixel_unsafe(dst,
+                        destX,
+                        destY,
+                        pntr_image_get_color_unsafe(src, srcXint, srcYint)
+                    );
+                }
+                else {
+                    // For bilinear, don't overscan.
+                    if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
+                        continue;
+                    }
+
+                    pntr_draw_pixel_unsafe(dst,
+                        destX,
+                        destY,
+                        pntr_color_bilinear_interpolate(
+                            pntr_image_get_color_unsafe(src, srcXint, srcYint),
+                            pntr_image_get_color_unsafe(src, srcXint, srcYint + 1),
+                            pntr_image_get_color_unsafe(src, srcXint + 1, srcYint),
+                            pntr_image_get_color_unsafe(src, srcXint + 1, srcYint + 1),
                             srcX - PNTR_FLOORF(srcX),
                             srcY - PNTR_FLOORF(srcY)
                         )
