@@ -18,7 +18,7 @@ void example_fonts_init() {
         "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
 
     // TTF Font
-    ttfFont = pntr_load_font_ttf("resources/tuffy.ttf", 28, PNTR_DARKPURPLE);
+    ttfFont = pntr_load_font_ttf("resources/tuffy.ttf", 28);
 
     // Resize the default font
     resizedFont = pntr_font_scale(defaultFont, 2.0f, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
@@ -31,11 +31,11 @@ const char* example_fonts_update(pntr_image* canvas) {
     }
 
     // Font Drawing
-    pntr_draw_text(canvas, defaultFont, "Default Font Example", 10, 50);
+    pntr_draw_text(canvas, defaultFont, "Default Font Example", 10, 50, PNTR_WHITE);
 
     // BMFont
     pntr_draw_rectangle_fill(canvas, 0, 90, 200, 20, PNTR_BLACK);
-    pntr_draw_text(canvas, bmFont, "BM Font Example", 10, 90);
+    pntr_draw_text(canvas, bmFont, "BM Font Example", 10, 90, PNTR_WHITE);
 
     // TTY Font
     pntr_color background = pntr_get_color(0x0000caff);
@@ -45,17 +45,17 @@ const char* example_fonts_update(pntr_image* canvas) {
 
     const char* text = "*** TTY Font Example ***";
     int textWidth = pntr_measure_text(ttyFont, text);
-    pntr_draw_text(canvas, ttyFont, text, canvas->width / 2 - textWidth / 2, 140);
+    pntr_draw_text(canvas, ttyFont, text, canvas->width / 2 - textWidth / 2, 140, PNTR_WHITE);
 
     // TTF Font
     const char* ttfText = "TTF Font Example";
     pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText);
 
     pntr_draw_rectangle_fill(canvas, 200, 50, textSize.x, textSize.y, PNTR_SKYBLUE);
-    pntr_draw_text(canvas, ttfFont, ttfText, 200, 50);
+    pntr_draw_text(canvas, ttfFont, ttfText, 200, 50, PNTR_DARKPURPLE);
 
     // Show the Resized Font
-    pntr_draw_text(canvas, resizedFont, "Bigger Font", 10, 65);
+    pntr_draw_text(canvas, resizedFont, "Blue Text", 10, 65, PNTR_BLUE);
 
     // Display the canvas
     // pntr_draw_rectangle_fill(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_GRAY);

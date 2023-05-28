@@ -124,7 +124,7 @@ MODULE(pntr, {
 
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
         NEQUALS(image, NULL);
-        pntr_draw_text(image, font, "Hello World!", 10, 10);
+        pntr_draw_text(image, font, "Hello World!", 10, 10, PNTR_WHITE);
         NEQUALS(image, NULL);
 
         pntr_unload_image(image);
@@ -138,7 +138,7 @@ MODULE(pntr, {
         GREATER(size.x, 50);
         EQUALS(size.y, font->atlas->height);
 
-        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!");
+        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!", PNTR_WHITE);
         NEQUALS(textImage, NULL);
         EQUALS(textImage->width, size.x);
         EQUALS(textImage->height, size.y);
@@ -239,11 +239,11 @@ MODULE(pntr, {
 
     #ifdef PNTR_ENABLE_TTF
         IT("pntr_load_font_ttf()", {
-            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20, PNTR_BLACK);
+            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20);
             NEQUALS(font, NULL);
             GREATER(font->charactersLen, 20);
 
-            pntr_image* canvas = pntr_gen_image_text(font, "Hello World!");
+            pntr_image* canvas = pntr_gen_image_text(font, "Hello World!", PNTR_RED);
             NEQUALS(canvas, NULL);
             GREATER(canvas->width, 10);
             GREATER(canvas->height, 10);

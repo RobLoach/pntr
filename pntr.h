@@ -418,14 +418,16 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
+PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
+PNTR_API void pntr_draw_image_rec_tint(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical);
 PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
 PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API unsigned char pntr_color_get_r(pntr_color color);
@@ -466,14 +468,14 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
-PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text);
+PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint);
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API unsigned char* pntr_load_file(const char *fileName, unsigned int *bytesRead);
 PNTR_API void pntr_unload_file(unsigned char* fileData);
-PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize, pntr_color fontColor);
-PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor);
+PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize);
+PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize);
 PNTR_API pntr_color pntr_color_invert(pntr_color color);
 PNTR_API void pntr_image_color_invert(pntr_image* image);
 PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);
@@ -1944,6 +1946,16 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
 }
 
 /**
+ * Draw an image onto the destination image, with tint.
+ */
+PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
+    pntr_draw_image_rec_tint(dst, src,
+        PNTR_CLITERAL(pntr_rectangle) { 0, 0, src->width, src->height },
+        posX, posY, tint
+    );
+}
+
+/**
  * Draw an image onto the destination image.
  */
 PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
@@ -1979,7 +1991,23 @@ PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src
  *
  * @see pntr_draw_image()
  */
-PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
+PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
+    pntr_draw_image_rec_tint(dst, src, srcRect, posX, posY, PNTR_WHITE);
+}
+
+/**
+ * Draw a source image within a destination image, with tint.
+ *
+ * @param dst The destination image.
+ * @param src The source image.
+ * @param srcRect The source rectangle of what to draw from the source image.
+ * @param posX Where to draw the image on the x coordinate.
+ * @param posY Where to draw the image on the y coordinate.
+ * @param tint The color to tint the image when drawing.
+ *
+ * @see pntr_draw_image()
+ */
+PNTR_API void pntr_draw_image_rec_tint(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
     if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
         return;
     }
@@ -2016,13 +2044,25 @@ PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectang
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-    while (dstRect.height-- > 0) {
-        for (int x = 0; x < dstRect.width; ++x) {
-            pntr_blend_color(dstPixel + x, srcPixel[x]);
-        }
+    if (tint.data == PNTR_WHITE.data) {
+        while (dstRect.height-- > 0) {
+            for (int x = 0; x < dstRect.width; ++x) {
+                pntr_blend_color(dstPixel + x, srcPixel[x]);
+            }
 
-        dstPixel += dst_skip;
-        srcPixel += src_skip;
+            dstPixel += dst_skip;
+            srcPixel += src_skip;
+        }
+    }
+    else {
+        while (dstRect.height-- > 0) {
+            for (int x = 0; x < dstRect.width; ++x) {
+                pntr_blend_color(dstPixel + x, pntr_color_tint(srcPixel[x], tint));
+            }
+
+            dstPixel += dst_skip;
+            srcPixel += src_skip;
+        }
     }
 }
 
@@ -2792,8 +2832,9 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
  * @param text The text to write. Must be NULL terminated.
  * @param posX The position to print the text, starting from the top left on the X axis.
  * @param posY The position to print the text, starting from the top left on the Y axis.
+ * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
  */
-PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY) {
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
         return;
     }
@@ -2812,7 +2853,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
         else {
             for (int i = 0; i < font->charactersLen; i++) {
                 if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y);
+                    pntr_draw_image_rec_tint(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
                     x += font->glyphRects[i].x + font->glyphRects[i].width;
                     if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
                         tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
@@ -2883,10 +2924,11 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
  *
  * @param font The font to use when rendering the text.
  * @param text The text to render.
+ * @param tint The color to tint the text by. Use PNTR_WHITE if you don't want to change the color.
  *
  * @return A new image with text on it, using the given font.
  */
-PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
+PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint) {
     pntr_vector size = pntr_measure_text_ex(font, text);
     if (size.x <= 0 || size.y <= 0) {
         return NULL;
@@ -2897,7 +2939,7 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text) {
         return NULL;
     }
 
-    pntr_draw_text(output, font, text, 0, 0);
+    pntr_draw_text(output, font, text, 0, 0, tint);
     return output;
 }
 
@@ -2951,7 +2993,6 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
  *
  * @param fileName The name of the .ttf file.
  * @param fontSize The size of the font, in pixels.
- * @param fontColor The color of the font.
  *
  * @return The newly loaded truetype font.
  *
@@ -2959,7 +3000,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
  *
  * @see PNTR_ENABLE_TTF
  */
-PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize, pntr_color fontColor) {
+PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     if (fileName == NULL || fontSize <= 0) {
         return pntr_set_error("pntr_load_font_ttf() requires a valid fileName and font size.");
     }
@@ -2974,14 +3015,14 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize, pntr_
             return NULL;
         }
 
-        pntr_font* output = pntr_load_font_ttf_from_memory(fileData, bytesRead, fontSize, fontColor);
+        pntr_font* output = pntr_load_font_ttf_from_memory(fileData, bytesRead, fontSize);
         pntr_unload_file(fileData);
 
         return output;
     #endif
 }
 
-PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor) {
+PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize) {
     if (fileData == NULL || dataSize == 0 || fontSize <= 0) {
         return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
     }
@@ -3018,11 +3059,6 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         // Clear up the unused atlas space from memory from top left
         pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
-
-        // Apply the font color
-        if (fontColor.data != PNTR_WHITE.data) {
-            pntr_image_color_tint(atlas, fontColor);
-        }
 
         // Create the font
         pntr_font* font = _pntr_new_font(PNTR_NUM_GLYPHS, atlas);

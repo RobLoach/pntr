@@ -11,6 +11,7 @@ typedef struct Bunny {
     float positionY;
     float speedX;
     float speedY;
+    pntr_color color;
 } Bunny;
 
 Bunny *bunnies;
@@ -36,18 +37,19 @@ const char* example_bunnymark_update(pntr_image* canvas) {
         return "resources/bunny.png failed to load";
     }
 
+    // Add new bunnies
     if (++frameCount > randNum(5, 10) && bunniesCount < MAX_BUNNIES) {
         frameCount = 0;
         bunnies[bunniesCount].positionX = randNum(0, canvas->width - bunnyImage->width);
         bunnies[bunniesCount].positionY = randNum(0, canvas->height - bunnyImage->height);
         bunnies[bunniesCount].speedX = (float)randNum(-250, 250) / 60.0f;
         bunnies[bunniesCount].speedY = (float)randNum(-250, 250) / 60.0f;
+        bunnies[bunniesCount].color = pntr_new_color(randNum(50, 240), randNum(80, 240), randNum(100, 240), 255);
         bunniesCount++;
     }
 
     // Update bunnies
-    for (int i = 0; i < bunniesCount; i++)
-    {
+    for (int i = 0; i < bunniesCount; i++) {
         bunnies[i].positionX += bunnies[i].speedX;
         bunnies[i].positionY += bunnies[i].speedY;
 
@@ -55,12 +57,17 @@ const char* example_bunnymark_update(pntr_image* canvas) {
             ((bunnies[i].positionX + bunnyImage->width / 2) < 0)) {
                 bunnies[i].speedX *= -1;
             }
+
         if (((bunnies[i].positionY + bunnyImage->width / 2) > canvas->height) ||
             ((bunnies[i].positionY + bunnyImage->width / 2) < 0)) {
                 bunnies[i].speedY *= -1;
             }
+    }
 
-        pntr_draw_image(canvas, bunnyImage, bunnies[i].positionX, bunnies[i].positionY);
+    // Draw bunnies
+    for (int i = 0; i < bunniesCount; i++) {
+        //pntr_draw_image(canvas, bunnyImage, bunnies[i].positionX, bunnies[i].positionY);
+        pntr_draw_image_tint(canvas, bunnyImage, bunnies[i].positionX, bunnies[i].positionY, bunnies[i].color);
     }
 
     sprintf(title, "Bunnies %i", bunniesCount);
