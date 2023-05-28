@@ -80,7 +80,7 @@ void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int pos
 void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
 void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
-void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY);
+void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
 pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 pntr_color pntr_get_color(unsigned int hexValue);
 unsigned char pntr_color_get_r(pntr_color color);
@@ -127,8 +127,8 @@ pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigne
 pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
 unsigned char* pntr_load_file(const char *fileName, unsigned int *bytesRead);
 void pntr_unload_file(unsigned char* fileData);
-pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize, pntr_color fontColor);
-pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize, pntr_color fontColor);
+pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize);
+pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize);
 pntr_color pntr_color_invert(pntr_color color);
 void pntr_image_color_invert(pntr_image* image);
 pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);

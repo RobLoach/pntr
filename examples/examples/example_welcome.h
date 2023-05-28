@@ -20,8 +20,8 @@ const char* example_welcome_update(pntr_image* canvas) {
     pntr_draw_rectangle_fill(canvas, 10, 22, canvas->width - 20, 2, PNTR_DARKBROWN);
 
     // Welcome text
-    pntr_draw_text(canvas, welcomeFont, "Image manipulation library for C", 10, 38);
-    pntr_draw_text(canvas, welcomeFont, "https://github.com/robloach/pntr", 10, 56);
+    pntr_draw_text(canvas, welcomeFont, "Image manipulation library for C", 10, 38, PNTR_WHITE);
+    pntr_draw_text(canvas, welcomeFont, "https://github.com/robloach/pntr", 10, 56, PNTR_WHITE);
 
     const char* buttonText = "See examples";
     int width = pntr_measure_text(welcomeFont, buttonText);
@@ -31,7 +31,7 @@ const char* example_welcome_update(pntr_image* canvas) {
     int height = 8;
     pntr_draw_rectangle_fill(canvas, x, y, width + padding * 4, height + padding * 4, PNTR_BLACK);
     pntr_draw_rectangle_fill(canvas, x + padding, y + padding, width + padding * 2, height + padding * 2, PNTR_GREEN);
-    pntr_draw_text(canvas, welcomeFont, buttonText, x + padding * 2, y + padding * 2);
+    pntr_draw_text(canvas, welcomeFont, buttonText, x + padding * 2, y + padding * 2, PNTR_WHITE);
 
     // Display the logo
     pntr_draw_image(canvas, welcomeLogo, canvas->width - welcomeLogo->width, 10);
