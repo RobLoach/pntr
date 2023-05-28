@@ -641,6 +641,17 @@ void pntr_draw_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color);
  */
 #define PNTR_WHITE      PNTR_CLITERAL(pntr_color) { .r = 255, .g = 255, .b = 255, .a = 255 }
 #endif
+
+#ifndef PNTR_WHITE_DATA
+/**
+ * The integer representation of PNTR_WHITE.
+ *
+ * @private
+ * @internal
+ */
+#define PNTR_WHITE_DATA 4294967295
+#endif  // PNTR_WHITE_DATA
+
 #ifndef PNTR_BLACK
 /**
  * Black.
@@ -2044,7 +2055,7 @@ PNTR_API void pntr_draw_image_rec_tint(pntr_image* dst, pntr_image* src, pntr_re
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-    if (tint.data == PNTR_WHITE.data) {
+    if (tint.data == PNTR_WHITE_DATA) {
         while (dstRect.height-- > 0) {
             for (int x = 0; x < dstRect.width; ++x) {
                 pntr_blend_color(dstPixel + x, srcPixel[x]);
