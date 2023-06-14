@@ -3017,7 +3017,6 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     }
 
     #ifndef PNTR_ENABLE_TTF
-        (void)fontColor;
         return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
     #else
         unsigned int bytesRead;
@@ -3039,7 +3038,6 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
     }
 
     #ifndef PNTR_ENABLE_TTF
-        (void)fontColor;
         return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
     #else
         // Create the bitmap data with ample space based on the font size
