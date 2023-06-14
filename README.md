@@ -149,6 +149,11 @@ pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, p
 pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
 ```
 
+## Applications
+
+- [pntr-physfs](https://github.com/RobLoach/pntr-physfs): [PhysicsFS](https://github.com/icculus/physfs) support for pntr to load and save images with PhysFS.
+- [pntr-nuklear](https://github.com/RobLoach/pntr-nuklear): [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr.
+
 ## Development
 
 To build the tests and examples, use [CMake](https://cmake.org):
