@@ -4206,22 +4206,12 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
  * @return A pointer to the new image.
  */
 PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom) {
-    pntr_image* image = pntr_new_image(width, height);
+    pntr_image* image = pntr_gen_image_color(width, height, PNTR_BLANK);
     if (image == NULL) {
         return NULL;
     }
 
-    for (int y = 0; y < height; y++) {
-        float factor = (float)y / (float)height;
-        for (int x = 0; x < width; x++) {
-            PNTR_PIXEL(image, x, y) = PNTR_CLITERAL(pntr_color) {
-                .r = (unsigned char)((float)bottom.r * factor + (float)top.r * (1.0f - factor)),
-                .g = (unsigned char)((float)bottom.g * factor + (float)top.g * (1.0f - factor)),
-                .b = (unsigned char)((float)bottom.b * factor + (float)top.b * (1.0f - factor)),
-                .a = (unsigned char)((float)bottom.a * factor + (float)top.a * (1.0f - factor))
-            };
-        }
-    }
+    pntr_draw_rectangle_gradient(image, 0, 0, width, height, top, top, bottom, bottom);
 
     return image;
 }
@@ -4237,22 +4227,12 @@ PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pnt
  * @return A pointer to the new image.
  */
 PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right) {
-    pntr_image* image = pntr_new_image(width, height);
+    pntr_image* image = pntr_gen_image_color(width, height, PNTR_BLANK);
     if (image == NULL) {
         return NULL;
     }
 
-    for (int x = 0; x < width; x++) {
-        float factor = (float)x / (float)width;
-        for (int y = 0; y < height; y++) {
-            PNTR_PIXEL(image, x, y) = PNTR_CLITERAL(pntr_color) {
-                .r = (unsigned char)((float)right.r * factor + (float)left.r * (1.0f - factor)),
-                .g = (unsigned char)((float)right.g * factor + (float)left.g * (1.0f - factor)),
-                .b = (unsigned char)((float)right.b * factor + (float)left.b * (1.0f - factor)),
-                .a = (unsigned char)((float)right.a * factor + (float)left.a * (1.0f - factor))
-            };
-        }
-    }
+    pntr_draw_rectangle_gradient(image, 0, 0, width, height, left, right, left, right);
 
     return image;
 }
@@ -4271,22 +4251,12 @@ PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, p
  * @return A pointer to the new image.
  */
 PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
-    pntr_image* image = pntr_new_image(width, height);
+    pntr_image* image = pntr_gen_image_color(width, height, PNTR_BLANK);
     if (image == NULL) {
         return NULL;
     }
 
-    for (int x = 0; x < width; x++) {
-        float factorX = (float)x / (float)width;
-        for (int y = 0; y < height; y++) {
-            PNTR_PIXEL(image, x, y) = pntr_color_bilinear_interpolate(
-                topLeft, bottomLeft,
-                topRight, bottomRight,
-                factorX,
-                (float)y / (float)height
-            );
-        }
-    }
+    pntr_draw_rectangle_gradient(image, 0, 0, width, height, topLeft, topRight, bottomLeft, bottomRight);
 
     return image;
 }
