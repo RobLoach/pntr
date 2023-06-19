@@ -187,7 +187,7 @@ npm it
 ## Acknowledgements
 
 - [cute_png.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) by [Randy Gaul](https://github.com/RandyGaul) provides the PNG loading/saving
-- [SDL_tty](https://github.com/Grumbel/SDL_tty) by [Ingo Ruhnke](https://github.com/Grumbel) provides the [8x8 default font](https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h)
+- [font8x8](https://github.com/dhepper/font8x8/tree/master) by [dhepper](https://github.com/dhepper) provides the 8x8 default font
 - [stb_image_resize.h](https://github.com/nothings/stb/blob/master/stb_image_resize.h) by [Sean Barrett](https://github.com/nothings) provides the smooth image resizing
 - [stb_truetype.h](https://github.com/nothings/stb/blob/master/stb_truetype.h) by [Sean Barrett](https://github.com/nothings) provides TrueType font support
 - [tester](https://github.com/zpl-c/tester) from [zpl](https://github.com/zpl-c) provides the unit testing framework

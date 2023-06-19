@@ -308,6 +308,13 @@ typedef struct pntr_rectangle {
     int height;
 } pntr_rectangle;
 
+typedef enum pntr_font_type {
+    PNTR_FONT_DEFAULT = 0,
+    PNTR_FONT_TTF,
+    PNTR_FONT_TTY,
+    PNTR_FONT_BMF
+} pntr_font_type;
+
 /**
  * Font.
  *
@@ -340,6 +347,11 @@ typedef struct pntr_font {
      * The number of characters that the font implements.
      */
     int charactersLen;
+
+    /**
+     * Determines the type of font.
+     */
+    pntr_font_type type;
 } pntr_font;
 
 /**
@@ -2642,6 +2654,8 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
+    font->type = PNTR_FONT_BMF;
+
     return font;
 }
 
@@ -2728,6 +2742,8 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
         // Set the character.
         font->characters[currentCharIndex] = characters[currentCharIndex];
     }
+
+    font->type = PNTR_FONT_TTY;
 
     return font;
 }
@@ -2835,6 +2851,7 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
     return output;
 }
 
+#include <stdio.h>
 /**
  * Prints text on the given image.
  *
@@ -2862,14 +2879,34 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
             y += tallestCharacter;
         }
         else {
-            for (int i = 0; i < font->charactersLen; i++) {
-                if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_rec_tint(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
-                    x += font->glyphRects[i].x + font->glyphRects[i].width;
-                    if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
-                        tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
+            if (font->type == PNTR_FONT_DEFAULT) {
+                if (*currentChar >= 128) {
+                    continue;
+                }
+
+                printf("OMG\n");
+                for (int pixelX = 0; pixelX < 8; pixelX++) {
+                    for (int pixelY = 0; pixelY < 8; pixelY++) {
+                        // if (font->characters[*currentChar * 8 + pixelX] & 1 << pixelY) {
+                        //     pntr_draw_pixel(dst, posX + pixelX, posY + pixelY, tint);
+                        // }
                     }
-                    break;
+                }
+
+                printf("OMG\n");
+                x += 8;
+                tallestCharacter = 8;
+            }
+            else {
+                for (int i = 0; i < font->charactersLen; i++) {
+                    if (font->characters[i] == *currentChar) {
+                        pntr_draw_image_rec_tint(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+                        x += font->glyphRects[i].x + font->glyphRects[i].width;
+                        if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+                            tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -2954,6 +2991,8 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
     return output;
 }
 
+#include <stdio.h>
+
 /**
  * Load the default font.
  *
@@ -2976,21 +3015,21 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         return PNTR_DEFAULT_FONT();
     #elif defined(PNTR_ENABLE_DEFAULT_FONT)
         // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
+
+        printf("SDFAFADS\n");
         #include "external/font8x8.h"
 
-        // Port the font8x8 data to a pntr_image
-        pntr_image* atlas = pntr_image_from_pixelformat((const void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
-        if (atlas == NULL) {
-            return pntr_set_error("pntr_load_font_default() failed to convert default image");
+        pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
+        font->type = PNTR_FONT_DEFAULT;
+
+        font->characters = PNTR_MALLOC(128 * 8);
+        for (int i = 0; i < 128 * 8; i++) {
+            int x = i % 8;
+            int y = i / 8;
+            font->characters[i] = font8x8_basic[y][x];
         }
 
-        // Load the font from the new image.
-        pntr_font* font = pntr_load_font_tty_from_image(atlas, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
-        if (font == NULL) {
-            pntr_unload_image(atlas);
-            return pntr_set_error("Failed to load default font from image");
-        }
-
+        printf("SDFAFADssssS\n");
         return font;
     #else
         return pntr_set_error("pntr_load_font_default() requires PNTR_ENABLE_DEFAULT_FONT");
@@ -3097,6 +3136,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             // Set up the active character.
             font->characters[i] = (char)(32 + i);
         }
+        font->type = PNTR_FONT_TTF;
 
         return font;
     #endif
