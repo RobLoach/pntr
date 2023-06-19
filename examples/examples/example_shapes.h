@@ -36,6 +36,8 @@ const char* example_shapes_update(pntr_image* canvas) {
         300, 80,
         350, 20, PNTR_PURPLE);
 
+    pntr_draw_rectangle_gradient(canvas, 100, 120, 80, 80, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_BLACK);
+
     return "Shapes";
 }
 

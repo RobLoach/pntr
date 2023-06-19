@@ -409,6 +409,8 @@ PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width
 PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
+PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
+PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
 PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color);
 PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
@@ -1369,7 +1371,7 @@ PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
  * @see pntr_draw_line_vertical()
  */
 PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
-    if (dst == NULL) {
+    if (dst == NULL || color.a == 0) {
         return;
     }
 
@@ -1615,6 +1617,34 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
             }
         }
     }
+}
+
+PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
+    if (dst == NULL) {
+        return;
+    }
+
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { 0, 0, dst->width, dst->height };
+    rect = _pntr_rectangle_intersect(&rect, &dstRect);
+
+    float width = (float)rect.width;
+    float height = (float)rect.height;
+    for (int x = 0; x < rect.width; x++) {
+        // TODO: Calculate the factorX based on the original rectangle coordinates rather than destination.
+        float factorX = (float)x / width;
+        for (int y = 0; y < rect.height; y++) {
+            pntr_draw_pixel_unsafe(dst, rect.x + x, rect.y + y, pntr_color_bilinear_interpolate(
+                topLeft, bottomLeft,
+                topRight, bottomRight,
+                factorX,
+                (float)y / height
+            ));
+        }
+    }
+}
+
+PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
+    pntr_draw_rectangle_gradient_rec(dst, PNTR_CLITERAL(pntr_rectangle) {x, y, width, height}, topLeft, topRight, bottomLeft, bottomRight);
 }
 
 /**
