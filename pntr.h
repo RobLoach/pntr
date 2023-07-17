@@ -1116,24 +1116,34 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
 /**
  * Get a new rectangle representing the intersection of the two given rectangles.
  *
- * @param rec1 A pointer to the first rectangle.
- * @param rec2 A pointer to the second rectangle.
+ * @param x The input rectangle's x coordinate.
+ * @param y The input rectangle's y coordinate.
+ * @param width The input rectangle's width.
+ * @param height The input rectangle's height.
+ * @param destWidth The destination rectangle's width.
+ * @param destHeight The destination rectangle's height.
+ * @param out The normalized rectangle.
  *
- * @return A new rectangle that represents the intersection of the original rectangles.
- *
- * @internal
+ * @return True if the intersect of the rectangle has a width and height greater than 0.
  */
-PNTR_API pntr_rectangle _pntr_rectangle_intersect(pntr_rectangle *rec1, pntr_rectangle *rec2) {
-    int left   = PNTR_MAX(rec1->x, rec2->x);
-    int right  = PNTR_MIN(rec1->x + rec1->width, rec2->x + rec2->width) - left;
-    int top    = PNTR_MAX(rec1->y, rec2->y);
-    int bottom = PNTR_MIN(rec1->y + rec1->height, rec2->y + rec2->height) - top;
-    return PNTR_CLITERAL(pntr_rectangle) {
-        .x = left,
-        .y = top,
-        .width = PNTR_MAX(right, 0),
-        .height = PNTR_MAX(bottom, 0)
-    };
+PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destWidth, int destHeight, pntr_rectangle *out) {
+    if (width <= 0 || height <= 0) {
+        return false;
+    }
+
+    out->x = PNTR_MAX(x, 0);
+    out->width = PNTR_MIN(x + width, destWidth) - out->x;
+    if (out->width <= 0) {
+        return false;
+    }
+
+    out->y = PNTR_MAX(y, 0);
+    out->height = PNTR_MIN(y + height, destHeight) - out->y;
+    if (out->height <= 0) {
+        return false;
+    }
+
+    return true;
 }
 
 /**
@@ -1157,22 +1167,19 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
         return pntr_set_error("pntr_image_from_image() requires valid source image");
     }
 
-    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle){ .x = x, .y = y, .width = width, .height = height };
-    pntr_rectangle imgRect = PNTR_CLITERAL(pntr_rectangle){ .x = 0, .y = 0, .width = image->width, .height = image->height };
-    srcRect = _pntr_rectangle_intersect(&imgRect, &srcRect);
-
-    if (srcRect.width <= 0 || srcRect.height <= 0) {
+    pntr_rectangle dstRect;
+    if (!_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &dstRect)) {
         return NULL;
     }
 
-    pntr_image* result = pntr_new_image(srcRect.width, srcRect.height);
+    pntr_image* result = pntr_new_image(dstRect.width, dstRect.height);
     if (result == NULL) {
         return NULL;
     }
 
-    for (int y = 0; y < srcRect.height; y++) {
+    for (int y = 0; y < dstRect.height; y++) {
         PNTR_MEMCPY(&PNTR_PIXEL(result, 0, y),
-            &PNTR_PIXEL(image, srcRect.x, y + srcRect.y),
+            &PNTR_PIXEL(image, dstRect.x, dstRect.y + y),
             result->pitch);
     }
 
@@ -1201,11 +1208,9 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
     }
 
     // Ensure we are referencing an actual portion of the image.
-    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = x, .y = y, .width = width, .height = height };
-    pntr_rectangle canvas = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = image->width, .height = image->height };
-    srcRect = _pntr_rectangle_intersect(&canvas, &srcRect);
-    if (srcRect.width <= 0 || srcRect.height <= 0) {
-        return pntr_set_error("pntr_image_subimage needs an actual section of the given image");
+    pntr_rectangle dstRect;
+    if (!_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &dstRect)) {
+        return NULL;
     }
 
     // Build the subimage.
@@ -1215,10 +1220,10 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
     }
 
     subimage->pitch = image->pitch;
-    subimage->width = srcRect.width;
-    subimage->height = srcRect.height;
+    subimage->width = dstRect.width;
+    subimage->height = dstRect.height;
     subimage->subimage = true;
-    subimage->data = &PNTR_PIXEL(image, srcRect.x, srcRect.y);
+    subimage->data = &PNTR_PIXEL(image, dstRect.x, dstRect.y);
 
     return subimage;
 }
@@ -1594,9 +1599,7 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
         return;
     }
 
-    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { 0, 0, dst->width, dst->height };
-    rect = _pntr_rectangle_intersect(&rect, &dstRect);
-    if (rect.width <= 0 || rect.height <= 0) {
+    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &rect)) {
         return;
     }
 
@@ -1624,8 +1627,9 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
         return;
     }
 
-    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { 0, 0, dst->width, dst->height };
-    rect = _pntr_rectangle_intersect(&rect, &dstRect);
+    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &rect)) {
+        return;
+    }
 
     float width = (float)rect.width;
     float height = (float)rect.height;
@@ -1894,7 +1898,6 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
     }
 
     // Find the bounding box of the triangle
-    pntr_rectangle canvas = PNTR_CLITERAL(pntr_rectangle) { 0, 0, dst->width, dst->height };
     pntr_rectangle dest;
     dest.x = PNTR_MIN(point1.x, point2.x);
     dest.x = PNTR_MIN(dest.x, point3.x);
@@ -1904,10 +1907,13 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
     dest.width = PNTR_MAX(dest.width, point3.x) - dest.x;
     dest.height = PNTR_MAX(point1.y, point2.y);
     dest.height = PNTR_MAX(dest.height, point3.y) - dest.y;
-    dest = _pntr_rectangle_intersect(&canvas, &dest);
+    if (!_pntr_rectangle_intersect(dest.x, dest.y, dest.width, dest.height, dst->width, dst->height, &dest)) {
+        return;
+    }
 
     for (int x = 0; x < dest.width; x++) {
         for (int y = 0; y < dest.height; y++) {
+            // TODO: Improve performance of checking triangle bounds
             if (_pntr_point_in_triangle(dest.x + x, dest.y + y, point1, point2, point3)) {
                 pntr_draw_pixel_unsafe(dst, dest.x + x, dest.y + y, color);
             }
@@ -2066,14 +2072,10 @@ PNTR_API void pntr_draw_image_rec_tint(pntr_image* dst, pntr_image* src, pntr_re
         srcRect.height += dstRect.y;
     }
 
-    // Figure out the final desintation
-    pntr_rectangle dstCanvas = PNTR_CLITERAL(pntr_rectangle){0, 0, dst->width, dst->height};
-    dstRect = _pntr_rectangle_intersect(&dstRect, &dstCanvas);
-    dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
-    dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
-
-    // Final sanity checks
-    if (dstRect.width <= 0 || dstRect.height <= 0) {
+    if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
+            PNTR_MIN(dstRect.width, srcRect.width),
+            PNTR_MIN(dstRect.height, srcRect.height),
+            dst->width, dst->height, &dstRect)) {
         return;
     }
 
@@ -3538,15 +3540,7 @@ PNTR_API void pntr_image_crop(pntr_image* image, int x, int y, int width, int he
         return;
     }
 
-    pntr_rectangle destination = PNTR_CLITERAL(pntr_rectangle) {0, 0, image->width, image->height};
-    pntr_rectangle source = PNTR_CLITERAL(pntr_rectangle) {x, y, width, height};
-    source = _pntr_rectangle_intersect(&source, &destination);
-
-    if (source.width <= 0 || source.height <= 0 || source.width > image->width || source.height > image->height) {
-        return;
-    }
-
-    pntr_image* newImage = pntr_image_from_image(image, source.x, source.y, source.width, source.height);
+    pntr_image* newImage = pntr_image_from_image(image, x, y, width, height);
     if (newImage == NULL) {
         return;
     }
@@ -3684,7 +3678,6 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
 
     pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { 0, 0, alphaMask->width, alphaMask->height };
     pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, alphaMask->width, alphaMask->height };
-    pntr_rectangle dstCanvas = PNTR_CLITERAL(pntr_rectangle) { 0, 0, image->width, image->height };
 
     // Update the source coordinates based on the destination
     if (dstRect.x < 0) {
@@ -3696,13 +3689,10 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
         srcRect.height += dstRect.y;
     }
 
-    // Figure out the final desintation
-    dstRect = _pntr_rectangle_intersect(&dstRect, &dstCanvas);
-    dstRect.width = PNTR_MIN(dstRect.width, srcRect.width);
-    dstRect.height = PNTR_MIN(dstRect.height, srcRect.height);
-
-    // Final sanity checks
-    if (srcRect.width <= 0 || srcRect.height <= 0 || dstRect.width <= 0 || dstRect.height <= 0 || dstRect.x >= image->width || dstRect.y >= image->height) {
+    if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
+            PNTR_MIN(dstRect.width, srcRect.width),
+            PNTR_MIN(dstRect.height, srcRect.height),
+            image->width, image->height, &dstRect)) {
         return;
     }
 
@@ -3769,19 +3759,15 @@ PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
+    if (!_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, src->width, src->height, &srcRec)) {
+        return;
+    }
+
     // If we are not flipping at all, use the simpler draw function.
     if (flipHorizontal == false && flipVertical == false) {
         pntr_draw_image_rec(dst, src, srcRec, posX, posY);
         return;
     }
-
-    pntr_rectangle dstRec = PNTR_CLITERAL(pntr_rectangle) {
-        .x = 0,
-        .y = 0,
-        .width = src->width,
-        .height = src->height
-    };
-    srcRec = _pntr_rectangle_intersect(&dstRec, &srcRec);
 
     for (int x = 0; x < srcRec.width; x++) {
         if (posX + x < 0 || posX + x > dst->width) {
@@ -3821,8 +3807,9 @@ PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_
         return;
     }
 
-    pntr_rectangle rect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
-    srcRect = _pntr_rectangle_intersect(&srcRect, &rect);
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, src->width, src->height, &srcRect)) {
+        return;
+    }
 
     int newWidth = (int)((float)srcRect.width * scaleX);
     int newHeight = (int)((float)srcRect.height * scaleY);
