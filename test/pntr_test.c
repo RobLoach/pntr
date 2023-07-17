@@ -492,6 +492,19 @@ MODULE(pntr, {
 
         STREQUALS(err, "");
     });
+
+    IT("_pntr_rectangle_intersect", {
+        pntr_rectangle out;
+        EQUALS(_pntr_rectangle_intersect(-10, -10, 5, 5, 100, 100, &out), false);
+        EQUALS(_pntr_rectangle_intersect(5, 6, 10, 5, 100, 100, &out), true);
+        EQUALS(out.x, 5);
+        EQUALS(out.y, 6);
+        EQUALS(out.width, 10);
+        EQUALS(out.height, 5);
+        EQUALS(_pntr_rectangle_intersect(-5, -5, 10, 10, 20, 20, &out), true);
+        EQUALS(out.width, 5);
+        EQUALS(out.height, 5);
+    });
 });
 
 int main() {
