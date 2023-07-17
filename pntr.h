@@ -1167,10 +1167,6 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
         return pntr_set_error("pntr_image_from_image() requires valid source image");
     }
 
-    // pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle){ .x = x, .y = y, .width = width, .height = height };
-    // pntr_rectangle imgRect = PNTR_CLITERAL(pntr_rectangle){ .x = 0, .y = 0, .width = image->width, .height = image->height };
-    // srcRect = _pntr_rectangle_intersect(&srcRect, image->width, image->height);
-
     pntr_rectangle dstRect;
     if (!_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &dstRect)) {
         return NULL;
