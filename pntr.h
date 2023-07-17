@@ -3007,17 +3007,45 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
     #ifdef PNTR_DEFAULT_FONT
         return PNTR_DEFAULT_FONT();
     #elif defined(PNTR_ENABLE_DEFAULT_FONT)
-        // https://github.com/Grumbel/SDL_tty/blob/master/src/font8x8.h
-        #include "external/font8x8.h"
+        // Load font8x8 character atlas.
+        // https://github.com/dhepper/font8x8
+        #include "external/font8x8_basic.h"
 
-        // Port the font8x8 data to a pntr_image
-        pntr_image* atlas = pntr_image_from_pixelformat((const void*)font8x8_data, font8x8_width, font8x8_height, PNTR_PIXELFORMAT_RGBA8888);
+        // Default parameters for font8x8.
+        #define PNTR_DEFAULT_FONT_NAME font8x8_basic
+        #define PNTR_DEFAULT_FONT_GLYPH_WIDTH 8
+        #define PNTR_DEFAULT_FONT_GLYPH_HEIGHT 8
+        #define PNTR_DEFAULT_FONT_CHARACTERS_LEN 97
+
+        // Build the atlas.
+        pntr_image* atlas = pntr_gen_image_color(
+            PNTR_DEFAULT_FONT_GLYPH_WIDTH * PNTR_DEFAULT_FONT_CHARACTERS_LEN,
+            PNTR_DEFAULT_FONT_GLYPH_HEIGHT,
+            PNTR_BLANK);
         if (atlas == NULL) {
-            return pntr_set_error("pntr_load_font_default() failed to convert default image");
+            return pntr_set_error("pntr_load_font_default() failed to build atlas");
         }
 
-        // Load the font from the new image.
-        pntr_font* font = pntr_load_font_tty_from_image(atlas, font8x8_glyph_width, font8x8_glyph_height, font8x8_glyphs);
+        // Iterate through all the characters and draw them manually.
+        for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
+            unsigned char* bitmap = PNTR_DEFAULT_FONT_NAME[i];
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    if (bitmap[y] & 1 << x) {
+                        pntr_draw_pixel(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH * i + x, y, PNTR_WHITE);
+                    }
+                }
+            }
+        }
+
+        // Build the character set.
+        char characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN];
+        for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
+            characters[i] = (char)(i + 32); // ASCII
+        }
+
+        // Use TTY to build the remaining font parameters.
+        pntr_font* font = pntr_load_font_tty_from_image(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH, PNTR_DEFAULT_FONT_GLYPH_HEIGHT, characters);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return pntr_set_error("Failed to load default font from image");
