@@ -3899,11 +3899,12 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_f
         return NULL;
     }
 
-    while (rotation >= 1.0f) {
-        rotation -= 1.0f;
+    // Normalize the rotation between 0.0f and 1.0f
+    if (rotation >= 1.0f) {
+        rotation -= (float)((int)rotation);
     }
-    while (rotation < 0.0f) {
-        rotation += 1.0f;
+    else if (rotation <= 0.0f) {
+        rotation += (float)((int)rotation);
     }
 
     if (rotation == 0.0f) {
@@ -4023,12 +4024,12 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    // Determine the correct rotation.
-    while (rotation >= 1.0f) {
-        rotation -= 1.0f;
+    // Normalize the rotation between 0.0f and 1.0f
+    if (rotation >= 1.0f) {
+        rotation -= (float)((int)rotation);
     }
-    while (rotation < 0.0f) {
-        rotation += 1.0f;
+    else if (rotation <= 0.0f) {
+        rotation += (float)((int)rotation);
     }
 
     // Draw the image normally if not rotated.
@@ -4192,15 +4193,8 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
  *
  * @return A pointer to the new image.
  */
-PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom) {
-    pntr_image* image = pntr_gen_image_color(width, height, PNTR_BLANK);
-    if (image == NULL) {
-        return NULL;
-    }
-
-    pntr_draw_rectangle_gradient(image, 0, 0, width, height, top, top, bottom, bottom);
-
-    return image;
+PNTR_API inline pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color top, pntr_color bottom) {
+    return pntr_gen_image_gradient(width, height, top, top, bottom, bottom);
 }
 
 /**
@@ -4213,15 +4207,8 @@ PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pnt
  *
  * @return A pointer to the new image.
  */
-PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right) {
-    pntr_image* image = pntr_gen_image_color(width, height, PNTR_BLANK);
-    if (image == NULL) {
-        return NULL;
-    }
-
-    pntr_draw_rectangle_gradient(image, 0, 0, width, height, left, right, left, right);
-
-    return image;
+PNTR_API inline pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right) {
+    return pntr_gen_image_gradient(width, height, left, right, left, right);
 }
 
 /**
@@ -4229,7 +4216,6 @@ PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, p
  *
  * @param width The width of the new image.
  * @param height The height of the new image.
- * @param left The color at the left of the image.
  * @param topLeft The color at the top left of the image.
  * @param topRight The color at the top right of the image.
  * @param bottomLeft The color at the bottom left of the image.
