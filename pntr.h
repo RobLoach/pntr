@@ -2733,7 +2733,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
 		numCharacters++;
 	}
 
-    // Create the font
+    // Create the font.
     pntr_font* font = _pntr_new_font(numCharacters, image);
     if (font == NULL) {
         return NULL;
@@ -2741,7 +2741,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
 
     // Set up the font data.
     for (int currentCharIndex = 0; currentCharIndex < font->charactersLen; currentCharIndex++) {
-        // Source rectangle
+        // Source rectangle.
         font->srcRects[currentCharIndex] = PNTR_CLITERAL(pntr_rectangle) {
             .x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth,
             .y = (currentCharIndex / (image->width / glyphWidth)) * glyphHeight,
@@ -2814,7 +2814,16 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
     }
 
     pntr_image* atlas = pntr_image_copy(font->atlas);
+    if (atlas == NULL) {
+        return NULL;
+    }
+
     pntr_font* output = _pntr_new_font(font->charactersLen, atlas);
+    if (output == NULL) {
+        pntr_unload_image(atlas);
+        return NULL;
+    }
+
     PNTR_MEMCPY(output->srcRects, font->srcRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
     PNTR_MEMCPY(output->glyphRects, font->glyphRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
     PNTR_MEMCPY(output->characters, font->characters, sizeof(char) * (size_t)output->charactersLen);
