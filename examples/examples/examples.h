@@ -72,8 +72,8 @@ const char* examples_update() {
         sprintf(title, "%d/%d %s", currentExample, EXAMPLES_COUNT - 1, exampleTitle);
     }
 
-    pntr_draw_text(canvas, font, title, 10, 10, PNTR_WHITE);
-    pntr_draw_text(canvas, font, "CLICK or press LEFT/RIGHT to switch examples", 10, canvas->height - 18, PNTR_WHITE);
+    pntr_draw_text(canvas, font, title, 10, 10, PNTR_BLACK);
+    pntr_draw_text(canvas, font, "CLICK or press LEFT/RIGHT to switch examples", 10, canvas->height - 18, PNTR_BLACK);
 
     return exampleTitle;
 }

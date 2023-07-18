@@ -31,7 +31,7 @@ const char* example_fonts_update(pntr_image* canvas) {
     }
 
     // Font Drawing
-    pntr_draw_text(canvas, defaultFont, "Default Font Example", 10, 50, PNTR_WHITE);
+    pntr_draw_text(canvas, defaultFont, "Default Font Example", 10, 50, PNTR_BLACK);
 
     // BMFont
     pntr_draw_rectangle_fill(canvas, 0, 90, 200, 20, PNTR_BLACK);
