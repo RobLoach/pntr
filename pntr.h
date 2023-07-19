@@ -1668,7 +1668,37 @@ PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y,
  * @see pntr_draw_circle_fill()
  */
 PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-    pntr_draw_ellipse(dst, centerX, centerY, radius, radius, color);
+    if (dst == NULL || color.a == 0 || radius == 0) {
+        return;
+    }
+
+    int x = 0;
+    int y = radius < 0 ? -radius : radius;
+    int decesionParameter = 3 - 2 * radius;
+
+    // Check that the circle is in the bounds.
+    if (centerX + y < 0 || centerY + y < 0 || centerX - y > dst->width || centerY - y > dst->height) {
+        return;
+    }
+
+    while (y >= x) {
+        pntr_draw_pixel(dst, centerX + x, centerY + y, color);
+        pntr_draw_pixel(dst, centerX - x, centerY + y, color);
+        pntr_draw_pixel(dst, centerX + x, centerY - y, color);
+        pntr_draw_pixel(dst, centerX - x, centerY - y, color);
+        pntr_draw_pixel(dst, centerX + y, centerY + x, color);
+        pntr_draw_pixel(dst, centerX - y, centerY + x, color);
+        pntr_draw_pixel(dst, centerX + y, centerY - x, color);
+        pntr_draw_pixel(dst, centerX - y, centerY - x, color);
+        x++;
+
+        if (decesionParameter > 0) {
+            decesionParameter += 4 * (x - --y) + 10;
+        }
+        else {
+            decesionParameter += 4 * x + 6;
+        }
+    }
 }
 
 /**
@@ -2842,18 +2872,14 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
  * @return The new font that has been resized.
  */
 PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY, pntr_filter filter) {
-    if (font == NULL) {
-        return pntr_set_error("pntr_font_copy requires a valid font");
-    }
-
-    if (scaleX <= 0.0f || scaleY <= 0.0f) {
-        return pntr_set_error("pntr_font_resize requires a scale >= 0");
+    if (font == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
+        return pntr_set_error("pntr_font_copy requires a valid font and scale");
     }
 
     // Create the new font.
     pntr_font* output = pntr_font_copy(font);
     if (output == NULL) {
-        return pntr_set_error("Failed to create a font copy");
+        return NULL;
     }
 
     // Resize the atlas.
