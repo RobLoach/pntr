@@ -424,15 +424,15 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
-PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
-PNTR_API void pntr_draw_image_rec_tint(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint);
+PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint);
+PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical);
-PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
-PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
@@ -1654,7 +1654,6 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
     float width = (float)rect.width;
     float height = (float)rect.height;
     for (int x = dstRect.x; x < dstRect.x + dstRect.width; x++) {
-        // TODO: Calculate the factorX based on the original rectangle coordinates rather than destination.
         float factorX = (float)(x - rect.x) / width;
         for (int y = dstRect.y; y < dstRect.y + dstRect.height; y++) {
             pntr_draw_point_unsafe(dst, x, y, pntr_color_bilinear_interpolate(
@@ -1665,26 +1664,6 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
             ));
         }
     }
-
-
-    // if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &rect)) {
-    //     return;
-    // }
-
-    // float width = (float)rect.width;
-    // float height = (float)rect.height;
-    // for (int x = 0; x < rect.width; x++) {
-    //     // TODO: Calculate the factorX based on the original rectangle coordinates rather than destination.
-    //     float factorX = (float)x / width;
-    //     for (int y = 0; y < rect.height; y++) {
-    //         pntr_draw_point_unsafe(dst, rect.x + x, rect.y + y, pntr_color_bilinear_interpolate(
-    //             topLeft, bottomLeft,
-    //             topRight, bottomRight,
-    //             factorX,
-    //             (float)y / height
-    //         ));
-    //     }
-    // }
 }
 
 PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
@@ -2080,7 +2059,7 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
  * Draw an image onto the destination image, with tint.
  */
 PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
-    pntr_draw_image_rec_tint(dst, src,
+    pntr_draw_image_tint_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { 0, 0, src->width, src->height },
         posX, posY, tint
     );
@@ -2123,7 +2102,7 @@ PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src
  * @see pntr_draw_image()
  */
 PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
-    pntr_draw_image_rec_tint(dst, src, srcRect, posX, posY, PNTR_WHITE);
+    pntr_draw_image_tint_rec(dst, src, srcRect, posX, posY, PNTR_WHITE);
 }
 
 /**
@@ -2138,7 +2117,7 @@ PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_
  *
  * @see pntr_draw_image()
  */
-PNTR_API void pntr_draw_image_rec_tint(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
+PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
     if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
         return;
     }
@@ -2985,7 +2964,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
         else {
             for (int i = 0; i < font->charactersLen; i++) {
                 if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_rec_tint(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+                    pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
                     x += font->glyphRects[i].x + font->glyphRects[i].width;
                     if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
                         tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
@@ -3863,7 +3842,7 @@ PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, i
         return;
     }
 
-    pntr_draw_image_rec_flipped(dst, src,
+    pntr_draw_image_flipped_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         flipHorizontal,
@@ -3871,7 +3850,7 @@ PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, i
     );
 }
 
-PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -3907,7 +3886,7 @@ PNTR_API inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, in
         return;
     }
 
-    pntr_draw_image_rec_scaled(dst, src,
+    pntr_draw_image_scaled_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         scaleX, scaleY,
@@ -3915,7 +3894,7 @@ PNTR_API inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, in
         filter);
 }
 
-PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4007,7 +3986,7 @@ PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_
  * @return The new rotated image.
  *
  * @see pntr_draw_image_rotated()
- * @see pntr_draw_image_rec_rotated()
+ * @see pntr_draw_image_rotated_rec()
  *
  * @see PNTR_DISABLE_MATH
  */
@@ -4113,7 +4092,7 @@ PNTR_API inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, i
         return;
     }
 
-    pntr_draw_image_rec_rotated(dst, src,
+    pntr_draw_image_rotated_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         rotation,
@@ -4136,7 +4115,7 @@ PNTR_API inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, i
  *
  * @see pntr_draw_image_rotated()
  */
-PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
+PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4220,7 +4199,7 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
 
     #ifdef PNTR_DISABLE_MATH
         (void)filter;
-        pntr_set_error("pntr_draw_image_rec_rotated requires the math library, without PNTR_DISABLE_MATH");
+        pntr_set_error("pntr_draw_image_rotated_rec requires the math library, without PNTR_DISABLE_MATH");
         return;
     #else
         float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
