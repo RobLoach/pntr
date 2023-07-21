@@ -401,16 +401,18 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
 PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height);
 PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
-PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color);
+PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color);
+PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
+PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
-PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
+PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
 PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color);
 PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color);
@@ -419,6 +421,8 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
 PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color);
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
+PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
+PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
@@ -499,7 +503,7 @@ PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_col
 
 // Internal
 void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
-void pntr_draw_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color);
+void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color);
 
 #ifdef __cplusplus
 }
@@ -1016,6 +1020,8 @@ PNTR_API inline void* pntr_set_error(const char* error) {
  * @param height The height of the new image.
  *
  * @return The new image that is the size of the given width/height.
+ *
+ * @see pntr_gen_image_color()
  */
 PNTR_API pntr_image* pntr_new_image(int width, int height) {
     if (width <= 0 || height <= 0) {
@@ -1116,6 +1122,13 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
 /**
  * Get a new rectangle representing the intersection of the two given rectangles.
  *
+ * @code
+ * pntr_rectangle dstRect;
+ * if (!_pntr_rectangle_intersect(10, 10, 20, 20, image->width, image>height, dstRect)) {
+ *     return;
+ * }
+ * @endcode
+ *
  * @param x The input rectangle's x coordinate.
  * @param y The input rectangle's y coordinate.
  * @param width The input rectangle's width.
@@ -1124,7 +1137,7 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  * @param destHeight The destination rectangle's height.
  * @param out The normalized rectangle.
  *
- * @return True if the intersect of the rectangle has a width and height greater than 0.
+ * @return True if the intersect of the rectangle has a width and height greater than 0, false otherwise.
  */
 PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destWidth, int destHeight, pntr_rectangle *out) {
     if (width <= 0 || height <= 0) {
@@ -1350,21 +1363,27 @@ PNTR_API inline void pntr_color_set_a(pntr_color* color, unsigned char a) {
 }
 
 /**
- * Draws a pixel on the given image, without safety checks.
+ * Draws a point on the given image, without safety checks.
  */
-PNTR_API inline void pntr_draw_pixel_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
+PNTR_API inline void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_blend_color(&PNTR_PIXEL(dst, x, y), color);
 }
 
 /**
  * Draws a pixel on the given image.
  */
-PNTR_API void pntr_draw_pixel(pntr_image* dst, int x, int y, pntr_color color) {
+PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
     if ((color.a == 0) || (dst == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
         return;
     }
 
-    pntr_draw_pixel_unsafe(dst, x, y, color);
+    pntr_draw_point_unsafe(dst, x, y, color);
+}
+
+void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) {
+    if (point != NULL) {
+        pntr_draw_point(dst, point->x, point->y, color);
+    }
 }
 
 /**
@@ -1413,7 +1432,7 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
 
         stepV = (changeInY < 0) ? -1 : 1;
 
-        pntr_draw_pixel(dst, startU, startV, color);
+        pntr_draw_point(dst, startU, startV, color);
     }
     else {
         A = 2 * absChangeInX;
@@ -1436,7 +1455,7 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
 
         stepV = (changeInX < 0) ? -1 : 1;
 
-        pntr_draw_pixel(dst, startV, startU, color);
+        pntr_draw_point(dst, startV, startU, color);
     }
 
     for (int u = startU + 1, v = startV; u <= endU; u++) {
@@ -1449,10 +1468,10 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
         }
 
         if (reversedXY) {
-            pntr_draw_pixel(dst, u, v, color);
+            pntr_draw_point(dst, u, v, color);
         }
         else {
-            pntr_draw_pixel(dst, v, u, color);
+            pntr_draw_point(dst, v, u, color);
         }
     }
 }
@@ -1627,24 +1646,45 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
         return;
     }
 
-    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &rect)) {
+    pntr_rectangle dstRect;
+    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &dstRect)) {
         return;
     }
 
     float width = (float)rect.width;
     float height = (float)rect.height;
-    for (int x = 0; x < rect.width; x++) {
+    for (int x = dstRect.x; x < dstRect.x + dstRect.width; x++) {
         // TODO: Calculate the factorX based on the original rectangle coordinates rather than destination.
-        float factorX = (float)x / width;
-        for (int y = 0; y < rect.height; y++) {
-            pntr_draw_pixel_unsafe(dst, rect.x + x, rect.y + y, pntr_color_bilinear_interpolate(
+        float factorX = (float)(x - rect.x) / width;
+        for (int y = dstRect.y; y < dstRect.y + dstRect.height; y++) {
+            pntr_draw_point_unsafe(dst, x, y, pntr_color_bilinear_interpolate(
                 topLeft, bottomLeft,
                 topRight, bottomRight,
                 factorX,
-                (float)y / height
+                (float)(y - rect.y) / height
             ));
         }
     }
+
+
+    // if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &rect)) {
+    //     return;
+    // }
+
+    // float width = (float)rect.width;
+    // float height = (float)rect.height;
+    // for (int x = 0; x < rect.width; x++) {
+    //     // TODO: Calculate the factorX based on the original rectangle coordinates rather than destination.
+    //     float factorX = (float)x / width;
+    //     for (int y = 0; y < rect.height; y++) {
+    //         pntr_draw_point_unsafe(dst, rect.x + x, rect.y + y, pntr_color_bilinear_interpolate(
+    //             topLeft, bottomLeft,
+    //             topRight, bottomRight,
+    //             factorX,
+    //             (float)y / height
+    //         ));
+    //     }
+    // }
 }
 
 PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
@@ -1668,83 +1708,36 @@ PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y,
  * @see pntr_draw_circle_fill()
  */
 PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-    if (dst == NULL || color.a == 0 || radius == 0) {
+    if (dst == NULL || color.a == 0) {
         return;
     }
 
-    int x = 0;
-    int y = radius < 0 ? -radius : radius;
-    int decesionParameter = 3 - 2 * radius;
+    if (radius < 0) {
+        radius = -radius;
+    }
 
     // Check that the circle is in the bounds.
-    if (centerX + y < 0 || centerY + y < 0 || centerX - y > dst->width || centerY - y > dst->height) {
+    if (centerX + radius < 0 || centerY + radius < 0 || centerX - radius > dst->width || centerY - radius > dst->height) {
         return;
     }
 
-    while (y >= x) {
-        pntr_draw_pixel(dst, centerX + x, centerY + y, color);
-        pntr_draw_pixel(dst, centerX - x, centerY + y, color);
-        pntr_draw_pixel(dst, centerX + x, centerY - y, color);
-        pntr_draw_pixel(dst, centerX - x, centerY - y, color);
-        pntr_draw_pixel(dst, centerX + y, centerY + x, color);
-        pntr_draw_pixel(dst, centerX - y, centerY + x, color);
-        pntr_draw_pixel(dst, centerX + y, centerY - x, color);
-        pntr_draw_pixel(dst, centerX - y, centerY - x, color);
-        x++;
-
-        if (decesionParameter > 0) {
-            decesionParameter += 4 * (x - --y) + 10;
-        }
-        else {
-            decesionParameter += 4 * x + 6;
-        }
-    }
-}
-
-/**
- * Draws an ellipse on the given image.
- *
- * @param dst The image to draw the filled circle onto.
- * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
- * @param radiusX The  horizontal radius of the circle.
- * @param radiusY The vertical radius of the circle.
- * @param color The desired color of the circle.
- *
- * @see pntr_draw_ellipse_fill()
- */
-PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0) {
-        return;
-    }
-
-    int x = 0;
-    if (radiusX < 0) {
-        radiusX = -radiusX;
-    }
-    if (radiusY < 0) {
-        radiusY = -radiusY;
-    }
-
-    int radiusXSquared = radiusX * radiusX;
-    int radiusXSquared2 = radiusXSquared * 2;
-    int radiusYSquared = radiusY * radiusY;
-    int radiusYSquared2 = radiusYSquared * 2;
-    int error = radiusYSquared - radiusXSquared * radiusY;
-
-    while (radiusY >= 0) {
-        pntr_draw_pixel(dst, centerX + x, centerY + radiusY, color);
-        pntr_draw_pixel(dst, centerX - x, centerY + radiusY, color);
-        pntr_draw_pixel(dst, centerX - x, centerY - radiusY, color);
-        pntr_draw_pixel(dst, centerX + x, centerY - radiusY, color);
-
-        if (error <= 0) {
-            x++;
-            error += radiusYSquared2 * x + radiusYSquared;
-        }
-        if (error > 0) {
-            radiusY--;
-            error -= radiusXSquared2 * radiusY - radiusXSquared;
+    int largestX = radius;
+    int r2 = radius * radius;
+    for (int y = 0; y <= radius; ++y) {
+        int y2 = y * y;
+        for (int x = largestX; x >= 0; --x) {
+            if (x * x + y2 <= r2) {
+                pntr_draw_point(dst, centerX + x, centerY + y, color);
+                pntr_draw_point(dst, centerX - x, centerY + y, color);
+                pntr_draw_point(dst, centerX + x, centerY - y, color);
+                pntr_draw_point(dst, centerX - x, centerY - y, color);
+                pntr_draw_point(dst, centerX + y, centerY + x, color);
+                pntr_draw_point(dst, centerX - y, centerY + x, color);
+                pntr_draw_point(dst, centerX + y, centerY - x, color);
+                pntr_draw_point(dst, centerX - y, centerY - x, color);
+                largestX = x;
+                break;
+            }
         }
     }
 }
@@ -1789,9 +1782,57 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
 }
 
 /**
+ * Draws an ellipse on the given image.
+ *
+ * @param dst The image to draw the filled circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerX The center of the circle at the Y coordinate.
+ * @param radiusX The  horizontal radius of the circle.
+ * @param radiusY The vertical radius of the circle.
+ * @param color The desired color of the circle.
+ *
+ * @see pntr_draw_ellipse_fill()
+ */
+PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0) {
+        return;
+    }
+
+    int x = 0;
+    if (radiusX < 0) {
+        radiusX = -radiusX;
+    }
+    if (radiusY < 0) {
+        radiusY = -radiusY;
+    }
+
+    int radiusXSquared = radiusX * radiusX;
+    int radiusXSquared2 = radiusXSquared * 2;
+    int radiusYSquared = radiusY * radiusY;
+    int radiusYSquared2 = radiusYSquared * 2;
+    int error = radiusYSquared - radiusXSquared * radiusY;
+
+    while (radiusY >= 0) {
+        pntr_draw_point(dst, centerX + x, centerY + radiusY, color);
+        pntr_draw_point(dst, centerX - x, centerY + radiusY, color);
+        pntr_draw_point(dst, centerX - x, centerY - radiusY, color);
+        pntr_draw_point(dst, centerX + x, centerY - radiusY, color);
+
+        if (error <= 0) {
+            x++;
+            error += radiusYSquared2 * x + radiusYSquared;
+        }
+        if (error > 0) {
+            radiusY--;
+            error -= radiusXSquared2 * radiusY - radiusXSquared;
+        }
+    }
+}
+
+/**
  * Draws a filled ellipse on the given image.
  *
- * TODO: pntr_draw_ellipse_fill: Add anti-aliased.
+ * TODO: pntr_draw_ellipse_fill: Add anti-aliased
  *
  * @param dst The image to draw the filled circle onto.
  * @param centerX The center of the circle at the X coordinate.
@@ -1890,27 +1931,64 @@ PNTR_API inline void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, in
     );
 }
 
-/**
- * Calculates if a point is within the given triangle.
- *
- * @private
- * @internal
- */
-PNTR_API bool _pntr_point_in_triangle(int x, int y, pntr_vector p0, pntr_vector p1, pntr_vector p2) {
-    float s = p0.y * p2.x - p0.x * p2.y + (p2.y - p0.y) * x + (p0.x - p2.x) * y;
-    float t = p0.x * p1.y - p0.y * p1.x + (p0.y - p1.y) * x + (p1.x - p0.x) * y;
-    if ((s < 0) != (t < 0)) {
-        return false;
+PNTR_API inline void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
+    pntr_draw_line(dst, start.x, start.y, end.x, end.y, color);
+}
+
+PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
+    if (dst == NULL || color.a == 0 || numPoints <= 0 || points == NULL) {
+        return;
     }
 
-    float A = -p1.y * p2.x + p0.y * (-p1.x + p2.x) + p0.x * (p1.y - p2.y) + p1.x * p2.y;
-    if (A < 0.0) {
-        s = -s;
-        t = -t;
-        A = -A;
+    int nextPointIndex;
+    for (int i = 0; i < numPoints; i++) {
+        if (i < numPoints - 1) {
+            nextPointIndex = i + 1;
+        }
+        else {
+            nextPointIndex = 0;
+        }
+
+        pntr_draw_line(dst, points[i].x, points[i].y, points[nextPointIndex].x, points[nextPointIndex].y, color);
+   }
+}
+
+PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
+    if (dst == NULL || points == NULL || numPoints <= 0 || color.a == 0) {
+        return;
     }
 
-    return s > 0 && t > 0 && (s + t) < A;
+    // Discover the top and bottom of the polygon.
+    int ymin = dst->height + 1;
+    int ymax = -1;
+    for (int i = 0; i < numPoints; ++i) {
+        ymin = PNTR_MIN(ymin, points[i].y);
+        ymax = PNTR_MAX(ymax, points[i].y);
+    }
+
+    // The following algorithm is correct for convex polygons only.
+    for (int yy = ymin; yy <= ymax; yy++) {
+        int xmin = dst->width + 1;
+        int xmax = -1;
+        for (int i = 0; i < numPoints; ++i) {
+            pntr_vector point1 = points[i];
+            pntr_vector point2 = i < (numPoints - 1) ? points[i + 1] : points[0];
+
+            if ((point1.y > yy) != (point2.y > yy)) {
+                int testx = point1.x + ((point2.x - point1.x) * (yy - point1.y)) / (point2.y - point1.y);
+                xmin = PNTR_MIN(xmin, testx);
+                xmax = PNTR_MAX(xmax, testx);
+            }
+        }
+
+        for (int xx = xmin; xx <= xmax; ++xx) {
+            if (yy >= 0 && yy < dst->height) {
+                if (xx >= 0 && xx < dst->width) {
+                    pntr_draw_point_unsafe(dst, xx, yy, color);
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -1923,32 +2001,11 @@ PNTR_API bool _pntr_point_in_triangle(int x, int y, pntr_vector p0, pntr_vector 
  * @param color What color to draw the triangle.
  */
 PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
-    if (dst == NULL) {
-        return;
-    }
-
-    // Find the bounding box of the triangle
-    pntr_rectangle dest;
-    dest.x = PNTR_MIN(point1.x, point2.x);
-    dest.x = PNTR_MIN(dest.x, point3.x);
-    dest.y = PNTR_MIN(point1.y, point2.y);
-    dest.y = PNTR_MIN(dest.y, point3.y);
-    dest.width = PNTR_MAX(point1.x, point2.x);
-    dest.width = PNTR_MAX(dest.width, point3.x) - dest.x;
-    dest.height = PNTR_MAX(point1.y, point2.y);
-    dest.height = PNTR_MAX(dest.height, point3.y) - dest.y;
-    if (!_pntr_rectangle_intersect(dest.x, dest.y, dest.width, dest.height, dst->width, dst->height, &dest)) {
-        return;
-    }
-
-    for (int x = 0; x < dest.width; x++) {
-        for (int y = 0; y < dest.height; y++) {
-            // TODO: Improve performance of checking triangle bounds
-            if (_pntr_point_in_triangle(dest.x + x, dest.y + y, point1, point2, point3)) {
-                pntr_draw_pixel_unsafe(dst, dest.x + x, dest.y + y, color);
-            }
-        }
-    }
+    pntr_vector points[3];
+    points[0] = point1;
+    points[1] = point2;
+    points[2] = point3;
+    pntr_draw_polygon_fill(dst, points, 3, color);
 }
 
 /**
@@ -1961,10 +2018,7 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
  * @return The color at (x, y) position from the image.
  */
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
-    if (image == NULL) {
-        return PNTR_BLANK;
-    }
-    if (x < 0 || y < 0 || x >= image->width || y >= image->height) {
+    if (image == NULL || x < 0 || y < 0 || x >= image->width || y >= image->height) {
         return PNTR_BLANK;
     }
 
@@ -3067,7 +3121,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
                     if (bitmap[y] & 1 << x) {
-                        pntr_draw_pixel(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH * i + x, y, PNTR_WHITE);
+                        pntr_draw_point(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH * i + x, y, PNTR_WHITE);
                     }
                 }
             }
@@ -3843,7 +3897,7 @@ PNTR_API void pntr_draw_image_rec_flipped(pntr_image* dst, pntr_image* src, pntr
             pntr_color source = pntr_image_get_color(src,
                 flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
                 flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y);
-            pntr_draw_pixel_unsafe(dst, posX + x, posY + y, source);
+            pntr_draw_point_unsafe(dst, posX + x, posY + y, source);
         }
     }
 }
@@ -3901,7 +3955,7 @@ PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_
                     float srcX = (float)x * xRatio;
                     int srcXPixel = srcRect.y + (int)srcX;
                     int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcXPixel : (int)srcXPixel + 1;
-                    pntr_draw_pixel_unsafe(dst, xPosition, yPosition, pntr_color_bilinear_interpolate(
+                    pntr_draw_point_unsafe(dst, xPosition, yPosition, pntr_color_bilinear_interpolate(
                         src->data[srcYPixel * (src->pitch >> 2) + srcXPixel],
                         src->data[srcYPixelPlusOne * (src->pitch >> 2) + srcXPixel],
                         src->data[srcYPixel * (src->pitch >> 2) + srcXPixelPlusOne],
@@ -3930,7 +3984,7 @@ PNTR_API void pntr_draw_image_rec_scaled(pntr_image* dst, pntr_image* src, pntr_
                         continue;
                     }
                     int x2 = (x * xRatio) >> 16;
-                    pntr_draw_pixel_unsafe(dst,
+                    pntr_draw_point_unsafe(dst,
                         xPosition,
                         yPosition,
                         PNTR_PIXEL(src, srcRect.x + x2, srcRect.y + y2)
@@ -4139,20 +4193,20 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
         for (int y = 0; y < srcRect.height; y++) {
             for (int x = 0; x < srcRect.width; x++) {
                 if (rotation == 0.25f) {
-                    pntr_draw_pixel(dst,
+                    pntr_draw_point(dst,
                         dstRect.x + y,
                         dstRect.y + srcRect.width - x,
                         PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
                     );
                 } else if (rotation == 0.5f) {
-                    pntr_draw_pixel(dst,
+                    pntr_draw_point(dst,
                         dstRect.x + srcRect.width - x,
                         dstRect.y + srcRect.height - y,
                         PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
                     );
                 }
                 else {
-                    pntr_draw_pixel(dst,
+                    pntr_draw_point(dst,
                         dstRect.x + srcRect.height - y,
                         dstRect.y + x,
                         PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
@@ -4216,7 +4270,7 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
                 srcYint = (int)srcY + srcRect.y;
 
                 if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
-                    pntr_draw_pixel_unsafe(dst,
+                    pntr_draw_point_unsafe(dst,
                         destX,
                         destY,
                         PNTR_PIXEL(src, srcXint, srcYint)
@@ -4228,7 +4282,7 @@ PNTR_API void pntr_draw_image_rec_rotated(pntr_image* dst, pntr_image* src, pntr
                         continue;
                     }
 
-                    pntr_draw_pixel_unsafe(dst,
+                    pntr_draw_point_unsafe(dst,
                         destX,
                         destY,
                         pntr_color_bilinear_interpolate(

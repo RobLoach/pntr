@@ -36,7 +36,17 @@ const char* example_shapes_update(pntr_image* canvas) {
         300, 80,
         350, 20, PNTR_PURPLE);
 
+    // Rectangle Gradient
     pntr_draw_rectangle_gradient(canvas, 100, 120, 80, 80, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_BLACK);
+
+    // Polygon
+    pntr_vector points[10];
+    points[0] = PNTR_CLITERAL(pntr_vector) {210, 110};
+    points[1] = PNTR_CLITERAL(pntr_vector) {215, 130};
+    points[2] = PNTR_CLITERAL(pntr_vector) {240, 140};
+    points[3] = PNTR_CLITERAL(pntr_vector) {200, 160};
+    pntr_draw_polygon_fill(canvas, points, 4, PNTR_BLUE);
+    pntr_draw_polygon(canvas, points, 4, PNTR_BLACK);
 
     return "Shapes";
 }

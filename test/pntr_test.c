@@ -70,7 +70,7 @@ MODULE(pntr, {
 
         COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_SKYBLUE);
 
-        pntr_draw_pixel(image, 10, 10, PNTR_PURPLE);
+        pntr_draw_point(image, 10, 10, PNTR_PURPLE);
         COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_PURPLE);
 
         pntr_unload_image(image);
