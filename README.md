@@ -168,6 +168,7 @@ pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color0
 
 - [pntr-physfs](https://github.com/RobLoach/pntr-physfs): [PhysicsFS](https://github.com/icculus/physfs) support for pntr to load and save images with PhysFS.
 - [pntr-nuklear](https://github.com/RobLoach/pntr-nuklear): [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr.
+- [pntr_app](https://github.com/RobLoach/pntr_app): Application wrapper for building the same pntr code on a number of different platforms.
 
 ## Development
 
