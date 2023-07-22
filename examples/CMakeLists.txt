@@ -69,7 +69,7 @@ if (PNTR_BUILD_EXAMPLES_LIBRETRO)
         FetchContent_Populate(libretro)
 
         add_library(libretro INTERFACE)
-        target_include_directories(pntr INTERFACE ${libretro_SOURCE_DIR}/include)
+        target_include_directories(libretro INTERFACE ${libretro_SOURCE_DIR}/include)
     endif()
 
     add_library(pntr_examples_libretro SHARED
