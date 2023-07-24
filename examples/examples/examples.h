@@ -1,7 +1,5 @@
 #include <stdio.h> // sprintf
 
-#include "../../pntr.h"
-
 #define EXAMPLES_COUNT 9
 #include "example_welcome.h"
 #include "example_shapes.h"
@@ -18,7 +16,6 @@ pntr_image* canvas;
 pntr_font* font;
 
 void examples_init() {
-    canvas = pntr_new_image(400, 225);
     font = pntr_load_font_default();
     example_welcome_init();
     example_shapes_init();
@@ -31,7 +28,7 @@ void examples_init() {
     example_image_alphamask_init();
 }
 
-const char* examples_update() {
+const char* examples_update(pntr_image* canvas) {
     pntr_clear_background(canvas, PNTR_RAYWHITE);
     const char* exampleTitle;
     switch (currentExample) {
@@ -88,28 +85,7 @@ void examples_unload() {
     example_image_rotate_unload();
     example_image_alphamask_unload();
     example_bunnymark_unload();
-    pntr_unload_image(canvas);
     pntr_unload_font(font);
-}
-
-void* examples_data() {
-    return (void*)canvas->data;
-}
-
-int examples_width() {
-    return canvas->width;
-}
-
-int examples_pitch() {
-    return canvas->pitch;
-}
-
-int examples_height() {
-    return canvas->height;
-}
-
-int examples_size() {
-    return canvas->pitch * canvas->height;
 }
 
 void examples_previous() {
@@ -124,6 +100,6 @@ void examples_next() {
     }
 }
 
-void examples_screenshot(const char* fileName) {
-    pntr_save_image(canvas, fileName);
+void examples_screenshot() {
+    pntr_save_image(canvas, "screenshot.png");
 }
