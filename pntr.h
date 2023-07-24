@@ -2290,8 +2290,7 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
                     image->width, image->height,
                     0, // Input stride
                     (unsigned char*)output->data,
-                    output->width,
-                    output->height,
+                    output->width, output->height,
                     0, // Output stride
                     4, // Number of channels
                     // TODO: pntr_image_resize() - Is the alpha channel always 3?
@@ -2843,11 +2842,7 @@ PNTR_API void pntr_unload_font(pntr_font* font) {
         return;
     }
 
-    if (font->atlas != NULL) {
-        pntr_unload_image(font->atlas);
-        font->atlas = NULL;
-    }
-
+    pntr_unload_image(font->atlas);
     pntr_unload_memory(font->srcRects);
     pntr_unload_memory(font->glyphRects);
     pntr_unload_memory(font->characters);
@@ -3152,6 +3147,21 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     #endif
 }
 
+/**
+ * Load a truetype font from memory.
+ *
+ * This needs to be compiled with `PNTR_ENABLE_TTF` to be supported.
+ *
+ * @param fileData The data of the TTF file.
+ * @param dataSize The size of the data in memory.
+ * @param fontSize The desired size of the font, in pixels.
+ *
+ * @return The newly loaded truetype font.
+ *
+ * @example examples/resources/tuffy.ttf
+ *
+ * @see PNTR_ENABLE_TTF
+ */
 PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize) {
     if (fileData == NULL || dataSize == 0 || fontSize <= 0) {
         return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
@@ -3885,11 +3895,7 @@ PNTR_API inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, in
 }
 
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
-    if (dst == NULL || src == NULL) {
-        return;
-    }
-
-    if (scaleX <= 0.0f || scaleY <= 0.0f) {
+    if (dst == NULL || src == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
         return;
     }
 
@@ -3989,7 +3995,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_f
     if (rotation >= 1.0f) {
         rotation -= (float)((int)rotation);
     }
-    else if (rotation <= 0.0f) {
+    else if (rotation < 0.0f) {
         rotation += (float)((int)rotation);
     }
 
@@ -4114,7 +4120,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     if (rotation >= 1.0f) {
         rotation -= (float)((int)rotation);
     }
-    else if (rotation <= 0.0f) {
+    else if (rotation < 0.0f) {
         rotation += (float)((int)rotation);
     }
 

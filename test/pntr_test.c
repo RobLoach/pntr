@@ -19,6 +19,12 @@
 } while (0)
 
 MODULE(pntr, {
+    IT("pntr_load_memory(), pntr_unload_memory()", {
+        void* memory = pntr_load_memory(100);
+        NEQUALS(memory, NULL);
+        pntr_unload_memory(memory);
+    });
+
     IT("pntr_set_error(), pntr_get_error()", {
         pntr_set_error(NULL);
         EQUALS(pntr_get_error(), NULL);
@@ -29,8 +35,7 @@ MODULE(pntr, {
         pntr_set_error(NULL);
     });
 
-    // pntr_color, pntr_color_get_r(), pntr_color_get_g(), pntr_color_get_b(), pntr_color_get_a()
-    IT("pntr_color", {
+    IT("pntr_color_get_*()", {
         pntr_color color = PNTR_RED;
         EQUALS(pntr_color_get_r(color), 230);
         EQUALS(pntr_color_get_g(color), 41);
@@ -42,7 +47,7 @@ MODULE(pntr, {
         EQUALS(color.a, 255);
     });
 
-    IT("pntr_color_set_*", {
+    IT("pntr_color_set_*()", {
         pntr_color blank = PNTR_BLANK;
         pntr_color_set_r(&blank, 10);
         pntr_color_set_g(&blank, 20);
@@ -169,7 +174,7 @@ MODULE(pntr, {
         pntr_image* image = pntr_new_image(300, 100);
         NEQUALS(image, NULL);
 
-        IT("pntr_image_resize() nearest neighbor", {
+        IT("pntr_image_resize(PNTR_FILTER_NEARESTNEIGHBOR)", {
             pntr_image* resized = pntr_image_resize(image, 100, 100, PNTR_FILTER_NEARESTNEIGHBOR);
             NEQUALS(resized, NULL);
             EQUALS(resized->width, 100);
@@ -177,17 +182,17 @@ MODULE(pntr, {
             pntr_unload_image(resized);
         });
 
-        #ifdef PNTR_SUPPORT_FILTER_SMOOOTH
-            IT("pntr_image_resize() smooth", {
+        #ifdef PNTR_ENABLE_FILTER_SMOOTH
+            IT("pntr_image_resize(PNTR_FILTER_SMOOTH)", {
                 pntr_image* resized = pntr_image_resize(image, 800, 600, PNTR_FILTER_SMOOTH);
                 NEQUALS(resized, NULL);
                 EQUALS(resized->width, 800);
                 EQUALS(resized->height, 600);
                 pntr_unload_image(resized);
             });
-        #endif  // PNTR_SUPPORT_FILTER_SMOOOTH
+        #endif  // PNTR_ENABLE_FILTER_SMOOTH
 
-        IT("pntr_image_resize() bilinear", {
+        IT("pntr_image_resize(PNTR_FILTER_BILINEAR)", {
             pntr_image* resized = pntr_image_resize(image, 400, 300, PNTR_FILTER_BILINEAR);
             NEQUALS(resized, NULL);
             EQUALS(resized->width, 400);
@@ -248,7 +253,7 @@ MODULE(pntr, {
             GREATER(canvas->width, 10);
             GREATER(canvas->height, 10);
 
-            IT("pntr_load_font_ttf() - pntr_measure_text_ex()", {
+            IT("pntr_measure_text_ex()", {
                 pntr_vector size = pntr_measure_text_ex(font, "Hello!!");
                 GREATER(size.x, 20);
                 GREATER(size.y, 5);
@@ -371,7 +376,7 @@ MODULE(pntr, {
             COLOREQUALS(pntr_image_get_color(rotated, 10, 10), PNTR_BLUE);
             COLOREQUALS(pntr_image_get_color(rotated, 10, 30), PNTR_RED);
             pntr_unload_image(rotated);
-        })
+        });
 
         IT("pntr_image_rotate(image, 0.5f)", {
             pntr_image* rotated = pntr_image_rotate(image, 0.5f, PNTR_FILTER_SMOOTH);
