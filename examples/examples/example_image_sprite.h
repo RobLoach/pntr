@@ -1,5 +1,3 @@
-#include "../../pntr.h"
-
 pntr_image* scarfy;
 pntr_rectangle frameRec;
 int framesSpeed = 8;

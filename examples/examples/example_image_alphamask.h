@@ -1,5 +1,3 @@
-#include "../../pntr.h"
-
 pntr_image* output;
 
 void example_image_alphamask_init() {

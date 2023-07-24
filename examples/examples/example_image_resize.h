@@ -1,5 +1,3 @@
-#include "../../pntr.h"
-
 pntr_image* originalImage;
 float size = 1.0f;
 float speed = 0.02f;
@@ -15,27 +13,22 @@ const char* example_image_resize_update(pntr_image* canvas) {
     }
 
     size += speed;
-    if (size >= 2.0f) {
-        speed = -0.02f;
+    if (size >= 1.5f) {
+        speed = -0.015f;
     }
     else if (size <= 0.2f) {
-        speed = 0.02f;
+        speed = 0.015f;
     }
 
-    // Resize the image
-    pntr_image* nearestNeighbor = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_NEARESTNEIGHBOR);
-    pntr_image* smooth = pntr_image_resize(originalImage, originalImage->width * size, originalImage->height * size, PNTR_FILTER_SMOOTH);
+    pntr_draw_image_scaled(canvas, originalImage,
+        canvas->width / 4 - originalImage->width * size / 2.0f,
+        canvas->height / 2 - originalImage->height * size / 2.0f,
+        size, size, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
 
-    // Draw an image on the canvas
-    pntr_draw_image(canvas, nearestNeighbor, canvas->width / 4 - nearestNeighbor->width / 2, canvas->height / 2 - nearestNeighbor->height / 2);
-    pntr_draw_image(canvas, smooth, canvas->width / 4 - smooth->width / 2 + canvas->width / 2, canvas->height / 2 - smooth->height / 2);
-
-
-    pntr_draw_image_scaled(canvas, originalImage, canvas->width / 2, canvas->height / 2, size, size, originalImage->width / 2, originalImage->width / 2, PNTR_FILTER_BILINEAR);
-
-    // Unload the resized image
-    pntr_unload_image(nearestNeighbor);
-    pntr_unload_image(smooth);
+    pntr_draw_image_scaled(canvas, originalImage,
+        canvas->width / 2 + canvas->width / 4 - originalImage->width * size / 2.0f,
+        canvas->height / 2 - originalImage->height * size / 2.0f,
+        size, size, 0.0f, 0.0f, PNTR_FILTER_SMOOTH);
 
     return "Image Resize";
 }

@@ -1,5 +1,3 @@
-#include "../../pntr.h"
-
 pntr_image* image;
 pntr_image* resized;
 

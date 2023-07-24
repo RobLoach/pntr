@@ -1,5 +1,3 @@
-#include "../../pntr.h"
-
 void example_shapes_init() {
     // Nothing
 }

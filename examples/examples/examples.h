@@ -1,5 +1,9 @@
 #include <stdio.h> // sprintf
 
+int currentExample = 0;
+pntr_image* canvas;
+pntr_font* font;
+
 #define EXAMPLES_COUNT 9
 #include "example_welcome.h"
 #include "example_shapes.h"
@@ -10,10 +14,6 @@
 #include "example_image_sprite.h"
 #include "example_image_alphamask.h"
 #include "example_bunnymark.h"
-
-int currentExample = 0;
-pntr_image* canvas;
-pntr_font* font;
 
 void examples_init() {
     font = pntr_load_font_default();

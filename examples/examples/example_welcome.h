@@ -1,5 +1,3 @@
-#include "../../pntr.h"
-
 pntr_image* welcomeLogo;
 pntr_font* welcomeFont;
 
