@@ -45,6 +45,7 @@
 
 #include <stdint.h> // uint32_t
 #include <stdbool.h> // bool
+#include <stddef.h> // size_t
 
 /**
  * @defgroup pntr pntr
@@ -500,10 +501,13 @@ PNTR_API pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pnt
 PNTR_API pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
 PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
+PNTR_API void* pntr_load_memory(size_t size);
+PNTR_API void pntr_unload_memory(void* pointer);
+PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
 
 // Internal
-void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
-void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color);
+PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
+PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color);
 
 #ifdef __cplusplus
 }
@@ -2286,8 +2290,7 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
                     image->width, image->height,
                     0, // Input stride
                     (unsigned char*)output->data,
-                    output->width,
-                    output->height,
+                    output->width, output->height,
                     0, // Output stride
                     4, // Number of channels
                     // TODO: pntr_image_resize() - Is the alpha channel always 3?
@@ -2839,26 +2842,10 @@ PNTR_API void pntr_unload_font(pntr_font* font) {
         return;
     }
 
-    if (font->atlas != NULL) {
-        pntr_unload_image(font->atlas);
-        font->atlas = NULL;
-    }
-
-    if (font->srcRects != NULL) {
-        PNTR_FREE(font->srcRects);
-        font->srcRects = NULL;
-    }
-
-    if (font->glyphRects != NULL) {
-        PNTR_FREE(font->glyphRects);
-        font->glyphRects = NULL;
-    }
-
-    if (font->characters != NULL) {
-        PNTR_FREE(font->characters);
-        font->characters = NULL;
-    }
-
+    pntr_unload_image(font->atlas);
+    pntr_unload_memory(font->srcRects);
+    pntr_unload_memory(font->glyphRects);
+    pntr_unload_memory(font->characters);
     PNTR_FREE(font);
 }
 
@@ -3160,6 +3147,21 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     #endif
 }
 
+/**
+ * Load a truetype font from memory.
+ *
+ * This needs to be compiled with `PNTR_ENABLE_TTF` to be supported.
+ *
+ * @param fileData The data of the TTF file.
+ * @param dataSize The size of the data in memory.
+ * @param fontSize The desired size of the font, in pixels.
+ *
+ * @return The newly loaded truetype font.
+ *
+ * @example examples/resources/tuffy.ttf
+ *
+ * @see PNTR_ENABLE_TTF
+ */
 PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize) {
     if (fileData == NULL || dataSize == 0 || fontSize <= 0) {
         return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
@@ -3564,9 +3566,7 @@ PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
  * @see pntr_load_file()
  */
 PNTR_API inline void pntr_unload_file(unsigned char* fileData) {
-    if (fileData != NULL) {
-        PNTR_FREE(fileData);
-    }
+    pntr_unload_memory(fileData);
 }
 
 /**
@@ -3895,11 +3895,7 @@ PNTR_API inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, in
 }
 
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
-    if (dst == NULL || src == NULL) {
-        return;
-    }
-
-    if (scaleX <= 0.0f || scaleY <= 0.0f) {
+    if (dst == NULL || src == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
         return;
     }
 
@@ -3999,7 +3995,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_f
     if (rotation >= 1.0f) {
         rotation -= (float)((int)rotation);
     }
-    else if (rotation <= 0.0f) {
+    else if (rotation < 0.0f) {
         rotation += (float)((int)rotation);
     }
 
@@ -4124,7 +4120,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     if (rotation >= 1.0f) {
         rotation -= (float)((int)rotation);
     }
-    else if (rotation <= 0.0f) {
+    else if (rotation < 0.0f) {
         rotation += (float)((int)rotation);
     }
 
@@ -4328,6 +4324,47 @@ PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color t
     pntr_draw_rectangle_gradient(image, 0, 0, width, height, topLeft, topRight, bottomLeft, bottomRight);
 
     return image;
+}
+
+/**
+ * Allocates the given amount of bytes in size.
+ *
+ * @param size The amount of bytes to allocate to memory.
+ *
+ * @return A pointer to the new memory address.
+ *
+ * @see PNTR_MALLOC
+ */
+PNTR_API inline void* pntr_load_memory(size_t size) {
+    return PNTR_MALLOC(size);
+}
+
+/**
+ * Unloads the given memory.
+ *
+ * @param pointer A pointer to the memory of which to unload.
+ *
+ * @see PNTR_FREE
+ */
+PNTR_API void pntr_unload_memory(void* pointer) {
+    if (pointer != NULL) {
+        PNTR_FREE(pointer);
+    }
+}
+
+/**
+ * Copy a memory address from the source to the destination.
+ *
+ * @param destination Where to copy the memory to.
+ * @param source The source data.
+ * @param size The size of the data to copy.
+ *
+ * @return The destination.
+ *
+ * @see PNTR_MEMCPY
+ */
+PNTR_API inline void* pntr_memory_copy(void* destination, void* source, size_t size) {
+    return PNTR_MEMCPY(destination, source, size);
 }
 
 /**

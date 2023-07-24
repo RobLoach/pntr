@@ -18,15 +18,12 @@ if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 else()
     set(PNTR_IS_MAIN FALSE)
 endif()
+
 option(PNTR_BUILD_EXAMPLES "Examples" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_EXAMPLES_SDL "Examples: SDL" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_EXAMPLES_RAYLIB "Examples: raylib" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_EXAMPLES_LIBRETRO "Examples: libretro" ${PNTR_IS_MAIN})
-option(PNTR_BUILD_TESTS "TESTS" ${PNTR_IS_MAIN})
-option(PNTR_BUILD_LIB "libpntr" TRUE)
-
-# libpntr
-add_subdirectory(lib)
+option(PNTR_BUILD_TESTS "Build Tests" ${PNTR_IS_MAIN})
 
 # Examples
 if (PNTR_BUILD_EXAMPLES)

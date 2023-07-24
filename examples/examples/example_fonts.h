@@ -1,5 +1,3 @@
-#include "../../pntr.h"
-
 pntr_font* defaultFont;
 pntr_font* bmFont;
 pntr_font* ttyFont;

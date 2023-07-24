@@ -1,6 +1,4 @@
-#include "../../pntr.h"
-
-#include <stdlib.h> // malloc(), free(), rand()
+#include <stdlib.h> // rand()
 #include <stdio.h>  // sprintf()
 
 #define MAX_BUNNIES        50000    // 50K bunnies limit
@@ -27,7 +25,7 @@ void example_bunnymark_init() {
     // Load an image
     bunnyImage = pntr_load_image("resources/bunny.png");
 
-    bunnies = (Bunny *)malloc(MAX_BUNNIES * sizeof(Bunny));
+    bunnies = (Bunny *)pntr_load_memory(MAX_BUNNIES * sizeof(Bunny));
     bunniesCount = 0;
     frameCount = 0;
 }
@@ -75,6 +73,6 @@ const char* example_bunnymark_update(pntr_image* canvas) {
 }
 
 void example_bunnymark_unload() {
-    free(bunnies);
+    pntr_unload_memory(bunnies);
     pntr_unload_image(bunnyImage);
 }

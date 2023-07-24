@@ -162,6 +162,9 @@ pntr_image* pntr_gen_image_gradient_vertical(int width, int height, pntr_color t
 pntr_image* pntr_gen_image_gradient_horizontal(int width, int height, pntr_color left, pntr_color right);
 pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
+void* pntr_load_memory(size_t size);
+void pntr_unload_memory(void* pointer);
+void* pntr_memory_copy(void* destination, void* source, size_t size);
 ```
 
 ## Applications
