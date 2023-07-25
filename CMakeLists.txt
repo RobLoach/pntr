@@ -6,8 +6,6 @@ project(pntr
     LANGUAGES C
 )
 
-set(C_STANDARD 99)
-
 # pntr
 add_library(pntr INTERFACE)
 target_include_directories(pntr INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
