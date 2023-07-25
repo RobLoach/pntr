@@ -1495,7 +1495,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
     }
 
     if (posX < 0) {
-        width -= posX;
+        width += posX;
         posX = 0;
     }
     if (posX + width >= dst->width) {

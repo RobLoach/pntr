@@ -51,7 +51,7 @@ void Event(pntr_app_event* event, void* userData) {
                 examples_previous();
             }
         }
-            break;
+        break;
     }
 }
 
