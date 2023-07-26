@@ -424,6 +424,8 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
+PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color);
+PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint);
@@ -737,6 +739,10 @@ extern "C" {
     #define PNTR_MEMSET memset
 #endif  // PNTR_MEMSET
 
+#ifndef PNTR_PI
+    #define PNTR_PI 3.1415926535897932f
+#endif
+
 #ifdef PNTR_DISABLE_MATH
     #ifdef PNTR_ENABLE_TTF
         // TTF requires math.h
@@ -747,56 +753,106 @@ extern "C" {
         #undef PNTR_ENABLE_FILTER_SMOOTH
     #endif
 
-    /**
-     * Custom implementation of floorf().
-     */
-    float _pntr_floorf(float val) {
-        if (val < 0.0f) {
-            return (float)((int)val - 1);
+    #ifndef PNTR_SINF
+        // TODO: sinf() implement it correctly
+        float _pntr_sinf(float x) {
+            float sign = 1;
+            if (x < 0){
+                sign = -1.0f;
+                x = -x;
+            }
+            if (x > 360) {
+                x -= (int)(x / 360.0f) * 360;
+            }
+            x *= PNTR_PI / 180.0f;
+            float res = 0.0f;
+            float term = x;
+            int k = 1;
+            while (res + term != res) {
+                res += term;
+                k += 2;
+                term *= -x * x / k / (k - 1);
+            }
+
+            return sign*res;
         }
-        else {
-            return (float)((int)val);
+        #define PNTR_SINF _pntr_sinf
+    #endif  // PNTR_SINF
+
+    #ifndef PNTR_COSF
+        // TODO: cosf() implement it correctly
+        float _pntr_cosf(float x) {
+            if (x < 0) {
+                x = -x;
+            }
+            if (x > 360) {
+                x -= (int)(x / 360.0f) * 360.0f;
+            }
+            x *= PNTR_PI / 180.0f;
+            float res = 0;
+            float term = 1;
+            int k = 0;
+            while (res + term != res){
+                res += term;
+                k += 2;
+                term *= -x * x / k / (k - 1);
+            }
+            return res;
         }
-    }
-    #define PNTR_FLOORF _pntr_floorf
+        #define PNTR_COSF _pntr_cosf
+    #endif  // PNTR_COSF
+
+    #ifndef PNTR_CEILF
+        float _pntr_ceilf(float val) {
+            int intVal = (int)val;
+            if (val >= 0 || val == intVal) {
+                return (float)intVal;
+            }
+            return (float)(intVal + 1);
+        }
+        #define PNTR_CEILF _pntr_ceilf
+    #endif  // PNTR_CEILF
+
+    #ifndef PNTR_FABSF
+        float _pntr_fabsf(float val) {
+            return (val >= 0) ? val : -val;
+        }
+        #define PNTR_FABSF _pntr_fabsf
+    #endif  // PNTR_FABSF
+
+    #ifndef PNTR_FLOORF
+        float _pntr_floorf(float val) {
+            int intVal = (int)val;
+            if (val < 0 || val == intVal) {
+                return (float)intVal;
+            }
+            return (float)(intVal - 1);
+        }
+        #define PNTR_FLOORF _pntr_floorf
+    #endif  // PNTR_FLOORF
 #else
     #ifndef PNTR_COSF
         #include <math.h>
-        /**
-         * Computes the cosine of the argument in radians.
-         */
         #define PNTR_COSF cosf
     #endif  // PNTR_COSF
 
     #ifndef PNTR_SINF
         #include <math.h>
-        /**
-         * Computes the sine of the argument in radians.
-         */
         #define PNTR_SINF sinf
     #endif  // PNTR_SINF
 
     #ifndef PNTR_CEILF
         #include <math.h>
-        /**
-         * Computes the smallest integer value not less than arg.
-         */
         #define PNTR_CEILF ceilf
     #endif  // PNTR_CEILF
 
     #ifndef PNTR_FABSF
         #include <math.h>
-        /**
-         * Computes the absolute value of a floating point value arg.
-         */
         #define PNTR_FABSF fabsf
     #endif  // PNTR_FABSF
 
     #ifndef PNTR_FLOORF
         #include <math.h>
-        /**
-         * Computes the largest integer value not greater than arg.
-         */
         #define PNTR_FLOORF floorf
     #endif  // PNTR_FLOORF
 #endif  // PNTR_DISABLE_MATH
@@ -1991,6 +2047,63 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
     pntr_draw_polygon_fill(dst, points, 3, color);
 }
 
+PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color) {
+    if (radius <= 0.0f) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+    if (segments < 0) {
+        return;
+    }
+    float startAngleRad = startAngle * PNTR_PI / 180.0f;
+    float endAngleRad = endAngle * PNTR_PI / 180.0f;
+
+    // Calculate how much distance between each segment
+    float stepAngle = (endAngleRad - startAngleRad) / (float)(++segments);
+
+    // Draw each line segment
+    int x1 = centerX + (int)((float)radius * PNTR_COSF(startAngleRad));
+    int y1 = centerY + (int)((float)radius * PNTR_SINF(startAngleRad));
+    float angle;
+    for (int i = 0; i < segments; i++) {
+        angle = startAngleRad + (float)i * stepAngle;
+        int x2 = centerX + (int)((float)radius * PNTR_COSF(angle));
+        int y2 = centerY + (int)((float)radius * PNTR_SINF(angle));
+        // TODO: pntr_draw_arc: Just draw pixels instead of a line?
+        pntr_draw_line(dst, x1, y1, x2, y2, color);
+        x1 = x2;
+        y1 = y2;
+    }
+}
+
+PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color) {
+    if (radius <= 0.0f) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+    if (segments < 0) {
+        return;
+    }
+    float startAngleRad = startAngle * PNTR_PI / 180.0f;
+    float endAngleRad = endAngle * PNTR_PI / 180.0f;
+
+    // Calculate how much distance between each segment
+    float stepAngle = (endAngleRad - startAngleRad) / (float)(++segments);
+
+    // Fill in each triangle
+    int x1 = centerX + (int)((float)radius * PNTR_COSF(startAngleRad));
+    int y1 = centerY + (int)((float)radius * PNTR_SINF(startAngleRad));
+    float angle;
+    for (int i = 0; i < segments; i++) {
+        angle = startAngleRad + (float)i * stepAngle;
+        int x2 = centerX + (int)((float)radius * PNTR_COSF(angle));
+        int y2 = centerY + (int)((float)radius * PNTR_SINF(angle));
+        pntr_draw_triangle_fill(dst, centerX, centerY, x1, y1, x2, y2, color);
+        x1 = x2;
+        y1 = y2;
+    }
+}
+
 /**
  * Get image pixel color at (x, y) position.
  *
@@ -2063,6 +2176,9 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
  * Draw an image onto the destination image, with tint.
  */
 PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
+    if (src == NULL) {
+        return;
+    }
     pntr_draw_image_tint_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { 0, 0, src->width, src->height },
         posX, posY, tint
@@ -2073,10 +2189,12 @@ PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int 
  * Draw an image onto the destination image.
  */
 PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
-    pntr_draw_image_rec(dst, src,
+    if (src == NULL) {
+        return;
+    }
+    pntr_draw_image_tint_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { 0, 0, src->width, src->height },
-        posX, posY
-    );
+        posX, posY, PNTR_WHITE);
 }
 
 /**

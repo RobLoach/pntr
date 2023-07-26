@@ -46,6 +46,10 @@ const char* example_shapes_update(pntr_image* canvas) {
     pntr_draw_polygon_fill(canvas, points, 4, PNTR_BLUE);
     pntr_draw_polygon(canvas, points, 4, PNTR_BLACK);
 
+    // Arc
+    pntr_draw_arc(canvas, 300, 120, 30, 30.0f, 180.0f, 20, PNTR_RED);
+    pntr_draw_arc_fill(canvas, 300, 180, 20, 10.0f, 280.0f, 20, PNTR_ORANGE);
+
     return "Shapes";
 }
 
