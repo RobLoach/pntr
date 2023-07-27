@@ -424,6 +424,9 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color);
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
+PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
+PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color);
+PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint);
@@ -737,6 +740,14 @@ extern "C" {
     #define PNTR_MEMSET memset
 #endif  // PNTR_MEMSET
 
+#ifndef PNTR_PI
+    #define PNTR_PI 3.1415926535897932f
+#endif
+
+#ifndef PNTR_RAD2DEG
+    #define PNTR_RAD2DEG 57.2957795131f
+#endif
+
 #ifdef PNTR_DISABLE_MATH
     #ifdef PNTR_ENABLE_TTF
         // TTF requires math.h
@@ -747,56 +758,91 @@ extern "C" {
         #undef PNTR_ENABLE_FILTER_SMOOTH
     #endif
 
-    /**
-     * Custom implementation of floorf().
-     */
-    float _pntr_floorf(float val) {
-        if (val < 0.0f) {
-            return (float)((int)val - 1);
+    #ifndef PNTR_SINF
+        /**
+         * Calculates sine of the given value.
+         *
+         * https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         */
+        float _pntr_sinf(float x) {
+            static const float a0 = +1.91059300966915117e-31f;
+            static const float a1 = +1.00086760103908896f;
+            static const float a2 = -1.21276126894734565e-2f;
+            static const float a3 = -1.38078780785773762e-1f;
+            static const float a4 = -2.67353392911981221e-2f;
+            static const float a5 = +2.08026600266304389e-2f;
+            static const float a6 = -3.03996055049204407e-3f;
+            static const float a7 = +1.38235642404333740e-4f;
+            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
         }
-        else {
-            return (float)((int)val);
+        #define PNTR_SINF _pntr_sinf
+    #endif  // PNTR_SINF
+
+    #ifndef PNTR_COSF
+        /**
+         * Calculates cosine of the given value.
+         *
+         * https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         */
+        float _pntr_cosf(float x) {
+            static const float a0 = 9.9995999154986614e-1f;
+            static const float a1 = 1.2548995793001028e-3f;
+            static const float a2 = -5.0648546280678015e-1f;
+            static const float a3 = 1.2942246466519995e-2f;
+            static const float a4 = 2.8668384702547972e-2f;
+            static const float a5 = 7.3726485210586547e-3f;
+            static const float a6 = -3.8510875386947414e-3f;
+            static const float a7 = 4.7196604604366623e-4f;
+            static const float a8 = -1.8776444013090451e-5f;
+            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
         }
-    }
-    #define PNTR_FLOORF _pntr_floorf
+        #define PNTR_COSF _pntr_cosf
+    #endif  // PNTR_COSF
+
+    #ifndef PNTR_CEILF
+        float _pntr_ceilf(float x) {
+            if (x >= 0.0f) {
+                int i = (int)x;
+                return (x > i) ? i + 1.0f : (float)i;
+            } else {
+                int t = (int)x;
+                float r = x - (float)t;
+                return (r > 0.0f) ? t + 1.0f: (float)t;
+            }
+        }
+        #define PNTR_CEILF _pntr_ceilf
+    #endif  // PNTR_CEILF
+
+    #ifndef PNTR_FABSF
+        #define PNTR_FABSF(a) (((a) < 0) ? -(a) : (a))
+    #endif  // PNTR_FABSF
+
+    #ifndef PNTR_FLOORF
+        #define PNTR_FLOORF(x) (float)((int)x - ((x < 0.0f) ? 1 : 0))
+    #endif  // PNTR_FLOORF
 #else
     #ifndef PNTR_COSF
         #include <math.h>
-        /**
-         * Computes the cosine of the argument in radians.
-         */
         #define PNTR_COSF cosf
     #endif  // PNTR_COSF
 
     #ifndef PNTR_SINF
         #include <math.h>
-        /**
-         * Computes the sine of the argument in radians.
-         */
         #define PNTR_SINF sinf
     #endif  // PNTR_SINF
 
     #ifndef PNTR_CEILF
         #include <math.h>
-        /**
-         * Computes the smallest integer value not less than arg.
-         */
         #define PNTR_CEILF ceilf
     #endif  // PNTR_CEILF
 
     #ifndef PNTR_FABSF
         #include <math.h>
-        /**
-         * Computes the absolute value of a floating point value arg.
-         */
         #define PNTR_FABSF fabsf
     #endif  // PNTR_FABSF
 
     #ifndef PNTR_FLOORF
         #include <math.h>
-        /**
-         * Computes the largest integer value not greater than arg.
-         */
         #define PNTR_FLOORF floorf
     #endif  // PNTR_FLOORF
 #endif  // PNTR_DISABLE_MATH
@@ -1480,6 +1526,21 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
     }
 }
 
+PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
+    if (color.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
+        return;
+    }
+
+    if (numPoints == 1) {
+        pntr_draw_point_vec(dst, points, color);
+        return;
+    }
+
+    for (int i = 0; i < numPoints - 1; i++) {
+        pntr_draw_line_vec(dst, points[i], points[i + 1], color);
+    }
+}
+
 /**
  * Draw a horizontal line at the given x, y coordinates.
  *
@@ -1991,6 +2052,63 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
     pntr_draw_polygon_fill(dst, points, 3, color);
 }
 
+PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color) {
+    if (radius <= 0.0f) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+    if (segments < 0) {
+        return;
+    }
+    float startAngleRad = startAngle * PNTR_PI / 180.0f;
+    float endAngleRad = endAngle * PNTR_PI / 180.0f;
+
+    // Calculate how much distance between each segment
+    float stepAngle = (endAngleRad - startAngleRad) / (float)(++segments);
+
+    // Draw each line segment
+    int x1 = centerX + (int)((float)radius * PNTR_COSF(startAngleRad));
+    int y1 = centerY + (int)((float)radius * PNTR_SINF(startAngleRad));
+    float angle;
+    for (int i = 1; i < segments; i++) {
+        angle = startAngleRad + (float)i * stepAngle;
+        int x2 = centerX + (int)((float)radius * PNTR_COSF(angle));
+        int y2 = centerY + (int)((float)radius * PNTR_SINF(angle));
+        // TODO: pntr_draw_arc: Just draw pixels instead of a line?
+        pntr_draw_line(dst, x1, y1, x2, y2, color);
+        x1 = x2;
+        y1 = y2;
+    }
+}
+
+PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, int radius, float startAngle, float endAngle, int segments, pntr_color color) {
+    if (radius <= 0.0f) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+    if (segments < 0) {
+        return;
+    }
+    float startAngleRad = startAngle * PNTR_PI / 180.0f;
+    float endAngleRad = endAngle * PNTR_PI / 180.0f;
+
+    // Calculate how much distance between each segment
+    float stepAngle = (endAngleRad - startAngleRad) / (float)(++segments);
+
+    // Fill in each triangle
+    int x1 = centerX + (int)((float)radius * PNTR_COSF(startAngleRad));
+    int y1 = centerY + (int)((float)radius * PNTR_SINF(startAngleRad));
+    float angle;
+    for (int i = 1; i < segments; i++) {
+        angle = startAngleRad + (float)i * stepAngle;
+        int x2 = centerX + (int)((float)radius * PNTR_COSF(angle));
+        int y2 = centerY + (int)((float)radius * PNTR_SINF(angle));
+        pntr_draw_triangle_fill(dst, centerX, centerY, x1, y1, x2, y2, color);
+        x1 = x2;
+        y1 = y2;
+    }
+}
+
 /**
  * Get image pixel color at (x, y) position.
  *
@@ -2063,6 +2181,9 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
  * Draw an image onto the destination image, with tint.
  */
 PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
+    if (src == NULL) {
+        return;
+    }
     pntr_draw_image_tint_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { 0, 0, src->width, src->height },
         posX, posY, tint
@@ -2073,10 +2194,12 @@ PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int 
  * Draw an image onto the destination image.
  */
 PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
-    pntr_draw_image_rec(dst, src,
+    if (src == NULL) {
+        return;
+    }
+    pntr_draw_image_tint_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { 0, 0, src->width, src->height },
-        posX, posY
-    );
+        posX, posY, PNTR_WHITE);
 }
 
 /**
@@ -3974,8 +4097,6 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 /**
  * Creates a new image based off the given image, that's rotated by the given rotation.
  *
- * If PNTR_DISABLE_MATH is defined, this is limited to rotation by 0.25f increments.
- *
  * @param image The image to rotate.
  * @param rotation The desired rotation from 0.0f to 1.0f. 0.25f == 90 degrees. 0.5f == 180 degress.
  *
@@ -3983,8 +4104,6 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
  *
  * @see pntr_draw_image_rotated()
  * @see pntr_draw_image_rotated_rec()
- *
- * @see PNTR_DISABLE_MATH
  */
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_filter filter) {
     if (image == NULL) {
@@ -4020,26 +4139,21 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_f
         return output;
     }
 
-    #ifdef PNTR_DISABLE_MATH
-        (void)filter;
-        return pntr_set_error("pntr_image_rotate off 90' requires the math library, without PNTR_DISABLE_MATH");
-    #else
-        float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
-        float cosTheta = PNTR_COSF(radians);
-        float sinTheta = PNTR_SINF(radians);
+    float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+    float cosTheta = PNTR_COSF(radians);
+    float sinTheta = PNTR_SINF(radians);
 
-        int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * cosTheta) + PNTR_FABSF((float)image->height * sinTheta));
-        int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * sinTheta) + PNTR_FABSF((float)image->height * cosTheta));
+    int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * cosTheta) + PNTR_FABSF((float)image->height * sinTheta));
+    int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)image->width * sinTheta) + PNTR_FABSF((float)image->height * cosTheta));
 
-        pntr_image* rotatedImage = pntr_gen_image_color(newWidth, newHeight, PNTR_BLANK);
-        if (rotatedImage == NULL) {
-            return NULL;
-        }
+    pntr_image* rotatedImage = pntr_gen_image_color(newWidth, newHeight, PNTR_BLANK);
+    if (rotatedImage == NULL) {
+        return NULL;
+    }
 
-        pntr_draw_image_rotated(rotatedImage, image, 0, 0, rotation, 0.0f, 0.0f, filter);
+    pntr_draw_image_rotated(rotatedImage, image, 0, 0, rotation, 0.0f, 0.0f, filter);
 
-        return rotatedImage;
-    #endif
+    return rotatedImage;
 }
 
 /**
@@ -4193,86 +4307,80 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    #ifdef PNTR_DISABLE_MATH
-        (void)filter;
-        pntr_set_error("pntr_draw_image_rotated_rec requires the math library, without PNTR_DISABLE_MATH");
+    float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+    float cosTheta = PNTR_COSF(radians);
+    float sinTheta = PNTR_SINF(radians);
+
+    int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.height * sinTheta));
+    int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.height * cosTheta));
+
+    int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
+    int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
+
+    // Make sure we're actually drawing on the screen.
+    if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
         return;
-    #else
-        float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
-        float cosTheta = PNTR_COSF(radians);
-        float sinTheta = PNTR_SINF(radians);
+    }
 
-        int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.height * sinTheta));
-        int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.height * cosTheta));
+    float centerX = (float)srcRect.width / 2.0f;
+    float centerY = (float)srcRect.height / 2.0f;
+    int srcXint, srcYint;
+    float srcX, srcY;
+    int destX, destY;
 
-        int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
-        int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
-
-        // Make sure we're actually drawing on the screen.
-        if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
-            return;
+    for (int y = 0; y < newHeight; y++) {
+        // Only draw onto the screen.
+        destY = posY + y - offsetYRatio;
+        if (destY < 0 || destY >= dst->height) {
+            continue;
         }
 
-        float centerX = (float)srcRect.width / 2.0f;
-        float centerY = (float)srcRect.height / 2.0f;
-        int srcXint, srcYint;
-        float srcX, srcY;
-        int destX, destY;
-
-        for (int y = 0; y < newHeight; y++) {
-            // Only draw onto the screen.
-            destY = posY + y - offsetYRatio;
-            if (destY < 0 || destY >= dst->height) {
+        for (int x = 0; x < newWidth; x++) {
+            // Make sure we're actually drawing onto the screen.
+            destX = posX + x - offsetXRatio;
+            if (destX < 0 || destX >= dst->width ) {
                 continue;
             }
 
-            for (int x = 0; x < newWidth; x++) {
-                // Make sure we're actually drawing onto the screen.
-                destX = posX + x - offsetXRatio;
-                if (destX < 0 || destX >= dst->width ) {
+            srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
+            srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+
+            // Only draw from the source rectangle.
+            if (srcX < 0 || srcX >= srcRect.width || srcY < 0 || srcY >= srcRect.height) {
+                continue;
+            }
+
+            srcXint = (int)srcX + srcRect.x;
+            srcYint = (int)srcY + srcRect.y;
+
+            if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
+                pntr_draw_point_unsafe(dst,
+                    destX,
+                    destY,
+                    PNTR_PIXEL(src, srcXint, srcYint)
+                );
+            }
+            else {
+                // For bilinear, don't overscan.
+                if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
                     continue;
                 }
 
-                srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
-                srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
-
-                // Only draw from the source rectangle.
-                if (srcX < 0 || srcX >= srcRect.width || srcY < 0 || srcY >= srcRect.height) {
-                    continue;
-                }
-
-                srcXint = (int)srcX + srcRect.x;
-                srcYint = (int)srcY + srcRect.y;
-
-                if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
-                    pntr_draw_point_unsafe(dst,
-                        destX,
-                        destY,
-                        PNTR_PIXEL(src, srcXint, srcYint)
-                    );
-                }
-                else {
-                    // For bilinear, don't overscan.
-                    if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
-                        continue;
-                    }
-
-                    pntr_draw_point_unsafe(dst,
-                        destX,
-                        destY,
-                        pntr_color_bilinear_interpolate(
-                            PNTR_PIXEL(src, srcXint, srcYint),
-                            PNTR_PIXEL(src, srcXint, srcYint + 1),
-                            PNTR_PIXEL(src, srcXint + 1, srcYint),
-                            PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
-                            srcX - PNTR_FLOORF(srcX),
-                            srcY - PNTR_FLOORF(srcY)
-                        )
-                    );
-                }
+                pntr_draw_point_unsafe(dst,
+                    destX,
+                    destY,
+                    pntr_color_bilinear_interpolate(
+                        PNTR_PIXEL(src, srcXint, srcYint),
+                        PNTR_PIXEL(src, srcXint, srcYint + 1),
+                        PNTR_PIXEL(src, srcXint + 1, srcYint),
+                        PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
+                        srcX - PNTR_FLOORF(srcX),
+                        srcY - PNTR_FLOORF(srcY)
+                    )
+                );
             }
         }
-    #endif
+    }
 }
 
 /**

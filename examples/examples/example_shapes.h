@@ -46,6 +46,17 @@ const char* example_shapes_update(pntr_image* canvas) {
     pntr_draw_polygon_fill(canvas, points, 4, PNTR_BLUE);
     pntr_draw_polygon(canvas, points, 4, PNTR_BLACK);
 
+    // Arc
+    pntr_draw_arc(canvas, 300, 120, 30, 30.0f, 180.0f, 20, PNTR_RED);
+    pntr_draw_arc_fill(canvas, 300, 180, 20, 10.0f, 280.0f, 20, PNTR_ORANGE);
+
+    // Polyline
+    points[0] = PNTR_CLITERAL(pntr_vector) {240, 110};
+    points[1] = PNTR_CLITERAL(pntr_vector) {260, 130};
+    points[2] = PNTR_CLITERAL(pntr_vector) {220, 140};
+    points[3] = PNTR_CLITERAL(pntr_vector) {240, 160};
+    pntr_draw_polyline(canvas, points, 4, PNTR_PURPLE);
+
     return "Shapes";
 }
 
