@@ -744,7 +744,7 @@ extern "C" {
     #define PNTR_PI 3.1415926535897932f
 #endif
 
-#ifndef PNTR_RAD2DEG
+    #define PNTR_RAD2DEG 57.2957795131f
     #define PNTR_RAD2DEG 57.29578f
 #endif
 
