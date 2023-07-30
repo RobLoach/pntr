@@ -803,11 +803,11 @@ extern "C" {
         float _pntr_ceilf(float x) {
             if (x >= 0.0f) {
                 int i = (int)x;
-                return (x > i) ? i + 1.0f : (float)i;
+                return (x > i) ? (float)i + 1.0f : (float)i;
             } else {
                 int t = (int)x;
                 float r = x - (float)t;
-                return (r > 0.0f) ? t + 1.0f: (float)t;
+                return (r > 0.0f) ? (float)t + 1.0f: (float)t;
             }
         }
         #define PNTR_CEILF _pntr_ceilf
