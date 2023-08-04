@@ -1454,6 +1454,17 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
     int changeInY = (endPosY - startPosY);
     int absChangeInY = (changeInY < 0) ? -changeInY : changeInY;
 
+    // Drawing a straight line is fast.
+    if (startPosX == endPosX) {
+        pntr_draw_line_vertical(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY, color);
+        return;
+    }
+
+    if (startPosY == endPosY) {
+        pntr_draw_line_horizontal(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX, color);
+        return;
+    }
+
     int startU, startV, endU, stepV;
     int A, B, P;
     int reversedXY = (absChangeInY < absChangeInX);
@@ -1549,9 +1560,11 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
  * @param posY The Y position.
  * @param width How long the line should be.
  * @param color The color of the line.
+ *
+ * TODO: pntr_draw_line_horizontal: Support negative width.
  */
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posY < 0 || posY >= dst->height) {
+    if (color.a == 0 || dst == NULL || posY < 0 || posY >= dst->height || posX >= dst->width) {
         return;
     }
 
@@ -1582,14 +1595,16 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
  * @param posY The Y position.
  * @param height How tall the line should be.
  * @param color The color of the line.
+ *
+ * TODO: pntr_draw_line_vertical: Support negative height.
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posX < 0 || posX >= dst->height) {
+    if (color.a == 0 || dst == NULL || posX < 0 || posX >= dst->width || posY >= dst->height) {
         return;
     }
 
     if (posY < 0) {
-        height -= posY;
+        height += posY;
         posY = 0;
     }
     if (posY + height >= dst->height) {
