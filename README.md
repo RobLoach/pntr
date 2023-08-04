@@ -170,11 +170,12 @@ void pntr_unload_memory(void* pointer);
 void* pntr_memory_copy(void* destination, void* source, size_t size);
 ```
 
-## Applications
+## Extensions
 
 - [pntr-physfs](https://github.com/RobLoach/pntr-physfs): [PhysicsFS](https://github.com/icculus/physfs) support for pntr to load and save images with PhysFS.
 - [pntr-nuklear](https://github.com/RobLoach/pntr-nuklear): [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr.
 - [pntr_app](https://github.com/RobLoach/pntr_app): Application wrapper for building the same pntr code on a number of different platforms.
+- [pntr_assetsys](https://github.com/RobLoach/pntr_assetsys): Load pntr assets from zip files.
 
 ## Development
 
