@@ -2145,7 +2145,7 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
 
     // Calculate how much distance between each segment
     float stepAngle = (endAngleRad - startAngleRad) / (float)(segments);
-    pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * segments + 1);
+    pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)segments + (size_t)1);
 
     float angle;
     // TODO: pntr_draw_arc_fill(): Is pntr_draw_polygon_fill ample here?
@@ -2169,10 +2169,10 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
     pntr_draw_line_vertical(dst, x + width, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
 
     // TODO: pntr_draw_rectangle_rounded(): Do the angles here make sense?
-    pntr_draw_arc(dst, x + topLeftRadius, y + topLeftRadius, topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
-    pntr_draw_arc(dst, x + width - topRightRadius, y + topRightRadius, topRightRadius, 0.0f, -90.0f, topRightRadius * 2, color); // Top Right
-    pntr_draw_arc(dst, x + bottomLeftRadius, y + height - bottomLeftRadius, bottomLeftRadius, -180.0f, -270.0f, bottomLeftRadius * 2, color); // Bottom Left
-    pntr_draw_arc(dst, x + width - bottomRightRadius, y + height - bottomRightRadius, bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+    pntr_draw_arc(dst, x + topLeftRadius, y + topLeftRadius, (float)topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
+    pntr_draw_arc(dst, x + width - topRightRadius, y + topRightRadius, (float)topRightRadius, 0.0f, -90.0f, topRightRadius * 2, color); // Top Right
+    pntr_draw_arc(dst, x + bottomLeftRadius, y + height - bottomLeftRadius, (float)bottomLeftRadius, -180.0f, -270.0f, bottomLeftRadius * 2, color); // Bottom Left
+    pntr_draw_arc(dst, x + width - bottomRightRadius, y + height - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
 }
 
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
