@@ -9,7 +9,6 @@ const char* example_shapes_update(pntr_image* canvas) {
     pntr_color lightBlue = PNTR_BLUE;
     lightBlue.a = 180;
 
-/*
     // Rectangles
     pntr_draw_rectangle_fill(canvas, 10, 30, 50, 50, PNTR_RED);
     pntr_draw_rectangle_fill(canvas, 20, 40, 50, 50, lightGreen);
@@ -58,11 +57,6 @@ const char* example_shapes_update(pntr_image* canvas) {
     points[2] = PNTR_CLITERAL(pntr_vector) {220, 140};
     points[3] = PNTR_CLITERAL(pntr_vector) {240, 160};
     pntr_draw_polyline(canvas, points, 4, PNTR_PURPLE);
-    */
-
-   // Rounded Recangle
-    pntr_draw_rectangle_rounded_fill(canvas, 50, 20, 200, 130, 20, PNTR_BLUE);
-    //pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color
 
     return "Shapes";
 }
