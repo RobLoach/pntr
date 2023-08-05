@@ -828,7 +828,6 @@ extern "C" {
          * Calculate the square root using fast inverse square root.
          *
          * https://en.wikipedia.org/wiki/Fast_inverse_square_root
-         */
         float _pntr_sqrtf(float number) {
             long i;
             float x2, y;
@@ -841,6 +840,7 @@ extern "C" {
             y  = y * (threehalfs - (x2 * y * y));
             return 1.0f / y;
         }
+        */
         #define PNTR_SQRTF _pntr_sqrtf
     #endif  // PNTR_SQRTF
 #else
@@ -2141,7 +2141,7 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
     float endAngleRad = endAngle * PNTR_PI / 180.0f;
 
     // Calculate how much distance between each segment
-    float stepAngle = (endAngleRad - startAngleRad) / (float)(segments);
+    float stepAngle = (endAngleRad - startAngleRad) / (float)segments;
     pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)segments + (size_t)1);
 
     float angle;
