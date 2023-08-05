@@ -2173,17 +2173,20 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
 }
 
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
+    // Corners
     pntr_draw_circle_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, color); // Top Left
     pntr_draw_circle_fill(dst, x + width - cornerRadius, y + cornerRadius, cornerRadius, color); // Top Right
     pntr_draw_circle_fill(dst, x + cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Left
     pntr_draw_circle_fill(dst, x + width - cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Right
 
+    // Edge bars
     pntr_draw_rectangle_fill(dst, x, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Left bar
     pntr_draw_rectangle_fill(dst, x + width - cornerRadius, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Right bar
     pntr_draw_rectangle_fill(dst, x + cornerRadius, y, width - cornerRadius * 2, cornerRadius, color); // Top bar
     pntr_draw_rectangle_fill(dst, x + cornerRadius, y + height - cornerRadius, width - cornerRadius * 2, cornerRadius, color); // Bottom bar
 
-    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + cornerRadius, width - cornerRadius * 2, height - cornerRadius * 2, color); // Center
+    // Center fill
+    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + cornerRadius, width - cornerRadius * 2, height - cornerRadius * 2, color);
 }
 
 /**
