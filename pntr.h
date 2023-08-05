@@ -427,6 +427,8 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
 PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color);
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color);
 PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color);
+PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color);
+PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color);
 PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY);
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY);
 PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint);
@@ -2089,7 +2091,7 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
 
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius < 0.0f) {
-        radius *= -1.0f;
+        //radius *= -1.0f;
     }
     else if (radius == 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
@@ -2124,7 +2126,7 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     float angle;
     for (int i = 0; i < segments; i++) {
         angle = startAngleRad + (float)i * stepAngle;
-        int x = centerX - (int)(radius * PNTR_COSF(angle)); // TODO: arc angle: Is the - correct here?
+        int x = centerX + (int)(radius * PNTR_COSF(angle)); // TODO: arc angle: Is the - correct here?
         int y = centerY + (int)(radius * PNTR_SINF(angle));
         pntr_draw_point(dst, x, y, color);
     }
@@ -2149,7 +2151,7 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
     // TODO: pntr_draw_arc_fill(): Is pntr_draw_polygon_fill ample here?
     for (int i = 0; i < segments; i++) {
         angle = startAngleRad + (float)i * stepAngle;
-        points[i].x = centerX - (int)(radius * PNTR_COSF(angle));
+        points[i].x = centerX + (int)(radius * PNTR_COSF(angle));
         points[i].y = centerY + (int)(radius * PNTR_SINF(angle));
     }
 
@@ -2158,6 +2160,33 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
 
     pntr_draw_polygon_fill(dst, points, segments + 1, color);
     pntr_unload_memory((void*)points);
+}
+
+PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color) {
+    pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
+    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, y + height, width - bottomLeftRadius - bottomRightRadius, color); // Bottom
+    pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
+    pntr_draw_line_vertical(dst, x + width, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
+
+    // TODO: pntr_draw_rectangle_rounded(): Do the angles here make sense?
+    pntr_draw_arc(dst, x + topLeftRadius, y + topLeftRadius, topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
+    pntr_draw_arc(dst, x + width - topRightRadius, y + topRightRadius, topRightRadius, 0.0f, -90.0f, topRightRadius * 2, color); // Top Right
+    pntr_draw_arc(dst, x + bottomLeftRadius, y + height - bottomLeftRadius, bottomLeftRadius, -180.0f, -270.0f, bottomLeftRadius * 2, color); // Bottom Left
+    pntr_draw_arc(dst, x + width - bottomRightRadius, y + height - bottomRightRadius, bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+}
+
+PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
+    pntr_draw_circle_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, color); // Top Left
+    pntr_draw_circle_fill(dst, x + width - cornerRadius, y + cornerRadius, cornerRadius, color); // Top Right
+    pntr_draw_circle_fill(dst, x + cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Left
+    pntr_draw_circle_fill(dst, x + width - cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Right
+
+    pntr_draw_rectangle_fill(dst, x, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Left bar
+    pntr_draw_rectangle_fill(dst, x + width - cornerRadius, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Right bar
+    pntr_draw_rectangle_fill(dst, x + cornerRadius, y, width - cornerRadius * 2, cornerRadius, color); // Top bar
+    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + height - cornerRadius, width - cornerRadius * 2, cornerRadius, color); // Bottom bar
+
+    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + cornerRadius, width - cornerRadius * 2, height - cornerRadius * 2, color); // Center
 }
 
 /**
