@@ -2090,10 +2090,7 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
 }
 
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
-    if (radius < 0.0f) {
-        //radius *= -1.0f;
-    }
-    else if (radius == 0.0f) {
+    if (radius == 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
