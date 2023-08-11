@@ -842,6 +842,17 @@ extern "C" {
         */
         #define PNTR_SQRTF _pntr_sqrtf
     #endif  // PNTR_SQRTF
+
+    #ifndef PNTR_FMODF
+        float _pntr_fmodf(float dividend, float divisor) {
+            if (divisor == 0.0f) {
+                return 0.0f;
+            }
+            float quotient = dividend / divisor;
+            return dividend - ((int)quotient) * divisor;
+        }
+        #define PNTR_FMODF _pntr_fmodf
+    #endif  // PNTR_FMOD
 #else
     #ifndef PNTR_COSF
         #include <math.h>
@@ -872,6 +883,11 @@ extern "C" {
         #include <math.h>
         #define PNTR_SQRTF sqrtf
     #endif  // PNTR_SQRTF
+
+    #ifndef PNTR_FMODF
+        #include <math.h>
+        #define PNTR_FMODF fmodf
+    #endif  // PNTR_FMODF
 #endif  // PNTR_DISABLE_MATH
 
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
@@ -4173,11 +4189,18 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
     }
 }
 
+float _pntr_normalize_degrees(float degrees) {
+    if (degrees < 0) {
+        return 360.0f - PNTR_FMODF(-degrees, 360.0f);
+    }
+    return PNTR_FMODF(degrees, 360.0f);
+}
+
 /**
  * Creates a new image based off the given image, that's rotated by the given rotation.
  *
  * @param image The image to rotate.
- * @param rotation The desired rotation from 0.0f to 1.0f. 0.25f == 90 degrees. 0.5f == 180 degress.
+ * @param rotation The desired rotation in degress.
  *
  * @return The new rotated image.
  *
@@ -4189,21 +4212,15 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_f
         return NULL;
     }
 
-    // Normalize the rotation between 0.0f and 1.0f
-    if (rotation >= 1.0f) {
-        rotation -= (float)((int)rotation);
-    }
-    else if (rotation < 0.0f) {
-        rotation += (float)((int)rotation);
-    }
+    rotation = _pntr_normalize_degrees(rotation);
 
     if (rotation == 0.0f) {
         return pntr_image_copy(image);
     }
 
-    if (rotation == 0.25f || rotation == 0.5f || rotation == 0.75f) {
+    if (rotation == 90.0f || rotation == 180.0f || rotation == 270.0f) {
         pntr_image* output;
-        if (rotation == 0.5f) {
+        if (rotation == 180.0f) {
             output = pntr_gen_image_color(image->width, image->height, PNTR_BLANK);
         }
         else {
@@ -4218,7 +4235,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float rotation, pntr_f
         return output;
     }
 
-    float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+    float radians = rotation * PNTR_RAD2DEG;
     float cosTheta = PNTR_COSF(radians);
     float sinTheta = PNTR_SINF(radians);
 
@@ -4268,7 +4285,7 @@ PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, p
  * @param src Pointer to the source image that will be drawn onto the destination image.
  * @param posX Where to draw the rotated image, at the X coordinate.
  * @param posY Where to draw the rotated image, at the Y coordinate.
- * @param rotation Angle of rotation via a value from 0 to 1.
+ * @param rotation The degrees of rotation.
  * @param offsetX Offset in the X direction after rotation.
  * @param offsetY Offset in the Y direction after rotation.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
@@ -4297,7 +4314,7 @@ PNTR_API inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, i
  * @param srcRect The portion of the source image to draw.
  * @param posX Where to draw the rotated image, at the X coordinate.
  * @param posY Where to draw the rotated image, at the Y coordinate.
- * @param rotation Angle of rotation via a value from 0 to 1.
+ * @param rotation The degrees of rotation.
  * @param offsetX Offset in the X direction after rotation.
  * @param offsetY Offset in the Y direction after rotation.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
@@ -4309,13 +4326,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    // Normalize the rotation between 0.0f and 1.0f
-    if (rotation >= 1.0f) {
-        rotation -= (float)((int)rotation);
-    }
-    else if (rotation < 0.0f) {
-        rotation += (float)((int)rotation);
-    }
+    rotation = _pntr_normalize_degrees(rotation);
 
     // Draw the image normally if not rotated.
     if (rotation == 0.0f) {
@@ -4338,10 +4349,10 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     }
 
     // Simple rotation by 90 degrees can be fast.
-    if (rotation == 0.25f || rotation == 0.5f || rotation == 0.75f) {
+    if (rotation == 90.0f || rotation == 180.0f || rotation == 270.0f) {
         // Build the destination coordinates of the image.
         pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
-        if (rotation == 0.25f || rotation == 0.75f) {
+        if (rotation == 90.0f || rotation == 270.0f) {
             dstRect.width = srcRect.height;
             dstRect.height = srcRect.width;
             dstRect.x -= (int)offsetY;
@@ -4360,13 +4371,13 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         // Draw the source portion on the destination.
         for (int y = 0; y < srcRect.height; y++) {
             for (int x = 0; x < srcRect.width; x++) {
-                if (rotation == 0.25f) {
+                if (rotation == 90.0f) {
                     pntr_draw_point(dst,
                         dstRect.x + y,
                         dstRect.y + srcRect.width - x,
                         PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
                     );
-                } else if (rotation == 0.5f) {
+                } else if (rotation == 180.0f) {
                     pntr_draw_point(dst,
                         dstRect.x + srcRect.width - x,
                         dstRect.y + srcRect.height - y,
@@ -4386,7 +4397,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    float radians = rotation * 6.283185307f; // 360.0f * M_PI / 180.0f;
+    float radians = rotation * PNTR_RAD2DEG;
     float cosTheta = PNTR_COSF(radians);
     float sinTheta = PNTR_SINF(radians);
 
