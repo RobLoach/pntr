@@ -369,8 +369,8 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        IT("pntr_image_rotate(image, 0.25f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.25f, PNTR_FILTER_BILINEAR);
+        IT("pntr_image_rotate(image, 90.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 90.0f, PNTR_FILTER_BILINEAR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -379,8 +379,8 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        IT("pntr_image_rotate(image, 0.5f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.5f, PNTR_FILTER_SMOOTH);
+        IT("pntr_image_rotate(image, 180.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 180.0f, PNTR_FILTER_SMOOTH);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->width);
             EQUALS(rotated->height, image->height);
@@ -389,8 +389,8 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        IT("pntr_image_rotate(image, 0.75f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.75f, PNTR_FILTER_NEARESTNEIGHBOR);
+        IT("pntr_image_rotate(image, 270.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 270.0f, PNTR_FILTER_NEARESTNEIGHBOR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -400,8 +400,8 @@ MODULE(pntr, {
         });
 
         #ifndef PNTR_DISABLE_MATH
-            IT("pntr_image_rotate(image, 0.33f)", {
-                pntr_image* rotated = pntr_image_rotate(image, 0.33f, PNTR_FILTER_BILINEAR);
+            IT("pntr_image_rotate(image, 48.0f)", {
+                pntr_image* rotated = pntr_image_rotate(image, 48.0f, PNTR_FILTER_BILINEAR);
                 NEQUALS(rotated, NULL);
                 NEQUALS(rotated->width, image->height);
                 NEQUALS(rotated->height, image->width);
@@ -410,7 +410,7 @@ MODULE(pntr, {
                 pntr_unload_image(rotated);
             });
         #else
-            IT("pntr_image_rotate(image, 0.33f): PNTR_DISABLE_MATH is defined, unable to test.", {
+            IT("pntr_image_rotate(image, 48.0f): PNTR_DISABLE_MATH is defined, unable to test.", {
                 // Nothing
             });
         #endif  // PNTR_DISABLE_MATH
