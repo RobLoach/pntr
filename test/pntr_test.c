@@ -243,6 +243,12 @@ MODULE(pntr, {
         pntr_set_error(NULL);
     });
 
+    IT("pntr_load_file_text()", {
+        const char* text = pntr_load_file_text("resources/text.txt");
+        STRCEQUALS(text, "Hello, World!", 13);
+        pntr_unload_file_text(text);
+    });
+
     #ifdef PNTR_ENABLE_TTF
         IT("pntr_load_font_ttf()", {
             pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20);
@@ -369,8 +375,8 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        IT("pntr_image_rotate(image, 0.25f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.25f, PNTR_FILTER_BILINEAR);
+        IT("pntr_image_rotate(image, 90.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 90.0f, PNTR_FILTER_BILINEAR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -379,8 +385,8 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        IT("pntr_image_rotate(image, 0.5f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.5f, PNTR_FILTER_SMOOTH);
+        IT("pntr_image_rotate(image, 180.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 180.0f, PNTR_FILTER_SMOOTH);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->width);
             EQUALS(rotated->height, image->height);
@@ -389,8 +395,8 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        IT("pntr_image_rotate(image, 0.75f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 0.75f, PNTR_FILTER_NEARESTNEIGHBOR);
+        IT("pntr_image_rotate(image, 270.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 270.0f, PNTR_FILTER_NEARESTNEIGHBOR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->height);
             EQUALS(rotated->height, image->width);
@@ -400,8 +406,8 @@ MODULE(pntr, {
         });
 
         #ifndef PNTR_DISABLE_MATH
-            IT("pntr_image_rotate(image, 0.33f)", {
-                pntr_image* rotated = pntr_image_rotate(image, 0.33f, PNTR_FILTER_BILINEAR);
+            IT("pntr_image_rotate(image, 48.0f)", {
+                pntr_image* rotated = pntr_image_rotate(image, 48.0f, PNTR_FILTER_BILINEAR);
                 NEQUALS(rotated, NULL);
                 NEQUALS(rotated->width, image->height);
                 NEQUALS(rotated->height, image->width);
@@ -410,12 +416,12 @@ MODULE(pntr, {
                 pntr_unload_image(rotated);
             });
         #else
-            IT("pntr_image_rotate(image, 0.33f): PNTR_DISABLE_MATH is defined, unable to test.", {
+            IT("pntr_image_rotate(image, 48.0f): PNTR_DISABLE_MATH is defined, unable to test.", {
                 // Nothing
             });
         #endif  // PNTR_DISABLE_MATH
 
-        IT("pntr_gen_image_gradient, pntr_gen_image_gradient_horizontal, pntr_gen_image_gradient_vertical", {
+        IT("pntr_gen_image_gradient", {
             pntr_image* image = pntr_gen_image_gradient(500, 500, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_GOLD);
             NEQUALS(image, NULL);
 
@@ -428,13 +434,6 @@ MODULE(pntr, {
             pntr_color gold = pntr_image_get_color(image, image->width - 1, image->height - 1);
             GREATER(gold.r, 230);
             GREATER(gold.g, 180);
-            pntr_unload_image(image);
-
-            image = pntr_gen_image_gradient_horizontal(400, 400, PNTR_RED, PNTR_BLUE);
-            NEQUALS(image, NULL);
-            pntr_unload_image(image);
-            image = pntr_gen_image_gradient_vertical(400, 400, PNTR_RED, PNTR_BLUE);
-            NEQUALS(image, NULL);
             pntr_unload_image(image);
         });
 
