@@ -22,11 +22,17 @@ const char* example_image_rotate_update(pntr_image* canvas) {
     // Draw the rotated image on the screen with a smooth filter.
     //pntr_draw_image_rotated(canvas, imageToRotate, canvas->width / 2 + canvas->width / 4, canvas->height / 2, rotation * 8, imageToRotate->width / 2.0f, imageToRotate->height / 2.0f, PNTR_FILTER_SMOOTH);
 
-
     pntr_rectangle srcRect = {0,0,0,0};
-    pntr_vector origin = {imageToRotate->width / 2, imageToRotate->height / 2};
-    pntr_rectangle dstRect = {canvas->width / 2 - origin.x, canvas->width / 2 - origin.y, imageToRotate->width * 2, 0};
-    pntr_draw_image_rotozoom(canvas, imageToRotate, srcRect, dstRect, origin, rotation, 0, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+
+    pntr_draw_image_rotozoom(canvas,
+            imageToRotate, srcRect,
+            canvas->width / 2, canvas->height / 2,
+            rotation, 1.0f, 2.0f,
+            imageToRotate->width / 2.0f, imageToRotate->height / 2.0f,
+            false, // Flip horizontal
+            false, // flip vertical
+            PNTR_FILTER_NEARESTNEIGHBOR,
+            PNTR_WHITE);
 
     return "Image Rotate";
 }
