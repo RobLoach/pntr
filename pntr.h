@@ -3811,7 +3811,7 @@ PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
  * @see pntr_load_file()
  */
 PNTR_API inline void pntr_unload_file(unsigned char* fileData) {
-    pntr_unload_memory(fileData);
+    pntr_unload_memory((void*)fileData);
 }
 
 /**
