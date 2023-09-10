@@ -10,54 +10,62 @@
 
 #include "examples/examples.h"
 
-bool Init(void* userData) {
+bool Init(pntr_app* app) {
     examples_init();
 
     return true;
 }
 
-bool Update(pntr_image* screen, void* userData) {
+bool Update(pntr_app* app, pntr_image* screen) {
     examples_update(screen);
 
     return true;
 }
 
-void Event(pntr_app_event* event, void* userData) {
+void Event(pntr_app* app, pntr_app_event* event) {
     switch (event->type) {
         case PNTR_APP_EVENTTYPE_KEY_DOWN: {
-            if (event->key == PNTR_APP_KEY_RIGHT) {
-                examples_next();
-            }
-            if (event->key == PNTR_APP_KEY_LEFT) {
-                examples_previous();
-            }
-            if (event->key == PNTR_APP_KEY_F1) {
-                examples_screenshot();
+            switch (event->key) {
+                case PNTR_APP_KEY_RIGHT:
+                    examples_next();
+                    break;
+                case PNTR_APP_KEY_LEFT:
+                    examples_previous();
+                    break;
+                case PNTR_APP_KEY_F1:
+                    examples_screenshot();
+                    break;
             }
         }
         break;
         case PNTR_APP_EVENTTYPE_MOUSE_BUTTON_DOWN: {
-            if (event->mouseButton == PNTR_APP_MOUSE_BUTTON_LEFT) {
-                examples_next();
-            }
-            if (event->mouseButton == PNTR_APP_MOUSE_BUTTON_RIGHT) {
-                examples_previous();
+            switch (event->mouseButton) {
+                case PNTR_APP_MOUSE_BUTTON_LEFT:
+                    examples_next();
+                    break;
+                case PNTR_APP_MOUSE_BUTTON_RIGHT:
+                    examples_previous();
+                    break;
             }
         }
         break;
         case PNTR_APP_EVENTTYPE_GAMEPAD_BUTTON_DOWN: {
-            if (event->gamepadButton == PNTR_APP_GAMEPAD_BUTTON_RIGHT_FACE_DOWN) {
-                examples_next();
-            }
-            if (event->gamepadButton == PNTR_APP_GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) {
-                examples_previous();
+            switch (event->gamepadButton) {
+                case PNTR_APP_GAMEPAD_BUTTON_A:
+                case PNTR_APP_GAMEPAD_BUTTON_RIGHT:
+                    examples_next();
+                    break;
+                case PNTR_APP_GAMEPAD_BUTTON_B:
+                case PNTR_APP_GAMEPAD_BUTTON_LEFT:
+                    examples_previous();
+                    break;
             }
         }
         break;
     }
 }
 
-void Close(void* userData) {
+void Close(pntr_app* app) {
     examples_unload();
 }
 
