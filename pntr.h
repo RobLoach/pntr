@@ -391,6 +391,16 @@ typedef enum pntr_filter {
     PNTR_FILTER_SMOOTH
 } pntr_filter;
 
+typedef enum pntr_error {
+    PNTR_ERROR_NONE = 0,
+    PNTR_ERROR_INVALID_ARGS = -1,
+    PNTR_ERROR_NO_MEMORY = -2,
+    PNTR_ERROR_NOT_SUPPORTED = -3,
+    PNTR_ERROR_FAILED_TO_OPEN = -4,
+    PNTR_ERROR_FAILED_TO_WRITE = -5,
+    PNTR_ERROR_UNKNOWN = -6
+} pntr_error;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -459,8 +469,9 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
 PNTR_API pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
-PNTR_API const char* pntr_get_error(void);
-PNTR_API void* pntr_set_error(const char* error);
+PNTR_API void* pntr_set_error(pntr_error error);
+PNTR_API const char* pntr_get_error();
+PNTR_API pntr_error pntr_get_error_code();
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
@@ -1083,14 +1094,23 @@ extern "C" {
  * @internal
  * @private
  */
-const char* _pntr_error;
+pntr_error _pntr_error;
 
-/**
- * Gets the last error that was reported.
- *
- * @return The last error, or NULL if there wasn't an error.
- */
-PNTR_API inline const char* pntr_get_error(void) {
+PNTR_API const char* pntr_get_error() {
+    switch (_pntr_error) {
+        case PNTR_ERROR_NONE: return NULL;
+        case PNTR_ERROR_INVALID_ARGS: return "Invalid arguments";
+        case PNTR_ERROR_NO_MEMORY: return "No memory";
+        case PNTR_ERROR_NOT_SUPPORTED: return "Not supported";
+        case PNTR_ERROR_FAILED_TO_OPEN: return "Failed to open";
+        case PNTR_ERROR_FAILED_TO_WRITE: return "Failed to write";
+        case PNTR_ERROR_UNKNOWN: return "Unknown error";
+    }
+
+    return NULL;
+}
+
+PNTR_API pntr_error pntr_get_error_code() {
     return _pntr_error;
 }
 
@@ -1101,8 +1121,13 @@ PNTR_API inline const char* pntr_get_error(void) {
  *
  * @return Always returns NULL.
  */
-PNTR_API inline void* pntr_set_error(const char* error) {
+PNTR_API void* pntr_set_error(pntr_error error) {
     _pntr_error = error;
+
+    #ifdef PNTR_SET_ERROR
+    PNTR_SET_ERROR(error);
+    #endif
+
     return NULL;
 }
 
@@ -1120,12 +1145,12 @@ PNTR_API inline void* pntr_set_error(const char* error) {
  */
 PNTR_API pntr_image* pntr_new_image(int width, int height) {
     if (width <= 0 || height <= 0) {
-        return pntr_set_error("pntr_new_image() requires a valid width and height");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
     if (image == NULL) {
-        return pntr_set_error("pntr_new_image() failed to allocate memory for pntr_image");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     image->pitch = width * (int)sizeof(pntr_color);
@@ -1135,7 +1160,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
     if (image->data == NULL) {
         PNTR_FREE(image);
-        return pntr_set_error("pntr_new_image() failed to allocate memory for pntr_image data");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     return image;
@@ -1166,7 +1191,7 @@ PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color colo
  */
 PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
     if (image == NULL) {
-        return pntr_set_error("pntr_image_copy() requires valid image data");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* newImage = pntr_new_image(image->width, image->height);
@@ -1272,7 +1297,7 @@ PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int
  */
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
-        return pntr_set_error("pntr_image_from_image() requires valid source image");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_rectangle dstRect;
@@ -1312,7 +1337,7 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
  */
 PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
-        return pntr_set_error("pntr_image_subimage requires a valid image");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Ensure we are referencing an actual portion of the image.
@@ -1324,7 +1349,7 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
     // Build the subimage.
     pntr_image* subimage = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
     if (subimage == NULL) {
-        return pntr_set_error("pntr_image_subimage() failed to allocate memory for pntr_image");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     subimage->pitch = image->pitch;
@@ -2232,15 +2257,15 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
  */
 PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
     if (fileData == NULL || dataSize <= 0) {
-        return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifdef PNTR_DISABLE_PNG
-        return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_DISABLE_PNG was defined.");
+        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
         cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
         if (image.pix == NULL) {
-            return pntr_set_error(cp_error_reason);
+            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         pntr_image* output = pntr_image_from_pixelformat((const void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
@@ -2259,13 +2284,13 @@ PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, 
  */
 PNTR_API pntr_image* pntr_load_image(const char* fileName) {
     if (fileName == NULL) {
-        return pntr_set_error("pntr_load_image() requires a valid fileName");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     unsigned int bytesRead;
     const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
     if (fileData == NULL) {
-        return pntr_set_error("Failed to load file");
+        return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
     }
 
     pntr_image* output = pntr_load_image_from_memory(fileData, bytesRead);
@@ -2410,7 +2435,7 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
  */
 PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int width, int height, pntr_pixelformat pixelFormat) {
     if (imageData == NULL || width <= 0 || height <= 0 || pixelFormat < 0) {
-        return pntr_set_error("pntr_image_from_data() requires valid imageData");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Check how we are to convert the pixel format.
@@ -2442,7 +2467,7 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
         }
 
         default: {
-            return pntr_set_error("Unknown pixel format");
+            return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
         }
     }
 }
@@ -2460,12 +2485,8 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
  * @see pntr_image_resize()
  */
 PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter) {
-    if (image == NULL) {
-        return pntr_set_error("pntr_image_scale() requires a valid image");
-    }
-
-    if (scaleX <= 0.0f || scaleY <= 0.0f) {
-        return pntr_set_error("pntr_image_scale() requires a valid scale values");
+    if (image == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     return pntr_image_resize(image, (int)((float)image->width * scaleX), (int)((float)image->height * scaleY), filter);
@@ -2486,7 +2507,7 @@ PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float sca
  */
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
     if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0) {
-        return pntr_set_error("pntr_image_resize() requires a valid image and width/height");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* output = pntr_new_image(newWidth, newHeight);
@@ -2523,7 +2544,7 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
 
                 if (result == 0) {
                     pntr_unload_image(output);
-                    return pntr_set_error("Failed to reszize imagess");
+                    return pntr_set_error(PNTR_ERROR_UNKNOWN);
                 }
             #endif
         }
@@ -2849,7 +2870,7 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
 
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL) {
-        return pntr_set_error("pntr_load_font_bmf_from_memory() requires valid file data, size and characters");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
@@ -2872,19 +2893,19 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData
  */
 PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
     if (numCharacters <= 0) {
-        return pntr_set_error("requires at least one character for fonts, none found");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
     if (font == NULL) {
-        return pntr_set_error("pntr_new_font() failed to allocate pntr_font memory");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     // Source Rectangles
     font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)numCharacters);
     if (font->srcRects == NULL) {
         PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for source rects");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     // Glyph Rectangles
@@ -2892,7 +2913,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
     if (font->glyphRects == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for glyphRects");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     // Characters
@@ -2901,7 +2922,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font->glyphRects);
         PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for characters");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     font->charactersLen = numCharacters;
@@ -2912,7 +2933,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
 
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters) {
     if (image == NULL || characters == NULL) {
-        return pntr_set_error("pntr_load_font_bmf_from_image() requires a valid image and characters");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
@@ -2984,7 +3005,7 @@ PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int
 
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
     if (fileData == NULL || dataSize <= 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
-        return pntr_set_error("pntr_load_font_tty_from_memory() requires valid file data, size, glyph size, and characters");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
@@ -3002,7 +3023,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData
 
 PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
     if (image == NULL || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
-        return pntr_set_error("pntr_load_font_tty_from_image() requires a valid image and characters");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Find out how many characters there are.
@@ -3073,7 +3094,7 @@ PNTR_API void pntr_unload_font(pntr_font* font) {
  */
 PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
     if (font == NULL) {
-        return pntr_set_error("pntr_font_copy requires a valid font");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* atlas = pntr_image_copy(font->atlas);
@@ -3106,7 +3127,7 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
  */
 PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY, pntr_filter filter) {
     if (font == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
-        return pntr_set_error("pntr_font_copy requires a valid font and scale");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Create the new font.
@@ -3291,7 +3312,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
             PNTR_DEFAULT_FONT_GLYPH_HEIGHT,
             PNTR_BLANK);
         if (atlas == NULL) {
-            return pntr_set_error("pntr_load_font_default() failed to build atlas");
+            return NULL;
         }
 
         // Iterate through all the characters and draw them manually.
@@ -3316,12 +3337,12 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         pntr_font* font = pntr_load_font_tty_from_image(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH, PNTR_DEFAULT_FONT_GLYPH_HEIGHT, characters);
         if (font == NULL) {
             pntr_unload_image(atlas);
-            return pntr_set_error("Failed to load default font from image");
+            return NULL;
         }
 
         return font;
     #else
-        return pntr_set_error("pntr_load_font_default() requires PNTR_ENABLE_DEFAULT_FONT");
+        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #endif
 }
 
@@ -3341,11 +3362,11 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
  */
 PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     if (fileName == NULL || fontSize <= 0) {
-        return pntr_set_error("pntr_load_font_ttf() requires a valid fileName and font size.");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifndef PNTR_ENABLE_TTF
-        return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
+        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
         unsigned int bytesRead;
         unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
@@ -3377,18 +3398,18 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
  */
 PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize) {
     if (fileData == NULL || dataSize == 0 || fontSize <= 0) {
-        return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifndef PNTR_ENABLE_TTF
-        return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
+        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
         // Create the bitmap data with ample space based on the font size
         int width = fontSize * 10;
         int height = fontSize * 10;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
         if (bitmap == NULL) {
-            return pntr_set_error("Failed to allocate memory for bitmap");
+            return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
         #define PNTR_NUM_GLYPHS 95
@@ -3398,14 +3419,14 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         // Check to make sure the font was baked correctly
         if (result == 0) {
             PNTR_FREE(bitmap);
-            return pntr_set_error("When baking font, no rows were created");
+            return pntr_set_error(PNTR_ERROR_UNKNOWN);
         }
 
         // Port the bitmap to a pntr_image as the atlas.
         pntr_image* atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         PNTR_FREE(bitmap);
         if (atlas == NULL) {
-            return pntr_set_error("Failed to convert pixel format for font");
+            return NULL;
         }
 
         // Clear up the unused atlas space from memory from top left
@@ -3530,7 +3551,7 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
  */
 PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
     if (fileName == NULL) {
-        return pntr_set_error("pntr_load_file() requires a valid fileName");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifdef PNTR_LOAD_FILE
@@ -3541,7 +3562,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return pntr_set_error("Failed to open file");
+            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         fseek(file, 0, SEEK_END);
@@ -3553,7 +3574,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return pntr_set_error("Failed to read file");
+            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         unsigned char* data = (unsigned char*)PNTR_MALLOC(size * sizeof(unsigned char));
@@ -3562,7 +3583,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return pntr_set_error("Failed to allocate data for file");
+            return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
         // Read the file
@@ -3623,7 +3644,7 @@ PNTR_API inline void pntr_unload_file_text(const char* text) {
  */
 PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite) {
     if (fileName == NULL || data == NULL) {
-        return pntr_set_error("pntr_save_file() requires a valid fileName");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifdef PNTR_SAVE_FILE
@@ -3631,19 +3652,19 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
     #else
         FILE *file = fopen(fileName, "wb");
         if (file == NULL) {
-            return pntr_set_error("Failed to open file for writing");
+            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         size_t count = fwrite(data, sizeof(unsigned char), bytesToWrite, file);
 
         if (count <= 0) {
             fclose(file);
-            return pntr_set_error("Failed to write data to file");
+            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         if (count != (size_t)bytesToWrite) {
             fclose(file);
-            return pntr_set_error("Failed to write the correct amount of data");
+            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         return fclose(file) == 0;
@@ -3676,7 +3697,7 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
             break;
         default:
             bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte;
-            pntr_set_error("Unknown pixel format for pntr_get_pixel_data_size");
+            pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
             break;
     }
 
@@ -3694,17 +3715,17 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
  */
 PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat) {
     if (image == NULL) {
-        return pntr_set_error("requires a valid image");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     int imageSize = pntr_get_pixel_data_size(image->width, image->height, pixelFormat);
     if (imageSize <= 0) {
-        return pntr_set_error("Resulted in no image");
+        return pntr_set_error(PNTR_ERROR_UNKNOWN);
     }
 
     void* data = PNTR_MALLOC(imageSize);
     if (data == NULL) {
-        return pntr_set_error("Failed to allocate memory for new image with different pixel format");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     int pixelSize = pntr_get_pixel_data_size(1, 1, pixelFormat);
@@ -3742,14 +3763,14 @@ PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSi
  */
 PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
     if (image == NULL) {
-        return pntr_set_error("Requires an actual image");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifdef PNTR_DISABLE_PNG
         if (dataSize != NULL) {
             *dataSize = 0;
         }
-        return pntr_set_error("Saving images requires to not define PNTR_DISABLE_PNG");
+        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
         cp_image_t cpImage = PNTR_CLITERAL(cp_image_t) {
             .w = image->width,
@@ -3758,13 +3779,13 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned in
 
         cpImage.pix = (cp_pixel_t*)pntr_image_to_pixelformat(image, NULL, PNTR_PIXELFORMAT_RGBA8888);
         if (cpImage.pix == NULL) {
-            return pntr_set_error("Failed to port image to RGBA8888");
+            return NULL;
         }
 
         cp_saved_png_t png = cp_save_png_to_memory(&cpImage);
         if (png.data == NULL) {
             cp_free_png(&cpImage);
-            return pntr_set_error("Failed to save image to memory");
+            return pntr_set_error(PNTR_ERROR_FAILED_TO_WRITE);
         }
 
         // Export the datasize
@@ -4060,12 +4081,12 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
  */
 PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
     if (image == NULL) {
+        pntr_set_error(PNTR_ERROR_INVALID_ARGS);
         return;
     }
 
     pntr_image* newImage = pntr_gen_image_color(newWidth, newHeight, fill);
     if (newImage == NULL) {
-        pntr_set_error("pntr_image_resize_canvas: Failed to build new image");
         return;
     }
 

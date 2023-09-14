@@ -27,13 +27,13 @@ MODULE(pntr, {
     });
 
     IT("pntr_set_error(), pntr_get_error()", {
-        pntr_set_error(NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
         EQUALS(pntr_get_error(), NULL);
         pntr_image* image = pntr_new_image(-500, -500);
         EQUALS(image, NULL);
         NEQUALS(pntr_get_error(), NULL);
         pntr_unload_image(image);
-        pntr_set_error(NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
     });
 
     IT("pntr_color_get_*()", {
@@ -100,7 +100,7 @@ MODULE(pntr, {
     IT("pntr_load_image()", {
         pntr_image* image = pntr_load_image("NotFoundImage.png");
         EQUALS(image, NULL);
-        pntr_set_error(NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
 
         image = pntr_load_image("resources/image.png");
         NEQUALS(image, NULL);
@@ -240,7 +240,7 @@ MODULE(pntr, {
         // Expect an error to result.
         const char* error = pntr_get_error();
         NEQUALS(error, NULL);
-        pntr_set_error(NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
     });
 
     IT("pntr_load_file_text()", {
