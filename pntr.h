@@ -451,6 +451,9 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
+#ifdef PNTR_ENABLE_VARGS
+PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
+#endif
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API unsigned char pntr_color_get_r(pntr_color color);
@@ -471,8 +474,8 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
 PNTR_API pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API void* pntr_set_error(pntr_error error);
-PNTR_API const char* pntr_get_error();
-PNTR_API pntr_error pntr_get_error_code();
+PNTR_API const char* pntr_get_error(void);
+PNTR_API pntr_error pntr_get_error_code(void);
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
@@ -520,10 +523,6 @@ PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_col
 PNTR_API void* pntr_load_memory(size_t size);
 PNTR_API void pntr_unload_memory(void* pointer);
 PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
-
-#ifdef PNTR_ENABLE_VARGS
-PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
-#endif
 
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
@@ -1107,7 +1106,7 @@ extern "C" {
  */
 pntr_error _pntr_error;
 
-PNTR_API const char* pntr_get_error() {
+PNTR_API const char* pntr_get_error(void) {
     switch (_pntr_error) {
         case PNTR_ERROR_NONE: return NULL;
         case PNTR_ERROR_INVALID_ARGS: return "Invalid arguments";
@@ -1121,7 +1120,7 @@ PNTR_API const char* pntr_get_error() {
     return NULL;
 }
 
-PNTR_API pntr_error pntr_get_error_code() {
+PNTR_API pntr_error pntr_get_error_code(void) {
     return _pntr_error;
 }
 
@@ -3211,11 +3210,28 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
 }
 
 #ifdef PNTR_ENABLE_VARGS
+/**
+ * Prints text on the given image, with the provided format.
+ *
+ * @param dst The image of which to print the text on.
+ * @param font The font to use when rendering the text.
+ * @param posX The position to print the text, starting from the top left on the X axis.
+ * @param posY The position to print the text, starting from the top left on the Y axis.
+ * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ * @param text The text to write. Must be NULL terminated.
+ * @param ... The arguments to pass for the format.
+ *
+ * @see printf
+ * @see PNTR_ENABLE_VARGS
+ *
+ * @note Requires \c PNTR_ENABLE_VARGS to be used.
+ */
 PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...) {
     #ifndef PNTR_DRAW_TEXT_EX_STRING_LENGTH
     #define PNTR_DRAW_TEXT_EX_STRING_LENGTH 256
     #endif
     char output[PNTR_DRAW_TEXT_EX_STRING_LENGTH];
+
     va_list arg_ptr;
     va_start(arg_ptr, text);
     vsprintf(output, text, arg_ptr);
