@@ -8,6 +8,7 @@
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
  * - PNTR_ENABLE_TTF: Enables TTF font loading
  * - PNTR_ENABLE_FILTER_SMOOTH: When resizing images, use stb_image, which is slower, but can look better.
+ * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
  * - PNTR_DISABLE_PNG: Disables loading/saving PNG images via cute_png
  * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_FILTER_SMOOTH, and PNTR_ENABLE_TTF.
@@ -519,6 +520,10 @@ PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_col
 PNTR_API void* pntr_load_memory(size_t size);
 PNTR_API void pntr_unload_memory(void* pointer);
 PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
+
+#ifdef PNTR_ENABLE_VARGS
+PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
+#endif
 
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
@@ -1072,6 +1077,12 @@ extern "C" {
         #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
     #endif  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
 #endif  // PNTR_ENABLE_FILTER_SMOOTH
+
+#ifdef PNTR_ENABLE_VARGS
+    // For pntr_draw_text_ex()
+    #include <stdarg.h> // va_list, va_start, va_end
+    #include <stdio.h> // vsprintf
+#endif
 
 /**
  * Retrieve the pixel at the given x,y coordinate of the image.
@@ -3173,7 +3184,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
 
     int x = posX;
     int y = posY;
-    int tallestCharacter;
+    int tallestCharacter = 0;
 
     const char * currentChar = text;
     while (currentChar != NULL && *currentChar != '\0') {
@@ -3198,6 +3209,21 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
         currentChar++;
     }
 }
+
+#ifdef PNTR_ENABLE_VARGS
+PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...) {
+    #ifndef PNTR_DRAW_TEXT_EX_STRING_LENGTH
+    #define PNTR_DRAW_TEXT_EX_STRING_LENGTH 256
+    #endif
+    char output[PNTR_DRAW_TEXT_EX_STRING_LENGTH];
+    va_list arg_ptr;
+    va_start(arg_ptr, text);
+    vsprintf(output, text, arg_ptr);
+    va_end(arg_ptr);
+
+    pntr_draw_text(dst, font, output, posX, posY, tint);
+}
+#endif
 
 /**
  * Measures the horizontal length of the text when rendered with the given font.

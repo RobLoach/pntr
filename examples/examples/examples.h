@@ -61,15 +61,7 @@ const char* examples_update(pntr_image* canvas) {
             break;
     }
 
-    char title[50];
-    if (currentExample == 0) {
-        sprintf(title, "%s", exampleTitle);
-    }
-    else {
-        sprintf(title, "%d/%d %s", currentExample, EXAMPLES_COUNT - 1, exampleTitle);
-    }
-
-    pntr_draw_text(canvas, font, title, 10, 10, PNTR_BLACK);
+    pntr_draw_text_ex(canvas, font, 10, 10, PNTR_BLACK, "%d/%d %s", currentExample, EXAMPLES_COUNT - 1, exampleTitle);
     pntr_draw_text(canvas, font, "CLICK or press LEFT/RIGHT to switch examples", 10, canvas->height - 18, PNTR_BLACK);
 
     return exampleTitle;
