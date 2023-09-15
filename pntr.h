@@ -509,14 +509,14 @@ PNTR_API pntr_color pntr_color_invert(pntr_color color);
 PNTR_API void pntr_image_color_invert(pntr_image* image);
 PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);
 PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold);
-PNTR_API void pntr_image_crop(pntr_image* image, int x, int y, int width, int height);
+PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height);
 PNTR_API void pntr_image_alpha_crop(pntr_image* image, float threshold);
 PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor);
 PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical);
 PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast);
 PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast);
 PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
-PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
+PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_filter filter);
 PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
@@ -3939,23 +3939,30 @@ PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float thresho
  *
  * @see pntr_image_from_image()
  */
-PNTR_API void pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
+PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
-        return;
+        return false;
     }
 
     pntr_image* newImage = pntr_image_from_image(image, x, y, width, height);
     if (newImage == NULL) {
-        return;
+        return false;
     }
 
-    PNTR_FREE(image->data);
+    // Clear the data if it isn't owned by another image.
+    if (!image->subimage) {
+        PNTR_FREE(image->data);
+    }
+
     image->data = newImage->data;
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
     image->subimage = false;
+
     PNTR_FREE(newImage);
+
+    return true;
 }
 
 /**
@@ -4120,29 +4127,35 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
  * @param offsetX How to offset the image once its canvas is resized. Use 0 if you like to keep the original image on the left.
  * @param offsetY How to offset the image once its canvas is resized. Use 0 if you like to keep the original image at the top.
  * @param fill The color to use for the background of the new image.
+ *
+ * @return True or false depending on if the image was resized correctly.
  */
-PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
+PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
     if (image == NULL) {
         pntr_set_error(PNTR_ERROR_INVALID_ARGS);
-        return;
+        return false;
     }
 
     pntr_image* newImage = pntr_gen_image_color(newWidth, newHeight, fill);
     if (newImage == NULL) {
-        return;
+        return false;
     }
 
     pntr_draw_image(newImage, image, offsetX, offsetY);
 
-    pntr_color* oldData = image->data;
+    // Clear the image if it's not a subimage
+    if (!image->subimage) {
+        PNTR_FREE(image->data);
+    }
+
     image->data = newImage->data;
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
     image->subimage = false;
 
-    PNTR_FREE(oldData);
     PNTR_FREE(newImage);
+    return true;
 }
 
 PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical) {
