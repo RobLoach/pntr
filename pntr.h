@@ -11,8 +11,8 @@
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
  * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_FILTER_SMOOTH, and PNTR_ENABLE_TTF.
- * - PNTR_LOAD_FILE: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
- * - PNTR_SAVE_FILE: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+ * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
+ * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
  * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
