@@ -9,11 +9,12 @@
  * - PNTR_ENABLE_TTF: Enables TTF font loading
  * - PNTR_ENABLE_FILTER_SMOOTH: When resizing images, use stb_image, which is slower, but can look better.
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
- * - PNTR_DISABLE_PNG: Disables loading/saving PNG images via cute_png
  * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_FILTER_SMOOTH, and PNTR_ENABLE_TTF.
  * - PNTR_LOAD_FILE: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
  * - PNTR_SAVE_FILE: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+ * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
+ * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
  * - PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using stb_truetype elsewhere.
  * - PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION: Skips defining STB_IMAGE_RESIZE_IMPLEMENTATION. Useful if you're using stb_image_resize elsewhere.
@@ -102,11 +103,13 @@
     #define PNTR_ENABLE_FILTER_SMOOTH
 
     /**
-     * Disables loading/saving PNG images, and will avoid loading cute_png.h.
+     * Overrides how saving an image to memory is handled.
      *
-     * @see pntr_load_image()
+     * @note Without this being defined, \c cute_png.h will be used.
+     *
+     * @see pntr_save_image_to_memory()
      */
-    #define PNTR_DISABLE_PNG
+    #define PNTR_SAVE_IMAGE_TO_MEMORY
 
     /**
      * Skips alpha blending when rendering images. Defining this will improve performance.
@@ -937,7 +940,7 @@ extern "C" {
 #endif  // PNTR_PIXELFORMAT
 
 // cute_png
-#ifndef PNTR_DISABLE_PNG
+#if !defined(PNTR_SAVE_IMAGE_TO_MEMORY) || !defined(PNTR_LOAD_IMAGE_FROM_MEMORY)
     #ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
         #define CUTE_PNG_IMPLEMENTATION
         #define CUTE_PNG_ALLOCA PNTR_MALLOC
@@ -986,7 +989,7 @@ extern "C" {
         #pragma GCC diagnostic pop
     #endif // defined(__GNUC__) || defined(__clang__)
 
-#endif // PNTR_DISABLE_PNG
+#endif // !defined(PNTR_SAVE_IMAGE_TO_MEMORY) || !defined(PNTR_LOAD_IMAGE_FROM_MEMORY)
 
 // STB TrueType
 #ifdef PNTR_ENABLE_TTF
@@ -2261,17 +2264,17 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
 /**
  * Load an image from memory buffer.
  *
- * Not supported if PNTR_DISABLE_PNG is defined.
+ * @note This can be overloaded by defining \c PNTR_LOAD_IMAGE_FROM_MEMORY .
  *
- * @see PNTR_DISABLE_PNG
+ * @see PNTR_LOAD_IMAGE_FROM_MEMORY
  */
 PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
     if (fileData == NULL || dataSize <= 0) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    #ifdef PNTR_DISABLE_PNG
-        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+    #if defined(PNTR_LOAD_IMAGE_FROM_MEMORY)
+        return PNTR_LOAD_IMAGE_FROM_MEMORY(fileData, dataSize);
     #else
         cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
         if (image.pix == NULL) {
@@ -3794,25 +3797,22 @@ PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSi
 /**
  * Gets a PNG representation of the given image in memory.
  *
- * If PNTR_DISABLE_PNG is defined, this function will not be supported.
+ * @note This method can be overloaded by defining \c PNTR_SAVE_IMAGE_TO_MEMORY .
  *
  * @param image The image to save to memory.
  * @param dataSize Where to put the resulting size of the image. Use NULL if you do not care about getting the file size.
  *
  * @return The image data in memory. This data must be freed when finished using.
  *
- * @see PNTR_DISABLE_PNG
+ * @see PNTR_SAVE_IMAGE_TO_MEMORY
  */
 PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
     if (image == NULL) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    #ifdef PNTR_DISABLE_PNG
-        if (dataSize != NULL) {
-            *dataSize = 0;
-        }
-        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+    #ifdef PNTR_SAVE_IMAGE_TO_MEMORY
+        return PNTR_SAVE_IMAGE_TO_MEMORY(image, dataSize);
     #else
         cp_image_t cpImage = PNTR_CLITERAL(cp_image_t) {
             .w = image->width,
@@ -3839,7 +3839,7 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned in
         cp_free_png(&cpImage);
 
         return (unsigned char*)png.data;
-    #endif  // PNTR_DISABLE_PNG
+    #endif  // PNTR_SAVE_IMAGE_TO_MEMORY
 }
 
 /**

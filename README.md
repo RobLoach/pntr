@@ -44,11 +44,12 @@ Add these defines prior to including `pntr.h` to modify how it functions.
 - `PNTR_ENABLE_DEFAULT_FONT`: Enables the default font
 - `PNTR_ENABLE_TTF`: Enables TTF font loading
 - `PNTR_ENABLE_FILTER_SMOOTH`: When resizing images, use stb_image, which is slower, but can look better.
-- `PNTR_DISABLE_PNG`: Disables loading/saving PNG images
 - `PNTR_DISABLE_ALPHABLEND`: Skips alpha blending when rendering images
 - `PNTR_DISABLE_MATH`: Disables dependency on C's math.h library
-- `PNTR_LOAD_FILE`: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
-- `PNTR_SAVE_FILE`: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+- `PNTR_LOAD_FILE`: Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`.
+- `PNTR_SAVE_FILE`: Callback to use when asked to save a file in `pntr_save_file()`. By default, will use `stdio.h`.
+- `PNTR_LOAD_IMAGE_FROM_MEMORY`: Callback to use when loading an image from memory in `pntr_load_image_from_memory()`. By default, will use [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h).
+- `PNTR_SAVE_IMAGE_TO_MEMORY`: Callback to use when saving an image to memory in `pntr_save_image_to_memory()`. By default, will use [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h).
 - `PNTR_NO_CUTE_PNG_IMPLEMENTATION`: Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
 - `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION`: Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
 - `PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION`: Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere.
