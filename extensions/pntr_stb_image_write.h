@@ -101,10 +101,9 @@ unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image
     return (unsigned char*)context.data;
 }
 
-#ifdef PNTR_SAVE_IMAGE_TO_MEMORY
-#undef PNTR_SAVE_IMAGE_TO_MEMORY
-#endif
+#ifndef PNTR_SAVE_IMAGE_TO_MEMORY
 #define PNTR_SAVE_IMAGE_TO_MEMORY pntr_stb_image_save_image_to_memory
+#endif
 
 #endif  // PNTR_STB_IMAGE_WRITE_IMPLEMENTATION
 #endif  // PNTR_IMPLEMENTATION

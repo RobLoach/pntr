@@ -81,11 +81,9 @@ pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const uns
     return output;
 }
 
-#ifdef PNTR_LOAD_IMAGE_FROM_MEMORY
-#undef PNTR_LOAD_IMAGE_FROM_MEMORY
-#endif
-
+#ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
 #define PNTR_LOAD_IMAGE_FROM_MEMORY pntr_cute_png_load_image_from_memory
+#endif
 
 unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize) {
     if (!(type == PNTR_IMAGE_TYPE_UNKNOWN || type == PNTR_IMAGE_TYPE_PNG)) {
@@ -119,11 +117,9 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_
     return (unsigned char*)png.data;
 }
 
-#ifdef PNTR_SAVE_IMAGE_TO_MEMORY
-#undef PNTR_SAVE_IMAGE_TO_MEMORY
-#endif
-
+#ifndef PNTR_SAVE_IMAGE_TO_MEMORY
 #define PNTR_SAVE_IMAGE_TO_MEMORY pntr_cute_png_save_image_to_memory
+#endif
 
 #endif  // PNTR_CUTE_PNG_IMPLEMENTATION
 #endif  // PNTR_IMPLEMENTATION

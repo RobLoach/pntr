@@ -16,6 +16,8 @@
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
  * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
+ * - PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips defining STB_IMAGE_IMPLEMENTATION. Useful if you're using stb_image elsewhere.
+ * - PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION: Skips defining STB_IMAGE_WRITE_IMPLEMENTATION. Useful if you're using stb_image_write elsewhere.
  * - PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using stb_truetype elsewhere.
  * - PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION: Skips defining STB_IMAGE_RESIZE_IMPLEMENTATION. Useful if you're using stb_image_resize elsewhere.
  *
@@ -2254,13 +2256,30 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
 }
 
 // Load stb_image or cute_png.
+
+//#define PNTR_STB_IMAGE
+//#define PNTR_CUTE_PNG
+
 #ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
-    #include "extensions/pntr_stb_image.h"
+    #ifdef PNTR_STB_IMAGE
+        #include "extensions/pntr_stb_image.h"
+    #elif defined(PNTR_CUTE_PNG)
+        #include "extensions/pntr_cute_png.h"
+    #else
+        // Default to stb_image.
+        #include "extensions/pntr_stb_image.h"
+    #endif
 #endif
 
 #ifndef PNTR_SAVE_IMAGE_TO_MEMORY
-    //#include "extensions/pntr_cute_png.h"
-    #include "extensions/pntr_stb_image_write.h"
+    #ifdef PNTR_STB_IMAGE
+        #include "extensions/pntr_stb_image_write.h"
+    #elif defined(PNTR_CUTE_PNG)
+        #include "extensions/pntr_cute_png.h"
+    #else
+        // Default to stb_image_write.
+        #include "extensions/pntr_stb_image_write.h"
+    #endif
 #endif
 
 /**
