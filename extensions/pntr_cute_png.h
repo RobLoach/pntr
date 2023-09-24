@@ -4,12 +4,12 @@
 /**
  * Load a pntr_image using cute_png.
  */
-pntr_image* pntr_cute_png_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize);
+pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize);
 
 /**
  * Save an image to memory using cutr_png.
  */
-unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
+unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize);
 
 #endif  // PNTR_CUTE_PNG_H__
 
@@ -65,7 +65,11 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, unsigned in
     #pragma GCC diagnostic pop
 #endif // defined(__GNUC__) || defined(__clang__)
 
-pntr_image* pntr_cute_png_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
+pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize) {
+    if (!(type == PNTR_IMAGE_TYPE_PNG || type == PNTR_IMAGE_TYPE_UNKNOWN)) {
+        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+    }
+
     cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
     if (image.pix == NULL) {
         return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
@@ -83,7 +87,11 @@ pntr_image* pntr_cute_png_load_image_from_memory(const unsigned char *fileData, 
 
 #define PNTR_LOAD_IMAGE_FROM_MEMORY pntr_cute_png_load_image_from_memory
 
-unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
+unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize) {
+    if (!(type == PNTR_IMAGE_TYPE_UNKNOWN || type == PNTR_IMAGE_TYPE_PNG)) {
+        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+    }
+
     cp_image_t cpImage = PNTR_CLITERAL(cp_image_t) {
         .w = image->width,
         .h = image->height

@@ -4,7 +4,7 @@
 /**
  * Load an image using stb_image.
  */
-pntr_image* pntr_stb_image_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize);
+pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize);
 
 #endif  // PNTR_STB_IMAGE_H__
 
@@ -18,10 +18,10 @@ pntr_image* pntr_stb_image_load_image_from_memory(const unsigned char *fileData,
     #define STBI_REALLOC PNTR_REALLOC
     #define STBI_FREE PNTR_FREE
     #define STBI_NO_HDR
-    //#define STBI_NO_FAILURE_STRINGS
+    #define STBI_NO_FAILURE_STRINGS
     #define STBI_NO_STDIO
     #define STBI_NO_SIMD
-    #define STBI_NO_JPEG
+    //#define STBI_NO_JPEG
     //#define STBI_NO_PNG
     #define STBI_NO_BMP
     #define STBI_NO_PSD
@@ -57,7 +57,10 @@ pntr_image* pntr_stb_image_load_image_from_memory(const unsigned char *fileData,
     #pragma GCC diagnostic pop
 #endif // defined(__GNUC__) || defined(__clang__)
 
-pntr_image* pntr_stb_image_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
+pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize) {
+    // We don't need to use the type, as stb_image will figure that out for us.
+    (void)type;
+
     int x, y, channels_in_file;
     int desired_channels = 4;
     stbi_uc *data = stbi_load_from_memory((stbi_uc const *)fileData, (int)dataSize, &x, &y, &channels_in_file, desired_channels);

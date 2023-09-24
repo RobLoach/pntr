@@ -4,7 +4,7 @@
 /**
  * Save an image using stb_image.
  */
-unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
+unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize);
 
 #endif  // PNTR_STB_IMAGE_WRITE_H__
 
@@ -44,23 +44,61 @@ unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, unsigned i
     #pragma GCC diagnostic pop
 #endif // defined(__GNUC__) || defined(__clang__)
 
-// Early declaration of the function we'll use.
-unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len);
+typedef struct pntr_stb_image_context {
+    unsigned int dataSize;
+    void* data;
+} pntr_stb_image_context;
 
-unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
+void pntr_stb_image_write_func(void *context, void *data, int size) {
+    pntr_stb_image_context* ctx = (pntr_stb_image_context*)context;
+    ctx->dataSize = (unsigned int)size;
+    if (size == 0) {
+        ctx->data = NULL;
+    }
+    else {
+        // Copy the stb_image data, because stb_image will free() it afterwards.
+        ctx->data = pntr_load_memory((size_t)size);
+        pntr_memory_copy(ctx->data, data, (size_t)size);
+    }
+}
+
+unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize) {
     const unsigned char* pixels = (const unsigned char*)pntr_image_to_pixelformat(image, NULL, PNTR_PIXELFORMAT_RGBA8888);
     if (pixels == NULL) {
         return NULL;
     }
 
-    int stride_bytes = pntr_get_pixel_data_size(image->width, 1, PNTR_PIXELFORMAT_RGBA8888);
-    int out_len;
-    unsigned char* output = stbi_write_png_to_mem(pixels, stride_bytes, image->width, image->height, 4, &out_len);
-    if (dataSize != NULL) {
-        *dataSize = (unsigned int)out_len;
+    pntr_stb_image_context context;
+    context.data = NULL;
+    context.dataSize = 0;
+
+    switch (type) {
+        case PNTR_IMAGE_TYPE_UNKNOWN:
+        case PNTR_IMAGE_TYPE_PNG: {
+            int stride_bytes = pntr_get_pixel_data_size(image->width, 1, PNTR_PIXELFORMAT_RGBA8888);
+            stbi_write_png_to_func(pntr_stb_image_write_func, &context, image->width, image->height, 4, pixels, stride_bytes);
+        }
+        break;
+        case PNTR_IMAGE_TYPE_JPG: {
+            stbi_write_jpg_to_func(pntr_stb_image_write_func, &context, image->width, image->height, 4, pixels, 100);
+        }
+        break;
+        case PNTR_IMAGE_TYPE_BMP: {
+            stbi_write_bmp_to_func(pntr_stb_image_write_func, &context, image->width, image->height, 4, pixels);
+        }
+        break;
+        default:
+            pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+        break;
     }
+
     pntr_unload_memory((void*)pixels);
-    return output;
+
+    if (dataSize != NULL) {
+        *dataSize = (unsigned int)context.dataSize;
+    }
+
+    return (unsigned char*)context.data;
 }
 
 #ifdef PNTR_SAVE_IMAGE_TO_MEMORY

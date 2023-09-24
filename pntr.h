@@ -405,6 +405,13 @@ typedef enum pntr_error {
     PNTR_ERROR_UNKNOWN = -6
 } pntr_error;
 
+typedef enum pntr_image_type {
+    PNTR_IMAGE_TYPE_UNKNOWN = 0,
+    PNTR_IMAGE_TYPE_PNG,
+    PNTR_IMAGE_TYPE_JPG,
+    PNTR_IMAGE_TYPE_BMP
+} pntr_image_type;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -471,10 +478,10 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite);
 PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat);
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName);
-PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
+PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize);
 PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
-PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
+PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char* fileData, unsigned int dataSize);
 PNTR_API pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API void* pntr_set_error(pntr_error error);
 PNTR_API const char* pntr_get_error(void);
@@ -526,6 +533,7 @@ PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_col
 PNTR_API void* pntr_load_memory(size_t size);
 PNTR_API void pntr_unload_memory(void* pointer);
 PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
+PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath);
 
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
@@ -752,7 +760,8 @@ extern "C" {
 #endif  // PNTR_MEMCPY
 
 #ifndef PNTR_MEMMOVE
-    #define PNTR_MEMMOVE(dest, src, n) PNTR_MEMCPY(dest, src, n)
+    #include <string.h>
+    #define PNTR_MEMMOVE(dest, src, n) memmove((dest), (src), (n))
 #endif  // PNTR_MEMCPY
 
 #ifndef PNTR_MEMSET
@@ -760,8 +769,21 @@ extern "C" {
     /**
      * Copies the character c (an unsigned char) to the first n characters of the string pointed to, by the argument str.
      */
-    #define PNTR_MEMSET memset
+    #define PNTR_MEMSET(str, c, n) memset((str), (c), (n))
 #endif  // PNTR_MEMSET
+
+#ifndef PNTR_STRSTR
+    #include <string.h>
+    /**
+     * Returns a pointer to the first occurrence of str2 in str1, or a null pointer if str2 is not part of str1.
+     *
+     * @param str1 (const char*) C string to be scanned.
+     * @param str2 (const char*) containing the sequence of characters to match.
+     *
+     * @return A pointer to the first occurrence in str1 of the entire sequence of characters specified in str2, or a null pointer if the sequence is not present in str1.
+     */
+    #define PNTR_STRSTR(str1, str2) strstr((str1), (str2))
+#endif
 
 #ifndef PNTR_PI
     #define PNTR_PI 3.1415926535897932f
@@ -2213,6 +2235,24 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     return PNTR_PIXEL(image, x, y);
 }
 
+PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
+    if (filePath == NULL) {
+        return PNTR_IMAGE_TYPE_UNKNOWN;
+    }
+
+    if (PNTR_STRSTR(filePath, ".png") != NULL) {
+        return PNTR_IMAGE_TYPE_PNG;
+    }
+    if (PNTR_STRSTR(filePath, ".bmp") != NULL) {
+        return PNTR_IMAGE_TYPE_BMP;
+    }
+    if (PNTR_STRSTR(filePath, ".jpg") != NULL) {
+        return PNTR_IMAGE_TYPE_JPG;
+    }
+
+    return PNTR_IMAGE_TYPE_UNKNOWN;
+}
+
 // Load stb_image or cute_png.
 #ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
     #include "extensions/pntr_stb_image.h"
@@ -2228,14 +2268,20 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
  *
  * @note This can be overloaded by defining \c PNTR_LOAD_IMAGE_FROM_MEMORY .
  *
+ * @param type The type of image to load.
+ * @param fileData The data of the file to be loaded.
+ * @param dataSize The size of the file data.
+ *
+ * @return A newly loaded image, or NULL on failure.
+ *
  * @see PNTR_LOAD_IMAGE_FROM_MEMORY
  */
-PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
+PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize) {
     if (fileData == NULL || dataSize <= 0) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    return PNTR_LOAD_IMAGE_FROM_MEMORY(fileData, dataSize);
+    return PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize);
 }
 
 /**
@@ -2256,7 +2302,8 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
         return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
     }
 
-    pntr_image* output = pntr_load_image_from_memory(fileData, bytesRead);
+    pntr_image_type type = pntr_get_file_image_type(fileName);
+    pntr_image* output = pntr_load_image_from_memory(type, fileData, bytesRead);
     pntr_unload_file((unsigned char*)fileData);
 
     return output;
@@ -2836,7 +2883,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
+    pntr_image* image = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, dataSize);
     if (image == NULL) {
         return NULL;
     }
@@ -2971,7 +3018,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
+    pntr_image* image = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, dataSize);
     if (image == NULL) {
         return NULL;
     }
@@ -3750,20 +3797,25 @@ PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSi
  * @note This method can be overloaded by defining \c PNTR_SAVE_IMAGE_TO_MEMORY .
  *
  * @param image The image to save to memory.
+ * @param type The type of the image. Use PNTR_IMAGE_TYPE_UNKNOWN if unknown. PNTR_IMAGE_TYPE_PNG, PNTR_IMAGE_TYPE_JPG, etc.
  * @param dataSize Where to put the resulting size of the image. Use NULL if you do not care about getting the file size.
  *
  * @return The image data in memory. This data must be freed when finished using. NULL on failure.
  *
  * @see PNTR_SAVE_IMAGE_TO_MEMORY
+ * @see PNTR_IMAGE_TYPE_PNG
+ * @see PNTR_IMAGE_TYPE_JPG
+ * @see PNTR_IMAGE_TYPE_UNKNOWN
  */
-PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
+PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize) {
     if (image == NULL) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    return PNTR_SAVE_IMAGE_TO_MEMORY(image, dataSize);
+    return PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize);
 }
 
+#include <stdio.h>
 /**
  * Saves an image to the file system.
  *
@@ -3777,7 +3829,8 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned in
  */
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
     unsigned int dataSize;
-    unsigned char* data = pntr_save_image_to_memory(image, &dataSize);
+    pntr_image_type type = pntr_get_file_image_type(fileName);
+    unsigned char* data = pntr_save_image_to_memory(image, type, &dataSize);
     if (data == NULL) {
         return false;
     }
