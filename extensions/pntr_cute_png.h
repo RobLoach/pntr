@@ -1,7 +1,14 @@
 #ifndef PNTR_CUTE_PNG_H__
 #define PNTR_CUTE_PNG_H__
 
+/**
+ * Load a pntr_image using cute_png.
+ */
 pntr_image* pntr_cute_png_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize);
+
+/**
+ * Save an image to memory using cutr_png.
+ */
 unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
 
 #endif  // PNTR_CUTE_PNG_H__

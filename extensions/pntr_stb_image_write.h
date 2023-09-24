@@ -1,6 +1,9 @@
 #ifndef PNTR_STB_IMAGE_WRITE_H__
 #define PNTR_STB_IMAGE_WRITE_H__
 
+/**
+ * Save an image using stb_image.
+ */
 unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
 
 #endif  // PNTR_STB_IMAGE_WRITE_H__
@@ -40,6 +43,9 @@ unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, unsigned i
 #if defined(__GNUC__) || defined(__clang__)
     #pragma GCC diagnostic pop
 #endif // defined(__GNUC__) || defined(__clang__)
+
+// Early declaration of the function we'll use.
+unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len);
 
 unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
     const unsigned char* pixels = (const unsigned char*)pntr_image_to_pixelformat(image, NULL, PNTR_PIXELFORMAT_RGBA8888);

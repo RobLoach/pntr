@@ -1,6 +1,9 @@
 #ifndef PNTR_STB_IMAGE_H__
 #define PNTR_STB_IMAGE_H__
 
+/**
+ * Load an image using stb_image.
+ */
 pntr_image* pntr_stb_image_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize);
 
 #endif  // PNTR_STB_IMAGE_H__
