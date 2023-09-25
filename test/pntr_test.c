@@ -97,6 +97,16 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_get_file_image_type()", {
+        EQUALS(pntr_get_file_image_type("myimage.png"), PNTR_IMAGE_TYPE_PNG);
+        EQUALS(pntr_get_file_image_type("my/path/ima.ge.png"), PNTR_IMAGE_TYPE_PNG);
+        EQUALS(pntr_get_file_image_type("myimage.jpg"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("myimage.bmp"), PNTR_IMAGE_TYPE_BMP);
+        EQUALS(pntr_get_file_image_type("myimage.exe"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type(NULL), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type(""), PNTR_IMAGE_TYPE_UNKNOWN);
+    });
+
     IT("pntr_load_image()", {
         pntr_image* image = pntr_load_image("NotFoundImage.png");
         EQUALS(image, NULL);
@@ -114,13 +124,13 @@ MODULE(pntr, {
         unsigned int bytes;
         unsigned char* fileData = pntr_load_file("resources/image.png", &bytes);
 
-        pntr_image* image = pntr_load_image_from_memory(fileData, bytes);
+        pntr_image* image = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
         NEQUALS(image, NULL);
         EQUALS(image->width, 128);
         EQUALS(image->height, 128);
 
-        pntr_unload_file(fileData);
         pntr_unload_image(image);
+        pntr_unload_file(fileData);
     });
 
     IT("pntr_load_font_bmf(), pntr_unload_font(), pntr_draw_text()", {
