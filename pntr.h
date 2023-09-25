@@ -15,6 +15,7 @@
  * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
  * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
+ * - PNTR_ENABLE_JPEG: When available, will enable JPEG image loading. By default, is disabled.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
  * - PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips defining STB_IMAGE_IMPLEMENTATION. Useful if you're using stb_image elsewhere.
  * - PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION: Skips defining STB_IMAGE_WRITE_IMPLEMENTATION. Useful if you're using stb_image_write elsewhere.
@@ -3834,7 +3835,6 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
     return PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize);
 }
 
-#include <stdio.h>
 /**
  * Saves an image to the file system.
  *
