@@ -546,143 +546,137 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 }
 #endif
 
-#if defined(__cplusplus)
-    #define PNTR_CLITERAL(type) type
-#else
-    #define PNTR_CLITERAL(type) (type)
-#endif
-
 #ifndef PNTR_LIGHTGRAY
 /**
  * Light gray.
  */
-#define PNTR_LIGHTGRAY  PNTR_CLITERAL(pntr_color) { .r = 200, .g = 200, .b = 200, .a = 255 }
+#define PNTR_LIGHTGRAY  pntr_new_color(200, 200, 200, 255)
 #endif
 #ifndef PNTR_GRAY
 /**
  * Gray.
  */
-#define PNTR_GRAY       PNTR_CLITERAL(pntr_color) { .r = 130, .g = 130, .b = 130, .a = 255 }
+#define PNTR_GRAY       pntr_new_color(130, 130, 130, 255)
 #endif
 #ifndef PNTR_DARKGRAY
 /**
  * Dark gray.
  */
-#define PNTR_DARKGRAY   PNTR_CLITERAL(pntr_color) { .r = 80,  .g = 80,  .b = 80,  .a = 255 }
+#define PNTR_DARKGRAY   pntr_new_color(80, 80,  80, 255)
 #endif
 #ifndef PNTR_YELLOW
 /**
  * Yellow.
  */
-#define PNTR_YELLOW     PNTR_CLITERAL(pntr_color) { .r = 253, .g = 249, .b = 0,   .a = 255 }
+#define PNTR_YELLOW     pntr_new_color(253, 249, 0, 255)
 #endif
 #ifndef PNTR_GOLD
 /**
  * Gold.
  */
-#define PNTR_GOLD       PNTR_CLITERAL(pntr_color) { .r = 255, .g = 203, .b = 0,   .a = 255 }
+#define PNTR_GOLD       pntr_new_color(255, 203, 0, 255)
 #endif
 #ifndef PNTR_ORANGE
 /**
  * Orange.
  */
-#define PNTR_ORANGE     PNTR_CLITERAL(pntr_color) { .r = 255, .g = 161, .b = 0,   .a = 255 }
+#define PNTR_ORANGE     pntr_new_color(255, 161, 0, 255)
 #endif
 #ifndef PNTR_PINK
 /**
  * Pink.
  */
-#define PNTR_PINK       PNTR_CLITERAL(pntr_color) { .r = 255, .g = 109, .b = 194, .a = 255 }
+#define PNTR_PINK       pntr_new_color(255, 109, 194, 255)
 #endif
 #ifndef PNTR_RED
 /**
  * Red.
  */
-#define PNTR_RED        PNTR_CLITERAL(pntr_color) { .r = 230, .g = 41,  .b = 55,  .a = 255 }
+#define PNTR_RED        pntr_new_color(230, 41, 55, 255)
 #endif
 #ifndef PNTR_MAROON
 /**
  * Maroon.
  */
-#define PNTR_MAROON     PNTR_CLITERAL(pntr_color) { .r = 190, .g = 33,  .b = 55,  .a = 255 }
+#define PNTR_MAROON     pntr_new_color(190, 33, 55, 255)
 #endif
 #ifndef PNTR_GREEN
 /**
  * Green.
  */
-#define PNTR_GREEN      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 228, .b = 48,  .a = 255 }
+#define PNTR_GREEN      pntr_new_color(0, 228, 48, 255)
 #endif
 #ifndef PNTR_LIME
 /**
  * Lime.
  */
-#define PNTR_LIME       PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 158, .b = 47,  .a = 255 }
+#define PNTR_LIME       pntr_new_color(0, 158, 47, 255)
 #endif
 #ifndef PNTR_DARKGREEN
 /**
  * Dark green.
  */
-#define PNTR_DARKGREEN  PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 117, .b = 44,  .a = 255 }
+#define PNTR_DARKGREEN  pntr_new_color(0, 117, 44, 255)
 #endif
 #ifndef PNTR_SKYBLUE
 /**
  * Sky blue.
  */
-#define PNTR_SKYBLUE    PNTR_CLITERAL(pntr_color) { .r = 102, .g = 191, .b = 255, .a = 255 }
+#define PNTR_SKYBLUE    pntr_new_color(102, 191, 255, 255)
 #endif
 #ifndef PNTR_BLUE
 /**
  * Blue.
  */
-#define PNTR_BLUE       PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 121, .b = 241, .a = 255 }
+#define PNTR_BLUE       pntr_new_color(0, 121, 241, 255)
 #endif
 #ifndef PNTR_DARKBLUE
 /**
  * Dark blue.
  */
-#define PNTR_DARKBLUE   PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 82,  .b = 172, .a = 255 }
+#define PNTR_DARKBLUE   pntr_new_color(0, 82, 172, 255)
 #endif
 #ifndef PNTR_PURPLE
 /**
  * Purple.
  */
-#define PNTR_PURPLE     PNTR_CLITERAL(pntr_color) { .r = 200, .g = 122, .b = 255, .a = 255 }
+#define PNTR_PURPLE     pntr_new_color(200, 122, 255, 255)
 #endif
 #ifndef PNTR_VIOLET
 /**
  * Violet.
  */
-#define PNTR_VIOLET     PNTR_CLITERAL(pntr_color) { .r = 135, .g = 60,  .b = 190, .a = 255 }
+#define PNTR_VIOLET     pntr_new_color(135, 60, 190, 255)
 #endif
 #ifndef PNTR_DARKPURPLE
 /**
  * Dark purple.
  */
-#define PNTR_DARKPURPLE PNTR_CLITERAL(pntr_color) { .r = 112, .g = 31,  .b = 126, .a = 255 }
+#define PNTR_DARKPURPLE pntr_new_color(112, 31, 126, 255)
 #endif
 #ifndef PNTR_BEIGE
 /**
  * Beige.
  */
-#define PNTR_BEIGE      PNTR_CLITERAL(pntr_color) { .r = 211, .g = 176, .b = 131, .a = 255 }
+#define PNTR_BEIGE      pntr_new_color(211, 176, 131, 255)
 #endif
 #ifndef PNTR_BROWN
 /**
  * Brown.
  */
-#define PNTR_BROWN      PNTR_CLITERAL(pntr_color) { .r = 127, .g = 106, .b = 79,  .a = 255 }
+#define PNTR_BROWN      pntr_new_color(127, 106, 79, 255)
 #endif
 #ifndef PNTR_DARKBROWN
 /**
  * Dark brown.
  */
-#define PNTR_DARKBROWN  PNTR_CLITERAL(pntr_color) { .r = 76,  .g = 63,  .b = 47,  .a = 255 }
+#define PNTR_DARKBROWN  pntr_new_color(76, 63, 47, 255)
 #endif
 #ifndef PNTR_WHITE
 /**
  * White.
  */
-#define PNTR_WHITE      PNTR_CLITERAL(pntr_color) { .r = 255, .g = 255, .b = 255, .a = 255 }
+#define PNTR_WHITE      pntr_new_color(255, 255, 255, 255)
 #endif
 
 #ifndef PNTR_WHITE_DATA
@@ -692,32 +686,32 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
  * @private
  * @internal
  */
-#define PNTR_WHITE_DATA 4294967295
+#define PNTR_WHITE_DATA 4294967295 // PNTR_WHITE.data
 #endif  // PNTR_WHITE_DATA
 
 #ifndef PNTR_BLACK
 /**
  * Black.
  */
-#define PNTR_BLACK      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 255 }
+#define PNTR_BLACK      pntr_new_color(0, 0, 0, 255)
 #endif
 #ifndef PNTR_BLANK
 /**
  * Blank, or transparent.
  */
-#define PNTR_BLANK      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 0   }
+#define PNTR_BLANK      pntr_new_color(0, 0, 0, 0)
 #endif
 #ifndef PNTR_MAGENTA
 /**
  * Magenta.
  */
-#define PNTR_MAGENTA    PNTR_CLITERAL(pntr_color) { .r = 255, .g = 0,   .b = 255, .a = 255 }
+#define PNTR_MAGENTA    pntr_new_color(255, 0, 255, 255)
 #endif
 #ifndef PNTR_RAYWHITE
 /**
  * The white used in raylib.
  */
-#define PNTR_RAYWHITE   PNTR_CLITERAL(pntr_color) { .r = 245, .g = 245, .b = 245, .a = 255 }
+#define PNTR_RAYWHITE   pntr_new_color(245, 245, 245, 255)
 #endif
 
 #endif  // PNTR_H__
@@ -942,6 +936,10 @@ extern "C" {
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
     #include <stdio.h> // FILE, fopen, fread
 #endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
+
+#ifndef PNTR_CLITERAL
+#define PNTR_CLITERAL(type) (type)
+#endif
 
 #ifndef PNTR_MAX
     /**
