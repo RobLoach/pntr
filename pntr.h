@@ -683,10 +683,12 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 /**
  * The integer representation of PNTR_WHITE.
  *
+ * @note This is the same as \c PNTR_WHITE.data .
+ *
  * @private
  * @internal
  */
-#define PNTR_WHITE_DATA 4294967295 // PNTR_WHITE.data
+#define PNTR_WHITE_DATA 4294967295
 #endif  // PNTR_WHITE_DATA
 
 #ifndef PNTR_BLACK
