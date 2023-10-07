@@ -4,7 +4,6 @@
 
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
-#define PNTR_ENABLE_FILTER_SMOOTH
 //#define PNTR_DISABLE_MATH
 
 #define PNTR_IMPLEMENTATION
@@ -203,16 +202,6 @@ MODULE(pntr, {
             EQUALS(resized->height, 100);
             pntr_unload_image(resized);
         });
-
-        #ifdef PNTR_ENABLE_FILTER_SMOOTH
-            IT("pntr_image_resize(PNTR_FILTER_SMOOTH)", {
-                pntr_image* resized = pntr_image_resize(image, 800, 600, PNTR_FILTER_SMOOTH);
-                NEQUALS(resized, NULL);
-                EQUALS(resized->width, 800);
-                EQUALS(resized->height, 600);
-                pntr_unload_image(resized);
-            });
-        #endif  // PNTR_ENABLE_FILTER_SMOOTH
 
         IT("pntr_image_resize(PNTR_FILTER_BILINEAR)", {
             pntr_image* resized = pntr_image_resize(image, 400, 300, PNTR_FILTER_BILINEAR);
@@ -470,7 +459,7 @@ MODULE(pntr, {
         });
 
         IT("pntr_image_rotate(image, 180.0f)", {
-            pntr_image* rotated = pntr_image_rotate(image, 180.0f, PNTR_FILTER_SMOOTH);
+            pntr_image* rotated = pntr_image_rotate(image, 180.0f, PNTR_FILTER_BILINEAR);
             NEQUALS(rotated, NULL);
             EQUALS(rotated->width, image->width);
             EQUALS(rotated->height, image->height);
