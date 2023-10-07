@@ -3241,6 +3241,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
  * @param maxWidth The maximum width for each line.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
  */
+#include <stdio.h>
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
         return;
@@ -3264,9 +3265,10 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
         else if (text[i] == ' ') {
             // Measure the width of the line from the previous word.
             if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x > maxWidth) {
+
                 // Have the space before the line end become a new line.
                 newText[lastSpace] = '\n';
-                currentLineLength = i - lastSpace;
+                currentLineLength = i - lastSpace - 1; // -1 to remove the active space from the line count.
             }
             lastSpace = i;
         }
