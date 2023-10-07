@@ -464,6 +464,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
+PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
 #ifdef PNTR_ENABLE_VARGS
 PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
 #endif
@@ -507,7 +508,7 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
-PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
+PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength);
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint);
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
@@ -3229,6 +3230,56 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
     }
 }
 
+/**
+ * Draws word-wrapped text on the given image.
+ *
+ * @param dst The image of which to print the text on.
+ * @param font The font to use when rendering the text.
+ * @param text The text to write. Must be NULL terminated.
+ * @param posX The position to print the text, starting from the top left on the X axis.
+ * @param posY The position to print the text, starting from the top left on the Y axis.
+ * @param maxWidth The maximum width for each line.
+ * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ */
+PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint) {
+    if (dst == NULL || font == NULL || text == NULL) {
+        return;
+    }
+
+    // Copy the string, along with its null terminator
+    size_t length = 0;
+    while (text[length++] != '\0');
+    char* newText = pntr_load_memory(length + 1);
+    pntr_memory_copy((void*)newText, (void*)text, length + 1);
+
+    // Go through and figure out where new lines should be placed in the string.
+    int currentLineLength = 0;
+    int i = 0;
+    int lastSpace = 0;
+    while (text[i] != '\0') {
+        if(text[i] == '\n') {
+            currentLineLength = 0;
+            lastSpace = i;
+        }
+        else if (text[i] == ' ') {
+            // Measure the width of the line from the previous word.
+            if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x > maxWidth) {
+                // Have the space before the line end become a new line.
+                newText[lastSpace] = '\n';
+                currentLineLength = i - lastSpace;
+            }
+            lastSpace = i;
+        }
+
+        currentLineLength++;
+        i++;
+    }
+
+    // Display the new text with the newlines, and clean up the memory usage.
+    pntr_draw_text(dst, font, newText, posX, posY, tint);
+    pntr_unload_memory((void*)newText);
+}
+
 #ifdef PNTR_ENABLE_VARGS
 /**
  * Prints text on the given image, with the provided format.
@@ -3270,10 +3321,19 @@ PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int 
  * @return The amount of pixels the text is when rendered with the font.
  */
 PNTR_API inline int pntr_measure_text(pntr_font* font, const char* text) {
-    return pntr_measure_text_ex(font, text).x;
+    return pntr_measure_text_ex(font, text, 0).x;
 }
 
-PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
+/**
+ * Measures the width and height of the given text when rendered with the font.
+ *
+ * @param font The font to use when rendering the text.
+ * @param text The text to measure the length of.
+ * @param textLength (Optional) How long the string to measure is from text. Provide 0 to determine the string length with a null character.
+ *
+ * @return A vector containing the width and height of the text when rendered by the font.
+ */
+PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength) {
     if (font == NULL || text == NULL) {
         return PNTR_CLITERAL(pntr_vector){0, 0};
     }
@@ -3282,8 +3342,9 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
     int currentX = 0;
     int currentY = 0;
     const char * currentChar = text;
+    int index = 0;
 
-    while (currentChar != NULL && *currentChar != '\0') {
+    while (currentChar != NULL && *currentChar != '\0' && (textLength <= 0 || index < textLength)) {
         if (*currentChar == '\n') {
             output.y += currentY;
             currentX = 0;
@@ -3304,7 +3365,9 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
                 }
             }
         }
+
         currentChar++;
+        index++;
     }
 
     // Has at least one line.
@@ -3323,7 +3386,7 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
  * @return A new image with text on it, using the given font.
  */
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint) {
-    pntr_vector size = pntr_measure_text_ex(font, text);
+    pntr_vector size = pntr_measure_text_ex(font, text, 0);
     if (size.x <= 0 || size.y <= 0) {
         return NULL;
     }
