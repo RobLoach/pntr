@@ -28,7 +28,7 @@ const char* example_image_resize_update(pntr_image* canvas) {
     pntr_draw_image_scaled(canvas, originalImage,
         canvas->width / 2 + canvas->width / 4 - originalImage->width * size / 2.0f,
         canvas->height / 2 - originalImage->height * size / 2.0f,
-        size, size, 0.0f, 0.0f, PNTR_FILTER_SMOOTH);
+        size, size, 0.0f, 0.0f, PNTR_FILTER_BILINEAR);
 
     return "Image Resize";
 }

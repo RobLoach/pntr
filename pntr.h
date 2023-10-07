@@ -7,10 +7,9 @@
  * - PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
  * - PNTR_ENABLE_TTF: Enables TTF font loading
- * - PNTR_ENABLE_FILTER_SMOOTH: When resizing images, use stb_image, which is slower, but can look better.
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
  * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
- * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_FILTER_SMOOTH, and PNTR_ENABLE_TTF.
+ * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_TTF.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
  * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
@@ -99,13 +98,6 @@
     #define PNTR_ENABLE_TTF
 
     /**
-     * When resizing images, use stb_image, which is slower, but can look better.
-     *
-     * @see PNTR_FILTER_SMOOTH
-     */
-    #define PNTR_ENABLE_FILTER_SMOOTH
-
-    /**
      * Overrides how saving an image to memory is handled.
      *
      * @note Without this being defined, \c cute_png.h will be used.
@@ -124,9 +116,8 @@
     /**
      * Will disable pntr's dependency on C's math.h library.
      *
-     * This will disable PNTR_ENABLE_FILTER_SMOOTH and PNTR_ENABLE_TTF.
+     * This will disable PNTR_ENABLE_TTF.
      *
-     * @see PNTR_ENABLE_FILTER_SMOOTH
      * @see PNTR_ENABLE_TTF
      */
     #define PNTR_DISABLE_MATH
@@ -386,16 +377,7 @@ typedef enum pntr_filter {
      *
      * @see pntr_color_bilinear_interpolate()
      */
-    PNTR_FILTER_BILINEAR,
-
-    /**
-     * The smooth filter will use stb_image_resize, which combines a number of different filtering algorithms.
-     *
-     * If the smooth filter is not available with PNTR_DISABLE_FILTER_SMOOTH, will fall back to PNTR_FILTER_BILINEAR.
-     *
-     * @see PNTR_DISABLE_FILTER_SMOOTH
-     */
-    PNTR_FILTER_SMOOTH
+    PNTR_FILTER_BILINEAR
 } pntr_filter;
 
 typedef enum pntr_error {
@@ -800,10 +782,6 @@ extern "C" {
         // TTF requires math.h
         #undef PNTR_ENABLE_TTF
     #endif
-    #ifdef PNTR_ENABLE_FILTER_SMOOTH
-        // stb_image_resize requires math.h
-        #undef PNTR_ENABLE_FILTER_SMOOTH
-    #endif
 
     #ifndef PNTR_SINF
         /**
@@ -1015,47 +993,6 @@ extern "C" {
         #pragma GCC diagnostic pop
     #endif  // defined(__GNUC__) || defined(__clang__)
 #endif  // PNTR_ENABLE_TTF
-
-// STB Image Resize
-#ifdef PNTR_ENABLE_FILTER_SMOOTH
-    #ifdef PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-        #ifdef STB_IMAGE_RESIZE_IMPLEMENTATION
-            #undef STB_IMAGE_RESIZE_IMPLEMENTATION
-        #endif  // STB_IMAGE_RESIZE_IMPLEMENTATION
-        // Just declare the function that we need from stb_image_resize.
-        int stbir_resize_uint8_srgb(const unsigned char *input_pixels, int input_w, int input_h, int input_stride_in_bytes,
-            unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-            int num_channels, int alpha_channel, int flags);
-    #else  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-        #define STB_IMAGE_RESIZE_IMPLEMENTATION
-        #ifndef STBIR_MALLOC
-            #define STBIR_MALLOC(size, context) ((void)(context), PNTR_MALLOC(size))
-        #endif  // STBIR_MALLOC
-        #ifndef STBIR_FREE
-            #define STBIR_FREE(ptr, context) ((void)(context), PNTR_FREE(ptr))
-        #endif  // STBIR_FREE
-        #ifndef STBIR_ASSERT
-            #define STBIR_ASSERT(val) ((void)(val))
-        #endif  // STBIR_ASSERT
-
-        #if defined(__GNUC__) || defined(__clang__)
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wpragmas"
-            #pragma GCC diagnostic ignored "-Wunknown-pragmas"
-            #pragma GCC diagnostic ignored "-Wsign-conversion"
-            #pragma GCC diagnostic ignored "-Wconversion"
-            #pragma GCC diagnostic ignored "-Wunused-parameter"
-        #endif  // defined(__GNUC__) || defined(__clang__)
-
-        #include "external/stb_image_resize.h"
-
-        #if defined(__GNUC__) || defined(__clang__)
-            #pragma GCC diagnostic pop
-        #endif  // defined(__GNUC__) || defined(__clang__)
-
-        #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-    #endif  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-#endif  // PNTR_ENABLE_FILTER_SMOOTH
 
 #ifdef PNTR_ENABLE_VARGS
     // For pntr_draw_text_ex()
@@ -2533,7 +2470,6 @@ PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float sca
  * @return The newly resized image.
  *
  * @see pntr_image_scale()
- * @see PNTR_ENABLE_FILTER_SMOOTH
  */
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
     if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0) {
@@ -2545,40 +2481,7 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
         return NULL;
     }
 
-    #ifndef PNTR_ENABLE_FILTER_SMOOTH
-        if (filter == PNTR_FILTER_SMOOTH) {
-            filter = PNTR_FILTER_BILINEAR;
-        }
-    #endif
-
     switch (filter) {
-        case PNTR_FILTER_SMOOTH: {
-            #ifndef PNTR_ENABLE_FILTER_SMOOTH
-                return NULL;
-            #else
-                int result = stbir_resize_uint8_srgb(
-                    (const unsigned char*)image->data,
-                    image->width, image->height,
-                    0, // Input stride
-                    (unsigned char*)output->data,
-                    output->width, output->height,
-                    0, // Output stride
-                    4, // Number of channels
-                    // TODO: pntr_image_resize() - Is the alpha channel always 3?
-                    #if defined(PNTR_PIXELFORMAT_RGBA)
-                        3, // Alpha channel
-                    #elif defined(PNTR_PIXELFORMAT_ARGB)
-                        3, // Alpha channel
-                    #endif
-                    0);
-
-                if (result == 0) {
-                    pntr_unload_image(output);
-                    return pntr_set_error(PNTR_ERROR_UNKNOWN);
-                }
-            #endif
-        }
-        break;
         case PNTR_FILTER_BILINEAR: {
             float xRatio = (float)image->width / (float)newWidth;
             float yRatio = (float)image->height / (float)newHeight;
@@ -4224,7 +4127,6 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
     switch (filter) {
-        case PNTR_FILTER_SMOOTH:
         case PNTR_FILTER_BILINEAR: {
             float xRatio = (float)srcRect.width / (float)newWidth;
             float yRatio = (float)srcRect.height / (float)newHeight;
