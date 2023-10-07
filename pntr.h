@@ -3258,14 +3258,9 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     int i = 0;
     int lastSpace = 0;
     while (text[i] != '\0') {
-        if(text[i] == '\n') {
-            currentLineLength = 0;
-            lastSpace = i;
-        }
-        else if (text[i] == ' ') {
+        if (text[i] == ' ' || text[i] == '\n') {
             // Measure the width of the line from the previous word.
             if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x > maxWidth) {
-
                 // Have the space before the line end become a new line.
                 newText[lastSpace] = '\n';
                 currentLineLength = i - lastSpace - 1; // -1 to remove the active space from the line count.
