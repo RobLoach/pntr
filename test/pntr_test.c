@@ -141,7 +141,7 @@ MODULE(pntr, {
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
         NEQUALS(image, NULL);
         pntr_draw_text(image, font, "Hello World!", 10, 10, PNTR_WHITE);
-        NEQUALS(image, NULL);
+        pntr_draw_text_wrapped(image, font, "The quick brown fox jumped over the lazy dog.", 10, 10, 100, PNTR_BLUE);
 
         pntr_unload_image(image);
         pntr_unload_font(font);
@@ -150,7 +150,7 @@ MODULE(pntr, {
     IT("pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()", {
         pntr_font* font = pntr_load_font_bmf("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
         GREATER(pntr_measure_text(font, "Hello World!"), 50);
-        pntr_vector size = pntr_measure_text_ex(font, "Hello World!");
+        pntr_vector size = pntr_measure_text_ex(font, "Hello World!", 0);
         GREATER(size.x, 50);
         EQUALS(size.y, font->atlas->height);
 
@@ -160,7 +160,7 @@ MODULE(pntr, {
         EQUALS(textImage->height, size.y);
         pntr_unload_image(textImage);
 
-        size = pntr_measure_text_ex(font, "On\nNew\nLines");
+        size = pntr_measure_text_ex(font, "On\nNew\nLines", 0);
         EQUALS(size.y, font->atlas->height * 3);
 
         pntr_unload_font(font);
@@ -271,7 +271,7 @@ MODULE(pntr, {
             GREATER(canvas->height, 10);
 
             IT("pntr_measure_text_ex()", {
-                pntr_vector size = pntr_measure_text_ex(font, "Hello!!");
+                pntr_vector size = pntr_measure_text_ex(font, "Hello!!", 0);
                 GREATER(size.x, 20);
                 GREATER(size.y, 5);
             });

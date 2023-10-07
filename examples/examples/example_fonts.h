@@ -47,10 +47,8 @@ const char* example_fonts_update(pntr_image* canvas) {
 
     // TTF Font
     const char* ttfText = "TTF Font Example";
-    pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText);
-
-    pntr_draw_rectangle_fill(canvas, 200, 50, textSize.x, textSize.y, PNTR_SKYBLUE);
-    pntr_draw_text(canvas, ttfFont, ttfText, 200, 50, PNTR_DARKPURPLE);
+    pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText, 0);
+    pntr_draw_text(canvas, ttfFont, ttfText, 200, 20, PNTR_DARKPURPLE);
 
     // Show the Resized Font
     pntr_draw_text(canvas, resizedFont, "Blue Text", 10, 65, PNTR_BLUE);
@@ -58,6 +56,10 @@ const char* example_fonts_update(pntr_image* canvas) {
     // Display the canvas
     // pntr_draw_rectangle_fill(canvas, 10, 80, ttfFont->atlas->width, ttfFont->atlas->height, PNTR_GRAY);
     // pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
+
+    // Word-wrapped
+    pntr_draw_rectangle(canvas, 225, 50, 150, 60, 1, PNTR_BLUE);
+    pntr_draw_text_wrapped(canvas, bmFont, "The awesome brown fox jumps over the lazy dog.", 225, 50, 150, PNTR_RED);
 
     return "Fonts";
 }
