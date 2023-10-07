@@ -26,14 +26,17 @@ MODULE(pntr, {
         pntr_unload_memory(memory);
     });
 
-    IT("pntr_set_error(), pntr_get_error()", {
+    IT("pntr_set_error(), pntr_get_error(), pntr_get_error_code()", {
         pntr_set_error(PNTR_ERROR_NONE);
         EQUALS(pntr_get_error(), NULL);
         pntr_image* image = pntr_new_image(-500, -500);
         EQUALS(image, NULL);
         NEQUALS(pntr_get_error(), NULL);
+        STREQUALS(pntr_get_error(), "Invalid arguments");
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
         pntr_unload_image(image);
         pntr_set_error(PNTR_ERROR_NONE);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
     });
 
     IT("pntr_color_get_*()", {
@@ -66,6 +69,14 @@ MODULE(pntr, {
         EQUALS(color.g, 44);
         EQUALS(color.b, 70);
         EQUALS(color.a, 255);
+    });
+
+    IT("pntr_new_color()", {
+        pntr_color color = pntr_new_color(100, 120, 130, 200);
+        EQUALS(color.r, 100);
+        EQUALS(color.g, 120);
+        EQUALS(color.b, 130);
+        EQUALS(color.a, 200);
     });
 
     IT("pntr_gen_image_color(), pntr_image_get_color()", {
@@ -214,6 +225,23 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_image_scale()", {
+        pntr_image* image = pntr_new_image(100, 200);
+        NEQUALS(image, NULL);
+
+        pntr_image* scaled = pntr_image_scale(image, 1.5f, 2.5f, PNTR_FILTER_BILINEAR);
+        NEQUALS(scaled, NULL);
+        EQUALS(scaled->width, 150);
+        EQUALS(scaled->height, 500);
+        pntr_unload_image(scaled);
+
+        scaled = pntr_image_scale(image, -2.0f, -3.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+        EQUALS(scaled, NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+
+        pntr_unload_image(image);
+    });
+
     IT("pntr_image_color_replace()", {
         pntr_image* image = pntr_gen_image_color(100, 100, PNTR_BLUE);
         NEQUALS(image, NULL);
@@ -225,6 +253,20 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_color_tint()", {
+        pntr_color color = PNTR_WHITE;
+        pntr_color tinted = pntr_color_tint(color, PNTR_RED);
+        COLOREQUALS(tinted, PNTR_RED);
+    });
+
+    IT("pntr_image_color_tint()", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+        pntr_image_color_tint(image, PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_RED);
+        pntr_unload_image(image);
+    });
+
     IT("pntr_color_fade()", {
         pntr_color color = PNTR_RED;
         EQUALS(color.a, 255);
@@ -233,6 +275,21 @@ MODULE(pntr, {
         pntr_color faded = pntr_color_fade(color, -0.5f);
         EQUALS(faded.a, 127);
         EQUALS(faded.r, 230);
+
+        faded = pntr_color_fade(faded, 0.5f);
+        EQUALS(faded.a, 191);
+        EQUALS(faded.r, 230);
+    });
+
+    IT("pntr_image_color_fade()", {
+        pntr_color red = PNTR_RED;
+        pntr_image* image = pntr_gen_image_color(50, 50, red);
+        NEQUALS(image, NULL);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), red);
+        pntr_image_color_fade(image, -0.5f);
+        red.a = 127;
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), red);
+        pntr_unload_image(image);
     });
 
     IT("pntr_load_file(), pntr_unload_file()", {
@@ -321,6 +378,7 @@ MODULE(pntr, {
         EQUALS(pntr_get_pixel_data_size(1, 1, PNTR_PIXELFORMAT_RGBA8888), 4);
         EQUALS(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888), 24);
         EQUALS(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888), 24);
+        EQUALS(pntr_get_pixel_data_size(4, 4, PNTR_PIXELFORMAT_GRAYSCALE), 16);
     });
 
     IT("pntr_image_alpha_border(), pntr_image_alpha_crop()", {
@@ -355,6 +413,22 @@ MODULE(pntr, {
         EQUALS(image->width, 20);
         EQUALS(image->height, 50);
         COLOREQUALS(pntr_image_get_color(image, 10, 20), PNTR_RED);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_flip()", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_draw_rectangle_fill(image, 0, 0, 20, 20, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 90, 10), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 90), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 90, 90), PNTR_RED);
+        pntr_image_flip(image, true, true);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 90, 10), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 90), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 90, 90), PNTR_BLUE);
         pntr_unload_image(image);
     });
 
