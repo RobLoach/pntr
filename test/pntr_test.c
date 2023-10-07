@@ -141,7 +141,7 @@ MODULE(pntr, {
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
         NEQUALS(image, NULL);
         pntr_draw_text(image, font, "Hello World!", 10, 10, PNTR_WHITE);
-        pntr_draw_text_wrapped(image, font, "The quick brown fox jumped over the lazy dog.", 10, 10, PNTR_BLUE);
+        pntr_draw_text_wrapped(image, font, "The quick brown fox jumped over the lazy dog.", 10, 10, 100, PNTR_BLUE);
 
         pntr_unload_image(image);
         pntr_unload_font(font);
