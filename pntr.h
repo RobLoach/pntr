@@ -3241,7 +3241,6 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
  * @param maxWidth The maximum width for each line.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
  */
-#include <stdio.h>
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
         return;
