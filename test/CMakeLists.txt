@@ -3,7 +3,7 @@ add_executable(pntr_test pntr_test.c)
 target_compile_options(pntr_test PRIVATE -Wall -Wextra -Wconversion -Wsign-conversion)
 target_link_libraries(pntr_test PUBLIC
     pntr
-    m
+    #m
 )
 set_property(TARGET pntr_test PROPERTY C_STANDARD 99)
 

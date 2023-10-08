@@ -4,7 +4,6 @@
 
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
-//#define PNTR_DISABLE_MATH
 
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
@@ -478,21 +477,15 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
-        #ifndef PNTR_DISABLE_MATH
-            IT("pntr_image_rotate(image, 48.0f)", {
-                pntr_image* rotated = pntr_image_rotate(image, 48.0f, PNTR_FILTER_BILINEAR);
-                NEQUALS(rotated, NULL);
-                NEQUALS(rotated->width, image->height);
-                NEQUALS(rotated->height, image->width);
-                COLOREQUALS(pntr_image_get_color(rotated, 5, 5), PNTR_BLANK);
-                COLOREQUALS(pntr_image_get_color(rotated, rotated->width / 2, rotated->height / 2), PNTR_BLUE);
-                pntr_unload_image(rotated);
-            });
-        #else
-            IT("pntr_image_rotate(image, 48.0f): PNTR_DISABLE_MATH is defined, unable to test.", {
-                // Nothing
-            });
-        #endif  // PNTR_DISABLE_MATH
+        IT("pntr_image_rotate(image, 48.0f)", {
+            pntr_image* rotated = pntr_image_rotate(image, 48.0f, PNTR_FILTER_BILINEAR);
+            NEQUALS(rotated, NULL);
+            NEQUALS(rotated->width, image->height);
+            NEQUALS(rotated->height, image->width);
+            COLOREQUALS(pntr_image_get_color(rotated, 5, 5), PNTR_BLANK);
+            COLOREQUALS(pntr_image_get_color(rotated, rotated->width / 2, rotated->height / 2), PNTR_BLUE);
+            pntr_unload_image(rotated);
+        });
 
         IT("pntr_gen_image_gradient", {
             pntr_image* image = pntr_gen_image_gradient(500, 500, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_GOLD);

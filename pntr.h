@@ -9,7 +9,7 @@
  * - PNTR_ENABLE_TTF: Enables TTF font loading
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
  * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
- * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_TTF.
+ * - PNTR_ENABLE_MATH: When enabled, will useC's math.h library, rather than internal implementations.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
  * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
@@ -114,13 +114,9 @@
     #define PNTR_DISABLE_ALPHABLEND
 
     /**
-     * Will disable pntr's dependency on C's math.h library.
-     *
-     * This will disable PNTR_ENABLE_TTF.
-     *
-     * @see PNTR_ENABLE_TTF
+     * When enabled, will use C's standard math.h library for math functions, rather than pntr's internally build in methods.
      */
-    #define PNTR_DISABLE_MATH
+    #define PNTR_ENABLE_MATH
 
     /**
      * Callback to use when asked to load a file. Must match the pntr_load_file() definition.
@@ -778,12 +774,7 @@ extern "C" {
     #define PNTR_DEG2RAD 0.017453293f
 #endif
 
-#ifdef PNTR_DISABLE_MATH
-    #ifdef PNTR_ENABLE_TTF
-        // TTF requires math.h
-        #undef PNTR_ENABLE_TTF
-    #endif
-
+#ifndef PNTR_ENABLE_MATH
     #ifndef PNTR_SINF
         /**
          * Calculates sine of the given value.
@@ -847,26 +838,6 @@ extern "C" {
         #define PNTR_FLOORF(x) (float)((int)x - ((x < 0.0f) ? 1 : 0))
     #endif  // PNTR_FLOORF
 
-    #ifndef PNTR_SQRTF
-        /**
-         * Calculate the square root using fast inverse square root.
-         *
-         * https://en.wikipedia.org/wiki/Fast_inverse_square_root
-        float _pntr_sqrtf(float number) {
-            long i;
-            float x2, y;
-            x2 = number * 0.5f;
-            y  = number;
-            i  = *(long*)&y;
-            i  = 0x5f3759df - (i >> 1);
-            y  = *(float*)&i;
-            y  = y * (1.5f - (x2 * y * y)); // threehalfs
-            return 1.0f / y;
-        }
-        */
-        #define PNTR_SQRTF _pntr_sqrtf
-    #endif  // PNTR_SQRTF
-
     #ifndef PNTR_FMODF
         float _pntr_fmodf(float dividend, float divisor) {
             if (divisor == 0.0f) {
@@ -878,15 +849,15 @@ extern "C" {
         #define PNTR_FMODF _pntr_fmodf
     #endif  // PNTR_FMOD
 #else
-    #ifndef PNTR_COSF
-        #include <math.h>
-        #define PNTR_COSF cosf
-    #endif  // PNTR_COSF
-
     #ifndef PNTR_SINF
         #include <math.h>
         #define PNTR_SINF sinf
     #endif  // PNTR_SINF
+
+    #ifndef PNTR_COSF
+        #include <math.h>
+        #define PNTR_COSF cosf
+    #endif  // PNTR_COSF
 
     #ifndef PNTR_CEILF
         #include <math.h>
@@ -912,7 +883,7 @@ extern "C" {
         #include <math.h>
         #define PNTR_FMODF fmodf
     #endif  // PNTR_FMODF
-#endif  // PNTR_DISABLE_MATH
+#endif  // PNTR_ENABLE_MATH
 
 #if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
     #include <stdio.h> // FILE, fopen, fread
@@ -954,6 +925,85 @@ extern "C" {
             #undef STB_TRUETYPE_IMPLEMENTATION
         #endif  // STB_TRUETYPE_IMPLEMENTATION
     #else  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+
+        #ifndef STBTT_ifloor
+            #define STBTT_ifloor(x) ((int)PNTR_FLOORF(x))
+        #endif
+
+        #ifndef STBTT_iceil
+            #define STBTT_iceil(x) ((int)PNTR_CEILF(x))
+        #endif
+
+        #ifndef STBTT_fmod
+            #define STBTT_fmod(x, y) PNTR_FMODF((x), (y))
+        #endif
+
+        #ifndef STBTT_cos
+            #define STBTT_cos(x) PNTR_COSF((float)(x))
+        #endif
+
+        #ifndef PNTR_ENABLE_MATH
+            #ifndef STBTT_sqrt
+                float _pntr_sqrtf(float number) {
+                    float guess = number / 2.0f;
+                    float epsilon = 1e-6f;
+                    while (true) {
+                        float next_guess = 0.5f * (guess + number / guess);
+                        if (PNTR_FABSF(next_guess - guess) < epsilon) {
+                            return next_guess;
+                        }
+                        guess = next_guess;
+                    }
+                }
+                #define STBTT_sqrt(x) _pntr_sqrtf(x)
+            #endif  // PNTR_SQRTF
+
+            #ifndef STBTT_pow
+                float _pntr_pow(float base, float exponent) {
+                    float result = 1.0f;
+                    if (exponent >= 0) {
+                        for (int i = 0; i < exponent; i++) {
+                            result *= base;
+                        }
+                    } else {
+                        for (int i = 0; i > exponent; i--) {
+                            result /= base;
+                        }
+                    }
+                    return result;
+                }
+                #define STBTT_pow(x, y) _pntr_pow((x), (y))
+            #endif
+
+            #ifndef STBTT_acos
+                float _pntr_acos(float x) {
+                    float negate = (float)(x < 0);
+                    x = PNTR_FABSF(x);
+                    float ret = -0.0187293f;
+                    ret = ret * x;
+                    ret = ret + 0.0742610f;
+                    ret = ret * x;
+                    ret = ret - 0.2121144f;
+                    ret = ret * x;
+                    ret = ret + 1.5707288f;
+                    ret = ret * STBTT_sqrt(1.0f - x);
+                    ret = ret - 2 * negate * ret;
+                    return negate * PNTR_PI + ret;
+                }
+                #define STBTT_acos(x) _pntr_acos((x))
+            #endif
+        #else
+            #ifndef STBTT_sqrt
+                #define STBTT_sqrt(x) sqrt(x)
+            #endif
+            #ifndef STBTT_pow
+                #define STBTT_pow(x, y) pow(x, y)
+            #endif
+            #ifndef STBTT_acos
+                #define STBTT_acos(x) acos(x)
+            #endif
+        #endif
+
         #ifndef STBTT_malloc
             #define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
         #endif  // STBTT_malloc
@@ -973,8 +1023,11 @@ extern "C" {
 
         #ifndef STBTT_memcpy
             #define STBTT_memcpy PNTR_MEMCPY
-            #define STBTT_memset PNTR_MEMSET
         #endif  // STBTT_memcpy
+
+        #ifndef STBTT_memset
+            #define STBTT_memset PNTR_MEMSET
+        #endif  // STBTT_memset
 
         #define STB_TRUETYPE_IMPLEMENTATION
     #endif  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION

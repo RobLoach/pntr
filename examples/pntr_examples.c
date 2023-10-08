@@ -1,10 +1,7 @@
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
 #define PNTR_ENABLE_VARGS
-
 #define PNTR_ENABLE_MATH
-//#define PNTR_DISABLE_MATH
-
 #define PNTR_APP_IMPLEMENTATION
 #include "pntr_app.h"
 

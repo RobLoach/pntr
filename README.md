@@ -46,7 +46,7 @@ Add these defines prior to including `pntr.h` to modify how it functions.
 | `PNTR_ENABLE_DEFAULT_FONT` | Enables the default font |
 | `PNTR_ENABLE_TTF` | Enables TTF font loading |
 | `PNTR_DISABLE_ALPHABLEND` | Skips alpha blending when rendering images |
-| `PNTR_DISABLE_MATH` | Disables dependency on C's math.h library |
+| `PNTR_ENABLE_MATH` | Enables use of C's standard math.h library, rather than using the built in math functions |
 | `PNTR_LOAD_FILE` | Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`. |
 | `PNTR_SAVE_FILE` | Callback to use when asked to save a file in `pntr_save_file()`. By default, will use `stdio.h`. |
 | `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory in `pntr_load_image_from_memory()`. By default, will use  [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) |
