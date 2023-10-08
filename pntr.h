@@ -406,6 +406,7 @@ PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
+PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color);
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
@@ -1481,9 +1482,21 @@ PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_draw_point_unsafe(dst, x, y, color);
 }
 
-void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) {
+PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) {
     if (point != NULL) {
         pntr_draw_point(dst, point->x, point->y, color);
+    }
+}
+
+PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color) {
+    if (dst == NULL || color.a == 0 || points == NULL || pointsCount <= 0) {
+        return;
+    }
+
+    for (int i = 0; i < pointsCount; i++) {
+        if (points[i].x >= 0 && points[i].x < dst->width && points[i].y >= 0 && points[i].y < dst->height) {
+            pntr_draw_point_unsafe(dst, points[i].x, points[i].y, color);
+        }
     }
 }
 
@@ -2649,6 +2662,10 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
  * @see pntr_image_color_tint()
  */
 PNTR_API inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
+    if (tint.data == PNTR_WHITE_DATA) {
+        return color;
+    }
+
     return PNTR_CLITERAL(pntr_color) {
         .r = (unsigned char)(((float)color.r / 255.0f * (float)tint.r / 255.0f) * 255.0f),
         .g = (unsigned char)(((float)color.g / 255.0f * (float)tint.g / 255.0f) * 255.0f),

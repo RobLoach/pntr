@@ -106,6 +106,37 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_draw_point()", {
+        pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 9), PNTR_WHITE);
+        pntr_draw_point(image, 10, 10, PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 9), PNTR_WHITE);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_draw_points()", {
+        pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 15, 30), PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 40, 40), PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 0, 5), PNTR_WHITE);
+        COLOREQUALS(pntr_image_get_color(image, 0, 4), PNTR_WHITE);
+        pntr_vector points[10];
+        points[0] = PNTR_CLITERAL(pntr_vector) {10, 10};
+        points[1] = PNTR_CLITERAL(pntr_vector) {15, 30};
+        points[2] = PNTR_CLITERAL(pntr_vector) {40, 40};
+        points[3] = PNTR_CLITERAL(pntr_vector) {0, 5};
+        pntr_draw_points(image, points, 4, PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 15, 30), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 40, 40), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 0, 5), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 0, 4), PNTR_WHITE);
+        pntr_unload_image(image);
+    });
+
     IT("pntr_get_file_image_type()", {
         EQUALS(pntr_get_file_image_type("myimage.png"), PNTR_IMAGE_TYPE_PNG);
         EQUALS(pntr_get_file_image_type("my/path/ima.ge.png"), PNTR_IMAGE_TYPE_PNG);
