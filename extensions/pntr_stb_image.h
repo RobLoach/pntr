@@ -22,7 +22,7 @@ pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const un
     #define STBI_NO_STDIO
     #define STBI_NO_SIMD
     #ifndef PNTR_ENABLE_JPEG
-    #define STBI_NO_JPEG // JPG support in stb_image.
+        #define STBI_NO_JPEG // JPG support in stb_image.
     #endif
     //#define STBI_NO_PNG
     #define STBI_NO_BMP
@@ -34,6 +34,8 @@ pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const un
     #define STBI_NO_PNM
     //#define STBI_SUPPORT_ZLIB
     #define STBI_NO_LINEAR
+
+    #define STBI_ASSERT(x)
 #endif  // PNTR_NO_STB_IMAGE_IMPLEMENTATION
 
 #if defined(__GNUC__) || defined(__clang__)
