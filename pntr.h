@@ -3221,9 +3221,9 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
 
     // Copy the string, along with its null terminator
     size_t length = 0;
-    while (text[length++] != '\0');
-    char* newText = pntr_load_memory(length + 1);
-    pntr_memory_copy((void*)newText, (void*)text, length + 1);
+    while (text[length++] != '\0'); // equivalent to strlen(text) + 1
+    char* newText = pntr_load_memory(length);
+    pntr_memory_copy((void*)newText, (void*)text, length);
 
     // Go through and figure out where new lines should be placed in the string.
     int currentLineLength = 0;
