@@ -17,6 +17,20 @@
     EQUALS(actualColor.a, expectedColor.a); \
 } while (0)
 
+#define IMAGEEQUALS(actual, expected) do { \
+    NEQUALS(actual, NULL); \
+    NEQUALS(expected, NULL); \
+    EQUALS(actual->subimage, expected->subimage); \
+    EQUALS(actual->pitch, expected->pitch); \
+    EQUALS(actual->width, expected->width); \
+    EQUALS(actual->height, expected->height); \
+    for (int x = 0; x < actual->width; x++) { \
+        for (int y = 0; y < actual->width; y++) { \
+            COLOREQUALS(pntr_image_get_color(actual, x, y), pntr_image_get_color(expected, x, y)); \
+        } \
+    } \
+} while (0)
+
 MODULE(pntr, {
     IT("pntr_load_memory(), pntr_unload_memory()", {
         void* memory = pntr_load_memory(100);
@@ -258,6 +272,22 @@ MODULE(pntr, {
         EQUALS(scaled, NULL);
         EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
 
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_copy()", {
+        pntr_image* image = pntr_gen_image_color(10, 10, PNTR_RED);
+        pntr_draw_point(image, 5, 5, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 5, 5), PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 2, 2), PNTR_RED);
+
+        pntr_image* copy = pntr_image_copy(image);
+        NEQUALS(image, copy);
+        IMAGEEQUALS(image, copy);
+        COLOREQUALS(pntr_image_get_color(copy, 5, 5), PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(copy, 2, 2), PNTR_RED);
+
+        pntr_unload_image(copy);
         pntr_unload_image(image);
     });
 
