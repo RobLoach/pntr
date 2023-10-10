@@ -302,6 +302,23 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_color_invert()", {
+        pntr_color color = pntr_new_color(21, 16, 171, 255);
+        COLOREQUALS(pntr_color_invert(color), pntr_new_color(234, 239, 84, 255));
+        color = pntr_new_color(64, 148, 81, 255);
+        COLOREQUALS(pntr_color_invert(color), pntr_new_color(191, 107, 174, 255));
+    });
+
+    IT("pntr_image_color_invert()", {
+        pntr_color color = pntr_new_color(21, 16, 171, 255);
+        pntr_color invert = pntr_new_color(234, 239, 84, 255);
+        pntr_image* image = pntr_gen_image_color(100, 100, color);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), color);
+        pntr_image_color_invert(image);
+        COLOREQUALS(pntr_image_get_color(image, 10, 10), invert);
+        pntr_unload_image(image);
+    });
+
     IT("pntr_color_tint()", {
         pntr_color color = PNTR_WHITE;
         pntr_color tinted = pntr_color_tint(color, PNTR_RED);
