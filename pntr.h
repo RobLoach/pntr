@@ -2407,8 +2407,8 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
 
     // Make sure the source rectangle is within bounds.
     if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
-            srcRect.width,
-            srcRect.height,
+            srcRect.width <= 0 ? src->width : srcRect.width,
+            srcRect.height <= 0 ? src->height : srcRect.height,
             src->width, src->height, &srcRect)) {
         return;
     }
