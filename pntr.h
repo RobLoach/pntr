@@ -2405,22 +2405,31 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
         return;
     }
 
-    // Scaling is not supported
-    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, srcRect.width, srcRect.height };
+    // Make sure the source rectangle is within bounds.
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
+            srcRect.width,
+            srcRect.height,
+            src->width, src->height, &srcRect)) {
+        return;
+    }
 
     // Update the source coordinates based on the destination
-    if (dstRect.x < 0) {
-        srcRect.x -= dstRect.x;
-        srcRect.width += dstRect.x;
+    if (posX < 0) {
+        srcRect.x -= posX;
+        srcRect.width += posX;
+        posX = 0;
     }
-    if (dstRect.y < 0) {
-        srcRect.y -= dstRect.y;
-        srcRect.height += dstRect.y;
+    if (posY < 0) {
+        srcRect.y -= posY;
+        srcRect.height += posY;
+        posY = 0;
     }
 
+    // Confine the destination.
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, srcRect.width, srcRect.height };
     if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
-            PNTR_MIN(dstRect.width, srcRect.width),
-            PNTR_MIN(dstRect.height, srcRect.height),
+            srcRect.width,
+            srcRect.height,
             dst->width, dst->height, &dstRect)) {
         return;
     }
