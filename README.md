@@ -1,6 +1,6 @@
 # pntr <a href="https://github.com/robloach/pntr"><img src="examples/resources/logo-55x55.png" align=left width=55 height=55 /></a>
 
-Image manipulation library for C99 or C++, with a focus on ease-of-use.
+Image manipulation library for [C11](https://en.wikipedia.org/wiki/C11_(C_standard_revision)) or C++, with a focus on ease-of-use.
 
 ## Usage
 

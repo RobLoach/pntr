@@ -382,31 +382,25 @@ MODULE(pntr, {
         pntr_unload_file_text(text);
     });
 
-    #ifdef PNTR_ENABLE_TTF
-        IT("pntr_load_font_ttf()", {
-            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20);
-            NEQUALS(font, NULL);
-            GREATER(font->charactersLen, 20);
+    IT("pntr_load_font_ttf()", {
+        pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20);
+        NEQUALS(font, NULL);
+        GREATER(font->charactersLen, 20);
 
-            pntr_image* canvas = pntr_gen_image_text(font, "Hello World!", PNTR_RED);
-            NEQUALS(canvas, NULL);
-            GREATER(canvas->width, 10);
-            GREATER(canvas->height, 10);
+        pntr_image* canvas = pntr_gen_image_text(font, "Hello World!", PNTR_RED);
+        NEQUALS(canvas, NULL);
+        GREATER(canvas->width, 10);
+        GREATER(canvas->height, 10);
 
-            IT("pntr_measure_text_ex()", {
-                pntr_vector size = pntr_measure_text_ex(font, "Hello!!", 0);
-                GREATER(size.x, 20);
-                GREATER(size.y, 5);
-            });
-
-            pntr_unload_image(canvas);
-            pntr_unload_font(font);
+        IT("pntr_measure_text_ex()", {
+            pntr_vector size = pntr_measure_text_ex(font, "Hello!!", 0);
+            GREATER(size.x, 20);
+            GREATER(size.y, 5);
         });
-    #else
-        IT("pntr_load_font_ttf(): PNTR_ENABLE_TTF is disabled, unable to test.", {
-            // Nothing
-        });
-    #endif  // PNTR_ENABLE_TTF
+
+        pntr_unload_image(canvas);
+        pntr_unload_font(font);
+    });
 
     IT("pntr_save_file()", {
         const char* fileName = "tempFile.txt";
@@ -654,7 +648,7 @@ MODULE(pntr, {
         EQUALS(out.width, 5);
         EQUALS(out.height, 5);
     });
-});
+})
 
 int main() {
     UNIT_CREATE("pntr");
