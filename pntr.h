@@ -4234,8 +4234,8 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
                 }
                 pntr_draw_point(dst, posX + y, posY + x,
                     pntr_image_get_color(src,
-                        flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
-                        flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y
+                        flipVertical ? srcRec.x + srcRec.width - x : srcRec.x + x,
+                        flipHorizontal ? srcRec.y + srcRec.height - y : srcRec.y + y
                     )
                 );
             }
