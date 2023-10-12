@@ -438,8 +438,8 @@ PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, i
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical);
-PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
+PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
+PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
@@ -4193,7 +4193,7 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     return true;
 }
 
-PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4202,11 +4202,12 @@ PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, i
         PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         flipHorizontal,
-        flipVertical
+        flipVertical,
+        flipDiagonal
     );
 }
 
-PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4216,23 +4217,46 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
     }
 
     // If we are not flipping at all, use the simpler draw function.
-    if (flipHorizontal == false && flipVertical == false) {
-        pntr_draw_image_rec(dst, src, srcRec, posX, posY);
+    if (!flipHorizontal && !flipVertical && !flipDiagonal) {
+        pntr_draw_image_tint_rec(dst, src, srcRec, posX, posY, PNTR_WHITE);
         return;
     }
 
-    for (int x = 0; x < srcRec.width; x++) {
-        if (posX + x < 0 || posX + x > dst->width) {
-            continue;
-        }
+    // See if we are to flip the x and y diagonally.
+    if (flipDiagonal) {
         for (int y = 0; y < srcRec.height; y++) {
-            if (posY + y < 0 || posY + y > dst->height) {
+            if (posX + y < 0 || posX + y >= dst->width) {
                 continue;
             }
-            pntr_color source = pntr_image_get_color(src,
-                flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
-                flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y);
-            pntr_draw_point(dst, posX + x, posY + y, source);
+            for (int x = 0; x < srcRec.width; x++) {
+                if (posY + x < 0 || posY + x >= dst->height) {
+                    continue;
+                }
+                pntr_draw_point(dst, posX + y, posY + x,
+                    pntr_image_get_color(src,
+                        flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
+                        flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y
+                    )
+                );
+            }
+        }
+    }
+    else {
+        for (int x = 0; x < srcRec.width; x++) {
+            if (posX + x < 0 || posX + x >= dst->width) {
+                continue;
+            }
+            for (int y = 0; y < srcRec.height; y++) {
+                if (posY + y < 0 || posY + y >= dst->height) {
+                    continue;
+                }
+                pntr_draw_point(dst, posX + x, posY + y,
+                    pntr_image_get_color(src,
+                        flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
+                        flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y
+                    )
+                );
+            }
         }
     }
 }
