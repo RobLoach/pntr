@@ -8,6 +8,7 @@ target_link_libraries(pntr_test PUBLIC
 
 # C11 Standard
 set_property(TARGET pntr_test PROPERTY C_STANDARD 11)
+set_property(TARGET pntr_test PROPERTY C_STANDARD_REQUIRED TRUE)
 
 # Strict Warnings and Errors
 if(MSVC)
