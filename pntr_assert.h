@@ -28,7 +28,12 @@
 
 #ifndef PNTR_ASSERT
 #ifdef NDEBUG
-#define PNTR_ASSERT(condition) ((void)0)
+#if defined __cplusplus && __GNUC_PREREQ (2,95)
+#define PNTR_ASSERT_VOID_CAST static_cast<void>
+#else
+#define PNTR_ASSERT_VOID_CAST (void)
+#endif
+#define PNTR_ASSERT(condition) (PNTR_ASSERT_VOID_CAST 0)
 #else
 #include <assert.h>
 #define PNTR_ASSERT(condition) assert(condition)
@@ -36,10 +41,22 @@
 #endif
 
 #ifndef PNTR_ASSERT_EQUALS
+/**
+ * Evaluates whether or not the given parameters are equal.
+ *
+ * @param actual The evaluated value to check against.
+ * @param expected The expected value.
+ */
 #define PNTR_ASSERT_EQUALS(actual, expected) PNTR_ASSERT((actual) == (expected))
 #endif
 
 #ifndef PNTR_ASSERT_NEQUALS
+/**
+ * Evaluates whether or not the given parameters are not equal.
+ *
+ * @param actual The evaluated value to check against.
+ * @param expected The expected value that should not be equal.
+ */
 #define PNTR_ASSERT_NEQUALS(actual, expected) PNTR_ASSERT((actual) != (expected))
 #endif
 
