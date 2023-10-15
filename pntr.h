@@ -4208,6 +4208,12 @@ PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, i
 }
 
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
+    // If we are not flipping at all, use the simpler draw function.
+    if (!flipHorizontal && !flipVertical && !flipDiagonal) {
+        pntr_draw_image_tint_rec(dst, src, srcRec, posX, posY, PNTR_WHITE);
+        return;
+    }
+
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4216,47 +4222,35 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    // If we are not flipping at all, use the simpler draw function.
-    if (!flipHorizontal && !flipVertical && !flipDiagonal) {
-        pntr_draw_image_tint_rec(dst, src, srcRec, posX, posY, PNTR_WHITE);
-        return;
-    }
-
-    // See if we are to flip the x and y diagonally.
-    if (flipDiagonal) {
-        for (int y = 0; y < srcRec.height; y++) {
-            if (posX + y < 0 || posX + y >= dst->width) {
-                continue;
-            }
-            for (int x = 0; x < srcRec.width; x++) {
-                if (posY + x < 0 || posY + x >= dst->height) {
-                    continue;
-                }
-                pntr_draw_point(dst, posX + y, posY + x,
-                    pntr_image_get_color(src,
-                        flipVertical ? srcRec.x + srcRec.width - x : srcRec.x + x,
-                        flipHorizontal ? srcRec.y + srcRec.height - y : srcRec.y + y
-                    )
-                );
-            }
-        }
-    }
-    else {
+    int dstX, dstY;
+    for (int y = 0; y < srcRec.height; y++) {
         for (int x = 0; x < srcRec.width; x++) {
-            if (posX + x < 0 || posX + x >= dst->width) {
-                continue;
+            // Flip the vertical
+            if (flipVertical) {
+                dstY = srcRec.height - y - 1;
             }
-            for (int y = 0; y < srcRec.height; y++) {
-                if (posY + y < 0 || posY + y >= dst->height) {
-                    continue;
-                }
-                pntr_draw_point(dst, posX + x, posY + y,
-                    pntr_image_get_color(src,
-                        flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
-                        flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y
-                    )
-                );
+            else {
+                dstY = y;
             }
+
+            // Flip the horizontal
+            if (flipHorizontal) {
+                dstX = srcRec.width - x - 1;
+            }
+            else {
+                dstX = x;
+            }
+
+            // Flip the diagonal by switching the x and y
+            if (flipDiagonal) {
+                int temp = dstX;
+                dstX = dstY;
+                dstY = temp;
+            }
+
+            pntr_draw_point(dst, posX + dstX, posY + dstY,
+                pntr_image_get_color(src, x, y)
+            );
         }
     }
 }

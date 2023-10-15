@@ -32,7 +32,7 @@ const char* example_image_update(pntr_image* canvas) {
     pntr_draw_image(canvas, resized, 170, 100);
 
     // Draw the resized image
-    pntr_draw_image_flipped(canvas, image, 240, 30, true, true, true);
+    pntr_draw_image_flipped(canvas, image, 240, 30, true, false, true);
 
     return "Image";
 }
