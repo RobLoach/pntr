@@ -4225,27 +4225,14 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
     int dstX, dstY;
     for (int y = 0; y < srcRec.height; y++) {
         for (int x = 0; x < srcRec.width; x++) {
-            // Flip the vertical
-            if (flipVertical) {
-                dstY = srcRec.height - y - 1;
-            }
-            else {
-                dstY = y;
-            }
-
-            // Flip the horizontal
-            if (flipHorizontal) {
-                dstX = srcRec.width - x - 1;
-            }
-            else {
-                dstX = x;
-            }
-
-            // Flip the diagonal by switching the x and y
+            // Determine the destination pixels based on flip parameters
             if (flipDiagonal) {
-                int temp = dstX;
-                dstX = dstY;
-                dstY = temp;
+                dstX = flipHorizontal ? srcRec.height - y - 1 : y;
+                dstY = flipVertical ? srcRec.width - x - 1 : x;
+            }
+            else {
+                dstY = flipVertical ? srcRec.height - y - 1 : y;
+                dstX = flipHorizontal ? srcRec.width - x - 1 : x;
             }
 
             pntr_draw_point(dst, posX + dstX, posY + dstY,
