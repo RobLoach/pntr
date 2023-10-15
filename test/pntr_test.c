@@ -8,28 +8,10 @@
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
-#define COLOREQUALS(actual, expected) do { \
-    pntr_color actualColor = (actual); \
-    pntr_color expectedColor = (expected); \
-    EQUALS(actualColor.r, expectedColor.r); \
-    EQUALS(actualColor.g, expectedColor.g); \
-    EQUALS(actualColor.b, expectedColor.b); \
-    EQUALS(actualColor.a, expectedColor.a); \
-} while (0)
-
-#define IMAGEEQUALS(actual, expected) do { \
-    NEQUALS(actual, NULL); \
-    NEQUALS(expected, NULL); \
-    EQUALS(actual->subimage, expected->subimage); \
-    EQUALS(actual->pitch, expected->pitch); \
-    EQUALS(actual->width, expected->width); \
-    EQUALS(actual->height, expected->height); \
-    for (int x = 0; x < actual->width; x++) { \
-        for (int y = 0; y < actual->width; y++) { \
-            COLOREQUALS(pntr_image_get_color(actual, x, y), pntr_image_get_color(expected, x, y)); \
-        } \
-    } \
-} while (0)
+#define PNTR_ASSERT(condition) EQUALS((bool)(condition), true)
+#define COLOREQUALS PNTR_ASSERT_COLOR_EQUALS
+#define IMAGEEQUALS PNTR_ASSERT_IMAGE_EQUALS
+#include "../pntr_assert.h"
 
 MODULE(pntr, {
     IT("pntr_load_memory(), pntr_unload_memory()", {
