@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
     libretro
     GIT_REPOSITORY https://github.com/libretro/libretro-common.git
-    GIT_TAG 7edbfaf17baffa1b8a00231762aa7ead809711b5
+    GIT_TAG 01c6122931a10a7012973054e7067859d2116420
 )
 FetchContent_GetProperties(libretro)
 if (NOT libretro_POPULATED)

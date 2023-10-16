@@ -3189,7 +3189,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
     int tallestCharacter = 0;
 
     const char * currentChar = text;
-    while (currentChar != NULL && *currentChar != '\0') {
+    while (*currentChar != '\0') {
         if (*currentChar == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
             x = posX;
@@ -3198,7 +3198,11 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
         else {
             for (int i = 0; i < font->charactersLen; i++) {
                 if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+                    // Draw the character, unless it's a space.
+                    if (*currentChar != ' ')  {
+                        pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+                    }
+
                     x += font->glyphRects[i].x + font->glyphRects[i].width;
                     if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
                         tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
