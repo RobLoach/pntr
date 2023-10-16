@@ -1,5 +1,5 @@
 /**
- * pntr: Image manipulation library for C99 and C++, with a focus on ease-of-use.
+ * pntr: Image manipulation library for C11 and C++, with a focus on ease-of-use.
  *
  * Configuration:
  * - PNTR_IMPLEMENTATION: Define this in one of your .c files, before including pntr.h
