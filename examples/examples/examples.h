@@ -1,6 +1,6 @@
 #include <stdio.h> // sprintf
 
-int currentExample = 3;
+int currentExample = 0;
 pntr_image* canvas;
 pntr_font* font;
 
