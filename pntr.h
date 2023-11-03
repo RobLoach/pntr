@@ -411,8 +411,10 @@ PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int 
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
-PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
-PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color);
+PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color);
+PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
+PNTR_API inline void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
 PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
@@ -1692,11 +1694,10 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
  *
  * @param dst Where to draw the rectangle.
  * @param rec The rectangle of which to draw.
- * @param thickness How thick the border of the rectangle should be.
  * @param color The color of the lines for the rectangle.
  */
-PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color) {
-    pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, thickness, color);
+PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color) {
+    pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, color);
 }
 
 /**
@@ -1707,29 +1708,30 @@ PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec
  * @param posY The Y position.
  * @param width How wide the rectangle should be.
  * @param height How tall the rectangle should be.
- * @param thickness How thick the line border should be.
  * @param color The color of the line.
  *
  * @see pntr_draw_rectangle_rec()
  * @see pntr_draw_rectangle_fill()
  */
-PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
-    if (color.a == 0 || thickness <= 0 || dst == NULL || width <= 0 || height <= 0) {
+PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
+    if (color.a == 0 ||  dst == NULL || width <= 0 || height <= 0) {
         return;
     }
 
-    if (thickness == 1) {
-        pntr_draw_line_horizontal(dst, posX, posY, width, color);
-        pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
-        pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
-        pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
+    pntr_draw_line_horizontal(dst, posX, posY, width, color);
+    pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
+    pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
+    pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
+}
+
+PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
+    for (int i = 0; i < thickness; i++) {
+        pntr_draw_rectangle(dst, posX + i, posY + i, width - i * 2, height - i * 2, color);
     }
-    else {
-        pntr_draw_rectangle_fill(dst, posX, posY, width, thickness, color);
-        pntr_draw_rectangle_fill(dst, posX, posY + thickness, thickness, height - thickness * 2, color);
-        pntr_draw_rectangle_fill(dst, posX + width - thickness, posY + thickness, thickness, height - thickness * 2, color);
-        pntr_draw_rectangle_fill(dst, posX, posY + height - thickness, width, thickness, color);
-    }
+}
+
+PNTR_API inline void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color) {
+    pntr_draw_rectangle_thick(dst, rect.x, rect.y, rect.width, rect.height, thickness, color);
 }
 
 /**
@@ -2210,6 +2212,7 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
 
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
     // Corners
+    // TODO: Replace this with pntr_draw_arc_fill()
     pntr_draw_circle_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, color); // Top Left
     pntr_draw_circle_fill(dst, x + width - cornerRadius, y + cornerRadius, cornerRadius, color); // Top Right
     pntr_draw_circle_fill(dst, x + cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Left

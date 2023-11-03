@@ -58,7 +58,7 @@ const char* example_fonts_update(pntr_image* canvas) {
     // pntr_draw_image(canvas, ttfFont->atlas, 10, 80);
 
     // Word-wrapped
-    pntr_draw_rectangle(canvas, 225, 50, 150, 60, 1, PNTR_BLUE);
+    pntr_draw_rectangle(canvas, 225, 50, 150, 60, PNTR_BLUE);
     pntr_draw_text_wrapped(canvas, bmFont, "The awesome brown fox jumps over the lazy dog.", 225, 50, 150, PNTR_RED);
 
     return "Fonts";

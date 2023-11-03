@@ -14,9 +14,9 @@ const char* example_shapes_update(pntr_image* canvas) {
     pntr_draw_rectangle_fill(canvas, 20, 40, 50, 50, lightGreen);
     pntr_draw_rectangle_fill(canvas, 30, 50, 50, 50, lightBlue);
 
-    pntr_draw_rectangle(canvas, 10, 120, 50, 50, 5, PNTR_RED);
-    pntr_draw_rectangle(canvas, 20, 130, 50, 50, 5, PNTR_GREEN);
-    pntr_draw_rectangle(canvas, 30, 140, 50, 50, 5, PNTR_BLUE);
+    pntr_draw_rectangle_thick(canvas, 10, 120, 50, 50, 5, PNTR_RED);
+    pntr_draw_rectangle_thick(canvas, 20, 130, 50, 50, 5, PNTR_GREEN);
+    pntr_draw_rectangle_thick(canvas, 30, 140, 50, 50, 5, PNTR_BLUE);
 
     // Circle
     pntr_draw_circle(canvas, 110, 60, 21, PNTR_RED);

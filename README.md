@@ -71,8 +71,8 @@ void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, 
 void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
 void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
-void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
-void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color);
+void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color);
 void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
 void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
