@@ -97,4 +97,21 @@
 } while (0)
 #endif
 
+#ifndef PNTR_ASSERT_RECT_EQUALS
+/**
+ * Validate whether or not the given rectangles are equal.
+ *
+ * @param actual The rectangle to check.
+ * @param expected The rectangle that is expected.
+ */
+#define PNTR_ASSERT_RECT_EQUALS(actual, expected) do { \
+    pntr_rectangle actualRect = (actual); \
+    pntr_rectangle expectedRect = (expected); \
+    PNTR_ASSERT_EQUALS(actualRect.x, expectedRect.x); \
+    PNTR_ASSERT_EQUALS(actualRect.y, expectedRect.y); \
+    PNTR_ASSERT_EQUALS(actualRect.width, expectedRect.width); \
+    PNTR_ASSERT_EQUALS(actualRect.height, expectedRect.height); \
+} while(0)
+#endif  // PNTR_ASSERT_RECT_EQUALS
+
 #endif

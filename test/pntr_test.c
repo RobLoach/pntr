@@ -6,11 +6,12 @@
 #define PNTR_ENABLE_TTF
 
 #define PNTR_IMPLEMENTATION
+#define PNTR_ASSERT(condition) EQUALS((bool)(condition), true)
 #include "../pntr.h"
 
-#define PNTR_ASSERT(condition) EQUALS((bool)(condition), true)
 #define COLOREQUALS PNTR_ASSERT_COLOR_EQUALS
 #define IMAGEEQUALS PNTR_ASSERT_IMAGE_EQUALS
+#define RECTEQUALS PNTR_ASSERT_RECT_EQUALS
 #include "../pntr_assert.h"
 
 MODULE(pntr, {
@@ -609,6 +610,44 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_image_set_clip", {
+        pntr_image* image = pntr_gen_image_color(300, 300, PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 125, 125), PNTR_RED);
+
+        pntr_image_set_clip(image, 100, 100, 50, 50);
+        pntr_draw_rectangle_fill(image, 0, 0, image->width, image->height, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 125, 125), PNTR_BLUE);
+
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_reset_clip", {
+        pntr_image* image = pntr_gen_image_color(300, 300, PNTR_RED);
+
+        EQUALS(image->clip.x, 0);
+        EQUALS(image->clip.y, 0);
+        EQUALS(image->clip.width, image->width);
+        EQUALS(image->clip.height, image->height);
+
+        pntr_image_set_clip(image, 100, 200, 50, 60);
+
+        EQUALS(image->clip.x, 100);
+        EQUALS(image->clip.y, 200);
+        EQUALS(image->clip.width, 50);
+        EQUALS(image->clip.height, 60);
+
+        pntr_image_reset_clip(image);
+
+        EQUALS(image->clip.x, 0);
+        EQUALS(image->clip.y, 0);
+        EQUALS(image->clip.width, image->width);
+        EQUALS(image->clip.height, image->height);
+
+        pntr_unload_image(image);
+    });
+
     IT("No reported errors", {
         const char* err = "";
         if (pntr_get_error() != NULL) {
@@ -620,15 +659,21 @@ MODULE(pntr, {
 
     IT("_pntr_rectangle_intersect", {
         pntr_rectangle out;
-        EQUALS(_pntr_rectangle_intersect(-10, -10, 5, 5, 100, 100, &out), false);
-        EQUALS(_pntr_rectangle_intersect(5, 6, 10, 5, 100, 100, &out), true);
+        EQUALS(_pntr_rectangle_intersect(-10, -10, 5, 5, 0, 0, 100, 100, &out), false);
+        EQUALS(_pntr_rectangle_intersect(5, 6, 10, 5, 0, 0, 100, 100, &out), true);
         EQUALS(out.x, 5);
         EQUALS(out.y, 6);
         EQUALS(out.width, 10);
         EQUALS(out.height, 5);
-        EQUALS(_pntr_rectangle_intersect(-5, -5, 10, 10, 20, 20, &out), true);
+        EQUALS(_pntr_rectangle_intersect(-5, -5, 10, 10, 0, 0, 20, 20, &out), true);
+        EQUALS(out.x, 0);
+        EQUALS(out.y, 0);
         EQUALS(out.width, 5);
         EQUALS(out.height, 5);
+
+        EQUALS(_pntr_rectangle_intersect(10, 10, 50, 50, 20, 20, 10, 10, &out), true);
+        pntr_rectangle expected = (pntr_rectangle) {20, 20, 10, 10};
+        RECTEQUALS(out, expected);
     });
 })
 

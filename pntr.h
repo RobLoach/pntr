@@ -1250,6 +1250,8 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  * @param y The input rectangle's y coordinate.
  * @param width The input rectangle's width.
  * @param height The input rectangle's height.
+ * @param destX The destination x coordinate.
+ * @param destY The destination y coordinate.
  * @param destWidth The destination rectangle's width.
  * @param destHeight The destination rectangle's height.
  * @param out The normalized rectangle.
@@ -1262,13 +1264,13 @@ PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int
     }
 
     out->x = PNTR_MAX(x, destX);
-    out->width = PNTR_MIN(x + width, destWidth) - out->x;
+    out->width = PNTR_MIN(x + width, destX + destWidth) - out->x;
     if (out->width <= 0) {
         return false;
     }
 
     out->y = PNTR_MAX(y, destY);
-    out->height = PNTR_MIN(y + height, destHeight) - out->y;
+    out->height = PNTR_MIN(y + height, destY + destHeight) - out->y;
     if (out->height <= 0) {
         return false;
     }
@@ -2455,7 +2457,7 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
     if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
             srcRect.width,
             srcRect.height,
-            dst->clip.x, dst->clip.y
+            dst->clip.x, dst->clip.y,
             dst->clip.width, dst->clip.height, &dstRect)) {
         return;
     }
@@ -4257,7 +4259,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    if (!_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, src->width, src->height, &srcRec)) {
+    if (!_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, 0, 0, src->width, src->height, &srcRec)) {
         return;
     }
 
@@ -4299,7 +4301,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
         return;
     }
 
-    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, src->width, src->height, &srcRect)) {
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
         return;
     }
 
@@ -4706,7 +4708,7 @@ PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, in
     }
 
     pntr_rectangle clip;
-    if (_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &clip)) {
+    if (_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &clip)) {
         image->clip = clip;
     }
 }
