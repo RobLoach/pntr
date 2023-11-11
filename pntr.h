@@ -3290,7 +3290,7 @@ PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int 
 
     va_list arg_ptr;
     va_start(arg_ptr, text);
-    vsprintf(output, text, arg_ptr);
+    vnsprintf(output, PNTR_DRAW_TEXT_EX_STRING_LENGTH, text, arg_ptr);
     va_end(arg_ptr);
 
     pntr_draw_text(dst, font, output, posX, posY, tint);
