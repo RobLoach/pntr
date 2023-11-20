@@ -1355,10 +1355,7 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
     subimage->width = dstRect.width;
     subimage->height = dstRect.height;
     subimage->subimage = true;
-    subimage->clip.x = 0;
-    subimage->clip.y = 0;
-    subimage->clip.width = dstRect.width;
-    subimage->clip.height = dstRect.height;
+    pntr_image_reset_clip(subimage);
     subimage->data = &PNTR_PIXEL(image, dstRect.x, dstRect.y);
 
     return subimage;
@@ -1498,7 +1495,7 @@ PNTR_API inline void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_
  * Draws a pixel on the given image.
  */
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
-    if ((color.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.height)) {
+   if ((color.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
         return;
     }
 
@@ -2426,7 +2423,7 @@ PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_
  * @see pntr_draw_image()
  */
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
-    if (dst == NULL || src == NULL || posX >= dst->clip.width || posY >= dst->clip.height) {
+    if (dst == NULL || src == NULL || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -2678,9 +2675,9 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
         return;
     }
 
-    for (int y = image->clip.y; y < image->clip.height; y++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
         pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = image->clip.x; x < image->clip.width; x++) {
+        for (int x = image->clip.x; x < image->clip.x + image->clip.width; x++) {
             if (pixel->data == color.data) {
                 *pixel = replace;
             }
@@ -4610,14 +4607,14 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     for (int y = 0; y < newHeight; y++) {
         // Only draw onto the screen.
         destY = posY + y - offsetYRatio;
-        if (destY < dst->clip.y || destY >= dst->clip.height) {
+        if (destY < dst->clip.y || destY >= dst->clip.y + dst->clip.height) {
             continue;
         }
 
         for (int x = 0; x < newWidth; x++) {
             // Make sure we're actually drawing onto the screen.
             destX = posX + x - offsetXRatio;
-            if (destX < dst->clip.x || destX >= dst->clip.width ) {
+            if (destX < dst->clip.x || destX >= dst->clip.x + dst->clip.width ) {
                 continue;
             }
 
