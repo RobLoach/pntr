@@ -1148,10 +1148,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->pitch = width * (int)sizeof(pntr_color);
     image->width = width;
     image->height = height;
-    image->clip.x = 0;
-    image->clip.y = 0;
-    image->clip.width = width;
-    image->clip.height = height;
+    pntr_image_reset_clip(image);
     image->subimage = false;
     image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
     if (image->data == NULL) {
