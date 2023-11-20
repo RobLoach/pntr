@@ -623,7 +623,7 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
-    IT("pntr_image_clip", {
+    IT("pntr_image_get_clip", {
         pntr_image* image = pntr_gen_image_color(300, 100, PNTR_RED);
 
         pntr_rectangle expected;
@@ -631,13 +631,13 @@ MODULE(pntr, {
         expected.height = 100;
         expected.x = 0;
         expected.y = 0;
-        RECTEQUALS(expected, pntr_image_clip(image));
+        RECTEQUALS(expected, pntr_image_get_clip(image));
 
         expected.width = 0;
         expected.height = 0;
         expected.x = 0;
         expected.y = 0;
-        RECTEQUALS(expected, pntr_image_clip(NULL));
+        RECTEQUALS(expected, pntr_image_get_clip(NULL));
 
         pntr_unload_image(image);
     });

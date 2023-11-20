@@ -407,7 +407,7 @@ PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color colo
 PNTR_API pntr_image* pntr_image_copy(pntr_image* image);
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height);
 PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height);
-PNTR_API pntr_rectangle pntr_image_clip(pntr_image* image);
+PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image);
 PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height);
 PNTR_API void pntr_image_reset_clip(pntr_image* image);
 PNTR_API void pntr_unload_image(pntr_image* image);
@@ -4685,7 +4685,7 @@ PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color t
 /**
  * Get the clip rectangle from the given image.
  */
-PNTR_API pntr_rectangle pntr_image_clip(pntr_image* image) {
+PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image) {
     if (image == NULL) {
         return PNTR_CLITERAL(pntr_rectangle) {
             .x = 0,
