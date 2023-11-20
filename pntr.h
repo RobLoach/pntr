@@ -1315,8 +1315,6 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
             result->pitch);
     }
 
-    // TODO: Adjust the scissor clip for the new image that's adjusted formm the original image.
-
     return result;
 }
 
@@ -1519,7 +1517,7 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
     }
 
     for (int i = 0; i < pointsCount; i++) {
-        if (points[i].x >= dst->clip.x && points[i].x < dst->clip.width && points[i].y >= dst->clip.y && points[i].y < dst->clip.height) {
+        if (points[i].x >= dst->clip.x && points[i].x < dst->clip.x + dst->clip.width && points[i].y >= dst->clip.y && points[i].y < dst->clip.y + dst->clip.height) {
             pntr_draw_point_unsafe(dst, points[i].x, points[i].y, color);
         }
     }
@@ -1688,7 +1686,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
  * TODO: pntr_draw_line_vertical: Support negative height.
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.width || posY >= dst->clip.height) {
+    if (color.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1865,7 +1863,7 @@ PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY,
     }
 
     // Check that the circle is in the bounds.
-    if (centerX + radius < 0 || centerY + radius < 0 || centerX - radius > dst->width || centerY - radius > dst->height) {
+    if (centerX + radius < dst->clip.x || centerY + radius < dst->clip.y || centerX - radius > dst->clip.x + dst->clip.width || centerY - radius > dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1908,7 +1906,7 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
         radius = -radius;
     }
 
-    if (dst == NULL || color.a == 0 || radius == 0 || centerX + radius < 0 || centerX - radius >= dst->width || centerY + radius < 0 || centerY - radius > dst->height) {
+    if (dst == NULL || color.a == 0 || radius == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1999,7 +1997,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
         radiusY = -radiusY;
     }
 
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0 || centerX + radiusX < 0 || centerX - radiusX > dst->width || centerY + radiusY < 0 || centerY - radiusY > dst->height) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -2184,9 +2182,10 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     float angle;
     for (int i = 0; i < segments; i++) {
         angle = startAngleRad + (float)i * stepAngle;
-        int x = centerX + (int)(radius * PNTR_COSF(angle)); // TODO: arc angle: Is the - correct here?
-        int y = centerY + (int)(radius * PNTR_SINF(angle));
-        pntr_draw_point(dst, x, y, color);
+        pntr_draw_point(dst,
+            centerX + (int)(radius * PNTR_COSF(angle)), // TODO: arc angle: Is the - correct here?
+            centerY + (int)(radius * PNTR_SINF(angle)),
+            color);
     }
 }
 
@@ -4317,7 +4316,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 
             for (int y = 0; y < newHeight; y++) {
                 int yPosition = posY + y - offsetYRatio;
-                if (yPosition < dst->clip.y || yPosition >= dst->clip.height) {
+                if (yPosition < dst->clip.y || yPosition >= dst->clip.y + dst->clip.height) {
                     continue;
                 }
                 float srcY = (float)y * yRatio;
@@ -4325,7 +4324,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
                 int srcYPixelPlusOne = y == newHeight - 1 ? (int)srcYPixel : (int)srcYPixel + 1;
                 for (int x = 0; x < newWidth; x++) {
                     int xPosition = posX + x - offsetXRatio;
-                    if (xPosition < dst->clip.x || xPosition >= dst->clip.width) {
+                    if (xPosition < dst->clip.x || xPosition >= dst->clip.x + dst->clip.width) {
                         continue;
                     }
                     float srcX = (float)x * xRatio;
@@ -4350,13 +4349,13 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 
             for (int y = 0; y < newHeight; y++) {
                 int yPosition = posY + y - offsetYRatio;
-                if (yPosition < dst->clip.y || yPosition >= dst->clip.height) {
+                if (yPosition < dst->clip.y || yPosition >= dst->clip.y + dst->clip.height) {
                     continue;
                 }
                 int y2 = (y * yRatio) >> 16;
                 for (int x = 0; x < newWidth; x++) {
                     int xPosition = posX + x - offsetXRatio;
-                    if (xPosition < dst->clip.x || xPosition >= dst->clip.width) {
+                    if (xPosition < dst->clip.x || xPosition >= dst->clip.x + dst->clip.width) {
                         continue;
                     }
                     int x2 = (x * xRatio) >> 16;
