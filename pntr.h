@@ -4220,7 +4220,7 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     image->pitch = newImage->pitch;
 
     // TODO: pntr_image_resize_canvas - Adust the new image clip with the original one.
-    image->clip = newImage->clip;
+    pntr_image_reset_clip(image);
     image->subimage = false;
 
     PNTR_FREE(newImage);
