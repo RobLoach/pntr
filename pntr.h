@@ -289,6 +289,10 @@ typedef struct pntr_image {
 
     /**
      * A rectangle representing the region of the image that can be changed.
+     *
+     * @see pntr_image_set_clip()
+     * @see pntr_image_reset_clip()
+     * @see pntr_image_get_clip()
      */
     pntr_rectangle clip;
 } pntr_image;
