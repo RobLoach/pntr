@@ -1649,16 +1649,16 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
  * TODO: pntr_draw_line_horizontal: Support negative width.
  */
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posY < 0 || posY >= dst->height || posX >= dst->width) {
+    if (color.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
         return;
     }
 
-    if (posX < 0) {
+    if (posX < dst->clip.x) {
         width += posX;
-        posX = 0;
+        posX = dst->clip.x;
     }
-    if (posX + width >= dst->width) {
-        width = dst->width - posX;
+    if (posX + width >= dst->clip.x + dst->clip.width) {
+        width = dst->clip.x + dst->clip.width - posX;
     }
 
     if (color.a == 255) {
@@ -1673,7 +1673,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
 }
 
 /**
- * Draw a horizontal line at the given x, y coordinates.
+ * Draw a vertical line at the given x, y coordinates.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -1692,8 +1692,8 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
         height += posY;
         posY = dst->clip.y;
     }
-    if (posY + height >= dst->clip.height) {
-        height = dst->clip.height - posY;
+    if (posY + height >= dst->clip.y + dst->clip.height) {
+        height = dst->clip.y + dst->clip.height - posY;
     }
 
     if (color.a == 255) {
@@ -4024,8 +4024,8 @@ PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int he
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
-    image->clip = newImage->clip;
     image->subimage = false;
+    pntr_image_reset_clip(image);
 
     PNTR_FREE(newImage);
 
