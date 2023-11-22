@@ -4551,7 +4551,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         }
 
         // Exit if it's not even on the screen.
-        if (dstRect.x + dstRect.width < 0 || dstRect.y + dstRect.height < 0 || dstRect.x > dst->width || dstRect.y > dst->height) {
+        if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
             return;
         }
 
@@ -4595,7 +4595,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
     // Make sure we're actually drawing on the screen.
-    if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
+    if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width || posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
         return;
     }
 
