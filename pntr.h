@@ -1654,7 +1654,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
     }
 
     if (posX < dst->clip.x) {
-        width += posX;
+        width += posX - dst->clip.x;
         posX = dst->clip.x;
     }
     if (posX + width >= dst->clip.x + dst->clip.width) {
@@ -1684,12 +1684,12 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
  * TODO: pntr_draw_line_vertical: Support negative height.
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
+    if (color.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
         return;
     }
 
     if (posY < dst->clip.y) {
-        height += posY;
+        height += posY - dst->clip.y;
         posY = dst->clip.y;
     }
     if (posY + height >= dst->clip.y + dst->clip.height) {
