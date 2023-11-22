@@ -283,7 +283,9 @@ typedef struct pntr_image {
     int pitch;
 
     /**
-     * Whether or not the image is a portion of another image.
+     * Whether or not the image is a portion of another image, sharing the same image data.
+     *
+     * @see pntr_image_subimage()
      */
     bool subimage;
 
@@ -2265,6 +2267,18 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     return PNTR_PIXEL(image, x, y);
 }
 
+/**
+ * Get the file type of the given image, based on its filename.
+ *
+ * @param filePath The file path to the image.
+ *
+ * @return The type of the image, based on its file extension, or PNTR_IMAGE_TYPE_UNKNOWN if it's unknown.
+ *
+ * @see PNTR_IMAGE_TYPE_UNKNOWN
+ * @see PNTR_IMAGE_TYPE_PNG
+ * @see PNTR_IMAGE_TYPE_BMP
+ * @see PNTR_IMAGE_TYPE_JPG
+ */
 PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     if (filePath == NULL) {
         return PNTR_IMAGE_TYPE_UNKNOWN;
@@ -2273,10 +2287,12 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     if (PNTR_STRSTR(filePath, ".png") != NULL) {
         return PNTR_IMAGE_TYPE_PNG;
     }
+
     if (PNTR_STRSTR(filePath, ".bmp") != NULL) {
         return PNTR_IMAGE_TYPE_BMP;
     }
-    if (PNTR_STRSTR(filePath, ".jpg") != NULL) {
+
+    if (PNTR_STRSTR(filePath, ".jpg") != NULL || PNTR_STRSTR(filePath, ".jpeg") != NULL) {
         return PNTR_IMAGE_TYPE_JPG;
     }
 
@@ -2642,7 +2658,6 @@ PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical)
     }
 
     pntr_color swap;
-
     if (vertical) {
         for (int y = 0; y < image->height / 2; y++) {
             for (int x = 0; x < image->width; x++) {
@@ -4684,7 +4699,11 @@ PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color t
 }
 
 /**
- * Get the clip rectangle from the given image.
+ * Get the clip rectangle from the given image. Anything outside of the clip cannot be changed.
+ *
+ * @param image The image of which to get the clip rectangle for.
+ *
+ * @return The clip rectangle associated with the given image.
  */
 PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image) {
     if (image == NULL) {
