@@ -231,6 +231,31 @@ typedef union pntr_color {
 } pntr_color;
 
 /**
+ * A rectangle.
+ */
+typedef struct pntr_rectangle {
+    /**
+     * The x position of the rectangle.
+     */
+    int x;
+
+    /**
+     * The y position of the rectangle.
+     */
+    int y;
+
+    /**
+     * The width of the rectangle.
+     */
+    int width;
+
+    /**
+     * The height of the rectangle.
+     */
+    int height;
+} pntr_rectangle;
+
+/**
  * An image, represented by pixel data.
  *
  * @see pntr_new_image()
@@ -258,9 +283,20 @@ typedef struct pntr_image {
     int pitch;
 
     /**
-     * Whether or not the image is a portion of another image.
+     * Whether or not the image is a portion of another image, sharing the same image data.
+     *
+     * @see pntr_image_subimage()
      */
     bool subimage;
+
+    /**
+     * A rectangle representing the region of the image that can be changed.
+     *
+     * @see pntr_image_set_clip()
+     * @see pntr_image_reset_clip()
+     * @see pntr_image_get_clip()
+     */
+    pntr_rectangle clip;
 } pntr_image;
 
 /**
@@ -277,31 +313,6 @@ typedef struct pntr_vector {
      */
     int y;
 } pntr_vector;
-
-/**
- * A rectangle.
- */
-typedef struct pntr_rectangle {
-    /**
-     * The x position of the rectangle.
-     */
-    int x;
-
-    /**
-     * The y position of the rectangle.
-     */
-    int y;
-
-    /**
-     * The width of the rectangle.
-     */
-    int width;
-
-    /**
-     * The height of the rectangle.
-     */
-    int height;
-} pntr_rectangle;
 
 /**
  * Font.
@@ -402,6 +413,9 @@ PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color colo
 PNTR_API pntr_image* pntr_image_copy(pntr_image* image);
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height);
 PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height);
+PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image);
+PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height);
+PNTR_API void pntr_image_reset_clip(pntr_image* image);
 PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color);
@@ -1140,6 +1154,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->pitch = width * (int)sizeof(pntr_color);
     image->width = width;
     image->height = height;
+    pntr_image_reset_clip(image);
     image->subimage = false;
     image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
     if (image->data == NULL) {
@@ -1178,12 +1193,13 @@ PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_image* newImage = pntr_new_image(image->width, image->height);
+    pntr_image* newImage = pntr_gen_image_color(image->width, image->height, PNTR_BLANK);
     if (newImage == NULL) {
         return NULL;
     }
 
-    PNTR_MEMCPY(newImage->data, image->data, newImage->pitch * newImage->height);
+    pntr_draw_image(newImage, image, 0, 0);
+    newImage->clip = image->clip;
 
     return newImage;
 }
@@ -1228,7 +1244,7 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  *
  * @code
  * pntr_rectangle dstRect;
- * if (!_pntr_rectangle_intersect(10, 10, 20, 20, image->width, image>height, dstRect)) {
+ * if (!_pntr_rectangle_intersect(10, 10, 20, 20, image->clip.x, image->clip.y, image->clip.width, image>clip.height, dstRect)) {
  *     return;
  * }
  * @endcode
@@ -1237,25 +1253,27 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  * @param y The input rectangle's y coordinate.
  * @param width The input rectangle's width.
  * @param height The input rectangle's height.
+ * @param destX The destination x coordinate.
+ * @param destY The destination y coordinate.
  * @param destWidth The destination rectangle's width.
  * @param destHeight The destination rectangle's height.
  * @param out The normalized rectangle.
  *
  * @return True if the intersect of the rectangle has a width and height greater than 0, false otherwise.
  */
-PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destWidth, int destHeight, pntr_rectangle *out) {
+PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destX, int destY, int destWidth, int destHeight, pntr_rectangle *out) {
     if (width <= 0 || height <= 0) {
         return false;
     }
 
-    out->x = PNTR_MAX(x, 0);
-    out->width = PNTR_MIN(x + width, destWidth) - out->x;
+    out->x = PNTR_MAX(x, destX);
+    out->width = PNTR_MIN(x + width, destX + destWidth) - out->x;
     if (out->width <= 0) {
         return false;
     }
 
-    out->y = PNTR_MAX(y, 0);
-    out->height = PNTR_MIN(y + height, destHeight) - out->y;
+    out->y = PNTR_MAX(y, destY);
+    out->height = PNTR_MIN(y + height, destY + destHeight) - out->y;
     if (out->height <= 0) {
         return false;
     }
@@ -1285,7 +1303,7 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
     }
 
     pntr_rectangle dstRect;
-    if (!_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &dstRect)) {
+    if (!_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &dstRect)) {
         return NULL;
     }
 
@@ -1326,7 +1344,7 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
 
     // Ensure we are referencing an actual portion of the image.
     pntr_rectangle dstRect;
-    if (!_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &dstRect)) {
+    if (!_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &dstRect)) {
         return NULL;
     }
 
@@ -1340,6 +1358,7 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
     subimage->width = dstRect.width;
     subimage->height = dstRect.height;
     subimage->subimage = true;
+    pntr_image_reset_clip(subimage);
     subimage->data = &PNTR_PIXEL(image, dstRect.x, dstRect.y);
 
     return subimage;
@@ -1375,6 +1394,8 @@ PNTR_API inline void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, 
 
 /**
  * Clears an image with the given color.
+ *
+ * @details Clearing the background ignores clipping.
  *
  * @param image The image to clear.
  * @param color The color to fill the image with.
@@ -1477,7 +1498,7 @@ PNTR_API inline void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_
  * Draws a pixel on the given image.
  */
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
-    if ((color.a == 0) || (dst == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
+   if ((color.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
         return;
     }
 
@@ -1496,7 +1517,7 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
     }
 
     for (int i = 0; i < pointsCount; i++) {
-        if (points[i].x >= 0 && points[i].x < dst->width && points[i].y >= 0 && points[i].y < dst->height) {
+        if (points[i].x >= dst->clip.x && points[i].x < dst->clip.x + dst->clip.width && points[i].y >= dst->clip.y && points[i].y < dst->clip.y + dst->clip.height) {
             pntr_draw_point_unsafe(dst, points[i].x, points[i].y, color);
         }
     }
@@ -1630,16 +1651,16 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
  * TODO: pntr_draw_line_horizontal: Support negative width.
  */
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posY < 0 || posY >= dst->height || posX >= dst->width) {
+    if (color.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
         return;
     }
 
-    if (posX < 0) {
-        width += posX;
-        posX = 0;
+    if (posX < dst->clip.x) {
+        width += posX - dst->clip.x;
+        posX = dst->clip.x;
     }
-    if (posX + width >= dst->width) {
-        width = dst->width - posX;
+    if (posX + width >= dst->clip.x + dst->clip.width) {
+        width = dst->clip.x + dst->clip.width - posX;
     }
 
     if (color.a == 255) {
@@ -1654,7 +1675,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
 }
 
 /**
- * Draw a horizontal line at the given x, y coordinates.
+ * Draw a vertical line at the given x, y coordinates.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -1665,16 +1686,16 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
  * TODO: pntr_draw_line_vertical: Support negative height.
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posX < 0 || posX >= dst->width || posY >= dst->height) {
+    if (color.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
         return;
     }
 
-    if (posY < 0) {
-        height += posY;
-        posY = 0;
+    if (posY < dst->clip.y) {
+        height += posY - dst->clip.y;
+        posY = dst->clip.y;
     }
-    if (posY + height >= dst->height) {
-        height = dst->height - posY;
+    if (posY + height >= dst->clip.y + dst->clip.height) {
+        height = dst->clip.y + dst->clip.height - posY;
     }
 
     if (color.a == 255) {
@@ -1764,7 +1785,7 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
         return;
     }
 
-    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &rect)) {
+    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->clip.x, dst->clip.y, dst->clip.width, dst->clip.height, &rect)) {
         return;
     }
 
@@ -1793,7 +1814,7 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
     }
 
     pntr_rectangle dstRect;
-    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &dstRect)) {
+    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->clip.x, dst->clip.y, dst->clip.width, dst->clip.height, &dstRect)) {
         return;
     }
 
@@ -1842,7 +1863,7 @@ PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY,
     }
 
     // Check that the circle is in the bounds.
-    if (centerX + radius < 0 || centerY + radius < 0 || centerX - radius > dst->width || centerY - radius > dst->height) {
+    if (centerX + radius < dst->clip.x || centerY + radius < dst->clip.y || centerX - radius > dst->clip.x + dst->clip.width || centerY - radius > dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1885,7 +1906,7 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
         radius = -radius;
     }
 
-    if (dst == NULL || color.a == 0 || radius == 0 || centerX + radius < 0 || centerX - radius >= dst->width || centerY + radius < 0 || centerY - radius > dst->height) {
+    if (dst == NULL || color.a == 0 || radius == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1976,7 +1997,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
         radiusY = -radiusY;
     }
 
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0 || centerX + radiusX < 0 || centerX - radiusX > dst->width || centerY + radiusY < 0 || centerY - radiusY > dst->height) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -2161,9 +2182,10 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     float angle;
     for (int i = 0; i < segments; i++) {
         angle = startAngleRad + (float)i * stepAngle;
-        int x = centerX + (int)(radius * PNTR_COSF(angle)); // TODO: arc angle: Is the - correct here?
-        int y = centerY + (int)(radius * PNTR_SINF(angle));
-        pntr_draw_point(dst, x, y, color);
+        pntr_draw_point(dst,
+            centerX + (int)(radius * PNTR_COSF(angle)), // TODO: arc angle: Is the - correct here?
+            centerY + (int)(radius * PNTR_SINF(angle)),
+            color);
     }
 }
 
@@ -2245,6 +2267,18 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     return PNTR_PIXEL(image, x, y);
 }
 
+/**
+ * Get the file type of the given image, based on its filename.
+ *
+ * @param filePath The file path to the image.
+ *
+ * @return The type of the image, based on its file extension, or PNTR_IMAGE_TYPE_UNKNOWN if it's unknown.
+ *
+ * @see PNTR_IMAGE_TYPE_UNKNOWN
+ * @see PNTR_IMAGE_TYPE_PNG
+ * @see PNTR_IMAGE_TYPE_BMP
+ * @see PNTR_IMAGE_TYPE_JPG
+ */
 PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     if (filePath == NULL) {
         return PNTR_IMAGE_TYPE_UNKNOWN;
@@ -2253,10 +2287,12 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     if (PNTR_STRSTR(filePath, ".png") != NULL) {
         return PNTR_IMAGE_TYPE_PNG;
     }
+
     if (PNTR_STRSTR(filePath, ".bmp") != NULL) {
         return PNTR_IMAGE_TYPE_BMP;
     }
-    if (PNTR_STRSTR(filePath, ".jpg") != NULL) {
+
+    if (PNTR_STRSTR(filePath, ".jpg") != NULL || PNTR_STRSTR(filePath, ".jpeg") != NULL) {
         return PNTR_IMAGE_TYPE_JPG;
     }
 
@@ -2404,7 +2440,7 @@ PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_
  * @see pntr_draw_image()
  */
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
-    if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
+    if (dst == NULL || src == NULL || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -2412,20 +2448,21 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
     if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
             srcRect.width <= 0 ? src->width : srcRect.width,
             srcRect.height <= 0 ? src->height : srcRect.height,
+            0, 0,
             src->width, src->height, &srcRect)) {
         return;
     }
 
     // Update the source coordinates based on the destination
-    if (posX < 0) {
-        srcRect.x -= posX;
-        srcRect.width += posX;
-        posX = 0;
+    if (posX < dst->clip.x) {
+        srcRect.x -= posX - dst->clip.x;
+        srcRect.width += posX - dst->clip.x;
+        posX = dst->clip.x;
     }
-    if (posY < 0) {
-        srcRect.y -= posY;
-        srcRect.height += posY;
-        posY = 0;
+    if (posY < dst->clip.y) {
+        srcRect.y -= posY - dst->clip.y;
+        srcRect.height += posY - dst->clip.y;
+        posY = dst->clip.y;
     }
 
     // Confine the destination.
@@ -2433,7 +2470,8 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
     if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
             srcRect.width,
             srcRect.height,
-            dst->width, dst->height, &dstRect)) {
+            dst->clip.x, dst->clip.y,
+            dst->clip.width, dst->clip.height, &dstRect)) {
         return;
     }
 
@@ -2600,6 +2638,8 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
         break;
     }
 
+    // TODO: Copy the clip values scaled from the original image?
+
     return output;
 }
 
@@ -2618,7 +2658,6 @@ PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical)
     }
 
     pntr_color swap;
-
     if (vertical) {
         for (int y = 0; y < image->height / 2; y++) {
             for (int x = 0; x < image->width; x++) {
@@ -2652,9 +2691,9 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
         return;
     }
 
-    for (int y = 0; y < image->height; y++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
         pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+        for (int x = image->clip.x; x < image->clip.x + image->clip.width; x++) {
             if (pixel->data == color.data) {
                 *pixel = replace;
             }
@@ -2765,9 +2804,9 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float factor) {
         factor = 1.0f;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             if (pixel->a > 0) {
                 *pixel = pntr_color_fade(*pixel, factor);
             }
@@ -2856,9 +2895,9 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
         return;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_tint(*pixel, tint);
             pixel++;
         }
@@ -3606,9 +3645,9 @@ PNTR_API void pntr_image_color_invert(pntr_image* image) {
         return;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_invert(*pixel);
             pixel++;
         }
@@ -3635,9 +3674,9 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
         factor = 1.0f;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_brightness(*pixel, factor);
             pixel++;
         }
@@ -4001,6 +4040,7 @@ PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int he
     image->height = newImage->height;
     image->pitch = newImage->pitch;
     image->subimage = false;
+    pntr_image_reset_clip(image);
 
     PNTR_FREE(newImage);
 
@@ -4107,9 +4147,9 @@ PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast) {
         contrast = 1.0f;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_contrast(*pixel, contrast);
             pixel++;
         }
@@ -4123,6 +4163,8 @@ PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast) {
  * @param alphaMask An image that has the alphaMask data.
  * @param posX Where to position the alpha mask on the image.
  * @param posY Where to position the alpha mask on the image.
+ *
+ * @todo // TODO: Add a pntr_draw_image_alpha_mask function.
  */
 PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY) {
     if (image == NULL || alphaMask == NULL) {
@@ -4145,12 +4187,13 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
     if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
             PNTR_MIN(dstRect.width, srcRect.width),
             PNTR_MIN(dstRect.height, srcRect.height),
-            image->width, image->height, &dstRect)) {
+            image->clip.x, image->clip.y,
+            image->clip.width, image->clip.height, &dstRect)) {
         return;
     }
 
     for (int y = 0; y < dstRect.height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, posX, posY + y);
+        pntr_color* pixel = &PNTR_PIXEL(image, dstRect.x, dstRect.y + y);
         for (int x = 0; x < dstRect.width; x++) {
             if (pixel->a > 0) {
                 pixel->a = PNTR_PIXEL(alphaMask, x, y).a;
@@ -4194,6 +4237,9 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
+
+    // TODO: pntr_image_resize_canvas - Adust the new image clip with the original one.
+    pntr_image_reset_clip(image);
     image->subimage = false;
 
     PNTR_FREE(newImage);
@@ -4225,7 +4271,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    if (!_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, src->width, src->height, &srcRec)) {
+    if (!_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, 0, 0, src->width, src->height, &srcRec)) {
         return;
     }
 
@@ -4267,7 +4313,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
         return;
     }
 
-    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, src->width, src->height, &srcRect)) {
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
         return;
     }
 
@@ -4283,7 +4329,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 
             for (int y = 0; y < newHeight; y++) {
                 int yPosition = posY + y - offsetYRatio;
-                if (yPosition < 0 || yPosition >= dst->height) {
+                if (yPosition < dst->clip.y || yPosition >= dst->clip.y + dst->clip.height) {
                     continue;
                 }
                 float srcY = (float)y * yRatio;
@@ -4291,7 +4337,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
                 int srcYPixelPlusOne = y == newHeight - 1 ? (int)srcYPixel : (int)srcYPixel + 1;
                 for (int x = 0; x < newWidth; x++) {
                     int xPosition = posX + x - offsetXRatio;
-                    if (xPosition < 0 || xPosition >= dst->width) {
+                    if (xPosition < dst->clip.x || xPosition >= dst->clip.x + dst->clip.width) {
                         continue;
                     }
                     float srcX = (float)x * xRatio;
@@ -4316,13 +4362,13 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 
             for (int y = 0; y < newHeight; y++) {
                 int yPosition = posY + y - offsetYRatio;
-                if (yPosition < 0 || yPosition >= dst->height) {
+                if (yPosition < dst->clip.y || yPosition >= dst->clip.y + dst->clip.height) {
                     continue;
                 }
                 int y2 = (y * yRatio) >> 16;
                 for (int x = 0; x < newWidth; x++) {
                     int xPosition = posX + x - offsetXRatio;
-                    if (xPosition < 0 || xPosition >= dst->width) {
+                    if (xPosition < dst->clip.x || xPosition >= dst->clip.x + dst->clip.width) {
                         continue;
                     }
                     int x2 = (x * xRatio) >> 16;
@@ -4520,7 +4566,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         }
 
         // Exit if it's not even on the screen.
-        if (dstRect.x + dstRect.width < 0 || dstRect.y + dstRect.height < 0 || dstRect.x > dst->width || dstRect.y > dst->height) {
+        if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
             return;
         }
 
@@ -4564,7 +4610,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
     // Make sure we're actually drawing on the screen.
-    if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
+    if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width || posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -4577,14 +4623,14 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     for (int y = 0; y < newHeight; y++) {
         // Only draw onto the screen.
         destY = posY + y - offsetYRatio;
-        if (destY < 0 || destY >= dst->height) {
+        if (destY < dst->clip.y || destY >= dst->clip.y + dst->clip.height) {
             continue;
         }
 
         for (int x = 0; x < newWidth; x++) {
             // Make sure we're actually drawing onto the screen.
             destX = posX + x - offsetXRatio;
-            if (destX < 0 || destX >= dst->width ) {
+            if (destX < dst->clip.x || destX >= dst->clip.x + dst->clip.width ) {
                 continue;
             }
 
@@ -4650,6 +4696,62 @@ PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color t
     pntr_draw_rectangle_gradient(image, 0, 0, width, height, topLeft, topRight, bottomLeft, bottomRight);
 
     return image;
+}
+
+/**
+ * Get the clip rectangle from the given image. Anything outside of the clip cannot be changed.
+ *
+ * @param image The image of which to get the clip rectangle for.
+ *
+ * @return The clip rectangle associated with the given image.
+ */
+PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image) {
+    if (image == NULL) {
+        return PNTR_CLITERAL(pntr_rectangle) {
+            .x = 0,
+            .y = 0,
+            .width = 0,
+            .height = 0
+        };
+    }
+
+    return image->clip;
+}
+
+/**
+ * Set the clipping rectangle for the given image to restrict drawing within.
+ *
+ * @param image The image to set the clipping rectangle.
+ * @param x The X coordinate for the clipping rectangle.
+ * @param y The Y coordinate for the clipping rectangle.
+ * @param width The width of the desired clipping rectangle.
+ * @param height The height of the desired clipping rectangle.
+ */
+PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height) {
+    if (image == NULL) {
+        return;
+    }
+
+    pntr_rectangle clip;
+    if (_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &clip)) {
+        image->clip = clip;
+    }
+}
+
+/**
+ * Reset the clipping rectangle for the given image.
+ *
+ * @param image The image to reset the clipping image for.
+ */
+PNTR_API void pntr_image_reset_clip(pntr_image* image) {
+    if (image == NULL) {
+        return;
+    }
+
+    image->clip.x = 0;
+    image->clip.y = 0;
+    image->clip.width = image->width;
+    image->clip.height = image->height;
 }
 
 /**
