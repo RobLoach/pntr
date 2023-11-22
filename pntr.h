@@ -2439,13 +2439,13 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
 
     // Update the source coordinates based on the destination
     if (posX < dst->clip.x) {
-        srcRect.x -= posX;
-        srcRect.width += posX;
+        srcRect.x -= posX - dst->clip.x;
+        srcRect.width += posX - dst->clip.x;
         posX = dst->clip.x;
     }
     if (posY < dst->clip.y) {
-        srcRect.y -= posY;
-        srcRect.height += posY;
+        srcRect.y -= posY - dst->clip.y;
+        srcRect.height += posY - dst->clip.y;
         posY = dst->clip.y;
     }
 
