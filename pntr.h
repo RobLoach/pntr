@@ -1432,10 +1432,12 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
  */
 PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
     return PNTR_CLITERAL(pntr_color){
-        .rgba.r = red,
-        .rgba.g = green,
-        .rgba.b = blue,
-        .rgba.a = alpha
+        .rgba = {
+            .r = red,
+            .g = green,
+            .b = blue,
+            .a = alpha
+        }
     };
 }
 
@@ -1448,10 +1450,12 @@ PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green
  */
 PNTR_API inline pntr_color pntr_get_color(unsigned int hexValue) {
     return PNTR_CLITERAL(pntr_color) {
-        .rgba.r = (unsigned char)(hexValue >> 24) & 0xFF,
-        .rgba.g = (unsigned char)(hexValue >> 16) & 0xFF,
-        .rgba.b = (unsigned char)(hexValue >> 8) & 0xFF,
-        .rgba.a = (unsigned char)hexValue & 0xFF
+        .rgba = {
+            .r = (unsigned char)(hexValue >> 24) & 0xFF,
+            .g = (unsigned char)(hexValue >> 16) & 0xFF,
+            .b = (unsigned char)(hexValue >> 8) & 0xFF,
+            .a = (unsigned char)hexValue & 0xFF
+        }
     };
 }
 
@@ -2718,10 +2722,12 @@ PNTR_API inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
     }
 
     return PNTR_CLITERAL(pntr_color) {
-        .rgba.r = (unsigned char)(((float)color.rgba.r / 255.0f * (float)tint.rgba.r / 255.0f) * 255.0f),
-        .rgba.g = (unsigned char)(((float)color.rgba.g / 255.0f * (float)tint.rgba.g / 255.0f) * 255.0f),
-        .rgba.b = (unsigned char)(((float)color.rgba.b / 255.0f * (float)tint.rgba.b / 255.0f) * 255.0f),
-        .rgba.a = (unsigned char)(((float)color.rgba.a / 255.0f * (float)tint.rgba.a / 255.0f) * 255.0f)
+        .rgba = {
+            .r = (unsigned char)(((float)color.rgba.r / 255.0f * (float)tint.rgba.r / 255.0f) * 255.0f),
+            .g = (unsigned char)(((float)color.rgba.g / 255.0f * (float)tint.rgba.g / 255.0f) * 255.0f),
+            .b = (unsigned char)(((float)color.rgba.b / 255.0f * (float)tint.rgba.b / 255.0f) * 255.0f),
+            .a = (unsigned char)(((float)color.rgba.a / 255.0f * (float)tint.rgba.a / 255.0f) * 255.0f)
+        }
     };
 }
 
@@ -2749,8 +2755,8 @@ PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor) {
     }
     else {
         color.rgba.r = (unsigned char)(((float)(255 - color.rgba.r) * factor) + color.rgba.r);
-        color.rgba.g = (unsigned char)(((float)(255 - color.rgba.r) * factor) + color.rgba.r);
-        color.rgba.b = (unsigned char)(((float)(255 - color.rgba.r) * factor) + color.rgba.r);
+        color.rgba.g = (unsigned char)(((float)(255 - color.rgba.g) * factor) + color.rgba.g);
+        color.rgba.b = (unsigned char)(((float)(255 - color.rgba.b) * factor) + color.rgba.b);
     }
 
     return color;
@@ -2857,25 +2863,31 @@ PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixel
     switch (srcPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
             return PNTR_CLITERAL(pntr_color) {
-                .rgba.r = ((unsigned char *)srcPtr)[0],
-                .rgba.g = ((unsigned char *)srcPtr)[1],
-                .rgba.b = ((unsigned char *)srcPtr)[2],
-                .rgba.a = ((unsigned char *)srcPtr)[3]
+                .rgba = {
+                    .r = ((unsigned char *)srcPtr)[0],
+                    .g = ((unsigned char *)srcPtr)[1],
+                    .b = ((unsigned char *)srcPtr)[2],
+                    .a = ((unsigned char *)srcPtr)[3]
+                }
             };
         case PNTR_PIXELFORMAT_ARGB8888:
             return PNTR_CLITERAL(pntr_color) {
-                .rgba.a = ((unsigned char *)srcPtr)[0],
-                .rgba.r = ((unsigned char *)srcPtr)[1],
-                .rgba.g = ((unsigned char *)srcPtr)[2],
-                .rgba.b = ((unsigned char *)srcPtr)[3]
+                .rgba = {
+                    .a = ((unsigned char *)srcPtr)[0],
+                    .r = ((unsigned char *)srcPtr)[1],
+                    .g = ((unsigned char *)srcPtr)[2],
+                    .b = ((unsigned char *)srcPtr)[3]
+                }
             };
         case PNTR_PIXELFORMAT_GRAYSCALE:
             // White, with alpha determining grayscale value. Use tint to change color afterwards.
             return PNTR_CLITERAL(pntr_color) {
-                .rgba.r = 255,
-                .rgba.g = 255,
-                .rgba.b = 255,
-                .rgba.a = ((unsigned char*)srcPtr)[0]
+                .rgba = {
+                    .r = 255,
+                    .g = 255,
+                    .b = 255,
+                    .a = ((unsigned char*)srcPtr)[0]
+                }
             };
     }
 
@@ -3626,10 +3638,12 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
  */
 PNTR_API inline pntr_color pntr_color_invert(pntr_color color) {
     return PNTR_CLITERAL(pntr_color) {
-        .rgba.r = 255 - color.rgba.r,
-        .rgba.g = 255 - color.rgba.g,
-        .rgba.b = 255 - color.rgba.b,
-        .rgba.a = color.rgba.a
+        .rgba = {
+            .r = 255 - color.rgba.r,
+            .g = 255 - color.rgba.g,
+            .b = 255 - color.rgba.b,
+            .a = color.rgba.a
+        }
     };
 }
 
@@ -4120,10 +4134,12 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
     }
 
     return PNTR_CLITERAL(pntr_color) {
-        .rgba.r = (unsigned char)pR,
-        .rgba.g = (unsigned char)pG,
-        .rgba.b = (unsigned char)pB,
-        .rgba.a = color.rgba.a,
+        .rgba = {
+            .r = (unsigned char)pR,
+            .g = (unsigned char)pG,
+            .b = (unsigned char)pB,
+            .a = color.rgba.a
+        }
     };
 }
 
@@ -4473,10 +4489,12 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
  */
 PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
     return PNTR_CLITERAL(pntr_color) {
-        .rgba.r = (uint8_t)(color00.rgba.r * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.r * (1 - coordinateX) * coordinateY + color10.rgba.r * coordinateX * (1 - coordinateY) + color11.rgba.r * coordinateX * coordinateY),
-        .rgba.g = (uint8_t)(color00.rgba.g * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.g * (1 - coordinateX) * coordinateY + color10.rgba.g * coordinateX * (1 - coordinateY) + color11.rgba.g * coordinateX * coordinateY),
-        .rgba.b = (uint8_t)(color00.rgba.b * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.b * (1 - coordinateX) * coordinateY + color10.rgba.b * coordinateX * (1 - coordinateY) + color11.rgba.b * coordinateX * coordinateY),
-        .rgba.a = (uint8_t)(color00.rgba.a * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.a * (1 - coordinateX) * coordinateY + color10.rgba.a * coordinateX * (1 - coordinateY) + color11.rgba.a * coordinateX * coordinateY)
+        .rgba = {
+            .r = (uint8_t)(color00.rgba.r * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.r * (1 - coordinateX) * coordinateY + color10.rgba.r * coordinateX * (1 - coordinateY) + color11.rgba.r * coordinateX * coordinateY),
+            .g = (uint8_t)(color00.rgba.g * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.g * (1 - coordinateX) * coordinateY + color10.rgba.g * coordinateX * (1 - coordinateY) + color11.rgba.g * coordinateX * coordinateY),
+            .b = (uint8_t)(color00.rgba.b * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.b * (1 - coordinateX) * coordinateY + color10.rgba.b * coordinateX * (1 - coordinateY) + color11.rgba.b * coordinateX * coordinateY),
+            .a = (uint8_t)(color00.rgba.a * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.a * (1 - coordinateX) * coordinateY + color10.rgba.a * coordinateX * (1 - coordinateY) + color11.rgba.a * coordinateX * coordinateY)
+        }
     };
 }
 
