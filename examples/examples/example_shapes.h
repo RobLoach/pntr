@@ -2,12 +2,12 @@ void example_shapes_init() {
     // Nothing
 }
 
-const char* example_shapes_update(pntr_image* canvas) {
+const char* example_shapes_update(pntr_app* app, pntr_image* canvas) {
     // Define some colors
     pntr_color lightGreen = PNTR_GREEN;
-    lightGreen.a = 180;
+    lightGreen.rgba.a = 180;
     pntr_color lightBlue = PNTR_BLUE;
-    lightBlue.a = 180;
+    lightBlue.rgba.a = 180;
 
     // Rectangles
     pntr_draw_rectangle_fill(canvas, 10, 30, 50, 50, PNTR_RED);

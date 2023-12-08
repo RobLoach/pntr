@@ -26,19 +26,19 @@ void example_bunnymark_init() {
     frameCount = 0;
 }
 
-const char* example_bunnymark_update(pntr_image* canvas) {
+const char* example_bunnymark_update(pntr_app* app, pntr_image* canvas) {
     if (bunnyImage == NULL) {
         return "resources/bunny.png failed to load";
     }
 
     // Add new bunnies
-    if (++frameCount > pntr_app_random(5, 10) && bunniesCount < MAX_BUNNIES) {
+    if (++frameCount > pntr_app_random(app, 5, 10) && bunniesCount < MAX_BUNNIES) {
         frameCount = 0;
-        bunnies[bunniesCount].positionX = pntr_app_random(0, canvas->width - bunnyImage->width);
-        bunnies[bunniesCount].positionY = pntr_app_random(0, canvas->height - bunnyImage->height);
-        bunnies[bunniesCount].speedX = (float)pntr_app_random(-250, 250) / 60.0f;
-        bunnies[bunniesCount].speedY = (float)pntr_app_random(-250, 250) / 60.0f;
-        bunnies[bunniesCount].color = pntr_new_color(pntr_app_random(50, 240), pntr_app_random(80, 240), pntr_app_random(100, 240), 255);
+        bunnies[bunniesCount].positionX = pntr_app_random(app, 0, canvas->width - bunnyImage->width);
+        bunnies[bunniesCount].positionY = pntr_app_random(app, 0, canvas->height - bunnyImage->height);
+        bunnies[bunniesCount].speedX = (float)pntr_app_random(app, -250, 250) / 60.0f;
+        bunnies[bunniesCount].speedY = (float)pntr_app_random(app, -250, 250) / 60.0f;
+        bunnies[bunniesCount].color = pntr_new_color(pntr_app_random(app, 50, 240), pntr_app_random(app, 80, 240), pntr_app_random(app, 100, 240), 255);
         bunniesCount++;
     }
 

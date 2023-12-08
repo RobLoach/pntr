@@ -12,7 +12,7 @@ void example_image_init() {
     resized = pntr_image_resize(image, image->width / 2, image->height / 2, PNTR_FILTER_NEARESTNEIGHBOR);
 }
 
-const char* example_image_update(pntr_image* canvas) {
+const char* example_image_update(pntr_app* app, pntr_image* canvas) {
     if (image == NULL) {
         return "Failed to load resources/logo-128x128.png";
     }

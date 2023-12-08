@@ -22,7 +22,7 @@ void example_fonts_init() {
     resizedFont = pntr_font_scale(defaultFont, 2.0f, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
 }
 
-const char* example_fonts_update(pntr_image* canvas) {
+const char* example_fonts_update(pntr_app* app, pntr_image* canvas) {
     // Only display the fonts if they loaded correctly.
     if (defaultFont == NULL || bmFont == NULL || ttyFont == NULL || ttfFont == NULL) {
         return "Fonts - Failed to load fonts";

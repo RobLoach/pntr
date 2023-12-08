@@ -16,7 +16,7 @@ void example_image_sprite_init() {
     frameRec.height = scarfy->height;
 }
 
-const char* example_image_sprite_update(pntr_image* canvas) {
+const char* example_image_sprite_update(pntr_app* app, pntr_image* canvas) {
     if (scarfy == NULL) {
         return "Failed to load resources/scarfy.png";
     }
