@@ -181,10 +181,18 @@
  */
 typedef union pntr_color {
     /**
-     * The color data, represented by an unsigned 32-bit integer.
+     * The color value, represented by an unsigned 32-bit integer.
      */
-    uint32_t data;
+    uint32_t value;
 
+    /**
+     * Union data representing the 32-bit integer, split into four bytes.
+     *
+     * The order in which the values are sorted depends on which pixel format you're using.
+     *
+     * @see PNTR_PIXELFORMAT_RGBA
+     * @see PNTR_PIXELFORMAT_ARGB
+     */
     struct pntr_color_rgba_t {
         #if defined(PNTR_PIXELFORMAT_RGBA)
             /**
@@ -675,17 +683,17 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #define PNTR_WHITE      pntr_new_color(255, 255, 255, 255)
 #endif
 
-#ifndef PNTR_WHITE_DATA
+#ifndef PNTR_WHITE_VALUE
 /**
  * The integer representation of PNTR_WHITE.
  *
- * @note This is the same as \c PNTR_WHITE.data .
+ * @note This is the same as \c PNTR_WHITE.value .
  *
  * @private
  * @internal
  */
-#define PNTR_WHITE_DATA 4294967295
-#endif  // PNTR_WHITE_DATA
+#define PNTR_WHITE_VALUE 4294967295
+#endif  // PNTR_WHITE_VALUE
 
 #ifndef PNTR_BLACK
 /**
@@ -2487,7 +2495,7 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-    if (tint.data == PNTR_WHITE_DATA) {
+    if (tint.value == PNTR_WHITE_VALUE) {
         while (dstRect.height-- > 0) {
             for (int x = 0; x < dstRect.width; ++x) {
                 pntr_blend_color(dstPixel + x, srcPixel[x]);
@@ -2698,7 +2706,7 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
     for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
         pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
         for (int x = image->clip.x; x < image->clip.x + image->clip.width; x++) {
-            if (pixel->data == color.data) {
+            if (pixel->value == color.value) {
                 *pixel = replace;
             }
             pixel++;
@@ -2717,7 +2725,7 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
  * @see pntr_image_color_tint()
  */
 PNTR_API inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
-    if (tint.data == PNTR_WHITE_DATA) {
+    if (tint.value == PNTR_WHITE_VALUE) {
         return color;
     }
 
@@ -3009,7 +3017,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     // Find out how many characters there are.
     int numCharacters = 0;
     for (int i = 0; i < image->width; i++) {
-        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
+        if (pntr_image_get_color(image, i, 0).value == seperator.value) {
             numCharacters++;
         }
     }
@@ -3022,7 +3030,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     // Set up the data structures.
     int currentCharacter = 0;
     for (int i = 1; i < image->width; i++) {
-        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
+        if (pntr_image_get_color(image, i, 0).value == seperator.value) {
             font->characters[currentCharacter] = characters[currentCharacter];
             font->srcRects[currentCharacter] = currentRectangle;
             font->glyphRects[currentCharacter] = PNTR_CLITERAL(pntr_rectangle) {
