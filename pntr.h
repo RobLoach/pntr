@@ -1320,9 +1320,9 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
         return NULL;
     }
 
-    for (int y = 0; y < dstRect.height; y++) {
-        PNTR_MEMCPY(&PNTR_PIXEL(result, 0, y),
-            &PNTR_PIXEL(image, dstRect.x, dstRect.y + y),
+    for (int destY = 0; destY < dstRect.height; destY++) {
+        PNTR_MEMCPY(&PNTR_PIXEL(result, 0, destY),
+            &PNTR_PIXEL(image, dstRect.x, dstRect.y + destY),
             result->pitch);
     }
 
@@ -2191,12 +2191,11 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     */
 
     // Draw each line segment
-    float angle;
     for (int i = 0; i < segments; i++) {
-        angle = startAngleRad + (float)i * stepAngle;
+        endAngleRad = startAngleRad + (float)i * stepAngle;
         pntr_draw_point(dst,
-            centerX + (int)(radius * PNTR_COSF(angle)), // TODO: arc angle: Is the - correct here?
-            centerY + (int)(radius * PNTR_SINF(angle)),
+            centerX + (int)(radius * PNTR_COSF(endAngleRad)), // TODO: arc angle: Is the - correct here?
+            centerY + (int)(radius * PNTR_SINF(endAngleRad)),
             color);
     }
 }
@@ -2216,12 +2215,11 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
     float stepAngle = (endAngleRad - startAngleRad) / (float)segments;
     pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)segments + (size_t)1);
 
-    float angle;
     // TODO: pntr_draw_arc_fill(): Is pntr_draw_polygon_fill ample here?
     for (int i = 0; i < segments; i++) {
-        angle = startAngleRad + (float)i * stepAngle;
-        points[i].x = centerX + (int)(radius * PNTR_COSF(angle));
-        points[i].y = centerY + (int)(radius * PNTR_SINF(angle));
+        endAngleRad = startAngleRad + (float)i * stepAngle;
+        points[i].x = centerX + (int)(radius * PNTR_COSF(endAngleRad));
+        points[i].y = centerY + (int)(radius * PNTR_SINF(endAngleRad));
     }
 
     points[segments].x = centerX;
@@ -2352,7 +2350,7 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
  * @see PNTR_LOAD_IMAGE_FROM_MEMORY
  */
 PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize) {
-    if (fileData == NULL || dataSize <= 0) {
+    if (fileData == NULL || dataSize == 0) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
@@ -3079,7 +3077,7 @@ PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int
 }
 
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
-    if (fileData == NULL || dataSize <= 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
+    if (fileData == NULL || dataSize == 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
@@ -3486,7 +3484,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
 
         // Iterate through all the characters and draw them manually.
         for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
-            unsigned char* bitmap = PNTR_DEFAULT_FONT_NAME[i];
+            const unsigned char* bitmap = PNTR_DEFAULT_FONT_NAME[i];
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
                     if (bitmap[y] & 1 << x) {
@@ -3575,7 +3573,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
     #else
         // Create the bitmap data with ample space based on the font size
         int width = fontSize * 10;
-        int height = fontSize * 10;
+        int height = width;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
         if (bitmap == NULL) {
             return pntr_set_error(PNTR_ERROR_NO_MEMORY);
@@ -4644,18 +4642,17 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     float centerY = (float)srcRect.height / 2.0f;
     int srcXint, srcYint;
     float srcX, srcY;
-    int destX, destY;
 
     for (int y = 0; y < newHeight; y++) {
         // Only draw onto the screen.
-        destY = posY + y - offsetYRatio;
+        int destY = posY + y - offsetYRatio;
         if (destY < dst->clip.y || destY >= dst->clip.y + dst->clip.height) {
             continue;
         }
 
         for (int x = 0; x < newWidth; x++) {
             // Make sure we're actually drawing onto the screen.
-            destX = posX + x - offsetXRatio;
+            int destX = posX + x - offsetXRatio;
             if (destX < dst->clip.x || destX >= dst->clip.x + dst->clip.width ) {
                 continue;
             }
