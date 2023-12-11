@@ -6,8 +6,8 @@ target_link_libraries(pntr_test PUBLIC
     #m
 )
 
-# C11 Standard
-set_property(TARGET pntr_test PROPERTY C_STANDARD 11)
+# C99 Standard
+set_property(TARGET pntr_test PROPERTY C_STANDARD 99)
 set_property(TARGET pntr_test PROPERTY C_STANDARD_REQUIRED TRUE)
 
 # Strict Warnings and Errors

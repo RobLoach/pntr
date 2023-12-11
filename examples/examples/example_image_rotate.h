@@ -6,7 +6,7 @@ void example_image_rotate_init() {
     imageToRotate = pntr_load_image("resources/logo-128x128.png");
 }
 
-const char* example_image_rotate_update(pntr_image* canvas) {
+const char* example_image_rotate_update(pntr_app* app, pntr_image* canvas) {
     if (imageToRotate == NULL) {
         return "Failed to load resources/logo-128x128.png";
     }

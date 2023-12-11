@@ -7,7 +7,7 @@ void example_image_resize_init() {
     originalImage = pntr_load_image("resources/logo-128x128.png");
 }
 
-const char* example_image_resize_update(pntr_image* canvas) {
+const char* example_image_resize_update(pntr_app* app, pntr_image* canvas) {
     if (originalImage == NULL) {
         return "Failed to load resources/logo-128x128.png";
     }

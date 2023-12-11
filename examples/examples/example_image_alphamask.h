@@ -19,7 +19,7 @@ void example_image_alphamask_init() {
     pntr_unload_image(imageText);
 }
 
-const char* example_image_alphamask_update(pntr_image* canvas) {
+const char* example_image_alphamask_update(pntr_app* app, pntr_image* canvas) {
     pntr_draw_image(canvas, output, 10, 50);
 
     return "Image Alpha Mask";

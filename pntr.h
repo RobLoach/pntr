@@ -181,11 +181,19 @@
  */
 typedef union pntr_color {
     /**
-     * The color data, represented by an unsigned 32-bit integer.
+     * The color value, represented by an unsigned 32-bit integer.
      */
-    uint32_t data;
+    uint32_t value;
 
-    struct {
+    /**
+     * Union data representing the 32-bit integer, split into four bytes.
+     *
+     * The order in which the values are sorted depends on which pixel format you're using.
+     *
+     * @see PNTR_PIXELFORMAT_RGBA
+     * @see PNTR_PIXELFORMAT_ARGB
+     */
+    struct pntr_color_rgba_t {
         #if defined(PNTR_PIXELFORMAT_RGBA)
             /**
              * Red channel.
@@ -227,7 +235,7 @@ typedef union pntr_color {
              */
             unsigned char a;
         #endif
-    };
+    } rgba;
 } pntr_color;
 
 /**
@@ -465,10 +473,10 @@ PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int 
 #endif
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
-PNTR_API unsigned char pntr_color_get_r(pntr_color color);
-PNTR_API unsigned char pntr_color_get_g(pntr_color color);
-PNTR_API unsigned char pntr_color_get_b(pntr_color color);
-PNTR_API unsigned char pntr_color_get_a(pntr_color color);
+PNTR_API unsigned char pntr_color_r(pntr_color color);
+PNTR_API unsigned char pntr_color_g(pntr_color color);
+PNTR_API unsigned char pntr_color_b(pntr_color color);
+PNTR_API unsigned char pntr_color_a(pntr_color color);
 PNTR_API void pntr_color_set_r(pntr_color* color, unsigned char r);
 PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g);
 PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b);
@@ -675,17 +683,17 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #define PNTR_WHITE      pntr_new_color(255, 255, 255, 255)
 #endif
 
-#ifndef PNTR_WHITE_DATA
+#ifndef PNTR_WHITE_VALUE
 /**
  * The integer representation of PNTR_WHITE.
  *
- * @note This is the same as \c PNTR_WHITE.data .
+ * @note This is the same as \c PNTR_WHITE.value .
  *
  * @private
  * @internal
  */
-#define PNTR_WHITE_DATA 4294967295
-#endif  // PNTR_WHITE_DATA
+#define PNTR_WHITE_VALUE 4294967295
+#endif  // PNTR_WHITE_VALUE
 
 #ifndef PNTR_BLACK
 /**
@@ -1218,23 +1226,23 @@ PNTR_API
 inline
 #endif
 void pntr_blend_color(pntr_color* dst, pntr_color src) {
-    if (src.a == 255) {
+    if (src.rgba.a == 255) {
         *dst = src;
         return;
     }
     #ifndef PNTR_DISABLE_ALPHABLEND
-        if (src.a == 0) {
+        if (src.rgba.a == 0) {
             return;
         }
 
-        unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
-        unsigned int dstAlpha = (unsigned int)dst->a * (256 - alpha);
-        dst->a = (unsigned char)((alpha * 256 + dstAlpha) >> 8);
+        unsigned int alpha = (unsigned int)src.rgba.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
+        unsigned int dstAlpha = (unsigned int)dst->rgba.a * (256 - alpha);
+        dst->rgba.a = (unsigned char)((alpha * 256 + dstAlpha) >> 8);
 
-        if (dst->a > 0) {
-            dst->r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst->r * dstAlpha) / dst->a) >> 8);
-            dst->g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst->g * dstAlpha) / dst->a) >> 8);
-            dst->b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst->b * dstAlpha) / dst->a) >> 8);
+        if (dst->rgba.a > 0) {
+            dst->rgba.r = (unsigned char)((((unsigned int)src.rgba.r * alpha * 256 + (unsigned int)dst->rgba.r * dstAlpha) / dst->rgba.a) >> 8);
+            dst->rgba.g = (unsigned char)((((unsigned int)src.rgba.g * alpha * 256 + (unsigned int)dst->rgba.g * dstAlpha) / dst->rgba.a) >> 8);
+            dst->rgba.b = (unsigned char)((((unsigned int)src.rgba.b * alpha * 256 + (unsigned int)dst->rgba.b * dstAlpha) / dst->rgba.a) >> 8);
         }
     #endif
 }
@@ -1406,7 +1414,7 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
     }
 
     // Blank
-    if (color.a == 0) {
+    if (color.rgba.a == 0) {
         PNTR_MEMSET((void*)image->data, 0, (size_t)(image->height * image->pitch));
         return;
     }
@@ -1432,10 +1440,12 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
  */
 PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
     return PNTR_CLITERAL(pntr_color){
-        .r = red,
-        .g = green,
-        .b = blue,
-        .a = alpha
+        .rgba = {
+            .r = red,
+            .g = green,
+            .b = blue,
+            .a = alpha
+        }
     };
 }
 
@@ -1447,44 +1457,46 @@ PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green
  * @return The color representing the given hex value.
  */
 PNTR_API inline pntr_color pntr_get_color(unsigned int hexValue) {
-    return PNTR_CLITERAL(pntr_color){
-        .r = (unsigned char)(hexValue >> 24) & 0xFF,
-        .g = (unsigned char)(hexValue >> 16) & 0xFF,
-        .b = (unsigned char)(hexValue >> 8) & 0xFF,
-        .a = (unsigned char)hexValue & 0xFF
+    return PNTR_CLITERAL(pntr_color) {
+        .rgba = {
+            .r = (unsigned char)(hexValue >> 24) & 0xFF,
+            .g = (unsigned char)(hexValue >> 16) & 0xFF,
+            .b = (unsigned char)(hexValue >> 8) & 0xFF,
+            .a = (unsigned char)hexValue & 0xFF
+        }
     };
 }
 
-PNTR_API inline unsigned char pntr_color_get_r(pntr_color color) {
-    return color.r;
+PNTR_API inline unsigned char pntr_color_r(pntr_color color) {
+    return color.rgba.r;
 }
 
-PNTR_API inline unsigned char pntr_color_get_g(pntr_color color) {
-    return color.g;
+PNTR_API inline unsigned char pntr_color_g(pntr_color color) {
+    return color.rgba.g;
 }
 
-PNTR_API inline unsigned char pntr_color_get_b(pntr_color color) {
-    return color.b;
+PNTR_API inline unsigned char pntr_color_b(pntr_color color) {
+    return color.rgba.b;
 }
 
-PNTR_API inline unsigned char pntr_color_get_a(pntr_color color) {
-    return color.a;
+PNTR_API inline unsigned char pntr_color_a(pntr_color color) {
+    return color.rgba.a;
 }
 
 PNTR_API inline void pntr_color_set_r(pntr_color* color, unsigned char r) {
-    color->r = r;
+    color->rgba.r = r;
 }
 
 PNTR_API inline void pntr_color_set_g(pntr_color* color, unsigned char g) {
-    color->g = g;
+    color->rgba.g = g;
 }
 
 PNTR_API inline void pntr_color_set_b(pntr_color* color, unsigned char b) {
-    color->b = b;
+    color->rgba.b = b;
 }
 
 PNTR_API inline void pntr_color_set_a(pntr_color* color, unsigned char a) {
-    color->a = a;
+    color->rgba.a = a;
 }
 
 /**
@@ -1498,7 +1510,7 @@ PNTR_API inline void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_
  * Draws a pixel on the given image.
  */
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
-   if ((color.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
+   if ((color.rgba.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
         return;
     }
 
@@ -1512,7 +1524,7 @@ PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_colo
 }
 
 PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color) {
-    if (dst == NULL || color.a == 0 || points == NULL || pointsCount <= 0) {
+    if (dst == NULL || color.rgba.a == 0 || points == NULL || pointsCount <= 0) {
         return;
     }
 
@@ -1532,7 +1544,7 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
  * @see pntr_draw_line_vertical()
  */
 PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
-    if (dst == NULL || color.a == 0) {
+    if (dst == NULL || color.rgba.a == 0) {
         return;
     }
 
@@ -1625,7 +1637,7 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
 }
 
 PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
-    if (color.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
+    if (color.rgba.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
         return;
     }
 
@@ -1651,7 +1663,7 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
  * TODO: pntr_draw_line_horizontal: Support negative width.
  */
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
+    if (color.rgba.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
         return;
     }
 
@@ -1663,7 +1675,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
         width = dst->clip.x + dst->clip.width - posX;
     }
 
-    if (color.a == 255) {
+    if (color.rgba.a == 255) {
         pntr_put_horizontal_line_unsafe(dst, posX, posY, width, color);
     }
     else {
@@ -1686,7 +1698,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
  * TODO: pntr_draw_line_vertical: Support negative height.
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
+    if (color.rgba.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
         return;
     }
 
@@ -1698,7 +1710,7 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
         height = dst->clip.y + dst->clip.height - posY;
     }
 
-    if (color.a == 255) {
+    if (color.rgba.a == 255) {
         for (int y = 0; y < height; y++) {
             PNTR_PIXEL(dst, posX, posY + y) = color;
         }
@@ -1735,7 +1747,7 @@ PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec
  * @see pntr_draw_rectangle_fill()
  */
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
-    if (color.a == 0 ||  dst == NULL || width <= 0 || height <= 0) {
+    if (color.rgba.a == 0 ||  dst == NULL || width <= 0 || height <= 0) {
         return;
     }
 
@@ -1781,7 +1793,7 @@ PNTR_API inline void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int pos
  * @see pntr_draw_rectangle_fill()
  */
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
-    if (color.a == 0 || dst == NULL) {
+    if (color.rgba.a == 0 || dst == NULL) {
         return;
     }
 
@@ -1790,7 +1802,7 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
     }
 
     // When the color is solid, we can do some performance improvements.
-    if (color.a == 255) {
+    if (color.rgba.a == 255) {
         pntr_put_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
         pntr_color* srcPixel = &PNTR_PIXEL(dst, rect.x, rect.y);
@@ -1854,7 +1866,7 @@ PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y,
  * @see pntr_draw_circle_fill()
  */
 PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-    if (dst == NULL || color.a == 0) {
+    if (dst == NULL || color.rgba.a == 0) {
         return;
     }
 
@@ -1906,7 +1918,7 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
         radius = -radius;
     }
 
-    if (dst == NULL || color.a == 0 || radius == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
+    if (dst == NULL || color.rgba.a == 0 || radius == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1940,7 +1952,7 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
  * @see pntr_draw_ellipse_fill()
  */
 PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
         return;
     }
 
@@ -1997,7 +2009,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
         radiusY = -radiusY;
     }
 
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -2082,7 +2094,7 @@ PNTR_API inline void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr
 }
 
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
-    if (dst == NULL || color.a == 0 || numPoints <= 0 || points == NULL) {
+    if (dst == NULL || color.rgba.a == 0 || numPoints <= 0 || points == NULL) {
         return;
     }
 
@@ -2100,7 +2112,7 @@ PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoi
 }
 
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
-    if (dst == NULL || points == NULL || numPoints <= 0 || color.a == 0) {
+    if (dst == NULL || points == NULL || numPoints <= 0 || color.rgba.a == 0) {
         return;
     }
 
@@ -2483,7 +2495,7 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-    if (tint.data == PNTR_WHITE_DATA) {
+    if (tint.value == PNTR_WHITE_VALUE) {
         while (dstRect.height-- > 0) {
             for (int x = 0; x < dstRect.width; ++x) {
                 pntr_blend_color(dstPixel + x, srcPixel[x]);
@@ -2694,7 +2706,7 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
     for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
         pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
         for (int x = image->clip.x; x < image->clip.x + image->clip.width; x++) {
-            if (pixel->data == color.data) {
+            if (pixel->value == color.value) {
                 *pixel = replace;
             }
             pixel++;
@@ -2713,15 +2725,17 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
  * @see pntr_image_color_tint()
  */
 PNTR_API inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
-    if (tint.data == PNTR_WHITE_DATA) {
+    if (tint.value == PNTR_WHITE_VALUE) {
         return color;
     }
 
     return PNTR_CLITERAL(pntr_color) {
-        .r = (unsigned char)(((float)color.r / 255.0f * (float)tint.r / 255.0f) * 255.0f),
-        .g = (unsigned char)(((float)color.g / 255.0f * (float)tint.g / 255.0f) * 255.0f),
-        .b = (unsigned char)(((float)color.b / 255.0f * (float)tint.b / 255.0f) * 255.0f),
-        .a = (unsigned char)(((float)color.a / 255.0f * (float)tint.a / 255.0f) * 255.0f)
+        .rgba = {
+            .r = (unsigned char)(((float)color.rgba.r / 255.0f * (float)tint.rgba.r / 255.0f) * 255.0f),
+            .g = (unsigned char)(((float)color.rgba.g / 255.0f * (float)tint.rgba.g / 255.0f) * 255.0f),
+            .b = (unsigned char)(((float)color.rgba.b / 255.0f * (float)tint.rgba.b / 255.0f) * 255.0f),
+            .a = (unsigned char)(((float)color.rgba.a / 255.0f * (float)tint.rgba.a / 255.0f) * 255.0f)
+        }
     };
 }
 
@@ -2743,14 +2757,14 @@ PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor) {
 
     if (factor < 0.0f) {
         factor = 1.0f + factor;
-        color.r = (unsigned char)((float)color.r * factor);
-        color.g = (unsigned char)((float)color.g * factor);
-        color.b = (unsigned char)((float)color.b * factor);
+        color.rgba.r = (unsigned char)((float)color.rgba.r * factor);
+        color.rgba.g = (unsigned char)((float)color.rgba.g * factor);
+        color.rgba.b = (unsigned char)((float)color.rgba.b * factor);
     }
     else {
-        color.r = (unsigned char)(((float)(255 - color.r) * factor) + color.r);
-        color.g = (unsigned char)(((float)(255 - color.r) * factor) + color.r);
-        color.b = (unsigned char)(((float)(255 - color.r) * factor) + color.r);
+        color.rgba.r = (unsigned char)(((float)(255 - color.rgba.r) * factor) + color.rgba.r);
+        color.rgba.g = (unsigned char)(((float)(255 - color.rgba.g) * factor) + color.rgba.g);
+        color.rgba.b = (unsigned char)(((float)(255 - color.rgba.b) * factor) + color.rgba.b);
     }
 
     return color;
@@ -2775,10 +2789,10 @@ PNTR_API pntr_color pntr_color_fade(pntr_color color, float factor) {
     }
 
     if (factor < 0.0f) {
-        color.a = (unsigned char)((float)color.a * (1.0f + factor));
+        color.rgba.a = (unsigned char)((float)color.rgba.a * (1.0f + factor));
     }
     else {
-        color.a = (unsigned char)(((float)(255 - color.a) * factor) + color.a);
+        color.rgba.a = (unsigned char)(((float)(255 - color.rgba.a) * factor) + color.rgba.a);
     }
 
     return color;
@@ -2807,7 +2821,7 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float factor) {
     for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
         pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
         for (int x = 0; x < image->clip.width; x++) {
-            if (pixel->a > 0) {
+            if (pixel->rgba.a > 0) {
                 *pixel = pntr_color_fade(*pixel, factor);
             }
             pixel++;
@@ -2830,15 +2844,15 @@ PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat
 
     switch (dstPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-            *((uint32_t*)(dstPtr)) = ((uint32_t)color.a << 24) | ((uint32_t)color.b << 16) | ((uint32_t)color.g << 8) | (uint32_t)color.r;
+            *((uint32_t*)(dstPtr)) = ((uint32_t)color.rgba.a << 24) | ((uint32_t)color.rgba.b << 16) | ((uint32_t)color.rgba.g << 8) | (uint32_t)color.rgba.r;
         break;
         case PNTR_PIXELFORMAT_ARGB8888:
-            *((uint32_t*)(dstPtr)) = ((uint32_t)color.b << 24) | ((uint32_t)color.g << 16) | ((uint32_t)color.r << 8) | (uint32_t)color.a;
+            *((uint32_t*)(dstPtr)) = ((uint32_t)color.rgba.b << 24) | ((uint32_t)color.rgba.g << 16) | ((uint32_t)color.rgba.r << 8) | (uint32_t)color.rgba.a;
         break;
         case PNTR_PIXELFORMAT_GRAYSCALE: {
-            float r = (float)color.r / 255.0f;
-            float g = (float)color.g / 255.0f;
-            float b = (float)color.b / 255.0f;
+            float r = (float)color.rgba.r / 255.0f;
+            float g = (float)color.rgba.g / 255.0f;
+            float b = (float)color.rgba.b / 255.0f;
             ((unsigned char *)dstPtr)[0] = (unsigned char)((r * 0.299f + g * 0.587f + b * 0.114f) * 255.0f);
         }
         break;
@@ -2857,25 +2871,31 @@ PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixel
     switch (srcPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
             return PNTR_CLITERAL(pntr_color) {
-                .r = ((unsigned char *)srcPtr)[0],
-                .g = ((unsigned char *)srcPtr)[1],
-                .b = ((unsigned char *)srcPtr)[2],
-                .a = ((unsigned char *)srcPtr)[3]
+                .rgba = {
+                    .r = ((unsigned char *)srcPtr)[0],
+                    .g = ((unsigned char *)srcPtr)[1],
+                    .b = ((unsigned char *)srcPtr)[2],
+                    .a = ((unsigned char *)srcPtr)[3]
+                }
             };
         case PNTR_PIXELFORMAT_ARGB8888:
             return PNTR_CLITERAL(pntr_color) {
-                .a = ((unsigned char *)srcPtr)[0],
-                .r = ((unsigned char *)srcPtr)[1],
-                .g = ((unsigned char *)srcPtr)[2],
-                .b = ((unsigned char *)srcPtr)[3]
+                .rgba = {
+                    .a = ((unsigned char *)srcPtr)[0],
+                    .r = ((unsigned char *)srcPtr)[1],
+                    .g = ((unsigned char *)srcPtr)[2],
+                    .b = ((unsigned char *)srcPtr)[3]
+                }
             };
         case PNTR_PIXELFORMAT_GRAYSCALE:
             // White, with alpha determining grayscale value. Use tint to change color afterwards.
             return PNTR_CLITERAL(pntr_color) {
-                .r = 255,
-                .g = 255,
-                .b = 255,
-                .a = ((unsigned char*)srcPtr)[0]
+                .rgba = {
+                    .r = 255,
+                    .g = 255,
+                    .b = 255,
+                    .a = ((unsigned char*)srcPtr)[0]
+                }
             };
     }
 
@@ -2997,7 +3017,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     // Find out how many characters there are.
     int numCharacters = 0;
     for (int i = 0; i < image->width; i++) {
-        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
+        if (pntr_image_get_color(image, i, 0).value == seperator.value) {
             numCharacters++;
         }
     }
@@ -3010,7 +3030,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     // Set up the data structures.
     int currentCharacter = 0;
     for (int i = 1; i < image->width; i++) {
-        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
+        if (pntr_image_get_color(image, i, 0).value == seperator.value) {
             font->characters[currentCharacter] = characters[currentCharacter];
             font->srcRects[currentCharacter] = currentRectangle;
             font->glyphRects[currentCharacter] = PNTR_CLITERAL(pntr_rectangle) {
@@ -3626,10 +3646,12 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
  */
 PNTR_API inline pntr_color pntr_color_invert(pntr_color color) {
     return PNTR_CLITERAL(pntr_color) {
-        .r = 255 - color.r,
-        .g = 255 - color.g,
-        .b = 255 - color.b,
-        .a = color.a
+        .rgba = {
+            .r = 255 - color.rgba.r,
+            .g = 255 - color.rgba.g,
+            .b = 255 - color.rgba.b,
+            .a = color.rgba.a
+        }
     };
 }
 
@@ -3979,7 +4001,7 @@ PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float thresho
 
     for (int y = 0; y < image->height; y++) {
         for (int x = 0; x < image->width; x++) {
-            if (image->data[y * (image->pitch >> 2) + x].a > alphaThreshold) {
+            if (image->data[y * (image->pitch >> 2) + x].rgba.a > alphaThreshold) {
                 if (x < xMin) {
                     xMin = x;
                 }
@@ -4086,7 +4108,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
 
     contrast = (1.0f + contrast) * contrast;
 
-    float pR = (float)color.r / 255.0f - 0.5f;
+    float pR = (float)color.rgba.r / 255.0f - 0.5f;
     pR *= contrast;
     pR += 0.5f;
     pR *= 255;
@@ -4097,7 +4119,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         pR = 255;
     }
 
-    float pG = (float)color.g / 255.0f - 0.5f;
+    float pG = (float)color.rgba.g / 255.0f - 0.5f;
     pG *= contrast;
     pG += 0.5f;
     pG *= 255;
@@ -4108,7 +4130,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         pG = 255;
     }
 
-    float pB = (float)color.b / 255.0f - 0.5f;
+    float pB = (float)color.rgba.b / 255.0f - 0.5f;
     pB *= contrast;
     pB += 0.5f;
     pB *= 255;
@@ -4120,10 +4142,12 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
     }
 
     return PNTR_CLITERAL(pntr_color) {
-        .r = (unsigned char)pR,
-        .g = (unsigned char)pG,
-        .b = (unsigned char)pB,
-        .a = color.a,
+        .rgba = {
+            .r = (unsigned char)pR,
+            .g = (unsigned char)pG,
+            .b = (unsigned char)pB,
+            .a = color.rgba.a
+        }
     };
 }
 
@@ -4195,8 +4219,8 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
     for (int y = 0; y < dstRect.height; y++) {
         pntr_color* pixel = &PNTR_PIXEL(image, dstRect.x, dstRect.y + y);
         for (int x = 0; x < dstRect.width; x++) {
-            if (pixel->a > 0) {
-                pixel->a = PNTR_PIXEL(alphaMask, x, y).a;
+            if (pixel->rgba.a > 0) {
+                pixel->rgba.a = PNTR_PIXEL(alphaMask, x, y).rgba.a;
             }
             pixel++;
         }
@@ -4473,10 +4497,12 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
  */
 PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
     return PNTR_CLITERAL(pntr_color) {
-        .r = (uint8_t)(color00.r * (1 - coordinateX) * (1 - coordinateY) + color01.r * (1 - coordinateX) * coordinateY + color10.r * coordinateX * (1 - coordinateY) + color11.r * coordinateX * coordinateY),
-        .g = (uint8_t)(color00.g * (1 - coordinateX) * (1 - coordinateY) + color01.g * (1 - coordinateX) * coordinateY + color10.g * coordinateX * (1 - coordinateY) + color11.g * coordinateX * coordinateY),
-        .b = (uint8_t)(color00.b * (1 - coordinateX) * (1 - coordinateY) + color01.b * (1 - coordinateX) * coordinateY + color10.b * coordinateX * (1 - coordinateY) + color11.b * coordinateX * coordinateY),
-        .a = (uint8_t)(color00.a * (1 - coordinateX) * (1 - coordinateY) + color01.a * (1 - coordinateX) * coordinateY + color10.a * coordinateX * (1 - coordinateY) + color11.a * coordinateX * coordinateY)
+        .rgba = {
+            .r = (uint8_t)(color00.rgba.r * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.r * (1 - coordinateX) * coordinateY + color10.rgba.r * coordinateX * (1 - coordinateY) + color11.rgba.r * coordinateX * coordinateY),
+            .g = (uint8_t)(color00.rgba.g * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.g * (1 - coordinateX) * coordinateY + color10.rgba.g * coordinateX * (1 - coordinateY) + color11.rgba.g * coordinateX * coordinateY),
+            .b = (uint8_t)(color00.rgba.b * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.b * (1 - coordinateX) * coordinateY + color10.rgba.b * coordinateX * (1 - coordinateY) + color11.rgba.b * coordinateX * coordinateY),
+            .a = (uint8_t)(color00.rgba.a * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.a * (1 - coordinateX) * coordinateY + color10.rgba.a * coordinateX * (1 - coordinateY) + color11.rgba.a * coordinateX * coordinateY)
+        }
     };
 }
 

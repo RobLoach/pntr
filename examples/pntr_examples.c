@@ -14,7 +14,7 @@ bool Init(pntr_app* app) {
 }
 
 bool Update(pntr_app* app, pntr_image* screen) {
-    examples_update(screen);
+    examples_update(app, screen);
 
     return true;
 }

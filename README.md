@@ -1,6 +1,6 @@
 # pntr <a href="https://github.com/robloach/pntr"><img src="examples/resources/logo-55x55.png" align=left width=55 height=55 /></a>
 
-Image manipulation library for [C11](https://en.wikipedia.org/wiki/C11_(C_standard_revision)) or C++, with a focus on ease-of-use.
+Image manipulation library for [C99](https://en.wikipedia.org/wiki/C99_(C_standard_revision)) or C++, with a focus on ease-of-use.
 
 ## Usage
 
@@ -113,10 +113,10 @@ void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, 
 void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
 pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 pntr_color pntr_get_color(unsigned int hexValue);
-unsigned char pntr_color_get_r(pntr_color color);
-unsigned char pntr_color_get_g(pntr_color color);
-unsigned char pntr_color_get_b(pntr_color color);
-unsigned char pntr_color_get_a(pntr_color color);
+unsigned char pntr_color_r(pntr_color color);
+unsigned char pntr_color_g(pntr_color color);
+unsigned char pntr_color_b(pntr_color color);
+unsigned char pntr_color_a(pntr_color color);
 void pntr_color_set_r(pntr_color* color, unsigned char r);
 void pntr_color_set_g(pntr_color* color, unsigned char g);
 void pntr_color_set_b(pntr_color* color, unsigned char b);

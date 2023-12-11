@@ -28,36 +28,36 @@ void examples_init() {
     example_image_alphamask_init();
 }
 
-const char* examples_update(pntr_image* canvas) {
+const char* examples_update(pntr_app* app, pntr_image* canvas) {
     pntr_clear_background(canvas, PNTR_RAYWHITE);
     const char* exampleTitle;
     switch (currentExample) {
         case 0:
-            exampleTitle = example_welcome_update(canvas);
+            exampleTitle = example_welcome_update(app, canvas);
             break;
         case 1:
-            exampleTitle = example_shapes_update(canvas);
+            exampleTitle = example_shapes_update(app, canvas);
             break;
         case 2:
-            exampleTitle = example_fonts_update(canvas);
+            exampleTitle = example_fonts_update(app, canvas);
             break;
         case 3:
-            exampleTitle = example_image_update(canvas);
+            exampleTitle = example_image_update(app, canvas);
             break;
         case 4:
-            exampleTitle = example_image_resize_update(canvas);
+            exampleTitle = example_image_resize_update(app, canvas);
             break;
         case 5:
-            exampleTitle = example_image_rotate_update(canvas);
+            exampleTitle = example_image_rotate_update(app, canvas);
             break;
         case 6:
-            exampleTitle = example_image_alphamask_update(canvas);
+            exampleTitle = example_image_alphamask_update(app, canvas);
             break;
         case 7:
-            exampleTitle = example_image_sprite_update(canvas);
+            exampleTitle = example_image_sprite_update(app, canvas);
             break;
         case 8:
-            exampleTitle = example_bunnymark_update(canvas);
+            exampleTitle = example_bunnymark_update(app, canvas);
             break;
     }
 

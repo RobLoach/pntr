@@ -9,7 +9,7 @@ void example_welcome_init() {
     welcomeFont = pntr_load_font_default();
 }
 
-const char* example_welcome_update(pntr_image* canvas) {
+const char* example_welcome_update(pntr_app* app, pntr_image* canvas) {
     if (welcomeLogo == NULL) {
         return "Failed to load resources/logo-128x128.png";
     }
