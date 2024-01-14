@@ -1413,10 +1413,19 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
         return;
     }
 
-    // Blank
-    if (color.rgba.a == 0) {
-        PNTR_MEMSET((void*)image->data, 0, (size_t)(image->height * image->pitch));
-        return;
+    // Blank or white can have some performance optimization.
+    if (!image->subimage) {
+        // White
+        if (color.value == PNTR_WHITE_VALUE) {
+            PNTR_MEMSET((void*)image->data, 255, (size_t)(image->height * image->pitch));
+            return;
+        }
+
+        // Blank
+        if (color.rgba.a == 0) {
+            PNTR_MEMSET((void*)image->data, 0, (size_t)(image->height * image->pitch));
+            return;
+        }
     }
 
     // Draw the first line
