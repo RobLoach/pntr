@@ -70,7 +70,7 @@
 #define PNTR_ASSERT_COLOR_EQUALS(actual, expected) do { \
     pntr_color actualColor = (actual); \
     pntr_color expectedColor = (expected); \
-    PNTR_ASSERT_EQUALS(actualColor.rgba.a, expectedColor.rgba.a); \
+    PNTR_ASSERT_EQUALS(actualColor.rgba.r, expectedColor.rgba.r); \
     PNTR_ASSERT_EQUALS(actualColor.rgba.g, expectedColor.rgba.g); \
     PNTR_ASSERT_EQUALS(actualColor.rgba.b, expectedColor.rgba.b); \
     PNTR_ASSERT_EQUALS(actualColor.rgba.a, expectedColor.rgba.a); \
