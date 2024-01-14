@@ -29,7 +29,7 @@ void examples_init() {
 }
 
 const char* examples_update(pntr_app* app, pntr_image* canvas) {
-    pntr_clear_background(canvas, PNTR_RAYWHITE);
+    pntr_clear(canvas, PNTR_RAYWHITE);
     const char* exampleTitle;
     switch (currentExample) {
         case 0:

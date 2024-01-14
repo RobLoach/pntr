@@ -425,7 +425,7 @@ PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image);
 PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height);
 PNTR_API void pntr_image_reset_clip(pntr_image* image);
 PNTR_API void pntr_unload_image(pntr_image* image);
-PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
+PNTR_API void pntr_clear(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
 PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color);
@@ -545,6 +545,9 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath);
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
 PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color);
+
+// Aliases
+#define pntr_clear_background pntr_clear
 
 #ifdef __cplusplus
 }
@@ -1184,7 +1187,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
  */
 PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
     pntr_image* image = pntr_new_image(width, height);
-    pntr_clear_background(image, color);
+    pntr_clear(image, color);
 
     return image;
 }
@@ -1408,7 +1411,7 @@ PNTR_API inline void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, 
  * @param image The image to clear.
  * @param color The color to fill the image with.
  */
-PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
+PNTR_API void pntr_clear(pntr_image* image, pntr_color color) {
     if (image == NULL) {
         return;
     }

@@ -88,14 +88,14 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
-    IT("pntr_clear_background(), pntr_draw_rectangle_fill()", {
+    IT("pntr_clear(), pntr_draw_rectangle_fill()", {
         pntr_image* image = pntr_new_image(100, 100);
         NEQUALS(image, NULL);
-        pntr_clear_background(image, PNTR_RED);
+        pntr_clear(image, PNTR_RED);
 
         COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_RED);
 
-        pntr_clear_background(image, PNTR_BLANK);
+        pntr_clear(image, PNTR_BLANK);
         COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_BLANK);
 
         pntr_draw_rectangle_fill(image, 9, 9, 3, 3, PNTR_BLUE);

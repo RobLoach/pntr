@@ -67,7 +67,7 @@ pntr_rectangle pntr_image_get_clip(pntr_image* image);
 void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height);
 void pntr_image_reset_clip(pntr_image* image);
 void pntr_unload_image(pntr_image* image);
-void pntr_clear_background(pntr_image* image, pntr_color color);
+void pntr_clear(pntr_image* image, pntr_color color);
 void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color);
 void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
 void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color);
