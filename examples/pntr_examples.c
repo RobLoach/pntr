@@ -2,80 +2,26 @@
 #define PNTR_ENABLE_TTF
 #define PNTR_ENABLE_VARGS
 #define PNTR_ENABLE_MATH
-#define PNTR_APP_IMPLEMENTATION
-#include "pntr_app.h"
+#define PNTR_IMPLEMENTATION
+#include "../pntr.h"
 
-#include "examples/examples.h"
+#include "pntr_examples_alphamask.h"
+#include "pntr_examples_fonts.h"
+#include "pntr_examples_image.h"
+#include "pntr_examples_resize.h"
+#include "pntr_examples_rotate.h"
+#include "pntr_examples_shapes.h"
+#include "pntr_examples_sprite.h"
 
-bool Init(pntr_app* app) {
-    examples_init();
+int main(int argc, char* argv[]) {
 
-    return true;
-}
+    pntr_examples_alphamask();
+    pntr_examples_fonts();
+    pntr_examples_image();
+    pntr_examples_resize();
+    pntr_examples_rotate();
+    pntr_examples_shapes();
+    pntr_examples_sprite();
 
-bool Update(pntr_app* app, pntr_image* screen) {
-    examples_update(app, screen);
-
-    return true;
-}
-
-void Event(pntr_app* app, pntr_app_event* event) {
-    switch (event->type) {
-        case PNTR_APP_EVENTTYPE_KEY_DOWN: {
-            switch (event->key) {
-                case PNTR_APP_KEY_RIGHT:
-                    examples_next();
-                    break;
-                case PNTR_APP_KEY_LEFT:
-                    examples_previous();
-                    break;
-                case PNTR_APP_KEY_F1:
-                    examples_screenshot();
-                    break;
-            }
-        }
-        break;
-        case PNTR_APP_EVENTTYPE_MOUSE_BUTTON_DOWN: {
-            switch (event->mouseButton) {
-                case PNTR_APP_MOUSE_BUTTON_LEFT:
-                    examples_next();
-                    break;
-                case PNTR_APP_MOUSE_BUTTON_RIGHT:
-                    examples_previous();
-                    break;
-            }
-        }
-        break;
-        case PNTR_APP_EVENTTYPE_GAMEPAD_BUTTON_DOWN: {
-            switch (event->gamepadButton) {
-                case PNTR_APP_GAMEPAD_BUTTON_A:
-                case PNTR_APP_GAMEPAD_BUTTON_RIGHT:
-                    examples_next();
-                    break;
-                case PNTR_APP_GAMEPAD_BUTTON_B:
-                case PNTR_APP_GAMEPAD_BUTTON_LEFT:
-                    examples_previous();
-                    break;
-            }
-        }
-        break;
-    }
-}
-
-void Close(pntr_app* app) {
-    examples_unload();
-}
-
-pntr_app Main(int argc, char* argv[]) {
-    return (pntr_app) {
-        .width = 400,
-        .height = 225,
-        .title = "pntr_app: Examples",
-        .init = Init,
-        .update = Update,
-        .close = Close,
-        .event = Event,
-        .fps = 60,
-        //.userData = PNTR_MALLOC(sizeof(AppData)),
-    };
+    return 0;
 }

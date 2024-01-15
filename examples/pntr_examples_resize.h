@@ -1,13 +1,9 @@
-pntr_image* originalImage;
-float size = 1.0f;
-float speed = 0.02f;
+#include "../pntr.h"
 
-void example_image_resize_init() {
-    // Load an image
-    originalImage = pntr_load_image("resources/logo-128x128.png");
-}
-
-const char* example_image_resize_update(pntr_app* app, pntr_image* canvas) {
+const char* pntr_examples_resize() {
+    float size = 1.0f;
+    float speed = 0.02f;
+    pntr_image* originalImage = pntr_load_image("resources/logo-128x128.png");
     if (originalImage == NULL) {
         return "Failed to load resources/logo-128x128.png";
     }
@@ -20,6 +16,8 @@ const char* example_image_resize_update(pntr_app* app, pntr_image* canvas) {
         speed = 0.015f;
     }
 
+    pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
+
     pntr_draw_image_scaled(canvas, originalImage,
         canvas->width / 4 - originalImage->width * size / 2.0f,
         canvas->height / 2 - originalImage->height * size / 2.0f,
@@ -30,9 +28,10 @@ const char* example_image_resize_update(pntr_app* app, pntr_image* canvas) {
         canvas->height / 2 - originalImage->height * size / 2.0f,
         size, size, 0.0f, 0.0f, PNTR_FILTER_BILINEAR);
 
-    return "Image Resize";
-}
+    pntr_save_image(canvas, "pntr_examples_resize.png");
 
-void example_image_resize_unload() {
     pntr_unload_image(originalImage);
+    pntr_unload_image(canvas);
+
+    return true;
 }

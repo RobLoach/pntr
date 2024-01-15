@@ -1,8 +1,8 @@
-void example_shapes_init() {
-    // Nothing
-}
+#include "../pntr.h"
 
-const char* example_shapes_update(pntr_app* app, pntr_image* canvas) {
+bool pntr_examples_shapes() {
+    pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
+
     // Define some colors
     pntr_color lightGreen = PNTR_GREEN;
     lightGreen.rgba.a = 180;
@@ -58,9 +58,8 @@ const char* example_shapes_update(pntr_app* app, pntr_image* canvas) {
     points[3] = PNTR_CLITERAL(pntr_vector) {240, 160};
     pntr_draw_polyline(canvas, points, 4, PNTR_PURPLE);
 
-    return "Shapes";
-}
+    pntr_save_image(canvas, "pntr_examples_shapes.png");
+    pntr_unload_image(canvas);
 
-void example_shapes_unload() {
-    // Nothing
+    return true;
 }

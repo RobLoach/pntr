@@ -1,24 +1,23 @@
-pntr_image* scarfy;
-pntr_rectangle frameRec;
-int framesSpeed = 8;
-int framesCounter = 0;
-int currentFrame = 0;
+#include "../pntr.h"
 
-void example_image_sprite_init() {
+bool pntr_examples_sprite() {
     // Load the image
-    scarfy = pntr_load_image("resources/scarfy.png");
+    pntr_image* scarfy = pntr_load_image("resources/scarfy.png");
     if (scarfy == NULL) {
-        return;
+        return false;
     }
+
+pntr_rectangle frameRec;
     frameRec.x = 0;
     frameRec.y = 0;
     frameRec.width = scarfy->width / 6;
     frameRec.height = scarfy->height;
-}
+int framesSpeed = 8;
+int framesCounter = 0;
+int currentFrame = 0;
 
-const char* example_image_sprite_update(pntr_app* app, pntr_image* canvas) {
     if (scarfy == NULL) {
-        return "Failed to load resources/scarfy.png";
+        return false;
     }
 
     framesCounter++;
@@ -36,9 +35,10 @@ const char* example_image_sprite_update(pntr_app* app, pntr_image* canvas) {
 
     pntr_draw_image_rec(canvas, scarfy, frameRec, canvas->width / 2 - frameRec.width / 2, canvas->height / 2 - frameRec.height / 2);
 
-    return "Image Sprite";
-}
+    pntr_save_image(canvas, "pntr_examples_sprite.png");
 
-void example_image_sprite_unload() {
     pntr_unload_image(scarfy);
+    pntr_unload_image(canvas);
+
+    return true;
 }
