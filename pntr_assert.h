@@ -26,6 +26,11 @@
 #ifndef PNTR_ASSERT_H__
 #define PNTR_ASSERT_H__
 
+/**
+ * @defgroup pntr_assert pntr_assert
+ * @{
+ */
+
 #ifndef PNTR_ASSERT
 #ifdef NDEBUG
 #if defined __cplusplus && __GNUC_PREREQ (2,95)
@@ -36,6 +41,11 @@
 #define PNTR_ASSERT(condition) (PNTR_ASSERT_VOID_CAST 0)
 #else
 #include <assert.h>
+/**
+ * Assert whether the given condition is true or not.
+ *
+ * @param condition Expression of scalar type.
+ */
 #define PNTR_ASSERT(condition) assert(condition)
 #endif
 #endif
@@ -114,4 +124,8 @@
 } while(0)
 #endif  // PNTR_ASSERT_RECT_EQUALS
 
-#endif
+/**
+ * @}
+ */
+
+#endif  // PNTR_ASSERT_H__

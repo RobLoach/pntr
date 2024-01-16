@@ -63,9 +63,18 @@
      */
 
     /**
-     * Define `PNTR_IMPLEMENTATION` in one of your `.c` files before including `pntr.h`.
+     * Define `PNTR_IMPLEMENTATION` in **one** of your `.c` files before including `pntr.h`.
      *
      * This will let pntr.h know where to implement its functions.
+     *
+     * @code
+     * #define PNTR_IMPLEMENTATION
+     * #include "pntr.h"
+     *
+     * int main() {
+     *     return 0;
+     * }
+     * @endcode
      */
     #define PNTR_IMPLEMENTATION
 
@@ -764,8 +773,17 @@ extern "C" {
 
 #ifndef PNTR_MEMMOVE
     #include <string.h>
-    #define PNTR_MEMMOVE(dest, src, n) memmove((dest), (src), (n))
-#endif  // PNTR_MEMCPY
+    /**
+     * Copies the values of num bytes from the location pointed by source to the memory block pointed by destination.
+     *
+     * @note If not defined, will use `memmove()`.
+     *
+     * @param destination Pointer to the destination array where the content is to be copied, type-casted to a pointer of type `void*`.
+     * @param source Pointer to the source of data to be copied, type-casted to a pointer of type `const void*`.
+     * @param num Number of bytes to copy.
+     */
+    #define PNTR_MEMMOVE(destination, source, num) memmove((destination), (source), (num))
+#endif  // PNTR_MEMMOVE
 
 #ifndef PNTR_MEMSET
     #include <string.h>
@@ -2939,7 +2957,7 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
  *
  * @return The newly loaded font.
  *
- * @example examples/resources/bmfont.png
+ * @see examples/resources/bmfont.png
  */
 PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -3069,7 +3087,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
  *
  * @return The newly loaded TTY font.
  *
- * @example examples/resources/ttyfont-16x16.png
+ * @see examples/resources/ttyfont-16x16.png
  */
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -3150,8 +3168,6 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
  * Unloads the given font from memory.
  *
  * @param font The font to unload from memory.
- *
- * @see pntr_load_font()
  */
 PNTR_API void pntr_unload_font(pntr_font* font) {
     if (font == NULL) {
@@ -3171,8 +3187,6 @@ PNTR_API void pntr_unload_font(pntr_font* font) {
  * @param font The font to copy.
  *
  * @return A new font that is a copy of the given font.
- *
- * @see pntr_load_font()
  */
 PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
     if (font == NULL) {
@@ -3532,7 +3546,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
  *
  * @return The newly loaded truetype font.
  *
- * @example examples/resources/tuffy.ttf
+ * @see examples/resources/tuffy.ttf
  *
  * @see PNTR_ENABLE_TTF
  */
@@ -3568,7 +3582,7 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
  *
  * @return The newly loaded truetype font.
  *
- * @example examples/resources/tuffy.ttf
+ * @see examples/resources/tuffy.ttf
  *
  * @see PNTR_ENABLE_TTF
  */
