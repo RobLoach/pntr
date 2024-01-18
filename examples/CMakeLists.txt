@@ -1,6 +1,3 @@
-# CMAKE Modules
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
-
 # Resources
 file(GLOB resources resources/*)
 set(examples_resources)
@@ -13,7 +10,9 @@ add_executable(pntr_examples
 )
 target_link_libraries(pntr_examples PUBLIC
     pntr
-    m
+
+    # Math: Define PNTR_ENABLE_MATH to use the math library
+    # m
 )
 
 add_custom_target(pntr_examples_output

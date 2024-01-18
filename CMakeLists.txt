@@ -39,7 +39,7 @@ if (PNTR_BUILD_TESTS)
 endif()
 
 # Documentation
-option(PNTR_BUILD_DOCS "Build Documentation" ${PNTR_IS_MAIN})
+option(PNTR_BUILD_DOCS "Build Documentation" OFF)
 if (PNTR_BUILD_EXAMPLES AND PNTR_BUILD_DOCS)
     find_package(Doxygen)
     if (DOXYGEN_FOUND)

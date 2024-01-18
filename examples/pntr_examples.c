@@ -34,7 +34,8 @@
 #define PNTR_ENABLE_DEFAUT_FONT
 #define PNTR_ENABLE_TTF
 #define PNTR_ENABLE_VARGS
-#define PNTR_ENABLE_MATH
+// Math: Link the m library to use math.h
+//#define PNTR_ENABLE_MATH
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
