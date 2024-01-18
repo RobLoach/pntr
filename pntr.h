@@ -414,10 +414,25 @@ typedef enum pntr_error {
     PNTR_ERROR_UNKNOWN = -6
 } pntr_error;
 
+/**
+ * The associated image format.
+ */
 typedef enum pntr_image_type {
+    /**
+     * Image type: Unknown.
+     */
     PNTR_IMAGE_TYPE_UNKNOWN = 0,
+    /**
+     * Image type: PNG.
+     */
     PNTR_IMAGE_TYPE_PNG,
+    /**
+     * Image type: JPEG.
+     */
     PNTR_IMAGE_TYPE_JPG,
+    /**
+     * Image type: BMP.
+     */
     PNTR_IMAGE_TYPE_BMP
 } pntr_image_type;
 
