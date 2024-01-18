@@ -26,6 +26,20 @@ unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image
 #ifndef PNTR_STB_IMAGE_WRITE_IMPLEMENTATION
 #define PNTR_STB_IMAGE_WRITE_IMPLEMENTATION
 
+#ifndef PNTR_MEMMOVE
+    #include <string.h>
+    /**
+     * Copies the values of num bytes from the location pointed by source to the memory block pointed by destination.
+     *
+     * @note If not defined, will use `memmove()`.
+     *
+     * @param destination Pointer to the destination array where the content is to be copied, type-casted to a pointer of type `void*`.
+     * @param source Pointer to the source of data to be copied, type-casted to a pointer of type `const void*`.
+     * @param num Number of bytes to copy.
+     */
+    #define PNTR_MEMMOVE(destination, source, num) memmove((destination), (source), (num))
+#endif  // PNTR_MEMMOVE
+
 #ifndef PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
     #define STB_IMAGE_WRITE_IMPLEMENTATION
     #define STBIW_MALLOC PNTR_MALLOC

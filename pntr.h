@@ -789,47 +789,57 @@ extern "C" {
     #include <stdlib.h>
     /**
      * Allocates the requested memory and returns a pointer to it.
+     *
+     * @param size (size_t) number of bytes to allocate
+     *
+     * @return On success, returns the pointer to the beginning of newly allocated memory.
+     * @see PNTR_FREE
+     * @see https://en.cppreference.com/w/c/memory/malloc
      */
-    #define PNTR_MALLOC(size) malloc((size_t)(size))
+    #define PNTR_MALLOC(size) malloc(size)
 #endif  // PNTR_MALLOC
 
 #ifndef PNTR_FREE
     #include <stdlib.h>
     /**
      * Deallocates the previously allocated memory.
+     *
+     * @param ptr (void*) pointer to the memory to deallocate
+     *
+     * @see PNTR_MALLOC
+     * @see https://en.cppreference.com/w/c/memory/free
      */
-    #define PNTR_FREE(obj) free((void*)(obj))
+    #define PNTR_FREE(ptr) free(ptr)
 #endif  // PNTR_FREE
 
 #ifndef PNTR_REALLOC
     #include <stdlib.h>
     /**
      * Attempts to resize the memory block pointed to that was previously allocated.
+     *
+     * @param ptr (void*) pointer to the memory area to be reallocated
+     * @param new_size (size_t) new size of the array in bytes
+     *
+     * @return On success, returns the pointer to the beginning of newly allocated memory. To avoid a memory leak, the returned pointer must be deallocated with free or realloc. The original pointer ptr is invalidated and any access to it is undefined behavior (even if reallocation was in-place).
+     *
+     * @see https://en.cppreference.com/w/c/memory/realloc
      */
-    #define PNTR_REALLOC realloc
+    #define PNTR_REALLOC(ptr, new_size) realloc(ptr, new_size)
 #endif  // PNTR_REALLOC
 
 #ifndef PNTR_MEMCPY
     #include <string.h>
     /**
      * Copies data from memory area src to the destination memory.
+     *
+     * @param dest (void*) pointer to the object to copy to
+     * @param src (const void*) pointer to the object to copy from
+     * @param n (size_t) number of bytes to copy
+     *
+     * @see https://en.cppreference.com/w/c/string/byte/memcpy
      */
-    #define PNTR_MEMCPY(dest, src, n) memcpy((void*)(dest), (const void*)(src), (size_t)(n))
+    #define PNTR_MEMCPY(dest, src, n) memcpy(dest, src, n)
 #endif  // PNTR_MEMCPY
-
-#ifndef PNTR_MEMMOVE
-    #include <string.h>
-    /**
-     * Copies the values of num bytes from the location pointed by source to the memory block pointed by destination.
-     *
-     * @note If not defined, will use `memmove()`.
-     *
-     * @param destination Pointer to the destination array where the content is to be copied, type-casted to a pointer of type `void*`.
-     * @param source Pointer to the source of data to be copied, type-casted to a pointer of type `const void*`.
-     * @param num Number of bytes to copy.
-     */
-    #define PNTR_MEMMOVE(destination, source, num) memmove((destination), (source), (num))
-#endif  // PNTR_MEMMOVE
 
 #ifndef PNTR_MEMSET
     #include <string.h>
@@ -855,6 +865,8 @@ extern "C" {
 #ifndef PNTR_PI
     /**
      * Pi
+     *
+     * @see https://en.wikipedia.org/wiki/Pi
      */
     #define PNTR_PI 3.1415926535897932f
 #endif
@@ -862,6 +874,10 @@ extern "C" {
 #ifndef PNTR_DEG2RAD
     /**
      * Convert a degree to radians. PI / 180.
+     *
+     * @code
+     * float radians = degrees * PNTR_DEG2RAD
+     * @endcode
      */
     #define PNTR_DEG2RAD 0.017453293f
 #endif
@@ -1276,7 +1292,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->height = height;
     pntr_image_reset_clip(image);
     image->subimage = false;
-    image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
+    image->data = (pntr_color*)PNTR_MALLOC((size_t)(image->pitch * height));
     if (image->data == NULL) {
         PNTR_FREE(image);
         return pntr_set_error(PNTR_ERROR_NO_MEMORY);
@@ -1435,7 +1451,7 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
     for (int destY = 0; destY < dstRect.height; destY++) {
         PNTR_MEMCPY(&PNTR_PIXEL(result, 0, destY),
             &PNTR_PIXEL(image, dstRect.x, dstRect.y + destY),
-            result->pitch);
+            (size_t)result->pitch);
     }
 
     return result;
@@ -1545,7 +1561,7 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
 
     // Copy the line for the rest of the background
     for (int y = 1; y < image->height; y++) {
-        PNTR_MEMCPY(&PNTR_PIXEL(image, 0, y), image->data, image->pitch);
+        PNTR_MEMCPY(&PNTR_PIXEL(image, 0, y), image->data, (size_t)image->pitch);
     }
 }
 
@@ -4010,7 +4026,7 @@ PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSi
         return pntr_set_error(PNTR_ERROR_UNKNOWN);
     }
 
-    void* data = PNTR_MALLOC(imageSize);
+    void* data = PNTR_MALLOC((size_t)imageSize);
     if (data == NULL) {
         return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
