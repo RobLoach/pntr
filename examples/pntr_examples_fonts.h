@@ -46,7 +46,7 @@ void pntr_examples_fonts() {
 
     // Word-wrapped
     pntr_draw_rectangle(canvas, 225, 50, 150, 60, PNTR_BLUE);
-    pntr_draw_text_wrapped(canvas, bmFont, "The awesome brown fox jumps over the lazy dog.", 225, 50, 150, PNTR_RED);
+    pntr_draw_text_wrapped(canvas, bmFont, "The quick brown fox jumps over the lazy dog.", 225, 50, 150, PNTR_RED);
 
     pntr_save_image(canvas, "pntr_examples_fonts.png");
 
