@@ -63,9 +63,18 @@
      */
 
     /**
-     * Define `PNTR_IMPLEMENTATION` in one of your `.c` files before including `pntr.h`.
+     * Define `PNTR_IMPLEMENTATION` in **one** of your `.c` files before including `pntr.h`.
      *
      * This will let pntr.h know where to implement its functions.
+     *
+     * @code
+     * #define PNTR_IMPLEMENTATION
+     * #include "pntr.h"
+     *
+     * int main() {
+     *     return 0;
+     * }
+     * @endcode
      */
     #define PNTR_IMPLEMENTATION
 
@@ -764,8 +773,17 @@ extern "C" {
 
 #ifndef PNTR_MEMMOVE
     #include <string.h>
-    #define PNTR_MEMMOVE(dest, src, n) memmove((dest), (src), (n))
-#endif  // PNTR_MEMCPY
+    /**
+     * Copies the values of num bytes from the location pointed by source to the memory block pointed by destination.
+     *
+     * @note If not defined, will use `memmove()`.
+     *
+     * @param destination Pointer to the destination array where the content is to be copied, type-casted to a pointer of type `void*`.
+     * @param source Pointer to the source of data to be copied, type-casted to a pointer of type `const void*`.
+     * @param num Number of bytes to copy.
+     */
+    #define PNTR_MEMMOVE(destination, source, num) memmove((destination), (source), (num))
+#endif  // PNTR_MEMMOVE
 
 #ifndef PNTR_MEMSET
     #include <string.h>
@@ -789,6 +807,9 @@ extern "C" {
 #endif
 
 #ifndef PNTR_PI
+    /**
+     * Pi
+     */
     #define PNTR_PI 3.1415926535897932f
 #endif
 
@@ -801,11 +822,6 @@ extern "C" {
 
 #ifndef PNTR_ENABLE_MATH
     #ifndef PNTR_SINF
-        /**
-         * Calculates sine of the given value.
-         *
-         * https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
-         */
         float _pntr_sinf(float x) {
             static const float a0 = +1.91059300966915117e-31f;
             static const float a1 = +1.00086760103908896f;
@@ -817,6 +833,13 @@ extern "C" {
             static const float a7 = +1.38235642404333740e-4f;
             return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
         }
+        /**
+         * Calculates sine of the given value.
+         *
+         * Sourced from https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         *
+         * @param x The input value of sinf()
+         */
         #define PNTR_SINF _pntr_sinf
     #endif  // PNTR_SINF
 
@@ -824,7 +847,9 @@ extern "C" {
         /**
          * Calculates cosine of the given value.
          *
-         * https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         * Sourced from https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         *
+         * @param x The input value of cosf()
          */
         float _pntr_cosf(float x) {
             static const float a0 = 9.9995999154986614e-1f;
@@ -921,6 +946,11 @@ extern "C" {
 #ifndef PNTR_MAX
     /**
      * Return the largest value of the two given values.
+     *
+     * @param a The first value to compare.
+     * @param b The second value to compare.
+     *
+     * @return Which value is larger.
      */
     #define PNTR_MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
@@ -928,6 +958,11 @@ extern "C" {
 #ifndef PNTR_MIN
     /**
      * Return the smallest value of the two given values.
+     *
+     * @param a The first value to compare.
+     * @param b The second value to compare.
+     *
+     * @return Which value is smaller.
      */
     #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
@@ -2939,7 +2974,7 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
  *
  * @return The newly loaded font.
  *
- * @example examples/resources/bmfont.png
+ * @see examples/resources/bmfont.png
  */
 PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -3069,7 +3104,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
  *
  * @return The newly loaded TTY font.
  *
- * @example examples/resources/ttyfont-16x16.png
+ * @see examples/resources/ttyfont-16x16.png
  */
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -3150,8 +3185,6 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
  * Unloads the given font from memory.
  *
  * @param font The font to unload from memory.
- *
- * @see pntr_load_font()
  */
 PNTR_API void pntr_unload_font(pntr_font* font) {
     if (font == NULL) {
@@ -3171,8 +3204,6 @@ PNTR_API void pntr_unload_font(pntr_font* font) {
  * @param font The font to copy.
  *
  * @return A new font that is a copy of the given font.
- *
- * @see pntr_load_font()
  */
 PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
     if (font == NULL) {
@@ -3532,7 +3563,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
  *
  * @return The newly loaded truetype font.
  *
- * @example examples/resources/tuffy.ttf
+ * @see examples/resources/tuffy.ttf
  *
  * @see PNTR_ENABLE_TTF
  */
@@ -3568,7 +3599,7 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
  *
  * @return The newly loaded truetype font.
  *
- * @example examples/resources/tuffy.ttf
+ * @see examples/resources/tuffy.ttf
  *
  * @see PNTR_ENABLE_TTF
  */
@@ -4326,6 +4357,19 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
     }
 }
 
+/**
+ * Draw a scaled image.
+ *
+ * @param dst Pointer to the destination image where the output will be stored.
+ * @param src Pointer to the source image that will be drawn onto the destination image.
+ * @param posX Where to draw the scaled image, at the X coordinate.
+ * @param posY Where to draw the scaled image, at the Y coordinate.
+ * @param scaleX The scale of which to apply to the width of the image.
+ * @param scaleY The scale of which to apply to the height of the image.
+ * @param offsetX How much to offset the X drawing of the image, relative from its original source size.
+ * @param offsetX How much to offset the Y drawing of the image, relative from its original source size.
+ * @param filter Filter to be applied during the rotation.
+ */
 PNTR_API inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
