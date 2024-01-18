@@ -124,6 +124,21 @@
 } while(0)
 #endif  // PNTR_ASSERT_RECT_EQUALS
 
+#ifndef PNTR_ASSERT_VECTOR_EQUALS
+/**
+ * Validate whether or not the given vectors are equal.
+ *
+ * @param actual The vector to check.
+ * @param expected The vector that is expected.
+ */
+#define PNTR_ASSERT_VECTOR_EQUALS(actual, expected) do {
+    pntr_vector actualVect = (actual); \
+    pntr_vector expectedVect = (expected); \
+    PNTR_ASSERT_EQUALS(actualVect.x, expectedVect.x); \
+    PNTR_ASSERT_EQUALS(actualVect.y, expectedVect.y); \
+} while(0)
+#endif  // PNTR_ASSERT_VECTOR_EQUALS
+
 /**
  * @}
  */

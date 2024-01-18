@@ -225,4 +225,4 @@ Unless stated otherwise, all works are:
 
 ... and licensed under:
 
-- [zlib License](LICENSE)
+- [zlib License](LICENSE.md)
