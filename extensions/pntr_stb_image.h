@@ -2,9 +2,23 @@
 #define PNTR_STB_IMAGE_H__
 
 /**
+ * @defgroup pntr_stb_image pntr_stb_image
+ * @{
+ *
+ * @brief [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) integration with pntr for loading images.
+ * @see https://github.com/nothings/stb/blob/master/stb_image.h
+ * @see PNTR_STB_IMAGE
+ * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+ */
+
+/**
  * Load an image using stb_image.
  */
 pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize);
+
+/**
+ * @}
+ */
 
 #endif  // PNTR_STB_IMAGE_H__
 

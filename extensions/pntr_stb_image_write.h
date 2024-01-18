@@ -2,9 +2,23 @@
 #define PNTR_STB_IMAGE_WRITE_H__
 
 /**
+ * @defgroup pntr_stb_image_write pntr_stb_image_write
+ * @{
+ *
+ * @brief [stb_image_write](https://github.com/nothings/stb/blob/master/stb_image_write.h) integration with pntr for saving images.
+ * @see https://github.com/nothings/stb/blob/master/stb_image_write.h
+ * @see PNTR_STB_IMAGE
+ * @see PNTR_SAVE_IMAGE_TO_MEMORY
+ */
+
+/**
  * Save an image using stb_image.
  */
 unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize);
+
+/**
+ * @}
+ */
 
 #endif  // PNTR_STB_IMAGE_WRITE_H__
 

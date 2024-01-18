@@ -181,12 +181,14 @@ pntr_image_type pntr_get_file_image_type(const char* filePath);
 
 ## Integrations
 
-- [pntr_app](https://github.com/RobLoach/pntr_app): Application wrapper for building the same pntr code on a number of different platforms
-- [pntr_assetsys](https://github.com/RobLoach/pntr_assetsys): Load pntr assets from zip files
-- [pntr_nuklear](https://github.com/RobLoach/pntr_nuklear): [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr
-- [pntr_physfs](https://github.com/RobLoach/pntr_physfs): [PhysicsFS](https://github.com/icculus/physfs) support for pntr to load and save images with PhysFS
-- [pntr_aseprite](https://github.com/RobLoach/pntr_aseprite): Use [Aseprite](https://github.com/RobLoach/pntr_aseprite) animated sprites in pntr
-- [pntr_tiled](https://github.com/RobLoach/pntr_tiled): Display [Tiled](https://www.mapeditor.org/) 2D level editor maps in pntr
+| Name | Description |
+| ---- | ----------- |
+| [pntr_app](https://github.com/RobLoach/pntr_app) | Application wrapper for building the same pntr code on a number of different platforms |
+| [pntr_assetsys](https://github.com/RobLoach/pntr_assetsys) | Load pntr assets from zip files |
+| [pntr_nuklear](https://github.com/RobLoach/pntr_nuklear) | [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr |
+| [pntr_physfs](https://github.com/RobLoach/pntr_physfs) | [PhysicsFS](https://github.com/icculus/physfs) support for pntr to load and save images from .zip files |
+| [pntr_aseprite](https://github.com/RobLoach/pntr_aseprite) | Use [Aseprite](https://github.com/RobLoach/pntr_aseprite) animated sprites in pntr |
+| [pntr_tiled](https://github.com/RobLoach/pntr_tiled) | Display [Tiled](https://www.mapeditor.org/) 2D level editor maps in pntr |
 
 ## Development
 

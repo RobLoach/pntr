@@ -114,6 +114,15 @@
     #define PNTR_SAVE_IMAGE_TO_MEMORY
 
     /**
+     * Overrides how loading an image from memory is handled.
+     *
+     * @see pntr_load_image_from_memory()
+     * @see PNTR_CUTE_PNG
+     * @see PNTR_STB_IMAGE
+     */
+    #define PNTR_LOAD_IMAGE_FROM_MEMORY
+
+    /**
      * Skips alpha blending when rendering images. Defining this will improve performance.
      *
      * @see pntr_color_alpha_blend()
@@ -3558,8 +3567,9 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
  * Define PNTR_ENABLE_DEFAULT_FONT to allow using the default 8x8 font.
  *
  * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_font_default()
- *
+ * @code
  * #define PNTR_DEFAULT_FONT load_my_font
+ * @endcode
  *
  * @return The default font, which must be unloaded when finished using.
  *

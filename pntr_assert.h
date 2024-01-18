@@ -27,8 +27,10 @@
 #define PNTR_ASSERT_H__
 
 /**
- * @defgroup pntr_assert pntr_assert: Assertion library for pntr
+ * @defgroup pntr_assert pntr_assert
  * @{
+ *
+ * @brief Assertion library for pntr.
  */
 
 #ifndef PNTR_ASSERT

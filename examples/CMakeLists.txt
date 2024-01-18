@@ -15,6 +15,7 @@ target_link_libraries(pntr_examples PUBLIC
     #m
 )
 
+# pntr_examples_output
 add_custom_target(pntr_examples_output
     COMMAND pntr_examples
 )

@@ -2,6 +2,16 @@
 #define PNTR_CUTE_PNG_H__
 
 /**
+ * @defgroup pntr_cute_png pntr_cute_png
+ * @{
+ *
+ * @brief [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) integration with pntr for loading and saving images.
+ * @see https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h
+ * @see PNTR_CUTE_PNG
+ * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+ */
+
+/**
  * Load a pntr_image using cute_png.
  */
 pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize);
@@ -10,6 +20,10 @@ pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const uns
  * Save an image to memory using cutr_png.
  */
 unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize);
+
+/**
+ * @}
+ */
 
 #endif  // PNTR_CUTE_PNG_H__
 
