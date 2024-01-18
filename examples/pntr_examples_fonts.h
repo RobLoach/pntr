@@ -1,7 +1,7 @@
 #include "../pntr.h"
 
 void pntr_examples_fonts() {
-    pntr_image* canvas = pntr_gen_image_color(400, 255, PNTR_RAYWHITE);
+    pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
 
     // Default Font
     pntr_font* defaultFont = pntr_load_font_default();
