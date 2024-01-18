@@ -27,7 +27,7 @@
 #define PNTR_ASSERT_H__
 
 /**
- * @defgroup pntr_assert pntr_assert
+ * @defgroup pntr_assert pntr_assert: Assertion library for pntr
  * @{
  */
 
@@ -43,6 +43,8 @@
 #include <assert.h>
 /**
  * Assert whether the given condition is true or not.
+ *
+ * @details By default, will use `assert()`, but you can override this by defining it to your own assertion call.
  *
  * @param condition Expression of scalar type.
  */

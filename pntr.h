@@ -109,8 +109,6 @@
     /**
      * Overrides how saving an image to memory is handled.
      *
-     * @note Without this being defined, \c cute_png.h will be used.
-     *
      * @see pntr_save_image_to_memory()
      */
     #define PNTR_SAVE_IMAGE_TO_MEMORY
@@ -140,6 +138,30 @@
      * @see pntr_save_file()
      */
     #define PNTR_SAVE_FILE
+
+    /**
+     * When defined, will use stb_image.h for loading images, and stb_image_write.h for saving.
+     *
+     * @details By default, stb_image will be used if a custom implementation isn't defined.
+     *
+     * @see pntr_load_image()
+     * @see pntr_save_image()
+     * @see PNTR_CUTE_PNG
+     * @see PNTR_SAVE_IMAGE_TO_MEMORY
+     * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+     */
+    #define PNTR_STB_IMAGE
+
+    /**
+     * When defined, will use cute_png.h for loading and saving.
+     *
+     * @see pntr_load_image()
+     * @see pntr_save_image()
+     * @see PNTR_STB_IMAGE
+     * @see PNTR_SAVE_IMAGE_TO_MEMORY
+     * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+     */
+    #define PNTR_CUTE_PNG
 
     /**
      * Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
@@ -835,7 +857,7 @@ extern "C" {
     #define PNTR_DEG2RAD 0.017453293f
 #endif
 
-#ifndef PNTR_ENABLE_MATH
+#if !defined(PNTR_ENABLE_MATH) || defined(_DOXYGEN_)
     #ifndef PNTR_SINF
         float _pntr_sinf(float x) {
             static const float a0 = +1.91059300966915117e-31f;
@@ -851,21 +873,15 @@ extern "C" {
         /**
          * Calculates sine of the given value.
          *
-         * Sourced from https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
-         *
          * @param x The input value of sinf()
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/sin
+         * @see https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
          */
         #define PNTR_SINF _pntr_sinf
     #endif  // PNTR_SINF
 
     #ifndef PNTR_COSF
-        /**
-         * Calculates cosine of the given value.
-         *
-         * Sourced from https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
-         *
-         * @param x The input value of cosf()
-         */
         float _pntr_cosf(float x) {
             static const float a0 = 9.9995999154986614e-1f;
             static const float a1 = 1.2548995793001028e-3f;
@@ -878,6 +894,14 @@ extern "C" {
             static const float a8 = -1.8776444013090451e-5f;
             return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
         }
+        /**
+         * Calculates cosine of the given value.
+         *
+         * @param x Floating-point value representing angle in radians
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/cos
+         * @see https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         */
         #define PNTR_COSF _pntr_cosf
     #endif  // PNTR_COSF
 
@@ -892,14 +916,35 @@ extern "C" {
                 return (r > 0.0f) ? (float)t + 1.0f: (float)t;
             }
         }
+        /**
+         * Computes the smallest integer value not less than arg.
+         *
+         * @param x Floating-point value
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/ceil
+         */
         #define PNTR_CEILF _pntr_ceilf
     #endif  // PNTR_CEILF
 
     #ifndef PNTR_FABSF
+        /**
+         * Computes the absolute value of a floating point value arg.
+         *
+         * @param a Floating point value
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/fabs
+         */
         #define PNTR_FABSF(a) (((a) < 0) ? -(a) : (a))
     #endif  // PNTR_FABSF
 
     #ifndef PNTR_FLOORF
+        /**
+         * Computes the largest integer value not greater than arg.
+         *
+         * @param x Floating point value.
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/floor
+         */
         #define PNTR_FLOORF(x) (float)((int)x - ((x < 0.0f) ? 1 : 0))
     #endif  // PNTR_FLOORF
 
@@ -911,6 +956,14 @@ extern "C" {
             float quotient = dividend / divisor;
             return dividend - ((int)quotient) * divisor;
         }
+        /**
+         * Computes the floating-point remainder of the division operation x/y.
+         *
+         * @param dividend floating point value
+         * @param divisor floating point value
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/fmod
+         */
         #define PNTR_FMODF _pntr_fmodf
     #endif  // PNTR_FMOD
 #else
