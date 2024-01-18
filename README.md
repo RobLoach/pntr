@@ -216,7 +216,7 @@ doxygen .Doxyfile
 
 To publish the documentation, [Node.js](https://nodejs.org)...
 ``` bash
-npx gh-pages -d build/html
+npm run docs
 ```
 
 ## Acknowledgements
