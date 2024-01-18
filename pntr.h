@@ -54,6 +54,26 @@
 /**
  * @defgroup pntr pntr
  * @{
+ *
+ * @brief Image manipulation library for C99 or C++, with a focus on ease-of-use.
+ *
+ * Make sure to define `PNTR_IMPLEMENTATION` before including in one of your `.c` files.
+ *
+ * @code
+ * #define PNTR_IMPLEMENTATION
+ * #include "pntr.h"
+ *
+ * int main() {
+ *     pntr_image* image = pntr_new_image(200, 200);
+ *     pntr_draw_circle_fill(image, 100, 100, 80, PNTR_RED);
+ *     pntr_save_image(image, "output.png");
+ *     pntr_unload_image(image);
+ *
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @see PNTR_IMPLEMENTATION
  */
 
 #ifdef _DOXYGEN_
