@@ -84,6 +84,8 @@ Macros</h2></td></tr>
 <tr class="separator:gacea25998837e11e563caf82e742830ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga3e859a9527dd761ffe2d78ce53c0cbc8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr__assert.html#ga3e859a9527dd761ffe2d78ce53c0cbc8">PNTR_ASSERT_RECT_EQUALS</a>(actual,  expected)</td></tr>
 <tr class="separator:ga3e859a9527dd761ffe2d78ce53c0cbc8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga22f7e7bab7e621055d191d527bf67c37"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr__assert.html#ga22f7e7bab7e621055d191d527bf67c37">PNTR_ASSERT_VECTOR_EQUALS</a>(actual,  expected)</td></tr>
+<tr class="separator:ga22f7e7bab7e621055d191d527bf67c37"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <h2 class="groupheader">Macro Definition Documentation</h2>
@@ -228,7 +230,7 @@ Macros</h2></td></tr>
 <div class="line">        } \</div>
 <div class="line">    } \</div>
 <div class="line">} <span class="keywordflow">while</span> (0)</div>
-<div class="ttc" id="agroup__pntr_html_ga692017de27cde2cd7c359dd50063c725"><div class="ttname"><a href="group__pntr.html#ga692017de27cde2cd7c359dd50063c725">pntr_image_get_color</a></div><div class="ttdeci">PNTR_API pntr_color pntr_image_get_color(pntr_image *image, int x, int y)</div><div class="ttdef"><b>Definition:</b> pntr.h:2299</div></div>
+<div class="ttc" id="agroup__pntr_html_ga692017de27cde2cd7c359dd50063c725"><div class="ttname"><a href="group__pntr.html#ga692017de27cde2cd7c359dd50063c725">pntr_image_get_color</a></div><div class="ttdeci">PNTR_API pntr_color pntr_image_get_color(pntr_image *image, int x, int y)</div><div class="ttdef"><b>Definition:</b> pntr.h:2316</div></div>
 </div><!-- fragment --><p>Check whether or not the given images are the same.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -314,6 +316,48 @@ Macros</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">actual</td><td>The rectangle to check. </td></tr>
     <tr><td class="paramname">expected</td><td>The rectangle that is expected. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="ga22f7e7bab7e621055d191d527bf67c37"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga22f7e7bab7e621055d191d527bf67c37">&#9670;&nbsp;</a></span>PNTR_ASSERT_VECTOR_EQUALS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PNTR_ASSERT_VECTOR_EQUALS</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">actual, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">expected&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Value:</b><div class="fragment"><div class="line">    <span class="keywordflow">do</span> { \</div>
+<div class="line">    pntr_vector actualVect = (actual); \</div>
+<div class="line">    pntr_vector expectedVect = (expected); \</div>
+<div class="line">    PNTR_ASSERT_EQUALS(actualVect.x, expectedVect.x); \</div>
+<div class="line">    PNTR_ASSERT_EQUALS(actualVect.y, expectedVect.y); \</div>
+<div class="line">} <span class="keywordflow">while</span>(0)</div>
+</div><!-- fragment --><p>Validate whether or not the given vectors are equal.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">actual</td><td>The vector to check. </td></tr>
+    <tr><td class="paramname">expected</td><td>The vector that is expected. </td></tr>
   </table>
   </dd>
 </dl>

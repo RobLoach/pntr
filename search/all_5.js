@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['height_10',['height',['../structpntr__rectangle.html#a7d903ecaa63040e0f7e3983e66042ef5',1,'pntr_rectangle::height()'],['../structpntr__image.html#a804f5f942b813425c2792294a2efe2db',1,'pntr_image::height()']]]
+  ['g_9',['g',['../structpntr__color_1_1pntr__color__rgba__t.html#a0b6829e49e3359811cf5f88a67e69c0e',1,'pntr_color::pntr_color_rgba_t']]],
+  ['glyphrects_10',['glyphRects',['../structpntr__font.html#a4c07b4cec83d64d8a96846cc9e014eba',1,'pntr_font']]]
 ];

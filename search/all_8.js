@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['srcrects_176',['srcRects',['../structpntr__font.html#a1ca98430cc4076e9df874004c1611975',1,'pntr_font']]],
-  ['subimage_177',['subimage',['../structpntr__image.html#a2308035113a67500a9a970a12a488526',1,'pntr_image']]]
+  ['r_182',['r',['../structpntr__color_1_1pntr__color__rgba__t.html#ad4fce3757ca5ed4314adf37bfe133c55',1,'pntr_color::pntr_color_rgba_t']]],
+  ['resource_20licenses_183',['Resource Licenses',['../md_examples_resources_LICENSE.html',1,'']]]
 ];
