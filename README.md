@@ -207,6 +207,18 @@ cmake --build build
 ctest --test-dir build -V
 ```
 
+### Documentation
+
+To build the documentation, use [Doxygen](https://www.doxygen.nl)...
+``` bash
+doxygen .Doxyfile
+```
+
+To publish the documentation, [Node.js](https://nodejs.org)...
+``` bash
+npx gh-pages -d build/html
+```
+
 ## Acknowledgements
 
 - [cute_png.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) by [Randy Gaul](https://github.com/RandyGaul)

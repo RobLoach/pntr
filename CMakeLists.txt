@@ -17,19 +17,14 @@ else()
     set(PNTR_IS_MAIN FALSE)
 endif()
 
-option(PNTR_BUILD_EXAMPLES "Examples" ${PNTR_IS_MAIN})
-option(PNTR_BUILD_EXAMPLES_SDL "Examples: SDL" ${PNTR_IS_MAIN})
-option(PNTR_BUILD_EXAMPLES_RAYLIB "Examples: raylib" ${PNTR_IS_MAIN})
-option(PNTR_BUILD_EXAMPLES_LIBRETRO "Examples: libretro" ${PNTR_IS_MAIN})
-option(PNTR_BUILD_TESTS "Build Tests" ${PNTR_IS_MAIN})
-option(PNTR_BUILD_DOCS "Build Documentation" ${PNTR_IS_MAIN})
-
 # Examples
+option(PNTR_BUILD_EXAMPLES "Examples" ${PNTR_IS_MAIN})
 if (PNTR_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
 # Tests
+option(PNTR_BUILD_TESTS "Build Tests" ${PNTR_IS_MAIN})
 if (PNTR_BUILD_TESTS)
     include(CTest)
     enable_testing()
@@ -38,18 +33,19 @@ if (PNTR_BUILD_TESTS)
             pkg-config--static
         )
         # Always print verbose output when tests fail if run using `make test`.
-        list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
+        list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure -V --debug")
         add_subdirectory(test)
     endif()
 endif()
 
 # Documentation
+option(PNTR_BUILD_DOCS "Build Documentation" ${PNTR_IS_MAIN})
 if (PNTR_BUILD_EXAMPLES AND PNTR_BUILD_DOCS)
     find_package(Doxygen)
     if (DOXYGEN_FOUND)
         add_custom_target(pntr_doxygen ALL
             COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/.Doxyfile
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMENT "Generating API documentation with Doxygen"
             VERBATIM
             DEPENDS pntr_examples_output
