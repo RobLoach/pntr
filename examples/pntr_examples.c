@@ -30,8 +30,7 @@
  * @image html pntr_examples_sprite.png
  */
 
-
-#define PNTR_ENABLE_DEFAUT_FONT
+#define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
 #define PNTR_ENABLE_VARGS
 // Math: Link the m library to use math.h

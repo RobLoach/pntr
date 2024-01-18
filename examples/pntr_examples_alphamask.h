@@ -1,4 +1,3 @@
-
 #include "../pntr.h"
 
 void pntr_examples_alphamask() {

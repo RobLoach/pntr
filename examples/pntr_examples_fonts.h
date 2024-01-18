@@ -1,10 +1,17 @@
 #include "../pntr.h"
+#include <stdio.h>
 
 void pntr_examples_fonts() {
     pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
 
     // Default Font
     pntr_font* defaultFont = pntr_load_font_default();
+    if (!defaultFont) {
+        printf("ASDFASDFASDF\n");
+        return;
+    }
+
+    pntr_draw_image(canvas, defaultFont->atlas, 0, 0);
 
     // Font Drawing
     pntr_draw_text(canvas, defaultFont, "Default Font Example", 10, 50, PNTR_BLACK);

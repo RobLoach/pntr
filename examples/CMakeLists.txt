@@ -12,7 +12,7 @@ target_link_libraries(pntr_examples PUBLIC
     pntr
 
     # Math: Define PNTR_ENABLE_MATH to use the math library
-    # m
+    #m
 )
 
 add_custom_target(pntr_examples_output
