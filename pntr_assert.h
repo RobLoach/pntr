@@ -131,7 +131,7 @@
  * @param actual The vector to check.
  * @param expected The vector that is expected.
  */
-#define PNTR_ASSERT_VECTOR_EQUALS(actual, expected) do {
+#define PNTR_ASSERT_VECTOR_EQUALS(actual, expected) do { \
     pntr_vector actualVect = (actual); \
     pntr_vector expectedVect = (expected); \
     PNTR_ASSERT_EQUALS(actualVect.x, expectedVect.x); \
