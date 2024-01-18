@@ -1,3 +1,5 @@
+# Zlib License
+
 Copyright (c) 2023 Rob Loach (@RobLoach, https://robloach.net)
 
 This software is provided "as-is", without any express or implied warranty. In no event

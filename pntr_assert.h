@@ -26,6 +26,11 @@
 #ifndef PNTR_ASSERT_H__
 #define PNTR_ASSERT_H__
 
+/**
+ * @defgroup pntr_assert pntr_assert
+ * @{
+ */
+
 #ifndef PNTR_ASSERT
 #ifdef NDEBUG
 #if defined __cplusplus && __GNUC_PREREQ (2,95)
@@ -36,6 +41,11 @@
 #define PNTR_ASSERT(condition) (PNTR_ASSERT_VOID_CAST 0)
 #else
 #include <assert.h>
+/**
+ * Assert whether the given condition is true or not.
+ *
+ * @param condition Expression of scalar type.
+ */
 #define PNTR_ASSERT(condition) assert(condition)
 #endif
 #endif
@@ -114,4 +124,23 @@
 } while(0)
 #endif  // PNTR_ASSERT_RECT_EQUALS
 
-#endif
+#ifndef PNTR_ASSERT_VECTOR_EQUALS
+/**
+ * Validate whether or not the given vectors are equal.
+ *
+ * @param actual The vector to check.
+ * @param expected The vector that is expected.
+ */
+#define PNTR_ASSERT_VECTOR_EQUALS(actual, expected) do { \
+    pntr_vector actualVect = (actual); \
+    pntr_vector expectedVect = (expected); \
+    PNTR_ASSERT_EQUALS(actualVect.x, expectedVect.x); \
+    PNTR_ASSERT_EQUALS(actualVect.y, expectedVect.y); \
+} while(0)
+#endif  // PNTR_ASSERT_VECTOR_EQUALS
+
+/**
+ * @}
+ */
+
+#endif  // PNTR_ASSERT_H__
