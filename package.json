@@ -9,7 +9,7 @@
     "pretest": "npm run build",
     "build": "cmake --build build",
     "prebuild": "cmake -B build",
-    "predocs": "npm run it",
+    "predocs": "npm it",
     "docs": "gh-pages -d docs/html"
   },
   "repository": {
