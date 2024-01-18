@@ -1,65 +1,51 @@
 #include "../pntr.h"
 
-bool pntr_examples_shapes() {
-    pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
+void pntr_examples_fonts() {
+    pntr_image* canvas = pntr_gen_image_color(400, 255, PNTR_RAYWHITE);
 
-    // Define some colors
-    pntr_color lightGreen = PNTR_GREEN;
-    lightGreen.rgba.a = 180;
-    pntr_color lightBlue = PNTR_BLUE;
-    lightBlue.rgba.a = 180;
+    // Default Font
+    pntr_font* defaultFont = pntr_load_font_default();
 
-    // Rectangles
-    pntr_draw_rectangle_fill(canvas, 10, 30, 50, 50, PNTR_RED);
-    pntr_draw_rectangle_fill(canvas, 20, 40, 50, 50, lightGreen);
-    pntr_draw_rectangle_fill(canvas, 30, 50, 50, 50, lightBlue);
+    // Font Drawing
+    pntr_draw_text(canvas, defaultFont, "Default Font Example", 10, 50, PNTR_BLACK);
 
-    pntr_draw_rectangle_thick(canvas, 10, 120, 50, 50, 5, PNTR_RED);
-    pntr_draw_rectangle_thick(canvas, 20, 130, 50, 50, 5, PNTR_GREEN);
-    pntr_draw_rectangle_thick(canvas, 30, 140, 50, 50, 5, PNTR_BLUE);
+    // BM Font
+    pntr_font* bmFont = pntr_load_font_bmf("resources/bmfont.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+    pntr_draw_rectangle_fill(canvas, 0, 90, 200, 20, PNTR_BLACK);
+    pntr_draw_text(canvas, bmFont, "BM Font Example", 10, 90, PNTR_WHITE);
 
-    // Circle
-    pntr_draw_circle(canvas, 110, 60, 21, PNTR_RED);
-    pntr_draw_circle_fill(canvas, 160, 60, 21, PNTR_BLUE);
+    // TTY Font
+    pntr_font* ttyFont = pntr_load_font_tty("resources/ttyfont-16x16.png", 16, 16,
+        "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+    pntr_color background = pntr_get_color(0x0000caff);
+    pntr_color border = pntr_get_color(0x8a8affff);
+    pntr_draw_rectangle_fill(canvas, 0, 120, canvas->width, 60, border);
+    pntr_draw_rectangle_fill(canvas, 0, 130, canvas->width, 40, background);
 
-    pntr_draw_ellipse(canvas, 110, 100, 20, 10, PNTR_GREEN);
-    pntr_draw_ellipse_fill(canvas, 160, 100, 20, 10, PNTR_ORANGE);
+    const char* text = "*** TTY Font Example ***";
+    int textWidth = pntr_measure_text(ttyFont, text);
+    pntr_draw_text(canvas, ttyFont, text, canvas->width / 2 - textWidth / 2, 140, PNTR_WHITE);
 
-    // Line
-    pntr_draw_line(canvas, 200, 50, 250, 80, PNTR_DARKGREEN);
+    // TTF Font
+    pntr_font* ttfFont = pntr_load_font_ttf("resources/tuffy.ttf", 28);
+    const char* ttfText = "TTF Font Example";
+    pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText, 0);
+    pntr_draw_text(canvas, ttfFont, ttfText, 200, 20, PNTR_DARKPURPLE);
 
-    // Triangle
-    pntr_draw_triangle_fill(canvas,
-        250, 50,
-        300, 80,
-        350, 20, PNTR_PURPLE);
+    // Resize the default font
+    pntr_font* resizedFont = pntr_font_scale(defaultFont, 2.0f, 2.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+    pntr_draw_text(canvas, resizedFont, "Blue Text", 10, 65, PNTR_BLUE);
+    pntr_unload_font(resizedFont);
 
-    // Rectangle Gradient
-    pntr_draw_rectangle_gradient(canvas, 100, 120, 80, 80, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_BLACK);
+    // Word-wrapped
+    pntr_draw_rectangle(canvas, 225, 50, 150, 60, PNTR_BLUE);
+    pntr_draw_text_wrapped(canvas, bmFont, "The awesome brown fox jumps over the lazy dog.", 225, 50, 150, PNTR_RED);
 
-    // Polygon
-    pntr_vector points[10];
-    points[0] = PNTR_CLITERAL(pntr_vector) {210, 110};
-    points[1] = PNTR_CLITERAL(pntr_vector) {215, 130};
-    points[2] = PNTR_CLITERAL(pntr_vector) {240, 140};
-    points[3] = PNTR_CLITERAL(pntr_vector) {200, 160};
-    pntr_draw_polygon_fill(canvas, points, 4, PNTR_BLUE);
-    pntr_draw_polygon(canvas, points, 4, PNTR_BLACK);
+    pntr_save_image(canvas, "pntr_examples_fonts.png");
 
-    // Arc
-    int radius = 40;
-    pntr_draw_arc_fill(canvas, 300, 120, radius, 90.0f, 180.0f, radius * 1.5f, PNTR_ORANGE);
-    pntr_draw_arc(canvas, 300, 120, radius, 90.0f, 180.0f, radius *1.5f, PNTR_RED);
-
-    // Polyline
-    points[0] = PNTR_CLITERAL(pntr_vector) {240, 110};
-    points[1] = PNTR_CLITERAL(pntr_vector) {260, 130};
-    points[2] = PNTR_CLITERAL(pntr_vector) {220, 140};
-    points[3] = PNTR_CLITERAL(pntr_vector) {240, 160};
-    pntr_draw_polyline(canvas, points, 4, PNTR_PURPLE);
-
-    pntr_save_image(canvas, "pntr_examples_shapes.png");
+    pntr_unload_font(defaultFont);
+    pntr_unload_font(ttyFont);
+    pntr_unload_font(bmFont);
+    pntr_unload_font(ttfFont);
     pntr_unload_image(canvas);
-
-    return true;
 }

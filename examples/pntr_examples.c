@@ -1,4 +1,37 @@
-#define PNTR_ENABLE_DEFAULT_FONT
+/**
+ * @page Examples Examples
+ *
+ * ## Alpha Mask
+ * @include pntr_examples_alphamask.h
+ * @image html pntr_examples_alphamask.png
+ *
+ * ## Fonts
+ * @include pntr_examples_fonts.h
+ * @image html pntr_examples_fonts.png
+ *
+ * ## Image
+ * @include pntr_examples_image.h
+ * @image html pntr_examples_image.png
+ *
+ * ## Resize
+ * @include pntr_examples_resize.h
+ * @image html pntr_examples_resize.png
+ *
+ * ## Rotate
+ * @include pntr_examples_rotate.h
+ * @image html pntr_examples_rotate.png
+ *
+ * ## Shapes
+ * @include pntr_examples_shapes.h
+ * @image html pntr_examples_shapes.png
+ *
+ * ## Sprite
+ * @include pntr_examples_sprite.h
+ * @image html pntr_examples_sprite.png
+ */
+
+
+#define PNTR_ENABLE_DEFAUT_FONT
 #define PNTR_ENABLE_TTF
 #define PNTR_ENABLE_VARGS
 #define PNTR_ENABLE_MATH
@@ -14,7 +47,6 @@
 #include "pntr_examples_sprite.h"
 
 int main(int argc, char* argv[]) {
-
     pntr_examples_alphamask();
     pntr_examples_fonts();
     pntr_examples_image();

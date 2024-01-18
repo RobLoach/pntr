@@ -22,6 +22,7 @@ option(PNTR_BUILD_EXAMPLES_SDL "Examples: SDL" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_EXAMPLES_RAYLIB "Examples: raylib" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_EXAMPLES_LIBRETRO "Examples: libretro" ${PNTR_IS_MAIN})
 option(PNTR_BUILD_TESTS "Build Tests" ${PNTR_IS_MAIN})
+option(PNTR_BUILD_DOCS "Build Documentation" ${PNTR_IS_MAIN})
 
 # Examples
 if (PNTR_BUILD_EXAMPLES)
@@ -40,4 +41,20 @@ if (PNTR_BUILD_TESTS)
         list(APPEND CMAKE_CTEST_ARGUMENTS "--output-on-failure")
         add_subdirectory(test)
     endif()
+endif()
+
+# Documentation
+if (PNTR_BUILD_EXAMPLES AND PNTR_BUILD_DOCS)
+    find_package(Doxygen)
+    if (DOXYGEN_FOUND)
+        add_custom_target(pntr_doxygen ALL
+            COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/.Doxyfile
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM
+            DEPENDS pntr_examples_output
+        )
+    else (DOXYGEN_FOUND)
+        message("Doxygen is required to build documentation")
+    endif (DOXYGEN_FOUND)
 endif()

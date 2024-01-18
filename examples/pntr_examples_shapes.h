@@ -1,6 +1,6 @@
 #include "../pntr.h"
 
-bool pntr_examples_shapes() {
+void pntr_examples_shapes() {
     pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
 
     // Define some colors
@@ -60,6 +60,4 @@ bool pntr_examples_shapes() {
 
     pntr_save_image(canvas, "pntr_examples_shapes.png");
     pntr_unload_image(canvas);
-
-    return true;
 }
