@@ -864,7 +864,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = pntr.h, pntr_assert.h, .Doxyfile.md, LICENSE.md
+INPUT                  = pntr.h pntr_assert.h .Doxyfile.md LICENSE.md examples
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -979,7 +979,7 @@ EXCLUDE_PATTERNS       =
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories use the pattern */test/*
 
-EXCLUDE_SYMBOLS        = PNTR_CLITERAL, CUTE_*, STB_*, STBIR_*, PNTR_IMPLEMENTATION_ONCE, stbir_*, _pntr_*
+EXCLUDE_SYMBOLS        = PNTR_CLITERAL, CUTE_*, STB_*, STBIR_*, PNTR_IMPLEMENTATION_ONCE, stbir_*, _pntr_*, cute_*
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or directories
 # that contain example code fragments that are included (see the \include
@@ -1293,7 +1293,15 @@ HTML_EXTRA_STYLESHEET  =
 # files will be copied as-is; there are no commands or markers available.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_FILES       = examples/examples/screenshots/image_resize.png examples/resources/logo-128x128.png
+HTML_EXTRA_FILES       = examples/examples/screenshots/image_resize.png \
+    examples/resources/logo-128x128.png \
+    build/examples/pntr_examples_alphamask.png \
+    build/examples/pntr_examples_fonts.png \
+    build/examples/pntr_examples_image.png \
+    build/examples/pntr_examples_resize.png \
+    build/examples/pntr_examples_rotate.png \
+    build/examples/pntr_examples_shapes.png \
+    build/examples/pntr_examples_sprite.png
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to

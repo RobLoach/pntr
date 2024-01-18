@@ -21,14 +21,10 @@ int main() {
 
 ## Examples
 
-The [examples](examples) can be run through [SDL](https://www.libsdl.org/), [raylib](https://www.raylib.com/), [libretro](https://www.retroarch.com/), or on the web with [Emscripten](https://emscripten.org/).
-
-[![Example: Shapes](examples/examples/screenshots/shapes.png)](examples/examples/example_shapes.h)
-[![Example: Image](examples/examples/screenshots/image.png)](examples/examples/example_image.h)
-[![Example: Fonts](examples/examples/screenshots/fonts.png)](examples/examples/example_fonts.h)
-[![Example: Image Resize](examples/examples/screenshots/image_resize.png)](examples/examples/example_image_resize.h)
-[![Example: Image Rotate](examples/examples/screenshots/image_rotate.png)](examples/examples/example_image_rotate.h)
-[![Example: Bunnymark](examples/examples/screenshots/bunnymark.png)](examples/examples/example_bunnymark.h)
+[![Example: Image](examples/pntr_examples_image.png)](examples/pntr_examples_image.h)
+[![Example: Shapes](examples/pntr_examples_shapes.png)](examples/pntr_examples_shapes.h)
+[![Example: Fonts](examples/pntr_examples_fonts.png)](examples/pntr_examples_fonts.h)
+[![Example: Sprite](examples/pntr_examples_sprite.png)](examples/pntr_examples_sprite.h)
 
 ## API
 
@@ -205,6 +201,18 @@ cmake --build build
 
 # Run the tests
 ctest --test-dir build -V
+```
+
+### Documentation
+
+To build the documentation, use [Doxygen](https://www.doxygen.nl)...
+``` bash
+doxygen .Doxyfile
+```
+
+To publish the documentation, [Node.js](https://nodejs.org)...
+``` bash
+npm run docs
 ```
 
 ## Acknowledgements
