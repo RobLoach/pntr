@@ -9,10 +9,15 @@
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -24,7 +29,7 @@
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">pntr
    </div>
-   <div id="projectbrief">Image manipulation library for C99 and C++, with a focus on ease-of-use.</div>
+   <div id="projectbrief">Image manipulation library</div>
   </td>
  </tr>
  </tbody>
@@ -47,6 +52,23 @@ $(function() {
 });
 /* @license-end */</script>
 <div id="main-nav"></div>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:cf05388f2679ee054f2beb29a391d25f4e673ac3&amp;dn=gpl-2.0.txt GPL-v2 */
+$(document).ready(function(){initNavTree('pntr__examples__shapes_8h_source.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -61,11 +83,6 @@ $(function() {
 </iframe>
 </div>
 
-<div id="nav-path" class="navpath">
-  <ul>
-<li class="navelem"><a class="el" href="dir_d28a4824dc47e487b107a5db32ef43c4.html">examples</a></li>  </ul>
-</div>
-</div><!-- top -->
 <div class="header">
   <div class="headertitle">
 <div class="title">pntr_examples_shapes.h</div>  </div>
@@ -134,32 +151,36 @@ $(function() {
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <a class="code" href="group__pntr.html#ga6f07bf72e4f7cd41f32202758b3e7546">pntr_save_image</a>(canvas, <span class="stringliteral">&quot;pntr_examples_shapes.png&quot;</span>);</div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;    <a class="code" href="group__pntr.html#ga2d2a7617812c782746f7ee0cacb53bc5">pntr_unload_image</a>(canvas);</div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;}</div>
-<div class="ttc" id="agroup__pntr_html_ga0c8c83c92fa93b7bf383d71694f47d6c"><div class="ttname"><a href="group__pntr.html#ga0c8c83c92fa93b7bf383d71694f47d6c">pntr_gen_image_color</a></div><div class="ttdeci">PNTR_API pntr_image * pntr_gen_image_color(int width, int height, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1220</div></div>
-<div class="ttc" id="agroup__pntr_html_ga1f1ecb7793da63b48acb1d95c3de52c6"><div class="ttname"><a href="group__pntr.html#ga1f1ecb7793da63b48acb1d95c3de52c6">pntr_draw_circle</a></div><div class="ttdeci">PNTR_API void pntr_draw_circle(pntr_image *dst, int centerX, int centerY, int radius, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1912</div></div>
-<div class="ttc" id="agroup__pntr_html_ga2d2a7617812c782746f7ee0cacb53bc5"><div class="ttname"><a href="group__pntr.html#ga2d2a7617812c782746f7ee0cacb53bc5">pntr_unload_image</a></div><div class="ttdeci">PNTR_API void pntr_unload_image(pntr_image *image)</div><div class="ttdef"><b>Definition:</b> pntr.h:1415</div></div>
-<div class="ttc" id="agroup__pntr_html_ga428ab4ab1346dd2ded7e0488757deaf2"><div class="ttname"><a href="group__pntr.html#ga428ab4ab1346dd2ded7e0488757deaf2">pntr_draw_triangle_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_triangle_fill(pntr_image *dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:2127</div></div>
-<div class="ttc" id="agroup__pntr_html_ga4696db434675f6df1c15ee8bdecdff78"><div class="ttname"><a href="group__pntr.html#ga4696db434675f6df1c15ee8bdecdff78">PNTR_RAYWHITE</a></div><div class="ttdeci">#define PNTR_RAYWHITE</div><div class="ttdef"><b>Definition:</b> pntr.h:729</div></div>
-<div class="ttc" id="agroup__pntr_html_ga50cdfcf369a2d046096cce6f413f5536"><div class="ttname"><a href="group__pntr.html#ga50cdfcf369a2d046096cce6f413f5536">PNTR_BLUE</a></div><div class="ttdeci">#define PNTR_BLUE</div><div class="ttdef"><b>Definition:</b> pntr.h:644</div></div>
-<div class="ttc" id="agroup__pntr_html_ga596f5dd7d5d9149a7c4abda1d6379e66"><div class="ttname"><a href="group__pntr.html#ga596f5dd7d5d9149a7c4abda1d6379e66">PNTR_DARKGREEN</a></div><div class="ttdeci">#define PNTR_DARKGREEN</div><div class="ttdef"><b>Definition:</b> pntr.h:632</div></div>
-<div class="ttc" id="agroup__pntr_html_ga6db6922f55d00a62f8bd9f16a56d2d1a"><div class="ttname"><a href="group__pntr.html#ga6db6922f55d00a62f8bd9f16a56d2d1a">pntr_draw_line</a></div><div class="ttdeci">PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1590</div></div>
-<div class="ttc" id="agroup__pntr_html_ga6f07bf72e4f7cd41f32202758b3e7546"><div class="ttname"><a href="group__pntr.html#ga6f07bf72e4f7cd41f32202758b3e7546">pntr_save_image</a></div><div class="ttdeci">PNTR_API bool pntr_save_image(pntr_image *image, const char *fileName)</div><div class="ttdef"><b>Definition:</b> pntr.h:3996</div></div>
-<div class="ttc" id="agroup__pntr_html_ga72d841a076f2093f8ee9e7686025e274"><div class="ttname"><a href="group__pntr.html#ga72d841a076f2093f8ee9e7686025e274">pntr_draw_ellipse_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_ellipse_fill(pntr_image *dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:2048</div></div>
-<div class="ttc" id="agroup__pntr_html_ga75bd8453e101ad19d9c029f040343e85"><div class="ttname"><a href="group__pntr.html#ga75bd8453e101ad19d9c029f040343e85">pntr_draw_rectangle_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_rectangle_fill(pntr_image *dst, int posX, int posY, int width, int height, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1826</div></div>
-<div class="ttc" id="agroup__pntr_html_gaa424073a637acb0d4f228d5d727d66b0"><div class="ttname"><a href="group__pntr.html#gaa424073a637acb0d4f228d5d727d66b0">PNTR_BLACK</a></div><div class="ttdeci">#define PNTR_BLACK</div><div class="ttdef"><b>Definition:</b> pntr.h:711</div></div>
-<div class="ttc" id="agroup__pntr_html_gab7506a47b323fe87a2e2dde1c1102f2d"><div class="ttname"><a href="group__pntr.html#gab7506a47b323fe87a2e2dde1c1102f2d">PNTR_PURPLE</a></div><div class="ttdeci">#define PNTR_PURPLE</div><div class="ttdef"><b>Definition:</b> pntr.h:656</div></div>
-<div class="ttc" id="agroup__pntr_html_gac820099df81a0735c9d7ce6303397ee7"><div class="ttname"><a href="group__pntr.html#gac820099df81a0735c9d7ce6303397ee7">pntr_draw_circle_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_circle_fill(pntr_image *dst, int centerX, int centerY, int radius, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1960</div></div>
-<div class="ttc" id="agroup__pntr_html_gaca0a5756176866106f7daa29e5b52a23"><div class="ttname"><a href="group__pntr.html#gaca0a5756176866106f7daa29e5b52a23">pntr_draw_ellipse</a></div><div class="ttdeci">PNTR_API void pntr_draw_ellipse(pntr_image *dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1998</div></div>
-<div class="ttc" id="agroup__pntr_html_gad9c80a461b6d316261c73c2e6eb9f790"><div class="ttname"><a href="group__pntr.html#gad9c80a461b6d316261c73c2e6eb9f790">PNTR_RED</a></div><div class="ttdeci">#define PNTR_RED</div><div class="ttdef"><b>Definition:</b> pntr.h:608</div></div>
-<div class="ttc" id="agroup__pntr_html_gaee489861e57f608f13fe6d56b5178bd0"><div class="ttname"><a href="group__pntr.html#gaee489861e57f608f13fe6d56b5178bd0">PNTR_GREEN</a></div><div class="ttdeci">#define PNTR_GREEN</div><div class="ttdef"><b>Definition:</b> pntr.h:620</div></div>
-<div class="ttc" id="agroup__pntr_html_gaf4d9426e5e27beec9d6b470d75554986"><div class="ttname"><a href="group__pntr.html#gaf4d9426e5e27beec9d6b470d75554986">PNTR_ORANGE</a></div><div class="ttdeci">#define PNTR_ORANGE</div><div class="ttdef"><b>Definition:</b> pntr.h:596</div></div>
-<div class="ttc" id="astructpntr__color_1_1pntr__color__rgba__t_html_ae810b5b1a848faacf7d28c54e6cbb2bd"><div class="ttname"><a href="structpntr__color_1_1pntr__color__rgba__t.html#ae810b5b1a848faacf7d28c54e6cbb2bd">pntr_color::pntr_color_rgba_t::a</a></div><div class="ttdeci">unsigned char a</div><div class="ttdef"><b>Definition:</b> pntr.h:225</div></div>
-<div class="ttc" id="astructpntr__image_html"><div class="ttname"><a href="structpntr__image.html">pntr_image</a></div><div class="ttdef"><b>Definition:</b> pntr.h:281</div></div>
-<div class="ttc" id="astructpntr__vector_html"><div class="ttname"><a href="structpntr__vector.html">pntr_vector</a></div><div class="ttdef"><b>Definition:</b> pntr.h:322</div></div>
-<div class="ttc" id="aunionpntr__color_html"><div class="ttname"><a href="unionpntr__color.html">pntr_color</a></div><div class="ttdef"><b>Definition:</b> pntr.h:191</div></div>
+<div class="ttc" id="agroup__pntr_html_ga0c8c83c92fa93b7bf383d71694f47d6c"><div class="ttname"><a href="group__pntr.html#ga0c8c83c92fa93b7bf383d71694f47d6c">pntr_gen_image_color</a></div><div class="ttdeci">PNTR_API pntr_image * pntr_gen_image_color(int width, int height, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1297</div></div>
+<div class="ttc" id="agroup__pntr_html_ga1f1ecb7793da63b48acb1d95c3de52c6"><div class="ttname"><a href="group__pntr.html#ga1f1ecb7793da63b48acb1d95c3de52c6">pntr_draw_circle</a></div><div class="ttdeci">PNTR_API void pntr_draw_circle(pntr_image *dst, int centerX, int centerY, int radius, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1989</div></div>
+<div class="ttc" id="agroup__pntr_html_ga2d2a7617812c782746f7ee0cacb53bc5"><div class="ttname"><a href="group__pntr.html#ga2d2a7617812c782746f7ee0cacb53bc5">pntr_unload_image</a></div><div class="ttdeci">PNTR_API void pntr_unload_image(pntr_image *image)</div><div class="ttdef"><b>Definition:</b> pntr.h:1492</div></div>
+<div class="ttc" id="agroup__pntr_html_ga428ab4ab1346dd2ded7e0488757deaf2"><div class="ttname"><a href="group__pntr.html#ga428ab4ab1346dd2ded7e0488757deaf2">pntr_draw_triangle_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_triangle_fill(pntr_image *dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:2204</div></div>
+<div class="ttc" id="agroup__pntr_html_ga4696db434675f6df1c15ee8bdecdff78"><div class="ttname"><a href="group__pntr.html#ga4696db434675f6df1c15ee8bdecdff78">PNTR_RAYWHITE</a></div><div class="ttdeci">#define PNTR_RAYWHITE</div><div class="ttdef"><b>Definition:</b> pntr.h:775</div></div>
+<div class="ttc" id="agroup__pntr_html_ga50cdfcf369a2d046096cce6f413f5536"><div class="ttname"><a href="group__pntr.html#ga50cdfcf369a2d046096cce6f413f5536">PNTR_BLUE</a></div><div class="ttdeci">#define PNTR_BLUE</div><div class="ttdef"><b>Definition:</b> pntr.h:690</div></div>
+<div class="ttc" id="agroup__pntr_html_ga596f5dd7d5d9149a7c4abda1d6379e66"><div class="ttname"><a href="group__pntr.html#ga596f5dd7d5d9149a7c4abda1d6379e66">PNTR_DARKGREEN</a></div><div class="ttdeci">#define PNTR_DARKGREEN</div><div class="ttdef"><b>Definition:</b> pntr.h:678</div></div>
+<div class="ttc" id="agroup__pntr_html_ga6db6922f55d00a62f8bd9f16a56d2d1a"><div class="ttname"><a href="group__pntr.html#ga6db6922f55d00a62f8bd9f16a56d2d1a">pntr_draw_line</a></div><div class="ttdeci">PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1667</div></div>
+<div class="ttc" id="agroup__pntr_html_ga6f07bf72e4f7cd41f32202758b3e7546"><div class="ttname"><a href="group__pntr.html#ga6f07bf72e4f7cd41f32202758b3e7546">pntr_save_image</a></div><div class="ttdeci">PNTR_API bool pntr_save_image(pntr_image *image, const char *fileName)</div><div class="ttdef"><b>Definition:</b> pntr.h:4074</div></div>
+<div class="ttc" id="agroup__pntr_html_ga72d841a076f2093f8ee9e7686025e274"><div class="ttname"><a href="group__pntr.html#ga72d841a076f2093f8ee9e7686025e274">pntr_draw_ellipse_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_ellipse_fill(pntr_image *dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:2125</div></div>
+<div class="ttc" id="agroup__pntr_html_ga75bd8453e101ad19d9c029f040343e85"><div class="ttname"><a href="group__pntr.html#ga75bd8453e101ad19d9c029f040343e85">pntr_draw_rectangle_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_rectangle_fill(pntr_image *dst, int posX, int posY, int width, int height, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:1903</div></div>
+<div class="ttc" id="agroup__pntr_html_gaa424073a637acb0d4f228d5d727d66b0"><div class="ttname"><a href="group__pntr.html#gaa424073a637acb0d4f228d5d727d66b0">PNTR_BLACK</a></div><div class="ttdeci">#define PNTR_BLACK</div><div class="ttdef"><b>Definition:</b> pntr.h:757</div></div>
+<div class="ttc" id="agroup__pntr_html_gab7506a47b323fe87a2e2dde1c1102f2d"><div class="ttname"><a href="group__pntr.html#gab7506a47b323fe87a2e2dde1c1102f2d">PNTR_PURPLE</a></div><div class="ttdeci">#define PNTR_PURPLE</div><div class="ttdef"><b>Definition:</b> pntr.h:702</div></div>
+<div class="ttc" id="agroup__pntr_html_gac820099df81a0735c9d7ce6303397ee7"><div class="ttname"><a href="group__pntr.html#gac820099df81a0735c9d7ce6303397ee7">pntr_draw_circle_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_circle_fill(pntr_image *dst, int centerX, int centerY, int radius, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:2037</div></div>
+<div class="ttc" id="agroup__pntr_html_gaca0a5756176866106f7daa29e5b52a23"><div class="ttname"><a href="group__pntr.html#gaca0a5756176866106f7daa29e5b52a23">pntr_draw_ellipse</a></div><div class="ttdeci">PNTR_API void pntr_draw_ellipse(pntr_image *dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:2075</div></div>
+<div class="ttc" id="agroup__pntr_html_gad9c80a461b6d316261c73c2e6eb9f790"><div class="ttname"><a href="group__pntr.html#gad9c80a461b6d316261c73c2e6eb9f790">PNTR_RED</a></div><div class="ttdeci">#define PNTR_RED</div><div class="ttdef"><b>Definition:</b> pntr.h:654</div></div>
+<div class="ttc" id="agroup__pntr_html_gaee489861e57f608f13fe6d56b5178bd0"><div class="ttname"><a href="group__pntr.html#gaee489861e57f608f13fe6d56b5178bd0">PNTR_GREEN</a></div><div class="ttdeci">#define PNTR_GREEN</div><div class="ttdef"><b>Definition:</b> pntr.h:666</div></div>
+<div class="ttc" id="agroup__pntr_html_gaf4d9426e5e27beec9d6b470d75554986"><div class="ttname"><a href="group__pntr.html#gaf4d9426e5e27beec9d6b470d75554986">PNTR_ORANGE</a></div><div class="ttdeci">#define PNTR_ORANGE</div><div class="ttdef"><b>Definition:</b> pntr.h:642</div></div>
+<div class="ttc" id="astructpntr__color_1_1pntr__color__rgba__t_html_ae810b5b1a848faacf7d28c54e6cbb2bd"><div class="ttname"><a href="structpntr__color_1_1pntr__color__rgba__t.html#ae810b5b1a848faacf7d28c54e6cbb2bd">pntr_color::pntr_color_rgba_t::a</a></div><div class="ttdeci">unsigned char a</div><div class="ttdef"><b>Definition:</b> pntr.h:256</div></div>
+<div class="ttc" id="astructpntr__image_html"><div class="ttname"><a href="structpntr__image.html">pntr_image</a></div><div class="ttdef"><b>Definition:</b> pntr.h:312</div></div>
+<div class="ttc" id="astructpntr__vector_html"><div class="ttname"><a href="structpntr__vector.html">pntr_vector</a></div><div class="ttdef"><b>Definition:</b> pntr.h:353</div></div>
+<div class="ttc" id="aunionpntr__color_html"><div class="ttname"><a href="unionpntr__color.html">pntr_color</a></div><div class="ttdef"><b>Definition:</b> pntr.h:222</div></div>
 </div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a class="el" href="dir_d28a4824dc47e487b107a5db32ef43c4.html">examples</a></li><li class="navelem"><b>pntr_examples_shapes.h</b></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
+  </ul>
+</div>
 </body>
 </html>

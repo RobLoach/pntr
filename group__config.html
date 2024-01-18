@@ -9,10 +9,15 @@
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
+<link href="doxygen-awesome.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -24,7 +29,7 @@
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">pntr
    </div>
-   <div id="projectbrief">Image manipulation library for C99 and C++, with a focus on ease-of-use.</div>
+   <div id="projectbrief">Image manipulation library</div>
   </td>
  </tr>
  </tbody>
@@ -48,6 +53,22 @@ $(function() {
 /* @license-end */</script>
 <div id="main-nav"></div>
 </div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:cf05388f2679ee054f2beb29a391d25f4e673ac3&amp;dn=gpl-2.0.txt GPL-v2 */
+$(document).ready(function(){initNavTree('group__config.html',''); initResizable(); });
+/* @license-end */
+</script>
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -84,6 +105,8 @@ Macros</h2></td></tr>
 <tr class="separator:ga4b14560d9c8acbf5c2f9f47960a4896e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga5a424ebb439dfbd61eaca5c8b3fd5824"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#ga5a424ebb439dfbd61eaca5c8b3fd5824">PNTR_SAVE_IMAGE_TO_MEMORY</a></td></tr>
 <tr class="separator:ga5a424ebb439dfbd61eaca5c8b3fd5824"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaec6fe0f10b824ba8341c122f6261d72e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#gaec6fe0f10b824ba8341c122f6261d72e">PNTR_LOAD_IMAGE_FROM_MEMORY</a></td></tr>
+<tr class="separator:gaec6fe0f10b824ba8341c122f6261d72e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad8dcd0f8596971ce525cbd9db03eea2f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#gad8dcd0f8596971ce525cbd9db03eea2f">PNTR_DISABLE_ALPHABLEND</a></td></tr>
 <tr class="separator:gad8dcd0f8596971ce525cbd9db03eea2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gae0b4879dac430e646da43858d0fefe19"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#gae0b4879dac430e646da43858d0fefe19">PNTR_ENABLE_MATH</a></td></tr>
@@ -92,6 +115,10 @@ Macros</h2></td></tr>
 <tr class="separator:gac9b85d27d7fa7ea29005cf1622c5e5d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gaa5e39384c05ba51972491647014440b8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#gaa5e39384c05ba51972491647014440b8">PNTR_SAVE_FILE</a></td></tr>
 <tr class="separator:gaa5e39384c05ba51972491647014440b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac0b54500a040e9fa46f24a24bc30eee4"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#gac0b54500a040e9fa46f24a24bc30eee4">PNTR_STB_IMAGE</a></td></tr>
+<tr class="separator:gac0b54500a040e9fa46f24a24bc30eee4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gacb385a61b076b08e03240b04bb86a13d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#gacb385a61b076b08e03240b04bb86a13d">PNTR_CUTE_PNG</a></td></tr>
+<tr class="separator:gacb385a61b076b08e03240b04bb86a13d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga7cce99b17ec015d1bce786676ac1b00d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#ga7cce99b17ec015d1bce786676ac1b00d">PNTR_NO_CUTE_PNG_IMPLEMENTATION</a></td></tr>
 <tr class="separator:ga7cce99b17ec015d1bce786676ac1b00d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga56cdfcbab13c4737daf76d03a1d96ac5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html#ga56cdfcbab13c4737daf76d03a1d96ac5">PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION</a></td></tr>
@@ -103,6 +130,30 @@ Macros</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="gacb385a61b076b08e03240b04bb86a13d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gacb385a61b076b08e03240b04bb86a13d">&#9670;&nbsp;</a></span>PNTR_CUTE_PNG</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PNTR_CUTE_PNG</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>When defined, will use cute_png.h for loading and saving.</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga3dd0982fa7fb2458d680db18163674e8">pntr_load_image()</a> </dd>
+<dd>
+<a class="el" href="group__pntr.html#ga6f07bf72e4f7cd41f32202758b3e7546">pntr_save_image()</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gac0b54500a040e9fa46f24a24bc30eee4">PNTR_STB_IMAGE</a> </dd>
+<dd>
+<a class="el" href="group__config.html#ga5a424ebb439dfbd61eaca5c8b3fd5824">PNTR_SAVE_IMAGE_TO_MEMORY</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gaec6fe0f10b824ba8341c122f6261d72e">PNTR_LOAD_IMAGE_FROM_MEMORY</a> </dd></dl>
+
+</div>
+</div>
 <a id="gad8dcd0f8596971ce525cbd9db03eea2f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gad8dcd0f8596971ce525cbd9db03eea2f">&#9670;&nbsp;</a></span>PNTR_DISABLE_ALPHABLEND</h2>
 
@@ -201,6 +252,26 @@ Macros</h2></td></tr>
 </div><div class="memdoc">
 <p>Callback to use when asked to load a file. Must match the <a class="el" href="group__pntr.html#ga560be10f03a2a3e34c29b51f1becb065">pntr_load_file()</a> definition.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga560be10f03a2a3e34c29b51f1becb065">pntr_load_file()</a> </dd></dl>
+
+</div>
+</div>
+<a id="gaec6fe0f10b824ba8341c122f6261d72e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaec6fe0f10b824ba8341c122f6261d72e">&#9670;&nbsp;</a></span>PNTR_LOAD_IMAGE_FROM_MEMORY</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PNTR_LOAD_IMAGE_FROM_MEMORY</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Overrides how loading an image from memory is handled.</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga69799366a2224ece50ac45d929d002ca">pntr_load_image_from_memory()</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gacb385a61b076b08e03240b04bb86a13d">PNTR_CUTE_PNG</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gac0b54500a040e9fa46f24a24bc30eee4">PNTR_STB_IMAGE</a> </dd></dl>
 
 </div>
 </div>
@@ -309,8 +380,32 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Overrides how saving an image to memory is handled.</p>
-<dl class="section note"><dt>Note</dt><dd>Without this being defined, <code>cute_png.h</code> will be used.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga4e7a6b5056677057e25404b82e1a5bac">pntr_save_image_to_memory()</a> </dd></dl>
+
+</div>
+</div>
+<a id="gac0b54500a040e9fa46f24a24bc30eee4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac0b54500a040e9fa46f24a24bc30eee4">&#9670;&nbsp;</a></span>PNTR_STB_IMAGE</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PNTR_STB_IMAGE</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>When defined, will use stb_image.h for loading images, and stb_image_write.h for saving.</p>
+<p>By default, stb_image will be used if a custom implementation isn't defined.</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga3dd0982fa7fb2458d680db18163674e8">pntr_load_image()</a> </dd>
+<dd>
+<a class="el" href="group__pntr.html#ga6f07bf72e4f7cd41f32202758b3e7546">pntr_save_image()</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gacb385a61b076b08e03240b04bb86a13d">PNTR_CUTE_PNG</a> </dd>
+<dd>
+<a class="el" href="group__config.html#ga5a424ebb439dfbd61eaca5c8b3fd5824">PNTR_SAVE_IMAGE_TO_MEMORY</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gaec6fe0f10b824ba8341c122f6261d72e">PNTR_LOAD_IMAGE_FROM_MEMORY</a> </dd></dl>
 
 </div>
 </div>
@@ -330,9 +425,12 @@ Macros</h2></td></tr>
 </div>
 </div>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
+  </ul>
+</div>
 </body>
 </html>
