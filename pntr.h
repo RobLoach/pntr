@@ -7,6 +7,7 @@
  * - PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
  * - PNTR_ENABLE_TTF: Enables TTF font loading
+ * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
  * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_ENABLE_MATH: When enabled, will useC's math.h library, rather than internal implementations.
@@ -125,6 +126,11 @@
      * @see pntr_load_font_ttf()
      */
     #define PNTR_ENABLE_TTF
+
+    /**
+     * Enable support for UTF-8 with `utf8.h`.
+     */
+    #define PNTR_ENABLE_UTF8
 
     /**
      * Overrides how saving an image to memory is handled.
