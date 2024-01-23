@@ -3458,7 +3458,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     while (text[i] != '\0') {
         if (text[i] == ' ' || text[i] == '\n') {
             // Measure the width of the line from the previous word.
-            if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x > maxWidth) {
+            if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x >= maxWidth) {
                 // Have the space before the line end become a new line.
                 newText[lastSpace] = '\n';
                 currentLineLength = i - lastSpace - 1; // -1 to remove the active space from the line count.
@@ -3468,6 +3468,11 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
 
         currentLineLength++;
         i++;
+    }
+
+    // Perform one more check on the last line.
+    if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x >= maxWidth) {
+        newText[lastSpace] = '\n';
     }
 
     // Display the new text with the newlines, and clean up the memory usage.
@@ -3733,9 +3738,10 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
-        #define PNTR_NUM_GLYPHS 95
-        stbtt_bakedchar characterData[PNTR_NUM_GLYPHS];
-        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, PNTR_NUM_GLYPHS, characterData);
+        #define PNTR_FONT_TTF_GLYPH_START 32
+        #define PNTR_FONT_TTF_GLYPH_NUM 95
+        stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
+        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, PNTR_FONT_TTF_GLYPH_START, PNTR_FONT_TTF_GLYPH_NUM, characterData);
 
         // Check to make sure the font was baked correctly
         if (result == 0) {
@@ -3755,14 +3761,14 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
         // Create the font
-        pntr_font* font = _pntr_new_font(PNTR_NUM_GLYPHS, atlas);
+        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, atlas);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return NULL;
         }
 
         // Capture each glyph data
-        for (int i = 0; i < PNTR_NUM_GLYPHS; i++) {
+        for (int i = 0; i < PNTR_FONT_TTF_GLYPH_NUM; i++) {
             // Calculate the source rectangles.
             font->srcRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = characterData[i].x0,
@@ -3774,13 +3780,13 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             // Find where the glyphs will be rendered.
             font->glyphRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
-                .y = (int)characterData[i].yoff + (int)((float)fontSize / 1.5f), // TODO: Determine correct y glyph value
+                .y = (int)(characterData[i].yoff + ((float)fontSize / 1.5f)), // TODO: Determine correct y glyph value
                 .width = (int)characterData[i].xadvance,
                 .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
             };
 
             // Set up the active character.
-            font->characters[i] = (char)(32 + i);
+            font->characters[i] = (char)(PNTR_FONT_TTF_GLYPH_START + i);
         }
 
         return font;
