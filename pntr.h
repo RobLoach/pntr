@@ -881,6 +881,7 @@ extern "C" {
     #define PNTR_STRCHR utf8chr
     #define PNTR_STRLEN utf8len
     #define PNTR_STRSIZE utf8size
+    #define PNTR_STRCODEPOINT utf8codepoint
 #endif
 
 #ifndef PNTR_STRSTR
@@ -909,6 +910,25 @@ extern "C" {
 #ifndef PNTR_STRSIZE
     #include <string.h>
     #define PNTR_STRSIZE(text) ((PNTR_STRLEN(text) + (size_t)1))
+#endif
+
+#ifndef PNTR_STRCODEPOINT
+    /**
+     * Sets out_codepoint to the current utf8 codepoint in str, and returns the address of the next utf8 codepoint after the current one in str.
+     *
+     * @private
+     * @internal
+     */
+    const char* pntr_strcodepoint(const char * str, int32_t* out_codepoint) {
+        if (str == NULL) {
+            *out_codepoint = 0;
+        }
+
+        char character = str[0];
+        *out_codepoint = (int32_t)character;
+        return str + 1;
+    }
+    #define PNTR_STRCODEPOINT pntr_strcodepoint
 #endif
 
 #ifndef PNTR_PI
@@ -3435,21 +3455,21 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
     int x = posX;
     int y = posY;
     int tallestCharacter = 0;
+    int32_t codepoint;
 
-    const char * currentChar = text;
-    while (*currentChar != '\0') {
-        if (*currentChar == '\n') {
+    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        if (codepoint == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
             x = posX;
             y += tallestCharacter;
         }
         else {
-            char* foundCharacter = PNTR_STRCHR(font->characters, *currentChar);
+            char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
             if (foundCharacter != NULL) {
                 int i = (int)(foundCharacter - font->characters);
 
                 // Draw the character, unless it's a space.
-                if (*currentChar != ' ')  {
+                if (codepoint != ' ')  {
                     pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
                 }
 
@@ -3459,9 +3479,6 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
                 }
             }
         }
-
-        // TODO: Iterate over the byte size of the codepoint instead of just one byte.
-        currentChar++;
     }
 }
 
