@@ -4,6 +4,7 @@
 
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
+#define PNTR_ENABLE_UTF8
 
 #define PNTR_IMPLEMENTATION
 #define PNTR_ASSERT(condition) EQUALS((bool)(condition), true)
@@ -13,6 +14,18 @@
 #define IMAGEEQUALS PNTR_ASSERT_IMAGE_EQUALS
 #define RECTEQUALS PNTR_ASSERT_RECT_EQUALS
 #include "../pntr_assert.h"
+
+
+void pntr_test_utf8() {
+    #ifdef PNTR_ENABLE_UTF8
+    pntr_font* font = pntr_load_font_tty("resources/ukranian.png", 43, 38, "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ ");
+    const char* text = "ПРИВІТ СВІТ";
+    pntr_image* image = pntr_gen_image_text(font, text, PNTR_WHITE);
+    pntr_save_image(image, "utf8_output.png");
+    pntr_unload_image(image);
+    pntr_unload_font(font);
+    #endif
+}
 
 MODULE(pntr, {
     IT("pntr_load_memory(), pntr_unload_memory()", {
@@ -694,6 +707,10 @@ MODULE(pntr, {
         EQUALS(_pntr_rectangle_intersect(10, 10, 50, 50, 20, 20, 10, 10, &out), true);
         pntr_rectangle expected = (pntr_rectangle) {20, 20, 10, 10};
         RECTEQUALS(out, expected);
+    });
+
+    IT("utf8", {
+        pntr_test_utf8();
     });
 })
 
