@@ -878,6 +878,7 @@ extern "C" {
 #ifdef PNTR_ENABLE_UTF8
     #include "external/utf8.h"
     #define PNTR_STRSTR utf8str
+    #define PNTR_STRCHR utf8chr
     #define PNTR_STRLEN utf8len
     #define PNTR_STRSIZE utf8size
 #endif
@@ -892,7 +893,12 @@ extern "C" {
      *
      * @return A pointer to the first occurrence in str1 of the entire sequence of characters specified in str2, or a null pointer if the sequence is not present in str1.
      */
-    #define PNTR_STRSTR(str1, str2) strstr((str1), (str2))
+    #define PNTR_STRSTR strstr
+#endif
+
+#ifndef PNTR_STRCHR
+    #include <string.h>
+    #define PNTR_STRCHR strchr
 #endif
 
 #ifndef PNTR_STRLEN
@@ -902,7 +908,7 @@ extern "C" {
 
 #ifndef PNTR_STRSIZE
     #include <string.h>
-    #define PNTR_STRSIZE(text) (PNTR_STRLEN((text)) + 1)
+    #define PNTR_STRSIZE(text) ((PNTR_STRLEN(text) + (size_t)1))
 #endif
 
 #ifndef PNTR_PI
@@ -3144,7 +3150,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData
  *
  * @internal
  */
-PNTR_API pntr_font* _pntr_new_font(int numCharacters, int characterByteSize, pntr_image* atlas) {
+PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pntr_image* atlas) {
     if (numCharacters <= 0) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
@@ -3170,7 +3176,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, int characterByteSize, pnt
     }
 
     // Characters
-    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)characterByteSize);
+    font->characters = PNTR_MALLOC(characterByteSize);
     if (font->characters == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font->glyphRects);
@@ -3285,8 +3291,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
     }
 
     // Find out how many characters there are.
-    int numCharacters = PNTR_STRLEN(characters);
-	int i = 0;
+    int numCharacters = (int)PNTR_STRLEN(characters);
 
     // Create the font.
     pntr_font* font = _pntr_new_font(numCharacters, PNTR_STRSIZE(characters), image);
@@ -3357,7 +3362,7 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
         return NULL;
     }
 
-    int charactersSize = PNTR_STRSIZE(font->characters);
+    size_t charactersSize = PNTR_STRSIZE(font->characters);
     pntr_font* output = _pntr_new_font(font->charactersLen, charactersSize, atlas);
     if (output == NULL) {
         pntr_unload_image(atlas);
@@ -3366,7 +3371,7 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
 
     PNTR_MEMCPY(output->srcRects, font->srcRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
     PNTR_MEMCPY(output->glyphRects, font->glyphRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
-    PNTR_MEMCPY(output->characters, font->characters, sizeof(char) * charactersSize);
+    PNTR_MEMCPY(output->characters, font->characters, charactersSize);
 
     return output;
 }
@@ -3439,22 +3444,23 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
             y += tallestCharacter;
         }
         else {
-            for (int i = 0; i < font->charactersLen; i++) {
-                if (font->characters[i] == *currentChar) {
-                    // Draw the character, unless it's a space.
-                    if (*currentChar != ' ')  {
-                        pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
-                    }
+            char* foundCharacter = PNTR_STRCHR(font->characters, *currentChar);
+            if (foundCharacter != NULL) {
+                int i = (int)(foundCharacter - font->characters);
 
-                    x += font->glyphRects[i].x + font->glyphRects[i].width;
-                    if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
-                        tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
-                    }
-                    break;
+                // Draw the character, unless it's a space.
+                if (*currentChar != ' ')  {
+                    pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+                }
+
+                x += font->glyphRects[i].x + font->glyphRects[i].width;
+                if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+                    tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
                 }
             }
         }
 
+        // TODO: Iterate over the byte size of the codepoint instead of just one byte.
         currentChar++;
     }
 }
@@ -3790,7 +3796,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
         // Create the font
-        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, atlas);
+        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, PNTR_FONT_TTF_GLYPH_NUM + 1, atlas);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return NULL;
