@@ -919,13 +919,13 @@ extern "C" {
      * @private
      * @internal
      */
-    const char* pntr_strcodepoint(const char * str, int32_t* out_codepoint) {
+    const char* pntr_strcodepoint(const char * str, char* out_codepoint) {
         if (str == NULL) {
             *out_codepoint = 0;
         }
 
         char character = str[0];
-        *out_codepoint = (int32_t)character;
+        *out_codepoint = character;
         return str + 1;
     }
     #define PNTR_STRCODEPOINT pntr_strcodepoint
@@ -3455,7 +3455,12 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
     int x = posX;
     int y = posY;
     int tallestCharacter = 0;
+
+    #ifdef PNTR_ENABLE_UTF8
     int32_t codepoint;
+    #else
+    char codepoint;
+    #endif
 
     for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
         if (codepoint == '\n') {
@@ -3507,6 +3512,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     int currentLineLength = 0;
     int i = 0;
     int lastSpace = 0;
+    // TODO: Implement pntr_draw_text_wrapped with UTF-8 support
     while (text[i] != '\0') {
         if (text[i] == ' ' || text[i] == '\n') {
             // Measure the width of the line from the previous word.
@@ -3596,6 +3602,7 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
     const char * currentChar = text;
     int index = 0;
 
+    // TODO: Implement pntr_draw_text_wrapped with UTF-8 support
     while (currentChar != NULL && *currentChar != '\0' && (textLength <= 0 || index < textLength)) {
         if (*currentChar == '\n') {
             output.y += currentY;
@@ -3790,6 +3797,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
+        // TODO: Add an API to Add UTF-8 characters to a TTF font?
         #define PNTR_FONT_TTF_GLYPH_START 32
         #define PNTR_FONT_TTF_GLYPH_NUM 95
         stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
