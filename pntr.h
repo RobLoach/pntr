@@ -882,6 +882,9 @@ extern "C" {
     #define PNTR_STRLEN utf8len
     #define PNTR_STRSIZE utf8size
     #define PNTR_STRCODEPOINT utf8codepoint
+    typedef int32_t pntr_codepoint_t;
+#else
+    typedef char pntr_codepoint_t;
 #endif
 
 #ifndef PNTR_STRSTR
@@ -909,6 +912,9 @@ extern "C" {
 
 #ifndef PNTR_STRSIZE
     #include <string.h>
+    /**
+     * Calculates the amount of bytes in a string, including the null character.
+     */
     #define PNTR_STRSIZE(text) ((PNTR_STRLEN(text) + (size_t)1))
 #endif
 
@@ -3456,11 +3462,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
     int y = posY;
     int tallestCharacter = 0;
 
-    #ifdef PNTR_ENABLE_UTF8
-    int32_t codepoint;
-    #else
-    char codepoint;
-    #endif
+    pntr_codepoint_t codepoint;
 
     for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
         if (codepoint == '\n') {
@@ -3605,34 +3607,43 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
     pntr_vector output = PNTR_CLITERAL(pntr_vector) { .x = 0, .y = 0 };
     int currentX = 0;
     int currentY = 0;
-    const char * currentChar = text;
     int index = 0;
 
-    // TODO: Implement pntr_draw_text_wrapped with UTF-8 support
-    while (currentChar != NULL && *currentChar != '\0' && (textLength <= 0 || index < textLength)) {
-        if (*currentChar == '\n') {
+    pntr_codepoint_t codepoint;
+
+    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        // Stop drawing if we're only counting a certain amount of characters.
+        if (textLength > 0 && index++ >= textLength) {
+            break;
+        }
+
+        // Consider any newlines
+        if (codepoint == '\n') {
             output.y += currentY;
             currentX = 0;
+            continue;
         }
-        else {
-            for (int i = 0; i < font->charactersLen; i++) {
-                if (font->characters[i] == *currentChar) {
-                    currentX += font->glyphRects[i].x + font->glyphRects[i].width;
-                    if (currentX > output.x) {
-                        output.x = currentX;
-                    }
 
-                    // Find the tallest character
-                    if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
-                        currentY = font->glyphRects[i].y + font->glyphRects[i].height;
-                    }
-                    break;
-                }
+        // Find the index of the character in the font atlas.
+        char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
+        if (foundCharacter != NULL) {
+            // Find the index of the character in the string.
+            #ifdef PNTR_ENABLE_UTF8
+            int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+            #else
+            int i = (int)(foundCharacter - font->characters);
+            #endif
+
+            currentX += font->glyphRects[i].x + font->glyphRects[i].width;
+            if (currentX > output.x) {
+                output.x = currentX;
+            }
+
+            // Find the tallest character
+            if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
+                currentY = font->glyphRects[i].y + font->glyphRects[i].height;
             }
         }
-
-        currentChar++;
-        index++;
     }
 
     // Has at least one line.
@@ -3997,7 +4008,8 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
  *
  * @param fileName The file to load.
  *
- * @see pntr_unload_file()
+ * @see pntr_load_file()
+ * @see pntr_unload_file_text()
  */
 PNTR_API const char* pntr_load_file_text(const char *fileName) {
     unsigned int bytesRead;

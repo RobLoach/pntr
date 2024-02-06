@@ -41,8 +41,9 @@ Add these defines prior to including `pntr.h` to modify how it functions.
 | `PNTR_PIXELFORMAT_ARGB` | Use the `ARGB` pixel format |
 | `PNTR_ENABLE_DEFAULT_FONT` | Enables the default font |
 | `PNTR_ENABLE_TTF` | Enables TTF font loading |
+| `PNTR_ENABLE_MATH` | Enables use of C's standard `math.h` library, rather than using the built in math functions |
+| `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for fonts |
 | `PNTR_DISABLE_ALPHABLEND` | Skips alpha blending when rendering images |
-| `PNTR_ENABLE_MATH` | Enables use of C's standard math.h library, rather than using the built in math functions |
 | `PNTR_LOAD_FILE` | Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`. |
 | `PNTR_SAVE_FILE` | Callback to use when asked to save a file in `pntr_save_file()`. By default, will use `stdio.h`. |
 | `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory in `pntr_load_image_from_memory()`. By default, will use  [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) |
@@ -223,6 +224,7 @@ npm run docs
 - [font8x8](https://github.com/dhepper/font8x8/) by [Daniel Hepper](https://github.com/dhepper) provides the [8x8 monochrome font](https://github.com/dhepper/font8x8/blob/master/font8x8_basic.h)
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) by [Sean Barrett](https://github.com/nothings)
 - [stb_truetype.h](https://github.com/nothings/stb/blob/master/stb_truetype.h) by [Sean Barrett](https://github.com/nothings)
+- [utf8.h](https://github.com/sheredom/utf8.h) by [Neil Henning](https://github.com/sheredom)
 - [tester](https://github.com/zpl-c/tester) from [zpl](https://github.com/zpl-c) provides the unit testing framework
 - [raylib](https://github.com/raysan5/raylib) inspired some of the design patterns
 - [Logo](https://www.pixilart.com/art/bob-ross-9910c4da4b3a1c8) by [Ravenist](https://www.pixilart.com/ravenist), used with [permission](https://www.reddit.com/r/PixelArt/comments/fi2b1v/oc_felt_a_little_sad_so_i_watched_bob_ross_videos/j6ordqn/)
