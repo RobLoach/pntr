@@ -3471,7 +3471,13 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
         else {
             char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
             if (foundCharacter != NULL) {
+
+                // Find the index of the character in the string.
+                #ifdef PNTR_ENABLE_UTF8
+                int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+                #else
                 int i = (int)(foundCharacter - font->characters);
+                #endif
 
                 // Draw the character, unless it's a space.
                 if (codepoint != ' ')  {

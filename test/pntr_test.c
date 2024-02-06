@@ -22,7 +22,6 @@ void pntr_test_utf8() {
     const char* text = "ПРИВІТ СВІТ";
     #else
     pntr_font* font = pntr_load_font_tty("resources/ukranian.png", 43, 38, "ApBfFaEeX3NIinK>MHONPCTy0XUyWwDLR ");
-    //pntr_font* font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
     const char* text = "HELLO WORLD";
     #endif
 
