@@ -706,9 +706,9 @@ MODULE(pntr, {
 
 void pntr_test_utf8() {
     #ifdef PNTR_ENABLE_UTF8
-    pntr_font* font = pntr_load_font_tty("resources/ukranian.png", 43, 38, "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ ");
-    //pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 38);
-    const char* text = "ПРИВІТ СВІТ";
+    //pntr_font* font = pntr_load_font_tty("resources/ukranian.png", 43, 38, "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ ");
+    pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 38);
+    const char* text = "Добрий день!";
     #else
     pntr_font* font = pntr_load_font_tty("resources/ukranian.png", 43, 38, "ApBfFaEeX3NIinK>MHONPCTy0XUyWwDLR ");
     const char* text = "HELLO WORLD";
@@ -716,7 +716,6 @@ void pntr_test_utf8() {
 
     pntr_image* image = pntr_gen_image_text(font, text, PNTR_BLACK);
     pntr_save_image(image, "pntr_test_utf8.png");
-    //pntr_save_image(font->atlas, "atlas.png");
     pntr_unload_image(image);
     pntr_unload_font(font);
 }
