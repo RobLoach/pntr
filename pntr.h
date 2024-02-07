@@ -3889,8 +3889,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
 
         #ifdef PNTR_ENABLE_UTF8
             // Clear out the unused memory in the character list.
-            size_t memorySize = utf8size(font->characters);
-            char* newCharacters = pntr_load_memory(memorySize);
+            char* newCharacters = pntr_load_memory(utf8size(font->characters));
             utf8cpy(newCharacters, font->characters);
             PNTR_FREE(font->characters);
             font->characters = newCharacters;
