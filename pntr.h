@@ -3806,17 +3806,24 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
     #ifndef PNTR_ENABLE_TTF
         return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
+        // TODO: Add an API to Add UTF-8 characters to a TTF font?
+        #define PNTR_FONT_TTF_GLYPH_START 32
+        #ifndef PNTR_FONT_TTF_GLYPH_NUM
+            #ifdef PNTR_ENABLE_UTF8
+                #define PNTR_FONT_TTF_GLYPH_NUM 1500
+            #else
+                #define PNTR_FONT_TTF_GLYPH_NUM 95
+            #endif
+        #endif
+
         // Create the bitmap data with ample space based on the font size
-        int width = fontSize * 10;
-        int height = width;
+        int width = 512;
+        int height = fontSize * PNTR_FONT_TTF_GLYPH_NUM / 10;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
         if (bitmap == NULL) {
             return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
-        // TODO: Add an API to Add UTF-8 characters to a TTF font?
-        #define PNTR_FONT_TTF_GLYPH_START 32
-        #define PNTR_FONT_TTF_GLYPH_NUM 95
         stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
         int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, PNTR_FONT_TTF_GLYPH_START, PNTR_FONT_TTF_GLYPH_NUM, characterData);
 
@@ -3838,13 +3845,21 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
         // Create the font
-        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, PNTR_FONT_TTF_GLYPH_NUM + 1, atlas);
+        #ifdef PNTR_ENABLE_UTF8
+            #define PNTR_FONT_TTF_CHARACTER_SIZE PNTR_FONT_TTF_GLYPH_NUM * 4
+        #else
+            #define PNTR_FONT_TTF_CHARACTER_SIZE PNTR_FONT_TTF_GLYPH_NUM
+        #endif
+        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, PNTR_FONT_TTF_CHARACTER_SIZE, atlas);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return NULL;
         }
 
         // Capture each glyph data
+        #ifdef PNTR_ENABLE_UTF8
+        char* destination = font->characters;
+        #endif
         for (int i = 0; i < PNTR_FONT_TTF_GLYPH_NUM; i++) {
             // Calculate the source rectangles.
             font->srcRects[i] = PNTR_CLITERAL(pntr_rectangle) {
@@ -3863,7 +3878,13 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             };
 
             // Set up the active character.
-            font->characters[i] = (char)(PNTR_FONT_TTF_GLYPH_START + i);
+            #ifndef PNTR_ENABLE_UTF8
+                font->characters[i] = (char)(PNTR_FONT_TTF_GLYPH_START + i);
+            #else
+                // Append the character to the destination, considering the remaining memory.
+                // TODO: UTF-8 Is the remaining memory correct?
+                destination = utf8catcodepoint(destination, (pntr_codepoint_t)(PNTR_FONT_TTF_GLYPH_START + i), (size_t)PNTR_FONT_TTF_CHARACTER_SIZE - (size_t)destination - (size_t)font->characters);
+            #endif
         }
 
         return font;
