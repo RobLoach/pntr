@@ -498,6 +498,7 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
 PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height);
 PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image);
 PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height);
+PNTR_API void pntr_image_set_clip_rec(pntr_image* image, pntr_rectangle clip);
 PNTR_API void pntr_image_reset_clip(pntr_image* image);
 PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
@@ -511,7 +512,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color);
 PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
-PNTR_API inline void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color);
+PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
 PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
@@ -4922,6 +4923,9 @@ PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image) {
  * @param y The Y coordinate for the clipping rectangle.
  * @param width The width of the desired clipping rectangle.
  * @param height The height of the desired clipping rectangle.
+ *
+ * @see pntr_image_set_clip_rec()
+ * @see pntr_image_reset_clip()
  */
 PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
@@ -4935,9 +4939,24 @@ PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, in
 }
 
 /**
+ * Set the clipping rectangle for the given image to restrict drawing within, using a rectangle.
+ *
+ * @param image The image to set the clipping rectangle.
+ * @param clip The rectangle to set the new clip boundries.
+ *
+ * @see pntr_image_set_clip()
+ * @see pntr_image_reset_clip()
+ */
+PNTR_API void pntr_image_set_clip_rec(pntr_image* image, pntr_rectangle clip) {
+    pntr_image_set_clip(image, clip.x, clip.y, clip.width, clip.height);
+}
+
+/**
  * Reset the clipping rectangle for the given image.
  *
  * @param image The image to reset the clipping image for.
+ *
+ * @see pntr_image_set_clip()
  */
 PNTR_API void pntr_image_reset_clip(pntr_image* image) {
     if (image == NULL) {
