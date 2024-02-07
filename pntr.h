@@ -3810,7 +3810,9 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         #define PNTR_FONT_TTF_GLYPH_START 32
         #ifndef PNTR_FONT_TTF_GLYPH_NUM
             #ifdef PNTR_ENABLE_UTF8
-                #define PNTR_FONT_TTF_GLYPH_NUM 1500
+                // Up to the Cyrillic Supplement, minus the first 32 ascii characters.
+                // https://www.w3schools.com/charsets/ref_html_utf8.asp
+                #define PNTR_FONT_TTF_GLYPH_NUM 1295
             #else
                 #define PNTR_FONT_TTF_GLYPH_NUM 95
             #endif
