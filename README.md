@@ -41,8 +41,8 @@ Add these defines prior to including `pntr.h` to modify how it functions.
 | `PNTR_PIXELFORMAT_ARGB` | Use the `ARGB` pixel format |
 | `PNTR_ENABLE_DEFAULT_FONT` | Enables the default font |
 | `PNTR_ENABLE_TTF` | Enables TTF font loading |
-| `PNTR_ENABLE_MATH` | Enables use of C's standard `math.h` library, rather than using the built in math functions |
-| `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for fonts |
+| `PNTR_ENABLE_MATH` | Enables use of C's standard [`math.h`](https://en.cppreference.com/w/c/numeric/math) linked library, rather than using the built in math functions |
+| `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
 | `PNTR_DISABLE_ALPHABLEND` | Skips alpha blending when rendering images |
 | `PNTR_LOAD_FILE` | Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`. |
 | `PNTR_SAVE_FILE` | Callback to use when asked to save a file in `pntr_save_file()`. By default, will use `stdio.h`. |

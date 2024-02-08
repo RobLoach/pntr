@@ -128,7 +128,9 @@
     #define PNTR_ENABLE_TTF
 
     /**
-     * Enable support for UTF-8 with `utf8.h`.
+     * Enable UTF-8 character set support for font loading, and text rendering, with `utf8.h`.
+     *
+     * @see https://github.com/sheredom/utf8.h
      */
     #define PNTR_ENABLE_UTF8
 
@@ -882,8 +884,14 @@ extern "C" {
     #define PNTR_STRLEN utf8len
     #define PNTR_STRSIZE utf8size
     #define PNTR_STRCODEPOINT utf8codepoint
-    typedef int32_t pntr_codepoint_t;
+    typedef utf8_int32_t pntr_codepoint_t;
 #else
+    /**
+     * A type representing a single character or codepoint.
+     *
+     * @internal
+     * @private
+     */
     typedef char pntr_codepoint_t;
 #endif
 
@@ -892,21 +900,39 @@ extern "C" {
     /**
      * Returns a pointer to the first occurrence of str2 in str1, or a null pointer if str2 is not part of str1.
      *
+     * By default, will use string.h's `strstr`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8str`.
+     *
      * @param str1 (const char*) C string to be scanned.
      * @param str2 (const char*) containing the sequence of characters to match.
      *
      * @return A pointer to the first occurrence in str1 of the entire sequence of characters specified in str2, or a null pointer if the sequence is not present in str1.
+     *
+     * @see PNTR_ENABLE_UTF8
      */
     #define PNTR_STRSTR strstr
 #endif
 
 #ifndef PNTR_STRCHR
     #include <string.h>
+    /**
+     * Returns a pointer to the first occurance of a character in a string.
+     *
+     * By default, will use string.h's `strchr`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8chr`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
     #define PNTR_STRCHR strchr
 #endif
 
 #ifndef PNTR_STRLEN
     #include <string.h>
+    /**
+     * Returns the length of a string.
+     *
+     * By default, will use string.h's `strlen`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8len`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
     #define PNTR_STRLEN strlen
 #endif
 
@@ -914,6 +940,10 @@ extern "C" {
     #include <string.h>
     /**
      * Calculates the amount of bytes in a string, including the null character.
+     *
+     * By default, will use string.h's `strlen(text) + 1`. When `PNTR_ENABLE_UTF8` is enabled, this will be `utf8size`.
+     *
+     * @see PNTR_ENABLE_UTF8
      */
     #define PNTR_STRSIZE(text) ((PNTR_STRLEN(text) + (size_t)1))
 #endif
@@ -934,6 +964,15 @@ extern "C" {
         *out_codepoint = character;
         return str + 1;
     }
+
+    /**
+     * Sets out_codepoint to the current utf8 codepoint in str, and returns the address of the next utf8 codepoint after the current one in str.
+     *
+     * When `PNTR_ENABLE_UTF8` is enabled, will be `utf8codepoint`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     * @see pntr_strcodepoint
+     */
     #define PNTR_STRCODEPOINT pntr_strcodepoint
 #endif
 
@@ -3806,8 +3845,9 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
     #ifndef PNTR_ENABLE_TTF
         return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
-        // TODO: Add an API to Add UTF-8 characters to a TTF font?
+        // Which character to start rendering into the atlas.
         #define PNTR_FONT_TTF_GLYPH_START 32
+        // Find out how many glyhs we should prepare.
         #ifndef PNTR_FONT_TTF_GLYPH_NUM
             #ifdef PNTR_ENABLE_UTF8
                 // Up to the Cyrillic Supplement, minus the first 32 ascii characters.
@@ -3819,6 +3859,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         #endif
 
         // Create the bitmap data with ample space based on the font size
+        // TODO: pntr_load_font_ttf_from_memory: Is the initial bitmap large enough for the first round?
         int width = 512;
         int height = fontSize * PNTR_FONT_TTF_GLYPH_NUM / 10;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
@@ -3826,6 +3867,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
+        // Back the font into the bitmap.
         stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
         int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, PNTR_FONT_TTF_GLYPH_START, PNTR_FONT_TTF_GLYPH_NUM, characterData);
 
@@ -3835,21 +3877,23 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             return pntr_set_error(PNTR_ERROR_UNKNOWN);
         }
 
-        // Port the bitmap to a pntr_image as the atlas.
+        // Port the bitmap to a pntr_image as the font atlas
         pntr_image* atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         PNTR_FREE(bitmap);
         if (atlas == NULL) {
             return NULL;
         }
 
-        // Clear up the unused atlas space from memory from top left
+        // Clear up the unused atlas space from memory, from the top left
         pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
         // Create the font
         #ifdef PNTR_ENABLE_UTF8
-            #define PNTR_FONT_TTF_CHARACTER_SIZE PNTR_FONT_TTF_GLYPH_NUM * 4
+            // UTF8 uses 4 bytes per character.
+            #define PNTR_FONT_TTF_CHARACTER_SIZE (PNTR_FONT_TTF_GLYPH_NUM * 4)
         #else
+            // Characters just use 1 byte per character.
             #define PNTR_FONT_TTF_CHARACTER_SIZE PNTR_FONT_TTF_GLYPH_NUM
         #endif
         pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, PNTR_FONT_TTF_CHARACTER_SIZE, atlas);
@@ -3860,7 +3904,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
 
         // Capture each glyph data
         #ifdef PNTR_ENABLE_UTF8
-        char* destination = font->characters;
+        char* destination = font->characters; // Where to write the new character.
         #endif
         for (int i = 0; i < PNTR_FONT_TTF_GLYPH_NUM; i++) {
             // Calculate the source rectangles.
@@ -3890,11 +3934,13 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         }
 
         #ifdef PNTR_ENABLE_UTF8
+        {
             // Clear out the unused memory in the character list.
             char* newCharacters = pntr_load_memory(utf8size(font->characters));
             utf8cpy(newCharacters, font->characters);
             PNTR_FREE(font->characters);
             font->characters = newCharacters;
+        }
         #endif
 
         return font;
