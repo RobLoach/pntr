@@ -39,18 +39,19 @@ Add these defines prior to including `pntr.h` to modify how it functions.
 | `PNTR_IMPLEMENTATION` | Define this in one of your `.c` or `.cpp` files before including `pntr.h` |
 | `PNTR_PIXELFORMAT_RGBA` | Use the `RGBA` format |
 | `PNTR_PIXELFORMAT_ARGB` | Use the `ARGB` pixel format |
-| `PNTR_ENABLE_DEFAULT_FONT` | Enables the default font |
-| `PNTR_ENABLE_TTF` | Enables TTF font loading |
-| `PNTR_ENABLE_MATH` | Enables use of C's standard [`math.h`](https://en.cppreference.com/w/c/numeric/math) linked library, rather than using the built in math functions |
-| `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
 | `PNTR_DISABLE_ALPHABLEND` | Skips alpha blending when rendering images |
+| `PNTR_ENABLE_DEFAULT_FONT` | Enables the default font |
+| `PNTR_ENABLE_MATH` | Enables use of C's standard [`math.h`](https://en.cppreference.com/w/c/numeric/math) linked library, rather than using the built in math functions |
+| `PNTR_ENABLE_TTF` | Enables TTF font loading |
+| `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
 | `PNTR_LOAD_FILE` | Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`. |
-| `PNTR_SAVE_FILE` | Callback to use when asked to save a file in `pntr_save_file()`. By default, will use `stdio.h`. |
-| `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory in `pntr_load_image_from_memory()`. By default, will use  [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) |
-| `PNTR_SAVE_IMAGE_TO_MEMORY` | Callback to use when saving an image to memory in `pntr_save_image_to_memory()`. By default, will use [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) |
-| `PNTR_NO_CUTE_PNG_IMPLEMENTATION` | Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere. |
-| `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION` | Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using cute_png elsewhere. |
-| `PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION` | Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere. |
+| `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory via `pntr_load_image_from_memory()`. By default, will use  [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) |
+| `PNTR_SAVE_FILE` | Callback to use when saving a file via `pntr_save_file()`. By default, uses `stdio.h` |
+| `PNTR_SAVE_IMAGE_TO_MEMORY` | Callback to use when saving an image to memory via `pntr_save_image_to_memory()`. By default, will use [stb_image_write](https://github.com/nothings/stb/blob/master/stb_image_write.h) |
+| `PNTR_NO_CUTE_PNG_IMPLEMENTATION` | Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere |
+| `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION` | Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using stb_truetype elsewhere |
+| `PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION` | Skips defining `STB_IMAGE_WRITE_IMPLEMENTATION`. useful if you're using stb_image_write elsewhere |
+| `PNTR_NO_STB_IMAGE_IMPLEMENTATION` | Skips defining `STB_IMAGE_IMPLEMENTATION`. useful if you're using stb_image_write elsewhere |
 
 ### Functions
 

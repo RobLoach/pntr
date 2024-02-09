@@ -15,7 +15,13 @@
 #define RECTEQUALS PNTR_ASSERT_RECT_EQUALS
 #include "../pntr_assert.h"
 
-void pntr_test_utf8();
+bool pntr_utf8() {
+    #ifdef PNTR_ENABLE_UTF8
+    return true;
+    #else
+    return false;
+    #endif
+}
 
 MODULE(pntr, {
     IT("pntr_load_memory(), pntr_unload_memory()", {
@@ -699,26 +705,30 @@ MODULE(pntr, {
         RECTEQUALS(out, expected);
     });
 
-    IT("utf8", {
-        pntr_test_utf8();
-    });
+    if (pntr_utf8()) {
+        IT("PNTR_ENABLE_UTF8", {
+            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 38);
+            NEQUALS(font, NULL);
+
+            // Generate the image displaying UTF-8 text.
+            const char* text = "Добрий день!";
+            pntr_image* image = pntr_gen_image_text(font, text, PNTR_BLACK);
+            NEQUALS(image, NULL);
+            pntr_save_image(image, "pntr_test_utf8.png");
+
+            EQUALS(image->width, 190);
+            EQUALS(image->height, 37);
+
+            pntr_unload_font(font);
+            pntr_unload_image(image);
+        });
+    }
+    else {
+        IT("PNTR_ENABLE_UTF8: Not enabled", {
+            // Nothing
+        });
+    }
 })
-
-void pntr_test_utf8() {
-    #ifdef PNTR_ENABLE_UTF8
-    //pntr_font* font = pntr_load_font_tty("resources/ukranian.png", 43, 38, "АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ ");
-    pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 38);
-    const char* text = "Добрий день!";
-    #else
-    pntr_font* font = pntr_load_font_tty("resources/ukranian.png", 43, 38, "ApBfFaEeX3NIinK>MHONPCTy0XUyWwDLR ");
-    const char* text = "HELLO WORLD";
-    #endif
-
-    pntr_image* image = pntr_gen_image_text(font, text, PNTR_BLACK);
-    pntr_save_image(image, "pntr_test_utf8.png");
-    pntr_unload_image(image);
-    pntr_unload_font(font);
-}
 
 int main() {
     UNIT_CREATE("pntr");

@@ -1,26 +1,27 @@
 /**
  * pntr: Image manipulation library for C99 and C++, with a focus on ease-of-use.
  *
+ *   https://github.com/robloach/pntr
+ *
  * Configuration:
  * - PNTR_IMPLEMENTATION: Define this in one of your .c files, before including pntr.h
  * - PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * - PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
+ * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
+ * - PNTR_ENABLE_JPEG: When available, support JPEG image loading
+ * - PNTR_ENABLE_MATH: When enabled, will use C's math.h library, rather than internal implementations
  * - PNTR_ENABLE_TTF: Enables TTF font loading
  * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
- * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
- * - PNTR_ENABLE_MATH: When enabled, will useC's math.h library, rather than internal implementations.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
- * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
+ * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
- * - PNTR_ENABLE_JPEG: When available, will enable JPEG image loading. By default, is disabled.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
  * - PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips defining STB_IMAGE_IMPLEMENTATION. Useful if you're using stb_image elsewhere.
  * - PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION: Skips defining STB_IMAGE_WRITE_IMPLEMENTATION. Useful if you're using stb_image_write elsewhere.
  * - PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using stb_truetype elsewhere.
- * - PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION: Skips defining STB_IMAGE_RESIZE_IMPLEMENTATION. Useful if you're using stb_image_resize elsewhere.
  *
  * @file pntr.h
  *
@@ -130,6 +131,8 @@
     /**
      * Enable UTF-8 character set support for font loading, and text rendering, with `utf8.h`.
      *
+     * @note When this is enabled, there is an increase in font memory usage.
+     *
      * @see https://github.com/sheredom/utf8.h
      */
     #define PNTR_ENABLE_UTF8
@@ -206,9 +209,14 @@
     #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
     /**
-     * Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere.
+     * Skips defining `STB_IMAGE_WRITE_IMPLEMENTATION`. Useful if you're using stb_image_write elsewhere.
      */
-    #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+    #define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
+
+    /**
+     * Skips defining `STB_IMAGE_IMPLEMENTATION`. Useful if you're using stb_image elsewhere.
+     */
+    #define PNTR_NO_STB_IMAGE_IMPLEMENTATION
 
     /**
      * Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using stb_truetype elsewhere.
@@ -242,10 +250,13 @@
 /**
  * Color, represented by an unsigned 32-bit integer.
  *
- * Has four components: Red, Green, Blue, and Alpha.
+ * Has four components: Red, Green, Blue, and Alpha. Depending on the pixel format, will
+ * shift the order in which the components are defines.
  *
  * @see pntr_new_color()
  * @see pntr_get_color()
+ * @see PNTR_PIXELFORMAT_RGBA
+ * @see PNTR_PIXELFORMAT_ARGB
  */
 typedef union pntr_color {
     /**
@@ -391,11 +402,14 @@ typedef struct pntr_vector {
 } pntr_vector;
 
 /**
- * Font.
+ * Font used to render text.
+ *
+ * @details If `PNTR_ENABLE_UTF8` is enabled, will allow loading fonts with UTF-8 support.
  *
  * @see pntr_load_font_tty()
  * @see pntr_load_font_ttf()
  * @see pntr_load_font_bmf()
+ * @see PNTR_ENABLE_UTF8
  */
 typedef struct pntr_font {
     /**
@@ -3492,6 +3506,8 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
  * @param posX The position to print the text, starting from the top left on the X axis.
  * @param posY The position to print the text, starting from the top left on the Y axis.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text_wrapped()
  */
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
@@ -3545,6 +3561,8 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
  * @param posY The position to print the text, starting from the top left on the Y axis.
  * @param maxWidth The maximum width for each line.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text()
  */
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
@@ -3560,7 +3578,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     int currentLineLength = 0;
     int i = 0;
     int lastSpace = 0;
-    // TODO: Implement pntr_draw_text_wrapped with UTF-8 support
+
     while (text[i] != '\0') {
         if (text[i] == ' ' || text[i] == '\n') {
             // Measure the width of the line from the previous word.
@@ -3890,14 +3908,8 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
         // Create the font
-        #ifdef PNTR_ENABLE_UTF8
-            // UTF8 uses 4 bytes per character.
-            #define PNTR_FONT_TTF_CHARACTER_SIZE (PNTR_FONT_TTF_GLYPH_NUM * 4)
-        #else
-            // Characters just use 1 byte per character.
-            #define PNTR_FONT_TTF_CHARACTER_SIZE PNTR_FONT_TTF_GLYPH_NUM
-        #endif
-        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, PNTR_FONT_TTF_CHARACTER_SIZE, atlas);
+        size_t charactersSize = sizeof(pntr_codepoint_t) * (size_t)PNTR_FONT_TTF_GLYPH_NUM;
+        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, charactersSize, atlas);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return NULL;
@@ -3930,7 +3942,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             #else
                 // Append the character to the destination, considering the remaining memory.
                 // TODO: UTF-8 Is the remaining memory correct?
-                destination = utf8catcodepoint(destination, (pntr_codepoint_t)(PNTR_FONT_TTF_GLYPH_START + i), (size_t)PNTR_FONT_TTF_CHARACTER_SIZE - (size_t)destination - (size_t)font->characters);
+                destination = utf8catcodepoint(destination, (pntr_codepoint_t)(PNTR_FONT_TTF_GLYPH_START + i), charactersSize - (size_t)destination - (size_t)font->characters);
             #endif
         }
 
