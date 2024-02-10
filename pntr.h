@@ -7,17 +7,20 @@
  * - PNTR_IMPLEMENTATION: Define this in one of your .c files, before including pntr.h
  * - PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * - PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
- * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
+ * - PNTR_NO_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
  * - PNTR_ENABLE_JPEG: When available, support JPEG image loading
  * - PNTR_ENABLE_MATH: When enabled, will use C's math.h library, rather than internal implementations
- * - PNTR_ENABLE_TTF: Enables TTF font loading
+ * - PNTR_ENABLE_TTF: Enables support for loading TrueType fonts
  * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
  * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
+ * - PNTR_NO_STDIO: When enabled, will disable the standard file loading/saving calls for PNTR_LOAD_FILE and PNTR_SAVE_FILE.
+ * - PNTR_NO_SAVE_IMAGE: Disables the default behaviour of saving images.
+ * - PNTR_NO_LOAD_IMAGE: Disables the default behavior of loading images.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
  * - PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips defining STB_IMAGE_IMPLEMENTATION. Useful if you're using stb_image elsewhere.
  * - PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION: Skips defining STB_IMAGE_WRITE_IMPLEMENTATION. Useful if you're using stb_image_write elsewhere.
@@ -122,9 +125,10 @@
     #define PNTR_ENABLE_DEFAULT_FONT
 
     /**
-     * Enables TTF font loading via stb_truetype.
+     * Enables support for loading TrueType fonts with `stb_truetype.h`.
      *
      * @see pntr_load_font_ttf()
+     * @see https://github.com/nothings/stb/blob/master/stb_truetype.h
      */
     #define PNTR_ENABLE_TTF
 
@@ -138,15 +142,21 @@
     #define PNTR_ENABLE_UTF8
 
     /**
-     * Overrides how saving an image to memory is handled.
+     * Callback to use when saving an image to memory. By default, will use stb_image_write.
      *
      * @see pntr_save_image_to_memory()
+     * @see PNTR_STB_IMAGE
+     * @see PNTR_CUTE_PNG
+     * @see pntr_stb_image_save_image_to_memory()
+     * @see pntr_cute_png_save_image_to_memory()
      */
     #define PNTR_SAVE_IMAGE_TO_MEMORY
 
     /**
-     * Overrides how loading an image from memory is handled.
+     * Callback to use when loading an image. By default, will use stb_image.
      *
+     * @see pntr_stb_image_load_image_from_memory()
+     * @see pntr_cute_png_load_image_from_memory()
      * @see pntr_load_image_from_memory()
      * @see PNTR_CUTE_PNG
      * @see PNTR_STB_IMAGE
@@ -154,35 +164,30 @@
     #define PNTR_LOAD_IMAGE_FROM_MEMORY
 
     /**
-     * Skips alpha blending when rendering images. Defining this will improve performance.
-     *
-     * @see pntr_color_alpha_blend()
-     */
-    #define PNTR_DISABLE_ALPHABLEND
-
-    /**
      * When enabled, will use C's standard math.h library for math functions, rather than pntr's internally build in methods.
      */
     #define PNTR_ENABLE_MATH
 
     /**
-     * Callback to use when asked to load a file. Must match the pntr_load_file() definition.
+     * Callback to use when loading a file. Must match the `pntr_load_file()` definition.
      *
      * @see pntr_load_file()
+     * @see PNTR_NO_STDIO
      */
     #define PNTR_LOAD_FILE
 
     /**
-     * Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+     * Callback to use when saving a file. Must match the `pntr_save_file()` definition.
      *
      * @see pntr_save_file()
+     * @see PNTR_NO_STDIO
      */
     #define PNTR_SAVE_FILE
 
     /**
-     * When defined, will use stb_image.h for loading images, and stb_image_write.h for saving.
+     * When defined, will use `stb_image.h` for loading images, and `stb_image_write.h` for saving.
      *
-     * @details By default, stb_image will be used if a custom implementation isn't defined.
+     * @details By default, `stb_image` will be used if a custom implementation isn't defined.
      *
      * @see pntr_load_image()
      * @see pntr_save_image()
@@ -193,7 +198,9 @@
     #define PNTR_STB_IMAGE
 
     /**
-     * When defined, will use cute_png.h for loading and saving.
+     * When defined, will use `cute_png.h` for loading and saving.
+     *
+     * @details While cute_png takes up less memory than stb_image, it doesn't support as many of the features.
      *
      * @see pntr_load_image()
      * @see pntr_save_image()
@@ -202,6 +209,35 @@
      * @see PNTR_LOAD_IMAGE_FROM_MEMORY
      */
     #define PNTR_CUTE_PNG
+
+    /**
+     * Skips alpha blending when rendering images. Defining this will improve performance.
+     *
+     * @see pntr_color_alpha_blend()
+     */
+    #define PNTR_NO_ALPHABLEND
+
+    /**
+     * Will disable the default use of `stdio.h` for file saving/loading with `PNTR_LOAD_FILE` and `PNTR_SAVE_FILE`.
+     *
+     * @see PNTR_LOAD_FILE
+     * @see PNTR_SAVE_FILE
+     */
+    #define PNTR_NO_STDIO
+
+    /**
+     * Will disable image loading.
+     *
+     * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+     */
+    #define PNTR_NO_LOAD_IMAGE
+
+    /**
+     * Will disable image saving.
+     *
+     * @see PNTR_SAVE_IMAGE_TO_MEMORY
+     */
+    #define PNTR_NO_SAVE_IMAGE
 
     /**
      * Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
@@ -1157,10 +1193,6 @@ extern "C" {
     #endif  // PNTR_FMODF
 #endif  // PNTR_ENABLE_MATH
 
-#if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
-    #include <stdio.h> // FILE, fopen, fread
-#endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
-
 #ifndef PNTR_CLITERAL
 #define PNTR_CLITERAL(type) (type)
 #endif
@@ -1474,11 +1506,11 @@ PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
  * @param dst The destination color.
  * @param src The source color.
  *
- * @see PNTR_DISABLE_ALPHABLEND
+ * @see PNTR_NO_ALPHABLEND
  * @see pntr_color_alpha_blend()
  */
 PNTR_API
-#ifdef PNTR_DISABLE_ALPHABLEND
+#ifdef PNTR_NO_ALPHABLEND
 inline
 #endif
 void pntr_blend_color(pntr_color* dst, pntr_color src) {
@@ -1486,7 +1518,7 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
         *dst = src;
         return;
     }
-    #ifndef PNTR_DISABLE_ALPHABLEND
+    #ifndef PNTR_NO_ALPHABLEND
         if (src.rgba.a == 0) {
             return;
         }
@@ -2575,18 +2607,19 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
 }
 
 // Load stb_image or cute_png.
-
-//#define PNTR_STB_IMAGE
-//#define PNTR_CUTE_PNG
-
 #ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
     #ifdef PNTR_STB_IMAGE
         #include "extensions/pntr_stb_image.h"
     #elif defined(PNTR_CUTE_PNG)
         #include "extensions/pntr_cute_png.h"
     #else
-        // Default to stb_image.
-        #include "extensions/pntr_stb_image.h"
+        // Allow disabling image loading.
+        #ifdef PNTR_NO_LOAD_IMAGE
+            #define PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize) NULL
+        #else
+            // Default to stb_image.
+            #include "extensions/pntr_stb_image.h"
+        #endif
     #endif
 #endif
 
@@ -2596,8 +2629,13 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     #elif defined(PNTR_CUTE_PNG)
         #include "extensions/pntr_cute_png.h"
     #else
-        // Default to stb_image_write.
-        #include "extensions/pntr_stb_image_write.h"
+        // Allow disabling image saving.
+        #ifdef PNTR_NO_SAVE_IMAGE
+            #define PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize) NULL
+        #else
+            // Default to stb_image_write.
+            #include "extensions/pntr_stb_image_write.h"
+        #endif
     #endif
 #endif
 
@@ -2680,7 +2718,7 @@ PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX,
  *
  * @return The new alpha-blended color.
  *
- * @see PNTR_DISABLE_ALPHABLEND
+ * @see PNTR_NO_ALPHABLEND
  */
 PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
     pntr_blend_color(&dst, src);
@@ -3739,7 +3777,7 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
  *
  * This must be unloaded manually afterwards with pntr_unload_font().
  *
- * Define PNTR_ENABLE_DEFAULT_FONT to allow using the default 8x8 font.
+ * Define `PNTR_ENABLE_DEFAULT_FONT` to allow using the default 8x8 font.
  *
  * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_font_default()
  * @code
@@ -3761,6 +3799,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         #include "external/font8x8_basic.h"
 
         // Default parameters for font8x8.
+        // TODO: pntr_load_font_default: Add UTF-8 support for the default font
         #define PNTR_DEFAULT_FONT_NAME font8x8_basic
         #define PNTR_DEFAULT_FONT_GLYPH_WIDTH 8
         #define PNTR_DEFAULT_FONT_GLYPH_HEIGHT 8
@@ -4030,6 +4069,14 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
     }
 }
 
+#ifndef PNTR_LOAD_FILE
+    #ifdef PNTR_NO_STDIO
+        #define PNTR_LOAD_FILE(fileName, bytesRead) NULL
+    #else
+        #include <stdio.h> // FILE, fopen, fread
+    #endif
+#endif  // PNTR_LOAD_FILE
+
 /**
  * Loads a file from the file system.
  *
@@ -4125,6 +4172,14 @@ PNTR_API const char* pntr_load_file_text(const char *fileName) {
 PNTR_API inline void pntr_unload_file_text(const char* text) {
     pntr_unload_memory((void*)text);
 }
+
+#ifndef PNTR_SAVE_FILE
+    #ifdef PNTR_NO_STDIO
+        #define PNTR_SAVE_FILE(fileName, data, bytesToWrite) NULL
+    #else
+        #include <stdio.h> // FILE, fopen, fwrite
+    #endif
+#endif  // PNTR_SAVE_FILE
 
 /**
  * Saves a file to the file system.
