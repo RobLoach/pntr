@@ -6,9 +6,11 @@
  * @{
  *
  * @brief [stb_image_write](https://github.com/nothings/stb/blob/master/stb_image_write.h) integration with pntr for saving images.
+ *
  * @see https://github.com/nothings/stb/blob/master/stb_image_write.h
  * @see PNTR_STB_IMAGE
  * @see PNTR_SAVE_IMAGE_TO_MEMORY
+ * @see PNTR_NO_SAVE_IMAGE
  */
 
 /**

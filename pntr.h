@@ -513,13 +513,46 @@ typedef enum pntr_filter {
     PNTR_FILTER_BILINEAR
 } pntr_filter;
 
+/**
+ * Error states definitions.
+ *
+ * @see pntr_set_error()
+ * @see pntr_get_error()
+ */
 typedef enum pntr_error {
+    /**
+     * No error
+     */
     PNTR_ERROR_NONE = 0,
+
+    /**
+     * Invalid arguments
+     */
     PNTR_ERROR_INVALID_ARGS = -1,
+
+    /**
+     * Not enough memory
+     */
     PNTR_ERROR_NO_MEMORY = -2,
+
+    /**
+     * Not supported
+     */
     PNTR_ERROR_NOT_SUPPORTED = -3,
+
+    /**
+     * Failed to open
+     */
     PNTR_ERROR_FAILED_TO_OPEN = -4,
+
+    /**
+     * Failed to write
+     */
     PNTR_ERROR_FAILED_TO_WRITE = -5,
+
+    /**
+     * Unknown error occurred
+     */
     PNTR_ERROR_UNKNOWN = -6
 } pntr_error;
 

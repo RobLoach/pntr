@@ -1,9 +1,4 @@
 /**
- * @defgroup examplesdocs Examples docs
- * @{
- */
-
-/**
  * @page Examples Examples
  *
  * @brief These are a few examples of pntr in use.
@@ -35,8 +30,9 @@
  * ## Sprite
  * @include pntr_examples_sprite.h
  * @image html pntr_examples_sprite.png
- * @}
  */
+
+#ifndef _DOXYGEN_
 
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
@@ -65,3 +61,5 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
+#endif

@@ -1,5 +1,3 @@
-#include "../pntr.h"
-
 void pntr_examples_alphamask() {
     // Load the Tuffy font, and find the size of the text output.
     pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 80);

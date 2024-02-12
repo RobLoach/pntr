@@ -6,9 +6,21 @@
  * @{
  *
  * @brief [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) integration with pntr for loading and saving images.
+ *
+ * To use `cute_png.h` for saving and loading images, define `PNTR_CUTE_PNG` prior to including `pntr.h`:
+ *
+ * @code
+ * #define PNTR_CUTE_PNG
+ * #define PNTR_IMPLEMENTATION
+ * #include "pntr.h"
+ * @endcode
+ *
  * @see https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h
  * @see PNTR_CUTE_PNG
  * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+ * @see PNTR_SAVE_IMAGE_TO_MEMORY
+ * @see PNTR_NO_LOAD_IMAGE
+ * @see PNTR_NO_SAVE_IMAGE
  */
 
 /**

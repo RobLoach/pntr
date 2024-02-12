@@ -1,5 +1,3 @@
-#include "../pntr.h"
-
 void pntr_examples_resize() {
     float size = 0.5f;
     pntr_image* originalImage = pntr_load_image("resources/logo-128x128.png");
