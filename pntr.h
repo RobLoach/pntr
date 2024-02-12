@@ -684,6 +684,11 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 }
 #endif
 
+/**
+ * @defgroup colors Colors
+ * @{
+ */
+
 #ifndef PNTR_LIGHTGRAY
 /**
  * Light gray.
@@ -854,6 +859,10 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #define PNTR_RAYWHITE   pntr_new_color(245, 245, 245, 255)
 #endif
 
+/**
+ * @}
+ */
+
 #endif  // PNTR_H__
 
 #ifdef PNTR_IMPLEMENTATION
@@ -863,6 +872,11 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @defgroup memory Memory
+ * @{
+ */
 
 #ifndef PNTR_MALLOC
     #include <stdlib.h>
@@ -928,7 +942,16 @@ extern "C" {
     #define PNTR_MEMSET(str, c, n) memset((str), (c), (n))
 #endif  // PNTR_MEMSET
 
-#ifdef PNTR_ENABLE_UTF8
+/**
+ * @}
+ */
+
+/**
+ * @defgroup strings String Manipulation
+ * @{
+ */
+
+#if defined(PNTR_ENABLE_UTF8) && !defined(_DOXYGEN_)
     #include "external/utf8.h"
     #define PNTR_STRSTR utf8str
     #define PNTR_STRCHR utf8chr
@@ -938,10 +961,11 @@ extern "C" {
     typedef utf8_int32_t pntr_codepoint_t;
 #else
     /**
-     * A type representing a single character or codepoint.
+     * A type representing a single character or UTF-8 codepoint.
      *
-     * @internal
-     * @private
+     * With UTF-8, a single character can be up to 4 bytes, so having this type define that helps determine its size quickly.
+     *
+     * @see PNTR_ENABLE_UTF8
      */
     typedef char pntr_codepoint_t;
 #endif
@@ -1026,6 +1050,15 @@ extern "C" {
      */
     #define PNTR_STRCODEPOINT pntr_strcodepoint
 #endif
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup math Math
+ * @{
+ */
 
 #ifndef PNTR_PI
     /**
@@ -1221,10 +1254,19 @@ extern "C" {
     #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
+/**
+ * @}
+ */
+
 #ifndef PNTR_PIXELFORMAT
     #if defined(PNTR_PIXELFORMAT_RGBA)
         /**
          * The set pixel format for the application.
+         *
+         * Will become either `PNTR_PIXELFORMAT_ARGB8888` or `PNTR_PIXELFORMAT_RGBA8888`, with the default being `PNTR_PIXELFORMAT_RGBA8888`.
+         *
+         * @see PNTR_PIXELFORMAT_RGBA8888
+         * @see PNTR_PIXELFORMAT_ARGB8888
          */
         #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
     #elif defined(PNTR_PIXELFORMAT_ARGB)

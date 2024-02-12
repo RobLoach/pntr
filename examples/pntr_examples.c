@@ -1,5 +1,12 @@
 /**
+ * @defgroup examplesdocs Examples docs
+ * @{
+ */
+
+/**
  * @page Examples Examples
+ *
+ * @brief These are a few examples of pntr in use.
  *
  * ## Alpha Mask
  * @include pntr_examples_alphamask.h
@@ -28,6 +35,7 @@
  * ## Sprite
  * @include pntr_examples_sprite.h
  * @image html pntr_examples_sprite.png
+ * @}
  */
 
 #define PNTR_ENABLE_DEFAULT_FONT
