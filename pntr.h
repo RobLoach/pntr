@@ -283,6 +283,23 @@
     #undef PNTR_PIXELFORMAT_ARGB
 #endif
 
+#ifdef PNTR_PIXELFORMAT
+    #undef PNTR_PIXELFORMAT
+#endif
+#ifdef PNTR_PIXELFORMAT_RGBA
+    /**
+     * The set pixel format for the application.
+     *
+     * Will become either `PNTR_PIXELFORMAT_ARGB8888` or `PNTR_PIXELFORMAT_RGBA8888`, with the default being `PNTR_PIXELFORMAT_RGBA8888`.
+     *
+     * @see PNTR_PIXELFORMAT_RGBA8888
+     * @see PNTR_PIXELFORMAT_ARGB8888
+     */
+    #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
+#elif defined(PNTR_PIXELFORMAT_ARGB)
+    #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
+#endif
+
 /**
  * Color, represented by an unsigned 32-bit integer.
  *
@@ -1290,22 +1307,6 @@ extern "C" {
 /**
  * @}
  */
-
-#ifndef PNTR_PIXELFORMAT
-    #if defined(PNTR_PIXELFORMAT_RGBA)
-        /**
-         * The set pixel format for the application.
-         *
-         * Will become either `PNTR_PIXELFORMAT_ARGB8888` or `PNTR_PIXELFORMAT_RGBA8888`, with the default being `PNTR_PIXELFORMAT_RGBA8888`.
-         *
-         * @see PNTR_PIXELFORMAT_RGBA8888
-         * @see PNTR_PIXELFORMAT_ARGB8888
-         */
-        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
-    #elif defined(PNTR_PIXELFORMAT_ARGB)
-        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
-    #endif
-#endif  // PNTR_PIXELFORMAT
 
 // STB TrueType
 #ifdef PNTR_ENABLE_TTF
