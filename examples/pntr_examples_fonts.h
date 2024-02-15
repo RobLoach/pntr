@@ -1,5 +1,3 @@
-#include "../pntr.h"
-
 void pntr_examples_fonts() {
     pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
 

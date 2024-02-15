@@ -1,25 +1,30 @@
 /**
  * pntr: Image manipulation library for C99 and C++, with a focus on ease-of-use.
  *
+ *   https://github.com/robloach/pntr
+ *
  * Configuration:
  * - PNTR_IMPLEMENTATION: Define this in one of your .c files, before including pntr.h
  * - PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * - PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
+ * - PNTR_NO_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
- * - PNTR_ENABLE_TTF: Enables TTF font loading
+ * - PNTR_ENABLE_JPEG: When available, support JPEG image loading
+ * - PNTR_ENABLE_MATH: When enabled, will use C's math.h library, rather than internal implementations
+ * - PNTR_ENABLE_TTF: Enables support for loading TrueType fonts
+ * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
- * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
- * - PNTR_ENABLE_MATH: When enabled, will useC's math.h library, rather than internal implementations.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
- * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
+ * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
  * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
- * - PNTR_ENABLE_JPEG: When available, will enable JPEG image loading. By default, is disabled.
+ * - PNTR_NO_STDIO: When enabled, will disable the standard file loading/saving calls for PNTR_LOAD_FILE and PNTR_SAVE_FILE.
+ * - PNTR_NO_SAVE_IMAGE: Disables the default behaviour of saving images.
+ * - PNTR_NO_LOAD_IMAGE: Disables the default behavior of loading images.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
  * - PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips defining STB_IMAGE_IMPLEMENTATION. Useful if you're using stb_image elsewhere.
  * - PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION: Skips defining STB_IMAGE_WRITE_IMPLEMENTATION. Useful if you're using stb_image_write elsewhere.
  * - PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using stb_truetype elsewhere.
- * - PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION: Skips defining STB_IMAGE_RESIZE_IMPLEMENTATION. Useful if you're using stb_image_resize elsewhere.
  *
  * @file pntr.h
  *
@@ -120,22 +125,38 @@
     #define PNTR_ENABLE_DEFAULT_FONT
 
     /**
-     * Enables TTF font loading via stb_truetype.
+     * Enables support for loading TrueType fonts with `stb_truetype.h`.
      *
      * @see pntr_load_font_ttf()
+     * @see https://github.com/nothings/stb/blob/master/stb_truetype.h
      */
     #define PNTR_ENABLE_TTF
 
     /**
-     * Overrides how saving an image to memory is handled.
+     * Enable UTF-8 character set support for font loading, and text rendering, with `utf8.h`.
+     *
+     * @note When this is enabled, there is an increase in font memory usage.
+     *
+     * @see https://github.com/sheredom/utf8.h
+     */
+    #define PNTR_ENABLE_UTF8
+
+    /**
+     * Callback to use when saving an image to memory. By default, will use stb_image_write.
      *
      * @see pntr_save_image_to_memory()
+     * @see PNTR_STB_IMAGE
+     * @see PNTR_CUTE_PNG
+     * @see pntr_stb_image_save_image_to_memory()
+     * @see pntr_cute_png_save_image_to_memory()
      */
     #define PNTR_SAVE_IMAGE_TO_MEMORY
 
     /**
-     * Overrides how loading an image from memory is handled.
+     * Callback to use when loading an image. By default, will use stb_image.
      *
+     * @see pntr_stb_image_load_image_from_memory()
+     * @see pntr_cute_png_load_image_from_memory()
      * @see pntr_load_image_from_memory()
      * @see PNTR_CUTE_PNG
      * @see PNTR_STB_IMAGE
@@ -143,35 +164,30 @@
     #define PNTR_LOAD_IMAGE_FROM_MEMORY
 
     /**
-     * Skips alpha blending when rendering images. Defining this will improve performance.
-     *
-     * @see pntr_color_alpha_blend()
-     */
-    #define PNTR_DISABLE_ALPHABLEND
-
-    /**
      * When enabled, will use C's standard math.h library for math functions, rather than pntr's internally build in methods.
      */
     #define PNTR_ENABLE_MATH
 
     /**
-     * Callback to use when asked to load a file. Must match the pntr_load_file() definition.
+     * Callback to use when loading a file. Must match the `pntr_load_file()` definition.
      *
      * @see pntr_load_file()
+     * @see PNTR_NO_STDIO
      */
     #define PNTR_LOAD_FILE
 
     /**
-     * Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+     * Callback to use when saving a file. Must match the `pntr_save_file()` definition.
      *
      * @see pntr_save_file()
+     * @see PNTR_NO_STDIO
      */
     #define PNTR_SAVE_FILE
 
     /**
-     * When defined, will use stb_image.h for loading images, and stb_image_write.h for saving.
+     * When defined, will use `stb_image.h` for loading images, and `stb_image_write.h` for saving.
      *
-     * @details By default, stb_image will be used if a custom implementation isn't defined.
+     * @details By default, `stb_image` will be used if a custom implementation isn't defined.
      *
      * @see pntr_load_image()
      * @see pntr_save_image()
@@ -182,7 +198,9 @@
     #define PNTR_STB_IMAGE
 
     /**
-     * When defined, will use cute_png.h for loading and saving.
+     * When defined, will use `cute_png.h` for loading and saving.
+     *
+     * @details While cute_png takes up less memory than stb_image, it doesn't support as many of the features.
      *
      * @see pntr_load_image()
      * @see pntr_save_image()
@@ -193,14 +211,48 @@
     #define PNTR_CUTE_PNG
 
     /**
+     * Skips alpha blending when rendering images. Defining this will improve performance.
+     *
+     * @see pntr_color_alpha_blend()
+     */
+    #define PNTR_NO_ALPHABLEND
+
+    /**
+     * Will disable the default use of `stdio.h` for file saving/loading with `PNTR_LOAD_FILE` and `PNTR_SAVE_FILE`.
+     *
+     * @see PNTR_LOAD_FILE
+     * @see PNTR_SAVE_FILE
+     */
+    #define PNTR_NO_STDIO
+
+    /**
+     * Will disable image loading.
+     *
+     * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+     */
+    #define PNTR_NO_LOAD_IMAGE
+
+    /**
+     * Will disable image saving.
+     *
+     * @see PNTR_SAVE_IMAGE_TO_MEMORY
+     */
+    #define PNTR_NO_SAVE_IMAGE
+
+    /**
      * Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
      */
     #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
     /**
-     * Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere.
+     * Skips defining `STB_IMAGE_WRITE_IMPLEMENTATION`. Useful if you're using stb_image_write elsewhere.
      */
-    #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+    #define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
+
+    /**
+     * Skips defining `STB_IMAGE_IMPLEMENTATION`. Useful if you're using stb_image elsewhere.
+     */
+    #define PNTR_NO_STB_IMAGE_IMPLEMENTATION
 
     /**
      * Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using stb_truetype elsewhere.
@@ -231,13 +283,33 @@
     #undef PNTR_PIXELFORMAT_ARGB
 #endif
 
+#ifdef PNTR_PIXELFORMAT
+    #undef PNTR_PIXELFORMAT
+#endif
+#ifdef PNTR_PIXELFORMAT_RGBA
+    /**
+     * The set pixel format for the application.
+     *
+     * Will become either `PNTR_PIXELFORMAT_ARGB8888` or `PNTR_PIXELFORMAT_RGBA8888`, with the default being `PNTR_PIXELFORMAT_RGBA8888`.
+     *
+     * @see PNTR_PIXELFORMAT_RGBA8888
+     * @see PNTR_PIXELFORMAT_ARGB8888
+     */
+    #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
+#elif defined(PNTR_PIXELFORMAT_ARGB)
+    #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
+#endif
+
 /**
  * Color, represented by an unsigned 32-bit integer.
  *
- * Has four components: Red, Green, Blue, and Alpha.
+ * Has four components: Red, Green, Blue, and Alpha. Depending on the pixel format, will
+ * shift the order in which the components are defines.
  *
  * @see pntr_new_color()
  * @see pntr_get_color()
+ * @see PNTR_PIXELFORMAT_RGBA
+ * @see PNTR_PIXELFORMAT_ARGB
  */
 typedef union pntr_color {
     /**
@@ -383,11 +455,14 @@ typedef struct pntr_vector {
 } pntr_vector;
 
 /**
- * Font.
+ * Font used to render text.
+ *
+ * @details If `PNTR_ENABLE_UTF8` is enabled, will allow loading fonts with UTF-8 support.
  *
  * @see pntr_load_font_tty()
  * @see pntr_load_font_ttf()
  * @see pntr_load_font_bmf()
+ * @see PNTR_ENABLE_UTF8
  */
 typedef struct pntr_font {
     /**
@@ -455,13 +530,46 @@ typedef enum pntr_filter {
     PNTR_FILTER_BILINEAR
 } pntr_filter;
 
+/**
+ * Error states definitions.
+ *
+ * @see pntr_set_error()
+ * @see pntr_get_error()
+ */
 typedef enum pntr_error {
+    /**
+     * No error
+     */
     PNTR_ERROR_NONE = 0,
+
+    /**
+     * Invalid arguments
+     */
     PNTR_ERROR_INVALID_ARGS = -1,
+
+    /**
+     * Not enough memory
+     */
     PNTR_ERROR_NO_MEMORY = -2,
+
+    /**
+     * Not supported
+     */
     PNTR_ERROR_NOT_SUPPORTED = -3,
+
+    /**
+     * Failed to open
+     */
     PNTR_ERROR_FAILED_TO_OPEN = -4,
+
+    /**
+     * Failed to write
+     */
     PNTR_ERROR_FAILED_TO_WRITE = -5,
+
+    /**
+     * Unknown error occurred
+     */
     PNTR_ERROR_UNKNOWN = -6
 } pntr_error;
 
@@ -625,6 +733,11 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #ifdef __cplusplus
 }
 #endif
+
+/**
+ * @defgroup colors Colors
+ * @{
+ */
 
 #ifndef PNTR_LIGHTGRAY
 /**
@@ -796,6 +909,10 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #define PNTR_RAYWHITE   pntr_new_color(245, 245, 245, 255)
 #endif
 
+/**
+ * @}
+ */
+
 #endif  // PNTR_H__
 
 #ifdef PNTR_IMPLEMENTATION
@@ -805,6 +922,11 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @defgroup memory Memory
+ * @{
+ */
 
 #ifndef PNTR_MALLOC
     #include <stdlib.h>
@@ -870,18 +992,123 @@ extern "C" {
     #define PNTR_MEMSET(str, c, n) memset((str), (c), (n))
 #endif  // PNTR_MEMSET
 
+/**
+ * @}
+ */
+
+/**
+ * @defgroup strings String Manipulation
+ * @{
+ */
+
+#if defined(PNTR_ENABLE_UTF8) && !defined(_DOXYGEN_)
+    #include "external/utf8.h"
+    #define PNTR_STRSTR utf8str
+    #define PNTR_STRCHR utf8chr
+    #define PNTR_STRLEN utf8len
+    #define PNTR_STRSIZE utf8size
+    #define PNTR_STRCODEPOINT utf8codepoint
+    typedef utf8_int32_t pntr_codepoint_t;
+#else
+    /**
+     * A type representing a single character or UTF-8 codepoint.
+     *
+     * With UTF-8, a single character can be up to 4 bytes, so having this type define that helps determine its size quickly.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    typedef char pntr_codepoint_t;
+#endif
+
 #ifndef PNTR_STRSTR
     #include <string.h>
     /**
      * Returns a pointer to the first occurrence of str2 in str1, or a null pointer if str2 is not part of str1.
      *
+     * By default, will use string.h's `strstr`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8str`.
+     *
      * @param str1 (const char*) C string to be scanned.
      * @param str2 (const char*) containing the sequence of characters to match.
      *
      * @return A pointer to the first occurrence in str1 of the entire sequence of characters specified in str2, or a null pointer if the sequence is not present in str1.
+     *
+     * @see PNTR_ENABLE_UTF8
      */
-    #define PNTR_STRSTR(str1, str2) strstr((str1), (str2))
+    #define PNTR_STRSTR strstr
 #endif
+
+#ifndef PNTR_STRCHR
+    #include <string.h>
+    /**
+     * Returns a pointer to the first occurance of a character in a string.
+     *
+     * By default, will use string.h's `strchr`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8chr`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRCHR strchr
+#endif
+
+#ifndef PNTR_STRLEN
+    #include <string.h>
+    /**
+     * Returns the length of a string.
+     *
+     * By default, will use string.h's `strlen`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8len`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRLEN strlen
+#endif
+
+#ifndef PNTR_STRSIZE
+    #include <string.h>
+    /**
+     * Calculates the amount of bytes in a string, including the null character.
+     *
+     * By default, will use string.h's `strlen(text) + 1`. When `PNTR_ENABLE_UTF8` is enabled, this will be `utf8size`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRSIZE(text) ((PNTR_STRLEN(text) + (size_t)1))
+#endif
+
+#ifndef PNTR_STRCODEPOINT
+    /**
+     * Sets out_codepoint to the current utf8 codepoint in str, and returns the address of the next utf8 codepoint after the current one in str.
+     *
+     * @private
+     * @internal
+     */
+    const char* pntr_strcodepoint(const char * str, char* out_codepoint) {
+        if (str == NULL) {
+            *out_codepoint = 0;
+        }
+
+        char character = str[0];
+        *out_codepoint = character;
+        return str + 1;
+    }
+
+    /**
+     * Sets out_codepoint to the current utf8 codepoint in str, and returns the address of the next utf8 codepoint after the current one in str.
+     *
+     * When `PNTR_ENABLE_UTF8` is enabled, will be `utf8codepoint`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     * @see pntr_strcodepoint
+     */
+    #define PNTR_STRCODEPOINT pntr_strcodepoint
+#endif
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup math Math
+ * @{
+ */
 
 #ifndef PNTR_PI
     /**
@@ -1049,10 +1276,6 @@ extern "C" {
     #endif  // PNTR_FMODF
 #endif  // PNTR_ENABLE_MATH
 
-#if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
-    #include <stdio.h> // FILE, fopen, fread
-#endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
-
 #ifndef PNTR_CLITERAL
 #define PNTR_CLITERAL(type) (type)
 #endif
@@ -1081,16 +1304,9 @@ extern "C" {
     #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-#ifndef PNTR_PIXELFORMAT
-    #if defined(PNTR_PIXELFORMAT_RGBA)
-        /**
-         * The set pixel format for the application.
-         */
-        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
-    #elif defined(PNTR_PIXELFORMAT_ARGB)
-        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
-    #endif
-#endif  // PNTR_PIXELFORMAT
+/**
+ * @}
+ */
 
 // STB TrueType
 #ifdef PNTR_ENABLE_TTF
@@ -1191,8 +1407,7 @@ extern "C" {
         #endif  // STBTT_assert
 
         #ifndef STBTT_strlen
-            #include <string.h>
-            #define STBTT_strlen(x) strlen(x)
+            #define STBTT_strlen(x) PNTR_STRLEN(x)
         #endif  // STBTT_strlen
 
         #ifndef STBTT_memcpy
@@ -1367,11 +1582,11 @@ PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
  * @param dst The destination color.
  * @param src The source color.
  *
- * @see PNTR_DISABLE_ALPHABLEND
+ * @see PNTR_NO_ALPHABLEND
  * @see pntr_color_alpha_blend()
  */
 PNTR_API
-#ifdef PNTR_DISABLE_ALPHABLEND
+#ifdef PNTR_NO_ALPHABLEND
 inline
 #endif
 void pntr_blend_color(pntr_color* dst, pntr_color src) {
@@ -1379,7 +1594,7 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
         *dst = src;
         return;
     }
-    #ifndef PNTR_DISABLE_ALPHABLEND
+    #ifndef PNTR_NO_ALPHABLEND
         if (src.rgba.a == 0) {
             return;
         }
@@ -2468,18 +2683,19 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
 }
 
 // Load stb_image or cute_png.
-
-//#define PNTR_STB_IMAGE
-//#define PNTR_CUTE_PNG
-
 #ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
     #ifdef PNTR_STB_IMAGE
         #include "extensions/pntr_stb_image.h"
     #elif defined(PNTR_CUTE_PNG)
         #include "extensions/pntr_cute_png.h"
     #else
-        // Default to stb_image.
-        #include "extensions/pntr_stb_image.h"
+        // Allow disabling image loading.
+        #ifdef PNTR_NO_LOAD_IMAGE
+            #define PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize) NULL
+        #else
+            // Default to stb_image.
+            #include "extensions/pntr_stb_image.h"
+        #endif
     #endif
 #endif
 
@@ -2489,8 +2705,13 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     #elif defined(PNTR_CUTE_PNG)
         #include "extensions/pntr_cute_png.h"
     #else
-        // Default to stb_image_write.
-        #include "extensions/pntr_stb_image_write.h"
+        // Allow disabling image saving.
+        #ifdef PNTR_NO_SAVE_IMAGE
+            #define PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize) NULL
+        #else
+            // Default to stb_image_write.
+            #include "extensions/pntr_stb_image_write.h"
+        #endif
     #endif
 #endif
 
@@ -2573,7 +2794,7 @@ PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX,
  *
  * @return The new alpha-blended color.
  *
- * @see PNTR_DISABLE_ALPHABLEND
+ * @see PNTR_NO_ALPHABLEND
  */
 PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
     pntr_blend_color(&dst, src);
@@ -3116,13 +3337,14 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData
  * Creates a new pntr_font object, with the number of allocated characters, using the given image.
  *
  * @param numCharacters The amount of glyphs to prepare within the font.
+ * @param characterByteSize The amount of bytes required to store the characters. If in ASCII, this is numCharacters.
  * @param atlas A pre-created image for the glyph atlas.
  *
  * @return The new font object allocated in memory.
  *
  * @internal
  */
-PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
+PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pntr_image* atlas) {
     if (numCharacters <= 0) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
@@ -3148,7 +3370,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
     }
 
     // Characters
-    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)numCharacters);
+    font->characters = PNTR_MALLOC(characterByteSize);
     if (font->characters == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font->glyphRects);
@@ -3156,6 +3378,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
         return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
+    font->characters[0] = '\0';
     font->charactersLen = numCharacters;
     font->atlas = atlas;
 
@@ -3178,7 +3401,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
-    pntr_font* font = _pntr_new_font(numCharacters, image);
+    pntr_font* font = _pntr_new_font(numCharacters, PNTR_STRSIZE(characters), image);
     if (font == NULL) {
         return NULL;
     }
@@ -3204,6 +3427,10 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
             currentRectangle.width++;
         }
     }
+
+    #ifdef PNTR_ENABLE_UTF8
+        utf8cpy(font->characters, characters);
+    #endif
 
     return font;
 }
@@ -3258,14 +3485,10 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
     }
 
     // Find out how many characters there are.
-    int numCharacters = 0;
-	int i = 0;
-	while (characters[i++] != '\0') {
-		numCharacters++;
-	}
+    int numCharacters = (int)PNTR_STRLEN(characters);
 
     // Create the font.
-    pntr_font* font = _pntr_new_font(numCharacters, image);
+    pntr_font* font = _pntr_new_font(numCharacters, PNTR_STRSIZE(characters), image);
     if (font == NULL) {
         return NULL;
     }
@@ -3291,6 +3514,10 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
         // Set the character.
         font->characters[currentCharIndex] = characters[currentCharIndex];
     }
+
+    #ifdef PNTR_ENABLE_UTF8
+        utf8cpy(font->characters, characters);
+    #endif
 
     return font;
 }
@@ -3329,7 +3556,8 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
         return NULL;
     }
 
-    pntr_font* output = _pntr_new_font(font->charactersLen, atlas);
+    size_t charactersSize = PNTR_STRSIZE(font->characters);
+    pntr_font* output = _pntr_new_font(font->charactersLen, charactersSize, atlas);
     if (output == NULL) {
         pntr_unload_image(atlas);
         return NULL;
@@ -3337,7 +3565,7 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
 
     PNTR_MEMCPY(output->srcRects, font->srcRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
     PNTR_MEMCPY(output->glyphRects, font->glyphRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
-    PNTR_MEMCPY(output->characters, font->characters, sizeof(char) * (size_t)output->charactersLen);
+    PNTR_MEMCPY(output->characters, font->characters, charactersSize);
 
     return output;
 }
@@ -3392,6 +3620,8 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
  * @param posX The position to print the text, starting from the top left on the X axis.
  * @param posY The position to print the text, starting from the top left on the Y axis.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text_wrapped()
  */
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
@@ -3402,31 +3632,36 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
     int y = posY;
     int tallestCharacter = 0;
 
-    const char * currentChar = text;
-    while (*currentChar != '\0') {
-        if (*currentChar == '\n') {
+    pntr_codepoint_t codepoint;
+
+    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        if (codepoint == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
             x = posX;
             y += tallestCharacter;
         }
         else {
-            for (int i = 0; i < font->charactersLen; i++) {
-                if (font->characters[i] == *currentChar) {
-                    // Draw the character, unless it's a space.
-                    if (*currentChar != ' ')  {
-                        pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
-                    }
+            char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
+            if (foundCharacter != NULL) {
 
-                    x += font->glyphRects[i].x + font->glyphRects[i].width;
-                    if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
-                        tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
-                    }
-                    break;
+                // Find the index of the character in the string.
+                #ifdef PNTR_ENABLE_UTF8
+                int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+                #else
+                int i = (int)(foundCharacter - font->characters);
+                #endif
+
+                // Draw the character, unless it's a space.
+                if (codepoint != ' ')  {
+                    pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+                }
+
+                x += font->glyphRects[i].x + font->glyphRects[i].width;
+                if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+                    tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
                 }
             }
         }
-
-        currentChar++;
     }
 }
 
@@ -3440,6 +3675,8 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
  * @param posY The position to print the text, starting from the top left on the Y axis.
  * @param maxWidth The maximum width for each line.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text()
  */
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
@@ -3447,8 +3684,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     }
 
     // Copy the string, along with its null terminator
-    size_t length = 0;
-    while (text[length++] != '\0'); // equivalent to strlen(text) + 1
+    size_t length = PNTR_STRLEN(text);
     char* newText = pntr_load_memory(length);
     pntr_memory_copy((void*)newText, (void*)text, length);
 
@@ -3456,6 +3692,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     int currentLineLength = 0;
     int i = 0;
     int lastSpace = 0;
+
     while (text[i] != '\0') {
         if (text[i] == ' ' || text[i] == '\n') {
             // Measure the width of the line from the previous word.
@@ -3542,33 +3779,43 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
     pntr_vector output = PNTR_CLITERAL(pntr_vector) { .x = 0, .y = 0 };
     int currentX = 0;
     int currentY = 0;
-    const char * currentChar = text;
     int index = 0;
 
-    while (currentChar != NULL && *currentChar != '\0' && (textLength <= 0 || index < textLength)) {
-        if (*currentChar == '\n') {
+    pntr_codepoint_t codepoint;
+
+    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        // Stop drawing if we're only counting a certain amount of characters.
+        if (textLength > 0 && index++ >= textLength) {
+            break;
+        }
+
+        // Consider any newlines
+        if (codepoint == '\n') {
             output.y += currentY;
             currentX = 0;
+            continue;
         }
-        else {
-            for (int i = 0; i < font->charactersLen; i++) {
-                if (font->characters[i] == *currentChar) {
-                    currentX += font->glyphRects[i].x + font->glyphRects[i].width;
-                    if (currentX > output.x) {
-                        output.x = currentX;
-                    }
 
-                    // Find the tallest character
-                    if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
-                        currentY = font->glyphRects[i].y + font->glyphRects[i].height;
-                    }
-                    break;
-                }
+        // Find the index of the character in the font atlas.
+        char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
+        if (foundCharacter != NULL) {
+            // Find the index of the character in the string.
+            #ifdef PNTR_ENABLE_UTF8
+            int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+            #else
+            int i = (int)(foundCharacter - font->characters);
+            #endif
+
+            currentX += font->glyphRects[i].x + font->glyphRects[i].width;
+            if (currentX > output.x) {
+                output.x = currentX;
+            }
+
+            // Find the tallest character
+            if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
+                currentY = font->glyphRects[i].y + font->glyphRects[i].height;
             }
         }
-
-        currentChar++;
-        index++;
     }
 
     // Has at least one line.
@@ -3606,7 +3853,7 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
  *
  * This must be unloaded manually afterwards with pntr_unload_font().
  *
- * Define PNTR_ENABLE_DEFAULT_FONT to allow using the default 8x8 font.
+ * Define `PNTR_ENABLE_DEFAULT_FONT` to allow using the default 8x8 font.
  *
  * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_font_default()
  * @code
@@ -3628,6 +3875,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         #include "external/font8x8_basic.h"
 
         // Default parameters for font8x8.
+        // TODO: pntr_load_font_default: Add UTF-8 support for the default font
         #define PNTR_DEFAULT_FONT_NAME font8x8_basic
         #define PNTR_DEFAULT_FONT_GLYPH_WIDTH 8
         #define PNTR_DEFAULT_FONT_GLYPH_HEIGHT 8
@@ -3731,16 +3979,32 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
     #ifndef PNTR_ENABLE_TTF
         return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
+        // Which ASCII character to start rendering into the atlas
+        #define PNTR_FONT_TTF_GLYPH_START 32
+
+        // Find out how many glyhs we should prepare
+        #ifndef PNTR_FONT_TTF_GLYPH_NUM
+            #ifdef PNTR_ENABLE_UTF8
+                // Up to the Cyrillic Supplement, minus the first 32 ascii characters
+                // https://www.w3schools.com/charsets/ref_html_utf8.asp
+                #define PNTR_FONT_TTF_GLYPH_NUM 1295
+            #else
+                // ASCII characater set
+                #define PNTR_FONT_TTF_GLYPH_NUM 95
+            #endif
+        #endif
+
         // Create the bitmap data with ample space based on the font size
-        int width = fontSize * 10;
-        int height = width;
+        int columns = 32;
+        int rows = PNTR_FONT_TTF_GLYPH_NUM / columns;
+        int width = fontSize * columns;
+        int height = fontSize * rows;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
         if (bitmap == NULL) {
             return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
-        #define PNTR_FONT_TTF_GLYPH_START 32
-        #define PNTR_FONT_TTF_GLYPH_NUM 95
+        // Bake the font into the bitmap
         stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
         int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, PNTR_FONT_TTF_GLYPH_START, PNTR_FONT_TTF_GLYPH_NUM, characterData);
 
@@ -3750,27 +4014,33 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             return pntr_set_error(PNTR_ERROR_UNKNOWN);
         }
 
-        // Port the bitmap to a pntr_image as the atlas.
+        // Port the bitmap to a pntr_image as the font atlas
         pntr_image* atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         PNTR_FREE(bitmap);
         if (atlas == NULL) {
             return NULL;
         }
 
-        // Clear up the unused atlas space from memory from top left
+        // Clear up the unused atlas space from memory, from the top left
         pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
-        // Create the font
-        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, atlas);
+        // Create the font data
+        size_t charactersSize = sizeof(pntr_codepoint_t) * (size_t)PNTR_FONT_TTF_GLYPH_NUM;
+        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, charactersSize, atlas);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return NULL;
         }
 
         // Capture each glyph data
+        #ifdef PNTR_ENABLE_UTF8
+        char* destination = font->characters; // Where to write the new character.
+        #endif
+
+        // Build each character
         for (int i = 0; i < PNTR_FONT_TTF_GLYPH_NUM; i++) {
-            // Calculate the source rectangles.
+            // Calculate the source rectangles
             font->srcRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = characterData[i].x0,
                 .y = characterData[i].y0,
@@ -3778,7 +4048,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
                 .height = characterData[i].y1 - characterData[i].y0
             };
 
-            // Find where the glyphs will be rendered.
+            // Find where the glyphs will be rendered
             font->glyphRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
                 .y = (int)(characterData[i].yoff + ((float)fontSize / 1.5f)), // TODO: Determine correct y glyph value
@@ -3786,9 +4056,24 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
                 .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
             };
 
-            // Set up the active character.
-            font->characters[i] = (char)(PNTR_FONT_TTF_GLYPH_START + i);
+            // Set up the active character
+            #ifndef PNTR_ENABLE_UTF8
+                font->characters[i] = (char)(PNTR_FONT_TTF_GLYPH_START + i);
+            #else
+                // Append the character to the destination, considering the remaining memory
+                destination = utf8catcodepoint(destination, (pntr_codepoint_t)(PNTR_FONT_TTF_GLYPH_START + i), charactersSize - (size_t)(destination - font->characters));
+            #endif
         }
+
+        #ifdef PNTR_ENABLE_UTF8
+        {
+            // Clear out the unused memory in the character list by building a new UTF-8 string
+            char* newCharacters = pntr_load_memory(PNTR_STRSIZE(font->characters));
+            utf8cpy(newCharacters, font->characters);
+            PNTR_FREE(font->characters);
+            font->characters = newCharacters;
+        }
+        #endif
 
         return font;
     #endif
@@ -3864,6 +4149,14 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
     }
 }
 
+#ifndef PNTR_LOAD_FILE
+    #ifdef PNTR_NO_STDIO
+        #define PNTR_LOAD_FILE(fileName, bytesRead) NULL
+    #else
+        #include <stdio.h> // FILE, fopen, fread
+    #endif
+#endif  // PNTR_LOAD_FILE
+
 /**
  * Loads a file from the file system.
  *
@@ -3932,7 +4225,8 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
  *
  * @param fileName The file to load.
  *
- * @see pntr_unload_file()
+ * @see pntr_load_file()
+ * @see pntr_unload_file_text()
  */
 PNTR_API const char* pntr_load_file_text(const char *fileName) {
     unsigned int bytesRead;
@@ -3955,9 +4249,24 @@ PNTR_API const char* pntr_load_file_text(const char *fileName) {
     return (const char*)output;
 }
 
+/**
+ * Unload the file text data from memory.
+ *
+ * @param text The text to unload.
+ *
+ * @see pntr_load_file_text()
+ */
 PNTR_API inline void pntr_unload_file_text(const char* text) {
     pntr_unload_memory((void*)text);
 }
+
+#ifndef PNTR_SAVE_FILE
+    #ifdef PNTR_NO_STDIO
+        #define PNTR_SAVE_FILE(fileName, data, bytesToWrite) NULL
+    #else
+        #include <stdio.h> // FILE, fopen, fwrite
+    #endif
+#endif  // PNTR_SAVE_FILE
 
 /**
  * Saves a file to the file system.
@@ -4591,6 +4900,7 @@ float _pntr_normalize_degrees(float degrees) {
     if (degrees < 0) {
         return 360.0f - PNTR_FMODF(-degrees, 360.0f);
     }
+
     return PNTR_FMODF(degrees, 360.0f);
 }
 

@@ -1,6 +1,8 @@
 /**
  * @page Examples Examples
  *
+ * @brief These are a few examples of pntr in use.
+ *
  * ## Alpha Mask
  * @include pntr_examples_alphamask.h
  * @image html pntr_examples_alphamask.png
@@ -30,6 +32,8 @@
  * @image html pntr_examples_sprite.png
  */
 
+#ifndef _DOXYGEN_
+
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
 #define PNTR_ENABLE_VARGS
@@ -57,3 +61,5 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
+#endif
