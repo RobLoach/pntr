@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['y_211',['y',['../structpntr__rectangle.html#aafe8c04a98ffb1918b584511044bc958',1,'pntr_rectangle::y()'],['../structpntr__vector.html#a67e78f5e7a58d167c1f8a6aade1c67b0',1,'pntr_vector::y()']]]
+  ['x_233',['x',['../structpntr__rectangle.html#a13c084fb57168b7d59d4af15227f9470',1,'pntr_rectangle::x()'],['../structpntr__vector.html#a291f06ab9178a967ce7da64856b88399',1,'pntr_vector::x()']]]
 ];

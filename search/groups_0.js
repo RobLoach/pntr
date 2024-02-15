@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['configuration_355',['Configuration',['../group__config.html',1,'']]]
+  ['colors_390',['Colors',['../group__colors.html',1,'']]],
+  ['configuration_391',['Configuration',['../group__config.html',1,'']]]
 ];

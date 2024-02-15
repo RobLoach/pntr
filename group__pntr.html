@@ -95,10 +95,21 @@ $(document).ready(function(){initNavTree('group__pntr.html',''); initResizable()
 <div class="title">pntr</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Image manipulation library for C99 or C++, with a focus on ease-of-use.  
+<a href="#details">More...</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="groups"></a>
 Modules</h2></td></tr>
 <tr class="memitem:group__config"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__config.html">Configuration</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:group__colors"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__colors.html">Colors</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:group__memory"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__memory.html">Memory</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:group__strings"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__strings.html">String Manipulation</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:group__math"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__math.html">Math</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
@@ -118,94 +129,6 @@ Data Structures</h2></td></tr>
 Macros</h2></td></tr>
 <tr class="memitem:gaab09cce0047581c37c6b43c8547a676f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a></td></tr>
 <tr class="separator:gaab09cce0047581c37c6b43c8547a676f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga50370fb28ed83a0566e44b5fcb5a7ed9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga50370fb28ed83a0566e44b5fcb5a7ed9">PNTR_LIGHTGRAY</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(200, 200, 200, 255)</td></tr>
-<tr class="separator:ga50370fb28ed83a0566e44b5fcb5a7ed9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gae710d03826e39d5aa1eeacac8d3f3e38"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gae710d03826e39d5aa1eeacac8d3f3e38">PNTR_GRAY</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(130, 130, 130, 255)</td></tr>
-<tr class="separator:gae710d03826e39d5aa1eeacac8d3f3e38"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga027a9b3d32f984ad3b770385ca4b8dc2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga027a9b3d32f984ad3b770385ca4b8dc2">PNTR_DARKGRAY</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(80, 80,  80, 255)</td></tr>
-<tr class="separator:ga027a9b3d32f984ad3b770385ca4b8dc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga30c7e460f8a994db8c1c5ab3e178e8fb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga30c7e460f8a994db8c1c5ab3e178e8fb">PNTR_YELLOW</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(253, 249, 0, 255)</td></tr>
-<tr class="separator:ga30c7e460f8a994db8c1c5ab3e178e8fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gadd240f4d620dfe033827ace4b6901b0b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gadd240f4d620dfe033827ace4b6901b0b">PNTR_GOLD</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 203, 0, 255)</td></tr>
-<tr class="separator:gadd240f4d620dfe033827ace4b6901b0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaf4d9426e5e27beec9d6b470d75554986"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaf4d9426e5e27beec9d6b470d75554986">PNTR_ORANGE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 161, 0, 255)</td></tr>
-<tr class="separator:gaf4d9426e5e27beec9d6b470d75554986"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga509b7ab9eb9ec0821c3e8cf33b32c6d0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga509b7ab9eb9ec0821c3e8cf33b32c6d0">PNTR_PINK</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 109, 194, 255)</td></tr>
-<tr class="separator:ga509b7ab9eb9ec0821c3e8cf33b32c6d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gad9c80a461b6d316261c73c2e6eb9f790"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gad9c80a461b6d316261c73c2e6eb9f790">PNTR_RED</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(230, 41, 55, 255)</td></tr>
-<tr class="separator:gad9c80a461b6d316261c73c2e6eb9f790"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga5d49dfb6f3c6880418b3d79582ca2599"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga5d49dfb6f3c6880418b3d79582ca2599">PNTR_MAROON</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(190, 33, 55, 255)</td></tr>
-<tr class="separator:ga5d49dfb6f3c6880418b3d79582ca2599"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaee489861e57f608f13fe6d56b5178bd0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaee489861e57f608f13fe6d56b5178bd0">PNTR_GREEN</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 228, 48, 255)</td></tr>
-<tr class="separator:gaee489861e57f608f13fe6d56b5178bd0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gada9f246407c95bf1cbe55296d9b9e278"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gada9f246407c95bf1cbe55296d9b9e278">PNTR_LIME</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 158, 47, 255)</td></tr>
-<tr class="separator:gada9f246407c95bf1cbe55296d9b9e278"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga596f5dd7d5d9149a7c4abda1d6379e66"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga596f5dd7d5d9149a7c4abda1d6379e66">PNTR_DARKGREEN</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 117, 44, 255)</td></tr>
-<tr class="separator:ga596f5dd7d5d9149a7c4abda1d6379e66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga6c26c8e6b62470fbd0dc91ef210e1f10"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga6c26c8e6b62470fbd0dc91ef210e1f10">PNTR_SKYBLUE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(102, 191, 255, 255)</td></tr>
-<tr class="separator:ga6c26c8e6b62470fbd0dc91ef210e1f10"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga50cdfcf369a2d046096cce6f413f5536"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga50cdfcf369a2d046096cce6f413f5536">PNTR_BLUE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 121, 241, 255)</td></tr>
-<tr class="separator:ga50cdfcf369a2d046096cce6f413f5536"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga825d1c601c4765bf9031dc7eadaa9747"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga825d1c601c4765bf9031dc7eadaa9747">PNTR_DARKBLUE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 82, 172, 255)</td></tr>
-<tr class="separator:ga825d1c601c4765bf9031dc7eadaa9747"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gab7506a47b323fe87a2e2dde1c1102f2d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gab7506a47b323fe87a2e2dde1c1102f2d">PNTR_PURPLE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(200, 122, 255, 255)</td></tr>
-<tr class="separator:gab7506a47b323fe87a2e2dde1c1102f2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaab5da1bf2d8ce430f69a0a5e9b0ea1b1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaab5da1bf2d8ce430f69a0a5e9b0ea1b1">PNTR_VIOLET</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(135, 60, 190, 255)</td></tr>
-<tr class="separator:gaab5da1bf2d8ce430f69a0a5e9b0ea1b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa34e3df02b7967271f48984e895c0654"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaa34e3df02b7967271f48984e895c0654">PNTR_DARKPURPLE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(112, 31, 126, 255)</td></tr>
-<tr class="separator:gaa34e3df02b7967271f48984e895c0654"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaf54193e76bcbd3cc24b8f7ace9781950"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaf54193e76bcbd3cc24b8f7ace9781950">PNTR_BEIGE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(211, 176, 131, 255)</td></tr>
-<tr class="separator:gaf54193e76bcbd3cc24b8f7ace9781950"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga57978414f14eabc8b3d7b67fb2b0a701"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga57978414f14eabc8b3d7b67fb2b0a701">PNTR_BROWN</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(127, 106, 79, 255)</td></tr>
-<tr class="separator:ga57978414f14eabc8b3d7b67fb2b0a701"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga61f58ca5d1fc730eebc28821cff1c67a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga61f58ca5d1fc730eebc28821cff1c67a">PNTR_DARKBROWN</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(76, 63, 47, 255)</td></tr>
-<tr class="separator:ga61f58ca5d1fc730eebc28821cff1c67a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga885306a493da36b189e8925e81457404"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga885306a493da36b189e8925e81457404">PNTR_WHITE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 255, 255, 255)</td></tr>
-<tr class="separator:ga885306a493da36b189e8925e81457404"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa970209f50fd6216bc8b10fcb7b398e7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaa970209f50fd6216bc8b10fcb7b398e7">PNTR_WHITE_VALUE</a>&#160;&#160;&#160;4294967295</td></tr>
-<tr class="separator:gaa970209f50fd6216bc8b10fcb7b398e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa424073a637acb0d4f228d5d727d66b0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaa424073a637acb0d4f228d5d727d66b0">PNTR_BLACK</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 0, 0, 255)</td></tr>
-<tr class="separator:gaa424073a637acb0d4f228d5d727d66b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga46684e7c8354cd3576d04185178cd04a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga46684e7c8354cd3576d04185178cd04a">PNTR_BLANK</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 0, 0, 0)</td></tr>
-<tr class="separator:ga46684e7c8354cd3576d04185178cd04a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa8cf1b8ea45c8a2903ec91d4ee663c49"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaa8cf1b8ea45c8a2903ec91d4ee663c49">PNTR_MAGENTA</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 0, 255, 255)</td></tr>
-<tr class="separator:gaa8cf1b8ea45c8a2903ec91d4ee663c49"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4696db434675f6df1c15ee8bdecdff78"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga4696db434675f6df1c15ee8bdecdff78">PNTR_RAYWHITE</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(245, 245, 245, 255)</td></tr>
-<tr class="separator:ga4696db434675f6df1c15ee8bdecdff78"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga4fbc165d6013c38d3469d558379ba423"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga4fbc165d6013c38d3469d558379ba423">PNTR_MALLOC</a>(size)&#160;&#160;&#160;malloc((size_t)(size))</td></tr>
-<tr class="separator:ga4fbc165d6013c38d3469d558379ba423"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga99322e93604f40e8f56bb26f49f3104d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga99322e93604f40e8f56bb26f49f3104d">PNTR_FREE</a>(obj)&#160;&#160;&#160;free((void*)(obj))</td></tr>
-<tr class="separator:ga99322e93604f40e8f56bb26f49f3104d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga2e1728b54dd3d8b3df90b05321921888"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga2e1728b54dd3d8b3df90b05321921888">PNTR_REALLOC</a>&#160;&#160;&#160;realloc</td></tr>
-<tr class="separator:ga2e1728b54dd3d8b3df90b05321921888"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gac861b1eede22b6ae24c66dd483ccfc8a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gac861b1eede22b6ae24c66dd483ccfc8a">PNTR_MEMCPY</a>(dest,  src,  n)&#160;&#160;&#160;memcpy((void*)(dest), (const void*)(src), (size_t)(n))</td></tr>
-<tr class="separator:gac861b1eede22b6ae24c66dd483ccfc8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga2aa6cfa1cee8aebaf7c1c9ebdcdf0091"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga2aa6cfa1cee8aebaf7c1c9ebdcdf0091">PNTR_MEMMOVE</a>(destination,  source,  num)&#160;&#160;&#160;memmove((destination), (source), (num))</td></tr>
-<tr class="separator:ga2aa6cfa1cee8aebaf7c1c9ebdcdf0091"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga86930d4c00f2298ead8d1cfd2d2e05b6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga86930d4c00f2298ead8d1cfd2d2e05b6">PNTR_MEMSET</a>(str,  c,  n)&#160;&#160;&#160;memset((str), (c), (n))</td></tr>
-<tr class="separator:ga86930d4c00f2298ead8d1cfd2d2e05b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaf3ca3bbf933a6ef46ec0a7429db56467"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaf3ca3bbf933a6ef46ec0a7429db56467">PNTR_STRSTR</a>(str1,  str2)&#160;&#160;&#160;strstr((str1), (str2))</td></tr>
-<tr class="separator:gaf3ca3bbf933a6ef46ec0a7429db56467"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaae1da8d3d662593a2df5568bf264cad3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaae1da8d3d662593a2df5568bf264cad3">PNTR_PI</a>&#160;&#160;&#160;3.1415926535897932f</td></tr>
-<tr class="separator:gaae1da8d3d662593a2df5568bf264cad3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gabdb242d6663fd46a9f04fc4709fd1bc1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gabdb242d6663fd46a9f04fc4709fd1bc1">PNTR_DEG2RAD</a>&#160;&#160;&#160;0.017453293f</td></tr>
-<tr class="separator:gabdb242d6663fd46a9f04fc4709fd1bc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga52652e811a79468484ac0ed5291c719f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga52652e811a79468484ac0ed5291c719f">PNTR_SINF</a>&#160;&#160;&#160;_pntr_sinf</td></tr>
-<tr class="separator:ga52652e811a79468484ac0ed5291c719f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaab4c395d7348818c45a894ad769e5067"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaab4c395d7348818c45a894ad769e5067">PNTR_COSF</a>&#160;&#160;&#160;_pntr_cosf</td></tr>
-<tr class="separator:gaab4c395d7348818c45a894ad769e5067"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga28706bb4701850d9807eb782b4bd8c21"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga28706bb4701850d9807eb782b4bd8c21">PNTR_CEILF</a>&#160;&#160;&#160;_pntr_ceilf</td></tr>
-<tr class="separator:ga28706bb4701850d9807eb782b4bd8c21"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga01ae29b4f95464bc3bb8f68652933b1d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga01ae29b4f95464bc3bb8f68652933b1d">PNTR_FABSF</a>(a)&#160;&#160;&#160;(((a) &lt; 0) ? -(a) : (a))</td></tr>
-<tr class="separator:ga01ae29b4f95464bc3bb8f68652933b1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga5b6a3b8446d827652134d94cdc91cb38"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga5b6a3b8446d827652134d94cdc91cb38">PNTR_FLOORF</a>(x)&#160;&#160;&#160;(float)((int)x - ((x &lt; 0.0f) ? 1 : 0))</td></tr>
-<tr class="separator:ga5b6a3b8446d827652134d94cdc91cb38"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga98deb488ae2983b5e8fa29277502b6df"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga98deb488ae2983b5e8fa29277502b6df">PNTR_FMODF</a>&#160;&#160;&#160;_pntr_fmodf</td></tr>
-<tr class="separator:ga98deb488ae2983b5e8fa29277502b6df"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga185fdea14445cc0e021c4e11511b9f7e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga185fdea14445cc0e021c4e11511b9f7e">PNTR_MAX</a>(a,  b)&#160;&#160;&#160;((a) &gt; (b) ? (a) : (b))</td></tr>
-<tr class="separator:ga185fdea14445cc0e021c4e11511b9f7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaac4139f0a1e5e2972f735968b155bc9b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaac4139f0a1e5e2972f735968b155bc9b">PNTR_MIN</a>(a,  b)&#160;&#160;&#160;((a) &lt; (b) ? (a) : (b))</td></tr>
-<tr class="separator:gaac4139f0a1e5e2972f735968b155bc9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gabc92df0d78c511c79955a7d46bd3aa85"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gabc92df0d78c511c79955a7d46bd3aa85">PNTR_PIXELFORMAT</a>&#160;&#160;&#160;<a class="el" href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a></td></tr>
 <tr class="separator:gabc92df0d78c511c79955a7d46bd3aa85"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga90053058513cc6900b32a50dbeed8b41"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga90053058513cc6900b32a50dbeed8b41">PNTR_PIXEL</a>(image,  x,  y)&#160;&#160;&#160;image-&gt;data[(y) * (image-&gt;pitch &gt;&gt; 2) + (x)]</td></tr>
@@ -227,8 +150,7 @@ Typedefs</h2></td></tr>
 <tr class="separator:ga10a094f2428cdd4b562390afcbcb5d58"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gab6b104429985d5fc6a0fe5eb946aa07c"><td class="memItemLeft" align="right" valign="top">typedef enum <a class="el" href="group__pntr.html#gaf58beab1cfc33f2ae1db071c2bb1bfd2">pntr_filter</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gab6b104429985d5fc6a0fe5eb946aa07c">pntr_filter</a></td></tr>
 <tr class="separator:gab6b104429985d5fc6a0fe5eb946aa07c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaee84528a50027bfad09108c98d54a3f8"><td class="memItemLeft" align="right" valign="top"><a id="gaee84528a50027bfad09108c98d54a3f8"></a>
-typedef enum pntr_error&#160;</td><td class="memItemRight" valign="bottom"><b>pntr_error</b></td></tr>
+<tr class="memitem:gaee84528a50027bfad09108c98d54a3f8"><td class="memItemLeft" align="right" valign="top">typedef enum <a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaee84528a50027bfad09108c98d54a3f8">pntr_error</a></td></tr>
 <tr class="separator:gaee84528a50027bfad09108c98d54a3f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga9f76e5dccf7415649505242a5165cc9b"><td class="memItemLeft" align="right" valign="top">typedef enum <a class="el" href="group__pntr.html#gac37559fc45753b46df5fd9a532f58b65">pntr_image_type</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga9f76e5dccf7415649505242a5165cc9b">pntr_image_type</a></td></tr>
 <tr class="separator:ga9f76e5dccf7415649505242a5165cc9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -244,15 +166,15 @@ Enumerations</h2></td></tr>
 , <a class="el" href="group__pntr.html#ggaf58beab1cfc33f2ae1db071c2bb1bfd2a728731b6097ee4048ad95b1a03af13ae">PNTR_FILTER_BILINEAR</a>
  }</td></tr>
 <tr class="separator:gaf58beab1cfc33f2ae1db071c2bb1bfd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga38025a8a46ee459bc4faf644462b1e33"><td class="memItemLeft" align="right" valign="top"><a id="ga38025a8a46ee459bc4faf644462b1e33"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>pntr_error</b> { <br />
-&#160;&#160;<b>PNTR_ERROR_NONE</b> = 0
-, <b>PNTR_ERROR_INVALID_ARGS</b> = -1
-, <b>PNTR_ERROR_NO_MEMORY</b> = -2
-, <b>PNTR_ERROR_NOT_SUPPORTED</b> = -3
+<tr class="memitem:ga38025a8a46ee459bc4faf644462b1e33"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a> { <br />
+&#160;&#160;<a class="el" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a8317c1a465905ee8081669852152e98d">PNTR_ERROR_NONE</a> = 0
+, <a class="el" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a21cda22849200ab0e3bead84aa36d578">PNTR_ERROR_INVALID_ARGS</a> = -1
+, <a class="el" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a9712c879cc45b02ccb0a97bddf68aa3e">PNTR_ERROR_NO_MEMORY</a> = -2
+, <a class="el" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a2084a8d1bbbaad8ce5a8e5d12548576c">PNTR_ERROR_NOT_SUPPORTED</a> = -3
 , <br />
-&#160;&#160;<b>PNTR_ERROR_FAILED_TO_OPEN</b> = -4
-, <b>PNTR_ERROR_FAILED_TO_WRITE</b> = -5
-, <b>PNTR_ERROR_UNKNOWN</b> = -6
+&#160;&#160;<a class="el" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33afba40a72e603d4ded6aeac1f87846bad">PNTR_ERROR_FAILED_TO_OPEN</a> = -4
+, <a class="el" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a48ca697573d1bc64c41e6381d5996044">PNTR_ERROR_FAILED_TO_WRITE</a> = -5
+, <a class="el" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a5038011bd7dede8275ab8c3d504bbc0b">PNTR_ERROR_UNKNOWN</a> = -6
 <br />
  }</td></tr>
 <tr class="separator:ga38025a8a46ee459bc4faf644462b1e33"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -279,6 +201,8 @@ Functions</h2></td></tr>
 <tr class="separator:ga37805cec1302d8c5b612e686a46d6d32"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga192ba9bcb066248f458969d88c8ed2e3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga192ba9bcb066248f458969d88c8ed2e3">pntr_image_set_clip</a> (<a class="el" href="structpntr__image.html">pntr_image</a> *image, int x, int y, int width, int height)</td></tr>
 <tr class="separator:ga192ba9bcb066248f458969d88c8ed2e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1c4e2346ac0786df9b277091498e801f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga1c4e2346ac0786df9b277091498e801f">pntr_image_set_clip_rec</a> (<a class="el" href="structpntr__image.html">pntr_image</a> *image, <a class="el" href="structpntr__rectangle.html">pntr_rectangle</a> clip)</td></tr>
+<tr class="separator:ga1c4e2346ac0786df9b277091498e801f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gabd89327fb71ed9c81811cdb14c0dc57b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gabd89327fb71ed9c81811cdb14c0dc57b">pntr_image_reset_clip</a> (<a class="el" href="structpntr__image.html">pntr_image</a> *image)</td></tr>
 <tr class="separator:gabd89327fb71ed9c81811cdb14c0dc57b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga2d2a7617812c782746f7ee0cacb53bc5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga2d2a7617812c782746f7ee0cacb53bc5">pntr_unload_image</a> (<a class="el" href="structpntr__image.html">pntr_image</a> *image)</td></tr>
@@ -432,13 +356,13 @@ Functions</h2></td></tr>
 <tr class="separator:ga69799366a2224ece50ac45d929d002ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gad1c7cc1a1e9ebed135ea13c88f2d8de0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> <a class="el" href="structpntr__image.html">pntr_image</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gad1c7cc1a1e9ebed135ea13c88f2d8de0">pntr_image_from_pixelformat</a> (const void *data, int width, int height, <a class="el" href="group__pntr.html#ga4c687cad9dbe014530479ed1bc95ebd5">pntr_pixelformat</a> pixelFormat)</td></tr>
 <tr class="separator:gad1c7cc1a1e9ebed135ea13c88f2d8de0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ga83292dfae88dff1485048a3afb202a0a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error</a> (pntr_error error)</td></tr>
+<tr class="memitem:ga83292dfae88dff1485048a3afb202a0a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error</a> (<a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a> error)</td></tr>
 <tr class="separator:ga83292dfae88dff1485048a3afb202a0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga81848153c2133f05dec5f802f91786ba"><td class="memItemLeft" align="right" valign="top"><a id="ga81848153c2133f05dec5f802f91786ba"></a>
 <a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> const char *&#160;</td><td class="memItemRight" valign="bottom"><b>pntr_get_error</b> (void)</td></tr>
 <tr class="separator:ga81848153c2133f05dec5f802f91786ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gafce1ce054d76ed3f5a63d6e9c23a9c73"><td class="memItemLeft" align="right" valign="top"><a id="gafce1ce054d76ed3f5a63d6e9c23a9c73"></a>
-<a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> pntr_error&#160;</td><td class="memItemRight" valign="bottom"><b>pntr_get_error_code</b> (void)</td></tr>
+<a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> <a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a>&#160;</td><td class="memItemRight" valign="bottom"><b>pntr_get_error_code</b> (void)</td></tr>
 <tr class="separator:gafce1ce054d76ed3f5a63d6e9c23a9c73"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga86a4063fe9ecb5e6b2873206ddc99045"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> <a class="el" href="structpntr__image.html">pntr_image</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga86a4063fe9ecb5e6b2873206ddc99045">pntr_image_resize</a> (<a class="el" href="structpntr__image.html">pntr_image</a> *image, int newWidth, int newHeight, <a class="el" href="group__pntr.html#gaf58beab1cfc33f2ae1db071c2bb1bfd2">pntr_filter</a> filter)</td></tr>
 <tr class="separator:ga86a4063fe9ecb5e6b2873206ddc99045"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -496,8 +420,7 @@ Functions</h2></td></tr>
 <tr class="separator:ga8a545c22c76e52937e2dd760fb86ebe9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga6c0633f102de3afca3e96cb3fe7d333e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga6c0633f102de3afca3e96cb3fe7d333e">pntr_load_file_text</a> (const char *fileName)</td></tr>
 <tr class="separator:ga6c0633f102de3afca3e96cb3fe7d333e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:gaa6fb9642249d9512b6faf8722298e5f3"><td class="memItemLeft" align="right" valign="top"><a id="gaa6fb9642249d9512b6faf8722298e5f3"></a>
-<a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void&#160;</td><td class="memItemRight" valign="bottom"><b>pntr_unload_file_text</b> (const char *text)</td></tr>
+<tr class="memitem:gaa6fb9642249d9512b6faf8722298e5f3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#gaa6fb9642249d9512b6faf8722298e5f3">pntr_unload_file_text</a> (const char *text)</td></tr>
 <tr class="separator:gaa6fb9642249d9512b6faf8722298e5f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ga792cf19259e7a8f2b1be5c5e1f142d0e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> <a class="el" href="structpntr__font.html">pntr_font</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__pntr.html#ga792cf19259e7a8f2b1be5c5e1f142d0e">pntr_load_font_ttf</a> (const char *fileName, int fontSize)</td></tr>
 <tr class="separator:ga792cf19259e7a8f2b1be5c5e1f142d0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -549,6 +472,26 @@ Functions</h2></td></tr>
 <tr class="separator:ga317d6fce9c9ed1c77ce04338ad2c6f93"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<p>Image manipulation library for C99 or C++, with a focus on ease-of-use. </p>
+<p>Make sure to define <code>PNTR_IMPLEMENTATION</code> before including in one of your <code>.c</code> files.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#define PNTR_IMPLEMENTATION</span></div>
+<div class="line"><span class="preprocessor">#include &quot;pntr.h&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main() {</div>
+<div class="line">    <a class="code" href="structpntr__image.html">pntr_image</a>* image = <a class="code" href="group__pntr.html#ga4505cc6cb7ba6fa88cdc70f78c624a9e">pntr_new_image</a>(200, 200);</div>
+<div class="line">    <a class="code" href="group__pntr.html#gac820099df81a0735c9d7ce6303397ee7">pntr_draw_circle_fill</a>(image, 100, 100, 80, <a class="code" href="group__colors.html#gad9c80a461b6d316261c73c2e6eb9f790">PNTR_RED</a>);</div>
+<div class="line">    <a class="code" href="group__pntr.html#ga6f07bf72e4f7cd41f32202758b3e7546">pntr_save_image</a>(image, <span class="stringliteral">&quot;output.png&quot;</span>);</div>
+<div class="line">    <a class="code" href="group__pntr.html#ga2d2a7617812c782746f7ee0cacb53bc5">pntr_unload_image</a>(image);</div>
+<div class="line"> </div>
+<div class="line">    <span class="keywordflow">return</span> 0;</div>
+<div class="line">}</div>
+<div class="ttc" id="agroup__colors_html_gad9c80a461b6d316261c73c2e6eb9f790"><div class="ttname"><a href="group__colors.html#gad9c80a461b6d316261c73c2e6eb9f790">PNTR_RED</a></div><div class="ttdeci">#define PNTR_RED</div><div class="ttdef"><b>Definition:</b> pntr.h:788</div></div>
+<div class="ttc" id="agroup__pntr_html_ga2d2a7617812c782746f7ee0cacb53bc5"><div class="ttname"><a href="group__pntr.html#ga2d2a7617812c782746f7ee0cacb53bc5">pntr_unload_image</a></div><div class="ttdeci">PNTR_API void pntr_unload_image(pntr_image *image)</div><div class="ttdef"><b>Definition:</b> pntr.h:1744</div></div>
+<div class="ttc" id="agroup__pntr_html_ga4505cc6cb7ba6fa88cdc70f78c624a9e"><div class="ttname"><a href="group__pntr.html#ga4505cc6cb7ba6fa88cdc70f78c624a9e">pntr_new_image</a></div><div class="ttdeci">PNTR_API pntr_image * pntr_new_image(int width, int height)</div><div class="ttdef"><b>Definition:</b> pntr.h:1516</div></div>
+<div class="ttc" id="agroup__pntr_html_ga6f07bf72e4f7cd41f32202758b3e7546"><div class="ttname"><a href="group__pntr.html#ga6f07bf72e4f7cd41f32202758b3e7546">pntr_save_image</a></div><div class="ttdeci">PNTR_API bool pntr_save_image(pntr_image *image, const char *fileName)</div><div class="ttdef"><b>Definition:</b> pntr.h:4426</div></div>
+<div class="ttc" id="agroup__pntr_html_gac820099df81a0735c9d7ce6303397ee7"><div class="ttname"><a href="group__pntr.html#gac820099df81a0735c9d7ce6303397ee7">pntr_draw_circle_fill</a></div><div class="ttdeci">PNTR_API void pntr_draw_circle_fill(pntr_image *dst, int centerX, int centerY, int radius, pntr_color color)</div><div class="ttdef"><b>Definition:</b> pntr.h:2289</div></div>
+<div class="ttc" id="astructpntr__image_html"><div class="ttname"><a href="structpntr__image.html">pntr_image</a></div><div class="ttdef"><b>Definition:</b> pntr.h:404</div></div>
+</div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a class="el" href="group__config.html#ga5f2e66802d79e5767e1787e06c332ddb">PNTR_IMPLEMENTATION</a> </dd></dl>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="gaab09cce0047581c37c6b43c8547a676f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gaab09cce0047581c37c6b43c8547a676f">&#9670;&nbsp;</a></span>PNTR_API</h2>
@@ -564,668 +507,6 @@ Functions</h2></td></tr>
 <p>Prefix applied to all pntr methods.</p>
 <p>If you're using Emscripten, for instance, you could use the following to export all pntr methods: </p><pre class="fragment">#define PNTR_API EMSCRIPTEN_KEEPALIVE
 </pre> 
-</div>
-</div>
-<a id="gaf54193e76bcbd3cc24b8f7ace9781950"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaf54193e76bcbd3cc24b8f7ace9781950">&#9670;&nbsp;</a></span>PNTR_BEIGE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_BEIGE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(211, 176, 131, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Beige. </p>
-
-</div>
-</div>
-<a id="gaa424073a637acb0d4f228d5d727d66b0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaa424073a637acb0d4f228d5d727d66b0">&#9670;&nbsp;</a></span>PNTR_BLACK</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_BLACK&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 0, 0, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Black. </p>
-
-</div>
-</div>
-<a id="ga46684e7c8354cd3576d04185178cd04a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga46684e7c8354cd3576d04185178cd04a">&#9670;&nbsp;</a></span>PNTR_BLANK</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_BLANK&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 0, 0, 0)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Blank, or transparent. </p>
-
-</div>
-</div>
-<a id="ga50cdfcf369a2d046096cce6f413f5536"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga50cdfcf369a2d046096cce6f413f5536">&#9670;&nbsp;</a></span>PNTR_BLUE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_BLUE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 121, 241, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Blue. </p>
-
-</div>
-</div>
-<a id="ga57978414f14eabc8b3d7b67fb2b0a701"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga57978414f14eabc8b3d7b67fb2b0a701">&#9670;&nbsp;</a></span>PNTR_BROWN</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_BROWN&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(127, 106, 79, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Brown. </p>
-
-</div>
-</div>
-<a id="ga28706bb4701850d9807eb782b4bd8c21"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga28706bb4701850d9807eb782b4bd8c21">&#9670;&nbsp;</a></span>PNTR_CEILF</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_CEILF&#160;&#160;&#160;_pntr_ceilf</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Computes the smallest integer value not less than arg.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">x</td><td>Floating-point value</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section see"><dt>See also</dt><dd><a href="https://en.cppreference.com/w/c/numeric/math/ceil">https://en.cppreference.com/w/c/numeric/math/ceil</a> </dd></dl>
-
-</div>
-</div>
-<a id="gaab4c395d7348818c45a894ad769e5067"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaab4c395d7348818c45a894ad769e5067">&#9670;&nbsp;</a></span>PNTR_COSF</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_COSF&#160;&#160;&#160;_pntr_cosf</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Calculates cosine of the given value.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">x</td><td>Floating-point value representing angle in radians</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section see"><dt>See also</dt><dd><a href="https://en.cppreference.com/w/c/numeric/math/cos">https://en.cppreference.com/w/c/numeric/math/cos</a> </dd>
-<dd>
-<a href="https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h">https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h</a> </dd></dl>
-
-</div>
-</div>
-<a id="ga825d1c601c4765bf9031dc7eadaa9747"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga825d1c601c4765bf9031dc7eadaa9747">&#9670;&nbsp;</a></span>PNTR_DARKBLUE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_DARKBLUE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 82, 172, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Dark blue. </p>
-
-</div>
-</div>
-<a id="ga61f58ca5d1fc730eebc28821cff1c67a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga61f58ca5d1fc730eebc28821cff1c67a">&#9670;&nbsp;</a></span>PNTR_DARKBROWN</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_DARKBROWN&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(76, 63, 47, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Dark brown. </p>
-
-</div>
-</div>
-<a id="ga027a9b3d32f984ad3b770385ca4b8dc2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga027a9b3d32f984ad3b770385ca4b8dc2">&#9670;&nbsp;</a></span>PNTR_DARKGRAY</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_DARKGRAY&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(80, 80,  80, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Dark gray. </p>
-
-</div>
-</div>
-<a id="ga596f5dd7d5d9149a7c4abda1d6379e66"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga596f5dd7d5d9149a7c4abda1d6379e66">&#9670;&nbsp;</a></span>PNTR_DARKGREEN</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_DARKGREEN&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 117, 44, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Dark green. </p>
-
-</div>
-</div>
-<a id="gaa34e3df02b7967271f48984e895c0654"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaa34e3df02b7967271f48984e895c0654">&#9670;&nbsp;</a></span>PNTR_DARKPURPLE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_DARKPURPLE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(112, 31, 126, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Dark purple. </p>
-
-</div>
-</div>
-<a id="gabdb242d6663fd46a9f04fc4709fd1bc1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gabdb242d6663fd46a9f04fc4709fd1bc1">&#9670;&nbsp;</a></span>PNTR_DEG2RAD</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_DEG2RAD&#160;&#160;&#160;0.017453293f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Convert a degree to radians. PI / 180. </p>
-
-</div>
-</div>
-<a id="ga01ae29b4f95464bc3bb8f68652933b1d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga01ae29b4f95464bc3bb8f68652933b1d">&#9670;&nbsp;</a></span>PNTR_FABSF</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_FABSF</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">a</td><td>)</td>
-          <td>&#160;&#160;&#160;(((a) &lt; 0) ? -(a) : (a))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Computes the absolute value of a floating point value arg.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">a</td><td>Floating point value</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section see"><dt>See also</dt><dd><a href="https://en.cppreference.com/w/c/numeric/math/fabs">https://en.cppreference.com/w/c/numeric/math/fabs</a> </dd></dl>
-
-</div>
-</div>
-<a id="ga5b6a3b8446d827652134d94cdc91cb38"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga5b6a3b8446d827652134d94cdc91cb38">&#9670;&nbsp;</a></span>PNTR_FLOORF</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_FLOORF</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">x</td><td>)</td>
-          <td>&#160;&#160;&#160;(float)((int)x - ((x &lt; 0.0f) ? 1 : 0))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Computes the largest integer value not greater than arg.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">x</td><td>Floating point value.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section see"><dt>See also</dt><dd><a href="https://en.cppreference.com/w/c/numeric/math/floor">https://en.cppreference.com/w/c/numeric/math/floor</a> </dd></dl>
-
-</div>
-</div>
-<a id="ga98deb488ae2983b5e8fa29277502b6df"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga98deb488ae2983b5e8fa29277502b6df">&#9670;&nbsp;</a></span>PNTR_FMODF</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_FMODF&#160;&#160;&#160;_pntr_fmodf</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Computes the floating-point remainder of the division operation x/y.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">dividend</td><td>floating point value </td></tr>
-    <tr><td class="paramname">divisor</td><td>floating point value</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section see"><dt>See also</dt><dd><a href="https://en.cppreference.com/w/c/numeric/math/fmod">https://en.cppreference.com/w/c/numeric/math/fmod</a> </dd></dl>
-
-</div>
-</div>
-<a id="ga99322e93604f40e8f56bb26f49f3104d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga99322e93604f40e8f56bb26f49f3104d">&#9670;&nbsp;</a></span>PNTR_FREE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_FREE</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">obj</td><td>)</td>
-          <td>&#160;&#160;&#160;free((void*)(obj))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Deallocates the previously allocated memory. </p>
-
-</div>
-</div>
-<a id="gadd240f4d620dfe033827ace4b6901b0b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gadd240f4d620dfe033827ace4b6901b0b">&#9670;&nbsp;</a></span>PNTR_GOLD</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_GOLD&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 203, 0, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Gold. </p>
-
-</div>
-</div>
-<a id="gae710d03826e39d5aa1eeacac8d3f3e38"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gae710d03826e39d5aa1eeacac8d3f3e38">&#9670;&nbsp;</a></span>PNTR_GRAY</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_GRAY&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(130, 130, 130, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Gray. </p>
-
-</div>
-</div>
-<a id="gaee489861e57f608f13fe6d56b5178bd0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaee489861e57f608f13fe6d56b5178bd0">&#9670;&nbsp;</a></span>PNTR_GREEN</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_GREEN&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 228, 48, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Green. </p>
-
-</div>
-</div>
-<a id="ga50370fb28ed83a0566e44b5fcb5a7ed9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga50370fb28ed83a0566e44b5fcb5a7ed9">&#9670;&nbsp;</a></span>PNTR_LIGHTGRAY</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_LIGHTGRAY&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(200, 200, 200, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Light gray. </p>
-
-</div>
-</div>
-<a id="gada9f246407c95bf1cbe55296d9b9e278"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gada9f246407c95bf1cbe55296d9b9e278">&#9670;&nbsp;</a></span>PNTR_LIME</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_LIME&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(0, 158, 47, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Lime. </p>
-
-</div>
-</div>
-<a id="gaa8cf1b8ea45c8a2903ec91d4ee663c49"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaa8cf1b8ea45c8a2903ec91d4ee663c49">&#9670;&nbsp;</a></span>PNTR_MAGENTA</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MAGENTA&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 0, 255, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Magenta. </p>
-
-</div>
-</div>
-<a id="ga4fbc165d6013c38d3469d558379ba423"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga4fbc165d6013c38d3469d558379ba423">&#9670;&nbsp;</a></span>PNTR_MALLOC</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MALLOC</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">size</td><td>)</td>
-          <td>&#160;&#160;&#160;malloc((size_t)(size))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Allocates the requested memory and returns a pointer to it. </p>
-
-</div>
-</div>
-<a id="ga5d49dfb6f3c6880418b3d79582ca2599"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga5d49dfb6f3c6880418b3d79582ca2599">&#9670;&nbsp;</a></span>PNTR_MAROON</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MAROON&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(190, 33, 55, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Maroon. </p>
-
-</div>
-</div>
-<a id="ga185fdea14445cc0e021c4e11511b9f7e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga185fdea14445cc0e021c4e11511b9f7e">&#9670;&nbsp;</a></span>PNTR_MAX</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MAX</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">a, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">b&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;((a) &gt; (b) ? (a) : (b))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Return the largest value of the two given values.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">a</td><td>The first value to compare. </td></tr>
-    <tr><td class="paramname">b</td><td>The second value to compare.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Which value is larger. </dd></dl>
-
-</div>
-</div>
-<a id="gac861b1eede22b6ae24c66dd483ccfc8a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gac861b1eede22b6ae24c66dd483ccfc8a">&#9670;&nbsp;</a></span>PNTR_MEMCPY</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MEMCPY</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">dest, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">src, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">n&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;memcpy((void*)(dest), (const void*)(src), (size_t)(n))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Copies data from memory area src to the destination memory. </p>
-
-</div>
-</div>
-<a id="ga2aa6cfa1cee8aebaf7c1c9ebdcdf0091"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga2aa6cfa1cee8aebaf7c1c9ebdcdf0091">&#9670;&nbsp;</a></span>PNTR_MEMMOVE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MEMMOVE</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">destination, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">source, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">num&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;memmove((destination), (source), (num))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Copies the values of num bytes from the location pointed by source to the memory block pointed by destination.</p>
-<dl class="section note"><dt>Note</dt><dd>If not defined, will use <code>memmove()</code>.</dd></dl>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">destination</td><td>Pointer to the destination array where the content is to be copied, type-casted to a pointer of type <code>void*</code>. </td></tr>
-    <tr><td class="paramname">source</td><td>Pointer to the source of data to be copied, type-casted to a pointer of type <code>const void*</code>. </td></tr>
-    <tr><td class="paramname">num</td><td>Number of bytes to copy. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="ga86930d4c00f2298ead8d1cfd2d2e05b6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga86930d4c00f2298ead8d1cfd2d2e05b6">&#9670;&nbsp;</a></span>PNTR_MEMSET</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MEMSET</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">str, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">c, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">n&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;memset((str), (c), (n))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Copies the character c (an unsigned char) to the first n characters of the string pointed to, by the argument str. </p>
-
-</div>
-</div>
-<a id="gaac4139f0a1e5e2972f735968b155bc9b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaac4139f0a1e5e2972f735968b155bc9b">&#9670;&nbsp;</a></span>PNTR_MIN</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_MIN</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">a, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">b&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;((a) &lt; (b) ? (a) : (b))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Return the smallest value of the two given values.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">a</td><td>The first value to compare. </td></tr>
-    <tr><td class="paramname">b</td><td>The second value to compare.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Which value is smaller. </dd></dl>
-
-</div>
-</div>
-<a id="gaf4d9426e5e27beec9d6b470d75554986"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaf4d9426e5e27beec9d6b470d75554986">&#9670;&nbsp;</a></span>PNTR_ORANGE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_ORANGE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 161, 0, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Orange. </p>
-
-</div>
-</div>
-<a id="gaae1da8d3d662593a2df5568bf264cad3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaae1da8d3d662593a2df5568bf264cad3">&#9670;&nbsp;</a></span>PNTR_PI</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_PI&#160;&#160;&#160;3.1415926535897932f</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Pi </p>
-
-</div>
-</div>
-<a id="ga509b7ab9eb9ec0821c3e8cf33b32c6d0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga509b7ab9eb9ec0821c3e8cf33b32c6d0">&#9670;&nbsp;</a></span>PNTR_PINK</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_PINK&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 109, 194, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Pink. </p>
-
 </div>
 </div>
 <a id="ga90053058513cc6900b32a50dbeed8b41"></a>
@@ -1283,204 +564,11 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>The set pixel format for the application. </p>
-
-</div>
-</div>
-<a id="gab7506a47b323fe87a2e2dde1c1102f2d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gab7506a47b323fe87a2e2dde1c1102f2d">&#9670;&nbsp;</a></span>PNTR_PURPLE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_PURPLE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(200, 122, 255, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Purple. </p>
-
-</div>
-</div>
-<a id="ga4696db434675f6df1c15ee8bdecdff78"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga4696db434675f6df1c15ee8bdecdff78">&#9670;&nbsp;</a></span>PNTR_RAYWHITE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_RAYWHITE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(245, 245, 245, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>The white used in raylib. </p>
-
-</div>
-</div>
-<a id="ga2e1728b54dd3d8b3df90b05321921888"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga2e1728b54dd3d8b3df90b05321921888">&#9670;&nbsp;</a></span>PNTR_REALLOC</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_REALLOC&#160;&#160;&#160;realloc</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Attempts to resize the memory block pointed to that was previously allocated. </p>
-
-</div>
-</div>
-<a id="gad9c80a461b6d316261c73c2e6eb9f790"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gad9c80a461b6d316261c73c2e6eb9f790">&#9670;&nbsp;</a></span>PNTR_RED</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_RED&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(230, 41, 55, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Red. </p>
-
-</div>
-</div>
-<a id="ga52652e811a79468484ac0ed5291c719f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga52652e811a79468484ac0ed5291c719f">&#9670;&nbsp;</a></span>PNTR_SINF</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_SINF&#160;&#160;&#160;_pntr_sinf</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Calculates sine of the given value.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">x</td><td>The input value of sinf()</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section see"><dt>See also</dt><dd><a href="https://en.cppreference.com/w/c/numeric/math/sin">https://en.cppreference.com/w/c/numeric/math/sin</a> </dd>
+<p>The set pixel format for the application.</p>
+<p>Will become either <code>PNTR_PIXELFORMAT_ARGB8888</code> or <code>PNTR_PIXELFORMAT_RGBA8888</code>, with the default being <code>PNTR_PIXELFORMAT_RGBA8888</code>.</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a> </dd>
 <dd>
-<a href="https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h">https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h</a> </dd></dl>
-
-</div>
-</div>
-<a id="ga6c26c8e6b62470fbd0dc91ef210e1f10"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga6c26c8e6b62470fbd0dc91ef210e1f10">&#9670;&nbsp;</a></span>PNTR_SKYBLUE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_SKYBLUE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(102, 191, 255, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Sky blue. </p>
-
-</div>
-</div>
-<a id="gaf3ca3bbf933a6ef46ec0a7429db56467"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaf3ca3bbf933a6ef46ec0a7429db56467">&#9670;&nbsp;</a></span>PNTR_STRSTR</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_STRSTR</td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">str1, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname">str2&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td>&#160;&#160;&#160;strstr((str1), (str2))</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Returns a pointer to the first occurrence of str2 in str1, or a null pointer if str2 is not part of str1.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">str1</td><td>(const char*) C string to be scanned. </td></tr>
-    <tr><td class="paramname">str2</td><td>(const char*) containing the sequence of characters to match.</td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>A pointer to the first occurrence in str1 of the entire sequence of characters specified in str2, or a null pointer if the sequence is not present in str1. </dd></dl>
-
-</div>
-</div>
-<a id="gaab5da1bf2d8ce430f69a0a5e9b0ea1b1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaab5da1bf2d8ce430f69a0a5e9b0ea1b1">&#9670;&nbsp;</a></span>PNTR_VIOLET</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_VIOLET&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(135, 60, 190, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Violet. </p>
-
-</div>
-</div>
-<a id="ga885306a493da36b189e8925e81457404"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga885306a493da36b189e8925e81457404">&#9670;&nbsp;</a></span>PNTR_WHITE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_WHITE&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(255, 255, 255, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>White. </p>
-
-</div>
-</div>
-<a id="gaa970209f50fd6216bc8b10fcb7b398e7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#gaa970209f50fd6216bc8b10fcb7b398e7">&#9670;&nbsp;</a></span>PNTR_WHITE_VALUE</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_WHITE_VALUE&#160;&#160;&#160;4294967295</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>The integer representation of PNTR_WHITE.</p>
-<dl class="section note"><dt>Note</dt><dd>This is the same as <code>PNTR_WHITE.value</code> . </dd></dl>
-
-</div>
-</div>
-<a id="ga30c7e460f8a994db8c1c5ab3e178e8fb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ga30c7e460f8a994db8c1c5ab3e178e8fb">&#9670;&nbsp;</a></span>PNTR_YELLOW</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">#define PNTR_YELLOW&#160;&#160;&#160;<a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color</a>(253, 249, 0, 255)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>Yellow. </p>
+<a class="el" href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a5ce97813b477d5de353eae3668d366e3">PNTR_PIXELFORMAT_ARGB8888</a> </dd></dl>
 
 </div>
 </div>
@@ -1497,10 +585,32 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <p>Color, represented by an unsigned 32-bit integer.</p>
-<p>Has four components: Red, Green, Blue, and Alpha.</p>
+<p>Has four components: Red, Green, Blue, and Alpha. Depending on the pixel format, will shift the order in which the components are defines.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#gaf8534459c197a2a8669b2ac9547d0a4b">pntr_new_color()</a> </dd>
 <dd>
-<a class="el" href="group__pntr.html#ga1ca84b4d6da8d55dae934d0fca143f9c">pntr_get_color()</a> </dd></dl>
+<a class="el" href="group__pntr.html#ga1ca84b4d6da8d55dae934d0fca143f9c">pntr_get_color()</a> </dd>
+<dd>
+<a class="el" href="group__config.html#ga26cc9ee8dc30bd18bbb5070d3763fd42">PNTR_PIXELFORMAT_RGBA</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gabd7cb589e36749a556fe74d4a121bda6">PNTR_PIXELFORMAT_ARGB</a> </dd></dl>
+
+</div>
+</div>
+<a id="gaee84528a50027bfad09108c98d54a3f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaee84528a50027bfad09108c98d54a3f8">&#9670;&nbsp;</a></span>pntr_error</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef enum <a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a> <a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Error states definitions.</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error()</a> </dd>
+<dd>
+pntr_get_error() </dd></dl>
 
 </div>
 </div>
@@ -1530,12 +640,15 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Font.</p>
+<p>Font used to render text.</p>
+<p>If <code>PNTR_ENABLE_UTF8</code> is enabled, will allow loading fonts with UTF-8 support.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#gaa17764330bf656edee07e1a86817816f">pntr_load_font_tty()</a> </dd>
 <dd>
 <a class="el" href="group__pntr.html#ga792cf19259e7a8f2b1be5c5e1f142d0e">pntr_load_font_ttf()</a> </dd>
 <dd>
-<a class="el" href="group__pntr.html#gaa557de3181ef9b08471f1b37e9c0a50d">pntr_load_font_bmf()</a> </dd></dl>
+<a class="el" href="group__pntr.html#gaa557de3181ef9b08471f1b37e9c0a50d">pntr_load_font_bmf()</a> </dd>
+<dd>
+<a class="el" href="group__config.html#gac7541868d2eb71419cd6e3eba6e3f851">PNTR_ENABLE_UTF8</a> </dd></dl>
 
 </div>
 </div>
@@ -1618,6 +731,40 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="ga38025a8a46ee459bc4faf644462b1e33"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga38025a8a46ee459bc4faf644462b1e33">&#9670;&nbsp;</a></span>pntr_error</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Error states definitions.</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error()</a> </dd>
+<dd>
+pntr_get_error() </dd></dl>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="gga38025a8a46ee459bc4faf644462b1e33a8317c1a465905ee8081669852152e98d"></a>PNTR_ERROR_NONE&#160;</td><td class="fielddoc"><p>No error </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga38025a8a46ee459bc4faf644462b1e33a21cda22849200ab0e3bead84aa36d578"></a>PNTR_ERROR_INVALID_ARGS&#160;</td><td class="fielddoc"><p>Invalid arguments </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga38025a8a46ee459bc4faf644462b1e33a9712c879cc45b02ccb0a97bddf68aa3e"></a>PNTR_ERROR_NO_MEMORY&#160;</td><td class="fielddoc"><p>Not enough memory </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga38025a8a46ee459bc4faf644462b1e33a2084a8d1bbbaad8ce5a8e5d12548576c"></a>PNTR_ERROR_NOT_SUPPORTED&#160;</td><td class="fielddoc"><p>Not supported </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga38025a8a46ee459bc4faf644462b1e33afba40a72e603d4ded6aeac1f87846bad"></a>PNTR_ERROR_FAILED_TO_OPEN&#160;</td><td class="fielddoc"><p>Failed to open </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga38025a8a46ee459bc4faf644462b1e33a48ca697573d1bc64c41e6381d5996044"></a>PNTR_ERROR_FAILED_TO_WRITE&#160;</td><td class="fielddoc"><p>Failed to write </p>
+</td></tr>
+<tr><td class="fieldname"><a id="gga38025a8a46ee459bc4faf644462b1e33a5038011bd7dede8275ab8c3d504bbc0b"></a>PNTR_ERROR_UNKNOWN&#160;</td><td class="fielddoc"><p>Unknown error occurred </p>
+</td></tr>
+</table>
+
+</div>
+</div>
 <a id="gaf58beab1cfc33f2ae1db071c2bb1bfd2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gaf58beab1cfc33f2ae1db071c2bb1bfd2">&#9670;&nbsp;</a></span>pntr_filter</h2>
 
@@ -1731,7 +878,7 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__config.html#gad8dcd0f8596971ce525cbd9db03eea2f">PNTR_DISABLE_ALPHABLEND</a> </dd>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__config.html#ga043e13b59b5a3ac68a6baee2abd9a0cb">PNTR_NO_ALPHABLEND</a> </dd>
 <dd>
 <a class="el" href="group__pntr.html#ga4b2892176183313d4b9b249b71348c2c">pntr_color_alpha_blend()</a> </dd></dl>
 
@@ -1816,7 +963,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The new alpha-blended color.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__config.html#gad8dcd0f8596971ce525cbd9db03eea2f">PNTR_DISABLE_ALPHABLEND</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__config.html#ga043e13b59b5a3ac68a6baee2abd9a0cb">PNTR_NO_ALPHABLEND</a> </dd></dl>
 
 </div>
 </div>
@@ -3404,10 +2551,11 @@ Functions</h2></td></tr>
     <tr><td class="paramname">text</td><td>The text to write. Must be NULL terminated. </td></tr>
     <tr><td class="paramname">posX</td><td>The position to print the text, starting from the top left on the X axis. </td></tr>
     <tr><td class="paramname">posY</td><td>The position to print the text, starting from the top left on the Y axis. </td></tr>
-    <tr><td class="paramname">tint</td><td>What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color. </td></tr>
+    <tr><td class="paramname">tint</td><td>What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga80ddbd3878617054d4fe04a92f7e7945">pntr_draw_text_wrapped()</a> </dd></dl>
 
 </div>
 </div>
@@ -3475,10 +2623,11 @@ Functions</h2></td></tr>
     <tr><td class="paramname">posX</td><td>The position to print the text, starting from the top left on the X axis. </td></tr>
     <tr><td class="paramname">posY</td><td>The position to print the text, starting from the top left on the Y axis. </td></tr>
     <tr><td class="paramname">maxWidth</td><td>The maximum width for each line. </td></tr>
-    <tr><td class="paramname">tint</td><td>What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color. </td></tr>
+    <tr><td class="paramname">tint</td><td>What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga3c21c0b9b3816cfc34978e4ef6a428aa">pntr_draw_text()</a> </dd></dl>
 
 </div>
 </div>
@@ -4819,10 +3968,11 @@ Functions</h2></td></tr>
 <p>Reset the clipping rectangle for the given image.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">image</td><td>The image to reset the clipping image for. </td></tr>
+    <tr><td class="paramname">image</td><td>The image to reset the clipping image for.</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga192ba9bcb066248f458969d88c8ed2e3">pntr_image_set_clip()</a> </dd></dl>
 
 </div>
 </div>
@@ -5091,10 +4241,52 @@ Functions</h2></td></tr>
     <tr><td class="paramname">x</td><td>The X coordinate for the clipping rectangle. </td></tr>
     <tr><td class="paramname">y</td><td>The Y coordinate for the clipping rectangle. </td></tr>
     <tr><td class="paramname">width</td><td>The width of the desired clipping rectangle. </td></tr>
-    <tr><td class="paramname">height</td><td>The height of the desired clipping rectangle. </td></tr>
+    <tr><td class="paramname">height</td><td>The height of the desired clipping rectangle.</td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga1c4e2346ac0786df9b277091498e801f">pntr_image_set_clip_rec()</a> </dd>
+<dd>
+<a class="el" href="group__pntr.html#gabd89327fb71ed9c81811cdb14c0dc57b">pntr_image_reset_clip()</a> </dd></dl>
+
+</div>
+</div>
+<a id="ga1c4e2346ac0786df9b277091498e801f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga1c4e2346ac0786df9b277091498e801f">&#9670;&nbsp;</a></span>pntr_image_set_clip_rec()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void pntr_image_set_clip_rec </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="structpntr__image.html">pntr_image</a> *&#160;</td>
+          <td class="paramname"><em>image</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structpntr__rectangle.html">pntr_rectangle</a>&#160;</td>
+          <td class="paramname"><em>clip</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Set the clipping rectangle for the given image to restrict drawing within, using a rectangle.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">image</td><td>The image to set the clipping rectangle. </td></tr>
+    <tr><td class="paramname">clip</td><td>The rectangle to set the new clip boundries.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga192ba9bcb066248f458969d88c8ed2e3">pntr_image_set_clip()</a> </dd>
+<dd>
+<a class="el" href="group__pntr.html#gabd89327fb71ed9c81811cdb14c0dc57b">pntr_image_reset_clip()</a> </dd></dl>
 
 </div>
 </div>
@@ -5268,7 +4460,9 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga8a545c22c76e52937e2dd760fb86ebe9">pntr_unload_file()</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga560be10f03a2a3e34c29b51f1becb065">pntr_load_file()</a> </dd>
+<dd>
+<a class="el" href="group__pntr.html#gaa6fb9642249d9512b6faf8722298e5f3">pntr_unload_file_text()</a> </dd></dl>
 
 </div>
 </div>
@@ -5327,7 +4521,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Load the default font.</p>
 <p>This must be unloaded manually afterwards with <a class="el" href="group__pntr.html#gafef2566ed30853dd3ac32a0f1915dbd9">pntr_unload_font()</a>.</p>
-<p>Define PNTR_ENABLE_DEFAULT_FONT to allow using the default 8x8 font.</p>
+<p>Define <code>PNTR_ENABLE_DEFAULT_FONT</code> to allow using the default 8x8 font.</p>
 <p>You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of <a class="el" href="group__pntr.html#gabbbb6900325d3bf19bd4c8b0e3b4b747">pntr_load_font_default()</a> </p><div class="fragment"><div class="line"><span class="preprocessor">#define PNTR_DEFAULT_FONT load_my_font</span></div>
 </div><!-- fragment --><dl class="section return"><dt>Returns</dt><dd>The default font, which must be unloaded when finished using.</dd></dl>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#gafef2566ed30853dd3ac32a0f1915dbd9">pntr_unload_font()</a> </dd>
@@ -5582,7 +4776,7 @@ PNTR_DEFAULT_FONT </dd></dl>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A pointer to the new memory address.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga4fbc165d6013c38d3469d558379ba423">PNTR_MALLOC</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__memory.html#ga4fbc165d6013c38d3469d558379ba423">PNTR_MALLOC</a> </dd></dl>
 
 </div>
 </div>
@@ -5724,7 +4918,7 @@ PNTR_DEFAULT_FONT </dd></dl>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The destination.</dd></dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#gac861b1eede22b6ae24c66dd483ccfc8a">PNTR_MEMCPY</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__memory.html#gac861b1eede22b6ae24c66dd483ccfc8a">PNTR_MEMCPY</a> </dd></dl>
 
 </div>
 </div>
@@ -6028,7 +5222,7 @@ PNTR_DEFAULT_FONT </dd></dl>
         <tr>
           <td class="memname"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void * pntr_set_error </td>
           <td>(</td>
-          <td class="paramtype">pntr_error&#160;</td>
+          <td class="paramtype"><a class="el" href="group__pntr.html#ga38025a8a46ee459bc4faf644462b1e33">pntr_error</a>&#160;</td>
           <td class="paramname"><em>error</em></td><td>)</td>
           <td></td>
         </tr>
@@ -6122,6 +5316,40 @@ PNTR_DEFAULT_FONT </dd></dl>
 
 </div>
 </div>
+<a id="gaa6fb9642249d9512b6faf8722298e5f3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaa6fb9642249d9512b6faf8722298e5f3">&#9670;&nbsp;</a></span>pntr_unload_file_text()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="group__pntr.html#gaab09cce0047581c37c6b43c8547a676f">PNTR_API</a> void pntr_unload_file_text </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>text</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Unload the file text data from memory.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">text</td><td>The text to unload.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga6c0633f102de3afca3e96cb3fe7d333e">pntr_load_file_text()</a> </dd></dl>
+
+</div>
+</div>
 <a id="gafef2566ed30853dd3ac32a0f1915dbd9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#gafef2566ed30853dd3ac32a0f1915dbd9">&#9670;&nbsp;</a></span>pntr_unload_font()</h2>
 
@@ -6194,7 +5422,7 @@ PNTR_DEFAULT_FONT </dd></dl>
   </table>
   </dd>
 </dl>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__pntr.html#ga99322e93604f40e8f56bb26f49f3104d">PNTR_FREE</a> </dd></dl>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="group__memory.html#gabd9f522a2330361b72d68a0b3b16c396">PNTR_FREE</a> </dd></dl>
 
 </div>
 </div>

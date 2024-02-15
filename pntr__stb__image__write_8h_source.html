@@ -91,127 +91,133 @@ $(document).ready(function(){initNavTree('pntr__stb__image__write_8h_source.html
 <div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#ifndef PNTR_STB_IMAGE_WRITE_H__</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#define PNTR_STB_IMAGE_WRITE_H__</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* <a class="code" href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">pntr_stb_image_save_image_to_memory</a>(<a class="code" href="structpntr__image.html">pntr_image</a>* image, <a class="code" href="group__pntr.html#gac37559fc45753b46df5fd9a532f58b65">pntr_image_type</a> type, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>* dataSize);</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_STB_IMAGE_WRITE_H__</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#ifdef PNTR_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#ifndef PNTR_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#define PNTR_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160; </div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#ifndef PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">    #define STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">    #define STBIW_MALLOC PNTR_MALLOC</span></div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">    #define STBIW_REALLOC PNTR_REALLOC</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">    #define STBIW_FREE PNTR_FREE</span></div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">    #define STBIW_MEMMOVE PNTR_MEMMOVE</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">    #define STBI_WRITE_NO_STDIO</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">    #define STBIW_ASSERT(x)</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_NO_STB_IMAGE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#if defined(__GNUC__) || defined(__clang__)</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic push</span></div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wpragmas&quot;</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunknown-pragmas&quot;</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wsign-conversion&quot;</span></div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wconversion&quot;</span></div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunused-function&quot;</span></div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunused-variable&quot;</span></div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wsign-compare&quot;</span></div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunused-value&quot;</span></div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// defined(__GNUC__) || defined(__clang__)</span></div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#include &quot;../external/stb_image_write.h&quot;</span></div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160; </div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="preprocessor">#define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;<span class="preprocessor">#ifdef STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;<span class="preprocessor">    #undef STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="preprocessor">#if defined(__GNUC__) || defined(__clang__)</span></div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic pop</span></div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// defined(__GNUC__) || defined(__clang__)</span></div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
-<div class="line"><a name="l00062"></a><span class="lineno"><a class="line" href="structpntr__stb__image__context.html">   62</a></span>&#160;<span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a> {</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> dataSize;</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <span class="keywordtype">void</span>* data;</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;} <a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a>;</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* <a class="code" href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">pntr_stb_image_save_image_to_memory</a>(<a class="code" href="structpntr__image.html">pntr_image</a>* image, <a class="code" href="group__pntr.html#gac37559fc45753b46df5fd9a532f58b65">pntr_image_type</a> type, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>* dataSize);</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_STB_IMAGE_WRITE_H__</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#ifdef PNTR_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#ifndef PNTR_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#define PNTR_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160; </div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#ifndef PNTR_MEMMOVE</span></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">    #include &lt;string.h&gt;</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">    #define PNTR_MEMMOVE(destination, source, num) memmove((destination), (source), (num))</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_MEMMOVE</span></div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">#ifndef PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="preprocessor">    #define STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">    #define STBIW_MALLOC PNTR_MALLOC</span></div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">    #define STBIW_REALLOC PNTR_REALLOC</span></div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="preprocessor">    #define STBIW_FREE PNTR_FREE</span></div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">    #define STBIW_MEMMOVE PNTR_MEMMOVE</span></div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">    #define STBI_WRITE_NO_STDIO</span></div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="preprocessor">    #define STBIW_ASSERT(x)</span></div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_NO_STB_IMAGE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;<span class="preprocessor">#if defined(__GNUC__) || defined(__clang__)</span></div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic push</span></div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wpragmas&quot;</span></div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunknown-pragmas&quot;</span></div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wsign-conversion&quot;</span></div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wconversion&quot;</span></div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunused-function&quot;</span></div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunused-variable&quot;</span></div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wsign-compare&quot;</span></div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic ignored &quot;-Wunused-value&quot;</span></div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// defined(__GNUC__) || defined(__clang__)</span></div>
 <div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;<span class="keywordtype">void</span> pntr_stb_image_write_func(<span class="keywordtype">void</span> *context, <span class="keywordtype">void</span> *data, <span class="keywordtype">int</span> size) {</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    <a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a>* ctx = (<a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a>*)context;</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    ctx-&gt;dataSize = (<span class="keywordtype">unsigned</span> int)size;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    <span class="keywordflow">if</span> (size == 0) {</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;        ctx-&gt;data = NULL;</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    }</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        <span class="comment">// Copy the stb_image data, because stb_image will free() it afterwards.</span></div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;        ctx-&gt;data = <a class="code" href="group__pntr.html#gade3b5369a7afc54903ab105ebb6a6024">pntr_load_memory</a>((<span class="keywordtype">size_t</span>)size);</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <a class="code" href="group__pntr.html#gaa34c6aa3a6e85549e78f93430115a477">pntr_memory_copy</a>(ctx-&gt;data, data, (<span class="keywordtype">size_t</span>)size);</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    }</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;}</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160; </div>
-<div class="line"><a name="l00080"></a><span class="lineno"><a class="line" href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">   80</a></span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* <a class="code" href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">pntr_stb_image_save_image_to_memory</a>(<a class="code" href="structpntr__image.html">pntr_image</a>* image, <a class="code" href="group__pntr.html#gac37559fc45753b46df5fd9a532f58b65">pntr_image_type</a> type, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>* dataSize) {</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;    <span class="keyword">const</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* pixels = (<span class="keyword">const</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>*)<a class="code" href="group__pntr.html#gabbb29f8b39a693b3035223546c283483">pntr_image_to_pixelformat</a>(image, NULL, <a class="code" href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a>);</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    <span class="keywordflow">if</span> (pixels == NULL) {</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    }</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160; </div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;    <a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a> context;</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;    context.data = NULL;</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;    context.dataSize = 0;</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;    <span class="keywordflow">switch</span> (type) {</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434">PNTR_IMAGE_TYPE_UNKNOWN</a>:</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f">PNTR_IMAGE_TYPE_PNG</a>: {</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;            <span class="keywordtype">int</span> stride_bytes = <a class="code" href="group__pntr.html#ga5a09f7fd2950a2895f13e8bda7a02c75">pntr_get_pixel_data_size</a>(image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, 1, <a class="code" href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a>);</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;            stbi_write_png_to_func(pntr_stb_image_write_func, &amp;context, image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, image-&gt;<a class="code" href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">height</a>, 4, pixels, stride_bytes);</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;        }</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;        <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe">PNTR_IMAGE_TYPE_JPG</a>: {</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;            stbi_write_jpg_to_func(pntr_stb_image_write_func, &amp;context, image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, image-&gt;<a class="code" href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">height</a>, 4, pixels, 100);</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;        }</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;        <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1">PNTR_IMAGE_TYPE_BMP</a>: {</div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;            stbi_write_bmp_to_func(pntr_stb_image_write_func, &amp;context, image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, image-&gt;<a class="code" href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">height</a>, 4, pixels);</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;        }</div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;        <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;        <span class="keywordflow">default</span>:</div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;            <a class="code" href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error</a>(PNTR_ERROR_NOT_SUPPORTED);</div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;        <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;    }</div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160; </div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;    <a class="code" href="group__pntr.html#ga715a6e60f60532fc97b291436d7b2189">pntr_unload_memory</a>((<span class="keywordtype">void</span>*)pixels);</div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160; </div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;    <span class="keywordflow">if</span> (dataSize != NULL) {</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;        *dataSize = (<span class="keywordtype">unsigned</span> int)context.dataSize;</div>
-<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;    }</div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160; </div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;    <span class="keywordflow">return</span> (<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>*)context.data;</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;}</div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160; </div>
-<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;<span class="preprocessor">#ifndef PNTR_SAVE_IMAGE_TO_MEMORY</span></div>
-<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;<span class="preprocessor">#define PNTR_SAVE_IMAGE_TO_MEMORY pntr_stb_image_save_image_to_memory</span></div>
-<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160; </div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
-<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_IMPLEMENTATION</span></div>
-<div class="ttc" id="agroup__pntr__stb__image__write_html_gae995b03bf332c77e25a66d0147b99aac"><div class="ttname"><a href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">pntr_stb_image_save_image_to_memory</a></div><div class="ttdeci">unsigned char * pntr_stb_image_save_image_to_memory(pntr_image *image, pntr_image_type type, unsigned int *dataSize)</div><div class="ttdef"><b>Definition:</b> pntr_stb_image_write.h:80</div></div>
-<div class="ttc" id="agroup__pntr_html_ga5a09f7fd2950a2895f13e8bda7a02c75"><div class="ttname"><a href="group__pntr.html#ga5a09f7fd2950a2895f13e8bda7a02c75">pntr_get_pixel_data_size</a></div><div class="ttdeci">PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat)</div><div class="ttdef"><b>Definition:</b> pntr.h:3970</div></div>
-<div class="ttc" id="agroup__pntr_html_ga715a6e60f60532fc97b291436d7b2189"><div class="ttname"><a href="group__pntr.html#ga715a6e60f60532fc97b291436d7b2189">pntr_unload_memory</a></div><div class="ttdeci">PNTR_API void pntr_unload_memory(void *pointer)</div><div class="ttdef"><b>Definition:</b> pntr.h:4931</div></div>
-<div class="ttc" id="agroup__pntr_html_ga83292dfae88dff1485048a3afb202a0a"><div class="ttname"><a href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error</a></div><div class="ttdeci">PNTR_API void * pntr_set_error(pntr_error error)</div><div class="ttdef"><b>Definition:</b> pntr.h:1242</div></div>
-<div class="ttc" id="agroup__pntr_html_gaa34c6aa3a6e85549e78f93430115a477"><div class="ttname"><a href="group__pntr.html#gaa34c6aa3a6e85549e78f93430115a477">pntr_memory_copy</a></div><div class="ttdeci">PNTR_API void * pntr_memory_copy(void *destination, void *source, size_t size)</div><div class="ttdef"><b>Definition:</b> pntr.h:4948</div></div>
-<div class="ttc" id="agroup__pntr_html_gabbb29f8b39a693b3035223546c283483"><div class="ttname"><a href="group__pntr.html#gabbb29f8b39a693b3035223546c283483">pntr_image_to_pixelformat</a></div><div class="ttdeci">PNTR_API void * pntr_image_to_pixelformat(pntr_image *image, unsigned int *dataSize, pntr_pixelformat pixelFormat)</div><div class="ttdef"><b>Definition:</b> pntr.h:4003</div></div>
-<div class="ttc" id="agroup__pntr_html_gac37559fc45753b46df5fd9a532f58b65"><div class="ttname"><a href="group__pntr.html#gac37559fc45753b46df5fd9a532f58b65">pntr_image_type</a></div><div class="ttdeci">pntr_image_type</div><div class="ttdef"><b>Definition:</b> pntr.h:451</div></div>
-<div class="ttc" id="agroup__pntr_html_gade3b5369a7afc54903ab105ebb6a6024"><div class="ttname"><a href="group__pntr.html#gade3b5369a7afc54903ab105ebb6a6024">pntr_load_memory</a></div><div class="ttdeci">PNTR_API void * pntr_load_memory(size_t size)</div><div class="ttdef"><b>Definition:</b> pntr.h:4920</div></div>
-<div class="ttc" id="agroup__pntr_html_gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6"><div class="ttname"><a href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a></div><div class="ttdeci">@ PNTR_PIXELFORMAT_RGBA8888</div><div class="ttdef"><b>Definition:</b> pntr.h:406</div></div>
-<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe">PNTR_IMAGE_TYPE_JPG</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_JPG</div><div class="ttdef"><b>Definition:</b> pntr.h:463</div></div>
-<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1">PNTR_IMAGE_TYPE_BMP</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_BMP</div><div class="ttdef"><b>Definition:</b> pntr.h:467</div></div>
-<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f">PNTR_IMAGE_TYPE_PNG</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_PNG</div><div class="ttdef"><b>Definition:</b> pntr.h:459</div></div>
-<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434">PNTR_IMAGE_TYPE_UNKNOWN</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_UNKNOWN</div><div class="ttdef"><b>Definition:</b> pntr.h:455</div></div>
-<div class="ttc" id="astructpntr__image_html"><div class="ttname"><a href="structpntr__image.html">pntr_image</a></div><div class="ttdef"><b>Definition:</b> pntr.h:312</div></div>
-<div class="ttc" id="astructpntr__image_html_a31d40228d5d3cf2576ba9ebe73e6e6a6"><div class="ttname"><a href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">pntr_image::width</a></div><div class="ttdeci">int width</div><div class="ttdef"><b>Definition:</b> pntr.h:321</div></div>
-<div class="ttc" id="astructpntr__image_html_a804f5f942b813425c2792294a2efe2db"><div class="ttname"><a href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">pntr_image::height</a></div><div class="ttdeci">int height</div><div class="ttdef"><b>Definition:</b> pntr.h:326</div></div>
-<div class="ttc" id="astructpntr__stb__image__context_html"><div class="ttname"><a href="structpntr__stb__image__context.html">pntr_stb_image_context</a></div><div class="ttdef"><b>Definition:</b> pntr_stb_image_write.h:62</div></div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;<span class="preprocessor">#include &quot;../external/stb_image_write.h&quot;</span></div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="preprocessor">#define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="preprocessor">#ifdef STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="preprocessor">    #undef STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;<span class="preprocessor">#if defined(__GNUC__) || defined(__clang__)</span></div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;<span class="preprocessor">    #pragma GCC diagnostic pop</span></div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// defined(__GNUC__) || defined(__clang__)</span></div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
+<div class="line"><a name="l00078"></a><span class="lineno"><a class="line" href="structpntr__stb__image__context.html">   78</a></span>&#160;<span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a> {</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> dataSize;</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;    <span class="keywordtype">void</span>* data;</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;} <a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a>;</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160; </div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="keywordtype">void</span> pntr_stb_image_write_func(<span class="keywordtype">void</span> *context, <span class="keywordtype">void</span> *data, <span class="keywordtype">int</span> size) {</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    <a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a>* ctx = (<a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a>*)context;</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;    ctx-&gt;dataSize = (<span class="keywordtype">unsigned</span> int)size;</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;    <span class="keywordflow">if</span> (size == 0) {</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;        ctx-&gt;data = NULL;</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;    }</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;    <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;        <span class="comment">// Copy the stb_image data, because stb_image will free() it afterwards.</span></div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;        ctx-&gt;data = <a class="code" href="group__pntr.html#gade3b5369a7afc54903ab105ebb6a6024">pntr_load_memory</a>((<span class="keywordtype">size_t</span>)size);</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;        <a class="code" href="group__pntr.html#gaa34c6aa3a6e85549e78f93430115a477">pntr_memory_copy</a>(ctx-&gt;data, data, (<span class="keywordtype">size_t</span>)size);</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;    }</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;}</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160; </div>
+<div class="line"><a name="l00096"></a><span class="lineno"><a class="line" href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">   96</a></span>&#160;<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* <a class="code" href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">pntr_stb_image_save_image_to_memory</a>(<a class="code" href="structpntr__image.html">pntr_image</a>* image, <a class="code" href="group__pntr.html#gac37559fc45753b46df5fd9a532f58b65">pntr_image_type</a> type, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span>* dataSize) {</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;    <span class="keyword">const</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>* pixels = (<span class="keyword">const</span> <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>*)<a class="code" href="group__pntr.html#gabbb29f8b39a693b3035223546c283483">pntr_image_to_pixelformat</a>(image, NULL, <a class="code" href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a>);</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;    <span class="keywordflow">if</span> (pixels == NULL) {</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;    }</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;    <a class="code" href="structpntr__stb__image__context.html">pntr_stb_image_context</a> context;</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;    context.data = NULL;</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;    context.dataSize = 0;</div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160; </div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;    <span class="keywordflow">switch</span> (type) {</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434">PNTR_IMAGE_TYPE_UNKNOWN</a>:</div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f">PNTR_IMAGE_TYPE_PNG</a>: {</div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;            <span class="keywordtype">int</span> stride_bytes = <a class="code" href="group__pntr.html#ga5a09f7fd2950a2895f13e8bda7a02c75">pntr_get_pixel_data_size</a>(image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, 1, <a class="code" href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a>);</div>
+<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;            stbi_write_png_to_func(pntr_stb_image_write_func, &amp;context, image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, image-&gt;<a class="code" href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">height</a>, 4, pixels, stride_bytes);</div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;        }</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;        <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe">PNTR_IMAGE_TYPE_JPG</a>: {</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;            stbi_write_jpg_to_func(pntr_stb_image_write_func, &amp;context, image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, image-&gt;<a class="code" href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">height</a>, 4, pixels, 100);</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;        }</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;        <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;        <span class="keywordflow">case</span> <a class="code" href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1">PNTR_IMAGE_TYPE_BMP</a>: {</div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;            stbi_write_bmp_to_func(pntr_stb_image_write_func, &amp;context, image-&gt;<a class="code" href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">width</a>, image-&gt;<a class="code" href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">height</a>, 4, pixels);</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;        }</div>
+<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;        <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;        <span class="keywordflow">default</span>:</div>
+<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;            <a class="code" href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error</a>(<a class="code" href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a2084a8d1bbbaad8ce5a8e5d12548576c">PNTR_ERROR_NOT_SUPPORTED</a>);</div>
+<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;        <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;    }</div>
+<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160; </div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;    <a class="code" href="group__pntr.html#ga715a6e60f60532fc97b291436d7b2189">pntr_unload_memory</a>((<span class="keywordtype">void</span>*)pixels);</div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160; </div>
+<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;    <span class="keywordflow">if</span> (dataSize != NULL) {</div>
+<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;        *dataSize = (<span class="keywordtype">unsigned</span> int)context.dataSize;</div>
+<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;    }</div>
+<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160; </div>
+<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;    <span class="keywordflow">return</span> (<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>*)context.data;</div>
+<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;}</div>
+<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160; </div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;<span class="preprocessor">#ifndef PNTR_SAVE_IMAGE_TO_MEMORY</span></div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;<span class="preprocessor">#define PNTR_SAVE_IMAGE_TO_MEMORY pntr_stb_image_save_image_to_memory</span></div>
+<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160; </div>
+<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_STB_IMAGE_WRITE_IMPLEMENTATION</span></div>
+<div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160;<span class="preprocessor">#endif  </span><span class="comment">// PNTR_IMPLEMENTATION</span></div>
+<div class="ttc" id="agroup__pntr__stb__image__write_html_gae995b03bf332c77e25a66d0147b99aac"><div class="ttname"><a href="group__pntr__stb__image__write.html#gae995b03bf332c77e25a66d0147b99aac">pntr_stb_image_save_image_to_memory</a></div><div class="ttdeci">unsigned char * pntr_stb_image_save_image_to_memory(pntr_image *image, pntr_image_type type, unsigned int *dataSize)</div><div class="ttdef"><b>Definition:</b> pntr_stb_image_write.h:96</div></div>
+<div class="ttc" id="agroup__pntr_html_ga5a09f7fd2950a2895f13e8bda7a02c75"><div class="ttname"><a href="group__pntr.html#ga5a09f7fd2950a2895f13e8bda7a02c75">pntr_get_pixel_data_size</a></div><div class="ttdeci">PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat)</div><div class="ttdef"><b>Definition:</b> pntr.h:4322</div></div>
+<div class="ttc" id="agroup__pntr_html_ga715a6e60f60532fc97b291436d7b2189"><div class="ttname"><a href="group__pntr.html#ga715a6e60f60532fc97b291436d7b2189">pntr_unload_memory</a></div><div class="ttdeci">PNTR_API void pntr_unload_memory(void *pointer)</div><div class="ttdef"><b>Definition:</b> pntr.h:5302</div></div>
+<div class="ttc" id="agroup__pntr_html_ga83292dfae88dff1485048a3afb202a0a"><div class="ttname"><a href="group__pntr.html#ga83292dfae88dff1485048a3afb202a0a">pntr_set_error</a></div><div class="ttdeci">PNTR_API void * pntr_set_error(pntr_error error)</div><div class="ttdef"><b>Definition:</b> pntr.h:1494</div></div>
+<div class="ttc" id="agroup__pntr_html_gaa34c6aa3a6e85549e78f93430115a477"><div class="ttname"><a href="group__pntr.html#gaa34c6aa3a6e85549e78f93430115a477">pntr_memory_copy</a></div><div class="ttdeci">PNTR_API void * pntr_memory_copy(void *destination, void *source, size_t size)</div><div class="ttdef"><b>Definition:</b> pntr.h:5319</div></div>
+<div class="ttc" id="agroup__pntr_html_gabbb29f8b39a693b3035223546c283483"><div class="ttname"><a href="group__pntr.html#gabbb29f8b39a693b3035223546c283483">pntr_image_to_pixelformat</a></div><div class="ttdeci">PNTR_API void * pntr_image_to_pixelformat(pntr_image *image, unsigned int *dataSize, pntr_pixelformat pixelFormat)</div><div class="ttdef"><b>Definition:</b> pntr.h:4355</div></div>
+<div class="ttc" id="agroup__pntr_html_gac37559fc45753b46df5fd9a532f58b65"><div class="ttname"><a href="group__pntr.html#gac37559fc45753b46df5fd9a532f58b65">pntr_image_type</a></div><div class="ttdeci">pntr_image_type</div><div class="ttdef"><b>Definition:</b> pntr.h:579</div></div>
+<div class="ttc" id="agroup__pntr_html_gade3b5369a7afc54903ab105ebb6a6024"><div class="ttname"><a href="group__pntr.html#gade3b5369a7afc54903ab105ebb6a6024">pntr_load_memory</a></div><div class="ttdeci">PNTR_API void * pntr_load_memory(size_t size)</div><div class="ttdef"><b>Definition:</b> pntr.h:5291</div></div>
+<div class="ttc" id="agroup__pntr_html_gga38025a8a46ee459bc4faf644462b1e33a2084a8d1bbbaad8ce5a8e5d12548576c"><div class="ttname"><a href="group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a2084a8d1bbbaad8ce5a8e5d12548576c">PNTR_ERROR_NOT_SUPPORTED</a></div><div class="ttdeci">@ PNTR_ERROR_NOT_SUPPORTED</div><div class="ttdef"><b>Definition:</b> pntr.h:558</div></div>
+<div class="ttc" id="agroup__pntr_html_gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6"><div class="ttname"><a href="group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6">PNTR_PIXELFORMAT_RGBA8888</a></div><div class="ttdeci">@ PNTR_PIXELFORMAT_RGBA8888</div><div class="ttdef"><b>Definition:</b> pntr.h:501</div></div>
+<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe">PNTR_IMAGE_TYPE_JPG</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_JPG</div><div class="ttdef"><b>Definition:</b> pntr.h:591</div></div>
+<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1">PNTR_IMAGE_TYPE_BMP</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_BMP</div><div class="ttdef"><b>Definition:</b> pntr.h:595</div></div>
+<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f">PNTR_IMAGE_TYPE_PNG</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_PNG</div><div class="ttdef"><b>Definition:</b> pntr.h:587</div></div>
+<div class="ttc" id="agroup__pntr_html_ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434"><div class="ttname"><a href="group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434">PNTR_IMAGE_TYPE_UNKNOWN</a></div><div class="ttdeci">@ PNTR_IMAGE_TYPE_UNKNOWN</div><div class="ttdef"><b>Definition:</b> pntr.h:583</div></div>
+<div class="ttc" id="astructpntr__image_html"><div class="ttname"><a href="structpntr__image.html">pntr_image</a></div><div class="ttdef"><b>Definition:</b> pntr.h:404</div></div>
+<div class="ttc" id="astructpntr__image_html_a31d40228d5d3cf2576ba9ebe73e6e6a6"><div class="ttname"><a href="structpntr__image.html#a31d40228d5d3cf2576ba9ebe73e6e6a6">pntr_image::width</a></div><div class="ttdeci">int width</div><div class="ttdef"><b>Definition:</b> pntr.h:413</div></div>
+<div class="ttc" id="astructpntr__image_html_a804f5f942b813425c2792294a2efe2db"><div class="ttname"><a href="structpntr__image.html#a804f5f942b813425c2792294a2efe2db">pntr_image::height</a></div><div class="ttdeci">int height</div><div class="ttdef"><b>Definition:</b> pntr.h:418</div></div>
+<div class="ttc" id="astructpntr__stb__image__context_html"><div class="ttname"><a href="structpntr__stb__image__context.html">pntr_stb_image_context</a></div><div class="ttdef"><b>Definition:</b> pntr_stb_image_write.h:78</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

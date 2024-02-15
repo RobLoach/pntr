@@ -1,12 +1,19 @@
 var searchData=
 [
-  ['pntr_5ffilter_5fbilinear_346',['PNTR_FILTER_BILINEAR',['../group__pntr.html#ggaf58beab1cfc33f2ae1db071c2bb1bfd2a728731b6097ee4048ad95b1a03af13ae',1,'pntr.h']]],
-  ['pntr_5ffilter_5fnearestneighbor_347',['PNTR_FILTER_NEARESTNEIGHBOR',['../group__pntr.html#ggaf58beab1cfc33f2ae1db071c2bb1bfd2a44c79145eac28d7e0cb3b8ab2a959bec',1,'pntr.h']]],
-  ['pntr_5fimage_5ftype_5fbmp_348',['PNTR_IMAGE_TYPE_BMP',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1',1,'pntr.h']]],
-  ['pntr_5fimage_5ftype_5fjpg_349',['PNTR_IMAGE_TYPE_JPG',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe',1,'pntr.h']]],
-  ['pntr_5fimage_5ftype_5fpng_350',['PNTR_IMAGE_TYPE_PNG',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f',1,'pntr.h']]],
-  ['pntr_5fimage_5ftype_5funknown_351',['PNTR_IMAGE_TYPE_UNKNOWN',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434',1,'pntr.h']]],
-  ['pntr_5fpixelformat_5fargb8888_352',['PNTR_PIXELFORMAT_ARGB8888',['../group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a5ce97813b477d5de353eae3668d366e3',1,'pntr.h']]],
-  ['pntr_5fpixelformat_5fgrayscale_353',['PNTR_PIXELFORMAT_GRAYSCALE',['../group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5ad4148ae6bb1d30008716625cf006e5c5',1,'pntr.h']]],
-  ['pntr_5fpixelformat_5frgba8888_354',['PNTR_PIXELFORMAT_RGBA8888',['../group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6',1,'pntr.h']]]
+  ['pntr_5ferror_5ffailed_5fto_5fopen_374',['PNTR_ERROR_FAILED_TO_OPEN',['../group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33afba40a72e603d4ded6aeac1f87846bad',1,'pntr.h']]],
+  ['pntr_5ferror_5ffailed_5fto_5fwrite_375',['PNTR_ERROR_FAILED_TO_WRITE',['../group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a48ca697573d1bc64c41e6381d5996044',1,'pntr.h']]],
+  ['pntr_5ferror_5finvalid_5fargs_376',['PNTR_ERROR_INVALID_ARGS',['../group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a21cda22849200ab0e3bead84aa36d578',1,'pntr.h']]],
+  ['pntr_5ferror_5fno_5fmemory_377',['PNTR_ERROR_NO_MEMORY',['../group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a9712c879cc45b02ccb0a97bddf68aa3e',1,'pntr.h']]],
+  ['pntr_5ferror_5fnone_378',['PNTR_ERROR_NONE',['../group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a8317c1a465905ee8081669852152e98d',1,'pntr.h']]],
+  ['pntr_5ferror_5fnot_5fsupported_379',['PNTR_ERROR_NOT_SUPPORTED',['../group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a2084a8d1bbbaad8ce5a8e5d12548576c',1,'pntr.h']]],
+  ['pntr_5ferror_5funknown_380',['PNTR_ERROR_UNKNOWN',['../group__pntr.html#gga38025a8a46ee459bc4faf644462b1e33a5038011bd7dede8275ab8c3d504bbc0b',1,'pntr.h']]],
+  ['pntr_5ffilter_5fbilinear_381',['PNTR_FILTER_BILINEAR',['../group__pntr.html#ggaf58beab1cfc33f2ae1db071c2bb1bfd2a728731b6097ee4048ad95b1a03af13ae',1,'pntr.h']]],
+  ['pntr_5ffilter_5fnearestneighbor_382',['PNTR_FILTER_NEARESTNEIGHBOR',['../group__pntr.html#ggaf58beab1cfc33f2ae1db071c2bb1bfd2a44c79145eac28d7e0cb3b8ab2a959bec',1,'pntr.h']]],
+  ['pntr_5fimage_5ftype_5fbmp_383',['PNTR_IMAGE_TYPE_BMP',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad2784eb170a39ada404caec29de7c2d1',1,'pntr.h']]],
+  ['pntr_5fimage_5ftype_5fjpg_384',['PNTR_IMAGE_TYPE_JPG',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65a4b596e12cc127ef27e6ef6a8ee2f01fe',1,'pntr.h']]],
+  ['pntr_5fimage_5ftype_5fpng_385',['PNTR_IMAGE_TYPE_PNG',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65ad599c0a701343b7d1bb21ad2f48c0b0f',1,'pntr.h']]],
+  ['pntr_5fimage_5ftype_5funknown_386',['PNTR_IMAGE_TYPE_UNKNOWN',['../group__pntr.html#ggac37559fc45753b46df5fd9a532f58b65af458a9eaef381cba691e504a413b2434',1,'pntr.h']]],
+  ['pntr_5fpixelformat_5fargb8888_387',['PNTR_PIXELFORMAT_ARGB8888',['../group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a5ce97813b477d5de353eae3668d366e3',1,'pntr.h']]],
+  ['pntr_5fpixelformat_5fgrayscale_388',['PNTR_PIXELFORMAT_GRAYSCALE',['../group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5ad4148ae6bb1d30008716625cf006e5c5',1,'pntr.h']]],
+  ['pntr_5fpixelformat_5frgba8888_389',['PNTR_PIXELFORMAT_RGBA8888',['../group__pntr.html#gga4c687cad9dbe014530479ed1bc95ebd5a8ea5c9a9a897e7488ac1ad54ee6266c6',1,'pntr.h']]]
 ];

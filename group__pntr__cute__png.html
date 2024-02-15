@@ -103,11 +103,21 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p><a href="https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h">cute_png</a> integration with pntr for loading and saving images. </p>
-<dl class="section see"><dt>See also</dt><dd><a href="https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h">https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h</a> </dd>
+<p>To use <code>cute_png.h</code> for saving and loading images, define <code>PNTR_CUTE_PNG</code> prior to including <code><a class="el" href="pntr_8h_source.html">pntr.h</a></code>:</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#define PNTR_CUTE_PNG</span></div>
+<div class="line"><span class="preprocessor">#define PNTR_IMPLEMENTATION</span></div>
+<div class="line"><span class="preprocessor">#include &quot;pntr.h&quot;</span></div>
+</div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><a href="https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h">https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h</a> </dd>
 <dd>
 <a class="el" href="group__config.html#gacb385a61b076b08e03240b04bb86a13d">PNTR_CUTE_PNG</a> </dd>
 <dd>
-<a class="el" href="group__config.html#gaec6fe0f10b824ba8341c122f6261d72e">PNTR_LOAD_IMAGE_FROM_MEMORY</a> </dd></dl>
+<a class="el" href="group__config.html#gaec6fe0f10b824ba8341c122f6261d72e">PNTR_LOAD_IMAGE_FROM_MEMORY</a> </dd>
+<dd>
+<a class="el" href="group__config.html#ga5a424ebb439dfbd61eaca5c8b3fd5824">PNTR_SAVE_IMAGE_TO_MEMORY</a> </dd>
+<dd>
+<a class="el" href="group__config.html#ga49866101c9fc9d8625244c5416db4d6d">PNTR_NO_LOAD_IMAGE</a> </dd>
+<dd>
+<a class="el" href="group__config.html#ga4b77833d6f30e702f3094560113f64e7">PNTR_NO_SAVE_IMAGE</a> </dd></dl>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ga32724bb09e003c135b3557f80912fcf9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ga32724bb09e003c135b3557f80912fcf9">&#9670;&nbsp;</a></span>pntr_cute_png_load_image_from_memory()</h2>

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['resource_20licenses_363',['Resource Licenses',['../md_examples_resources_LICENSE.html',1,'']]]
+  ['zlib_20license_402',['Zlib License',['../md_LICENSE.html',1,'']]]
 ];
