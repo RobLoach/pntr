@@ -3979,29 +3979,32 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
     #ifndef PNTR_ENABLE_TTF
         return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
-        // Which character to start rendering into the atlas.
+        // Which ASCII character to start rendering into the atlas
         #define PNTR_FONT_TTF_GLYPH_START 32
-        // Find out how many glyhs we should prepare.
+
+        // Find out how many glyhs we should prepare
         #ifndef PNTR_FONT_TTF_GLYPH_NUM
             #ifdef PNTR_ENABLE_UTF8
-                // Up to the Cyrillic Supplement, minus the first 32 ascii characters.
+                // Up to the Cyrillic Supplement, minus the first 32 ascii characters
                 // https://www.w3schools.com/charsets/ref_html_utf8.asp
                 #define PNTR_FONT_TTF_GLYPH_NUM 1295
             #else
+                // ASCII characater set
                 #define PNTR_FONT_TTF_GLYPH_NUM 95
             #endif
         #endif
 
         // Create the bitmap data with ample space based on the font size
-        // TODO: pntr_load_font_ttf_from_memory: Is the initial bitmap large enough for the first round?
-        int width = 512;
-        int height = fontSize * PNTR_FONT_TTF_GLYPH_NUM / 10;
+        int columns = 32;
+        int rows = PNTR_FONT_TTF_GLYPH_NUM / columns;
+        int width = fontSize * columns;
+        int height = fontSize * rows;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
         if (bitmap == NULL) {
             return pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
-        // Back the font into the bitmap.
+        // Bake the font into the bitmap
         stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
         int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, PNTR_FONT_TTF_GLYPH_START, PNTR_FONT_TTF_GLYPH_NUM, characterData);
 
@@ -4022,7 +4025,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
-        // Create the font
+        // Create the font data
         size_t charactersSize = sizeof(pntr_codepoint_t) * (size_t)PNTR_FONT_TTF_GLYPH_NUM;
         pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, charactersSize, atlas);
         if (font == NULL) {
@@ -4034,8 +4037,10 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         #ifdef PNTR_ENABLE_UTF8
         char* destination = font->characters; // Where to write the new character.
         #endif
+
+        // Build each character
         for (int i = 0; i < PNTR_FONT_TTF_GLYPH_NUM; i++) {
-            // Calculate the source rectangles.
+            // Calculate the source rectangles
             font->srcRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = characterData[i].x0,
                 .y = characterData[i].y0,
@@ -4043,7 +4048,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
                 .height = characterData[i].y1 - characterData[i].y0
             };
 
-            // Find where the glyphs will be rendered.
+            // Find where the glyphs will be rendered
             font->glyphRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
                 .y = (int)(characterData[i].yoff + ((float)fontSize / 1.5f)), // TODO: Determine correct y glyph value
@@ -4051,20 +4056,19 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
                 .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
             };
 
-            // Set up the active character.
+            // Set up the active character
             #ifndef PNTR_ENABLE_UTF8
                 font->characters[i] = (char)(PNTR_FONT_TTF_GLYPH_START + i);
             #else
-                // Append the character to the destination, considering the remaining memory.
-                // TODO: UTF-8 Is the remaining memory correct?
-                destination = utf8catcodepoint(destination, (pntr_codepoint_t)(PNTR_FONT_TTF_GLYPH_START + i), charactersSize - (size_t)destination - (size_t)font->characters);
+                // Append the character to the destination, considering the remaining memory
+                destination = utf8catcodepoint(destination, (pntr_codepoint_t)(PNTR_FONT_TTF_GLYPH_START + i), charactersSize - (size_t)(destination - font->characters));
             #endif
         }
 
         #ifdef PNTR_ENABLE_UTF8
         {
-            // Clear out the unused memory in the character list.
-            char* newCharacters = pntr_load_memory(utf8size(font->characters));
+            // Clear out the unused memory in the character list by building a new UTF-8 string
+            char* newCharacters = pntr_load_memory(PNTR_STRSIZE(font->characters));
             utf8cpy(newCharacters, font->characters);
             PNTR_FREE(font->characters);
             font->characters = newCharacters;
@@ -4245,6 +4249,13 @@ PNTR_API const char* pntr_load_file_text(const char *fileName) {
     return (const char*)output;
 }
 
+/**
+ * Unload the file text data from memory.
+ *
+ * @param text The text to unload.
+ *
+ * @see pntr_load_file_text()
+ */
 PNTR_API inline void pntr_unload_file_text(const char* text) {
     pntr_unload_memory((void*)text);
 }
@@ -4889,6 +4900,7 @@ float _pntr_normalize_degrees(float degrees) {
     if (degrees < 0) {
         return 360.0f - PNTR_FMODF(-degrees, 360.0f);
     }
+
     return PNTR_FMODF(degrees, 360.0f);
 }
 
