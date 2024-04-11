@@ -35,6 +35,7 @@ pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const un
     #define STBI_NO_FAILURE_STRINGS
     #define STBI_NO_STDIO
     #define STBI_NO_SIMD
+    #define STBI_NO_THREAD_LOCALS
     #ifndef PNTR_ENABLE_JPEG
         #define STBI_NO_JPEG // JPG support in stb_image.
     #endif
