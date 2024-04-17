@@ -143,6 +143,10 @@
 } while(0)
 #endif  // PNTR_ASSERT_VECTOR_EQUALS
 
+#ifndef pntr_assert
+    #define pntr_assert(condition) PNTR_ASSERT(condition)
+#endif  // pntr_assert
+
 /**
  * @}
  */

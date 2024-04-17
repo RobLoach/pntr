@@ -1116,6 +1116,10 @@ extern "C" {
             #define STBTT_cos(x) PNTR_COSF((float)(x))
         #endif
 
+        #ifndef STBTT_fabs
+            #define STBTT_fabs(x) PNTR_FABSF(x)
+        #endif
+
         #ifndef PNTR_ENABLE_MATH
             #ifndef STBTT_sqrt
                 float _pntr_sqrtf(float number) {
@@ -1166,7 +1170,7 @@ extern "C" {
                 }
                 #define STBTT_acos(x) _pntr_acos((x))
             #endif
-        #else
+        #else  // PNTR_ENABLE_MATH
             #ifndef STBTT_sqrt
                 #define STBTT_sqrt(x) sqrt(x)
             #endif
@@ -1176,7 +1180,7 @@ extern "C" {
             #ifndef STBTT_acos
                 #define STBTT_acos(x) acos(x)
             #endif
-        #endif
+        #endif  // PNTR_ENABLE_MATH
 
         #ifndef STBTT_malloc
             #define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))

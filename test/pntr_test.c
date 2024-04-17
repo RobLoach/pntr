@@ -668,15 +668,6 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
-    IT("No reported errors", {
-        const char* err = "";
-        if (pntr_get_error() != NULL) {
-            err = pntr_get_error();
-        }
-
-        STREQUALS(err, "");
-    });
-
     IT("_pntr_rectangle_intersect", {
         pntr_rectangle out;
         EQUALS(_pntr_rectangle_intersect(-10, -10, 5, 5, 0, 0, 100, 100, &out), false);
@@ -694,6 +685,15 @@ MODULE(pntr, {
         EQUALS(_pntr_rectangle_intersect(10, 10, 50, 50, 20, 20, 10, 10, &out), true);
         pntr_rectangle expected = (pntr_rectangle) {20, 20, 10, 10};
         RECTEQUALS(out, expected);
+    });
+
+    IT("No reported errors", {
+        const char* err = "";
+        if (pntr_get_error() != NULL) {
+            err = pntr_get_error();
+        }
+
+        STREQUALS(err, "");
     });
 })
 
