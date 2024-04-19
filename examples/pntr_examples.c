@@ -39,6 +39,7 @@
 #define PNTR_ENABLE_VARGS
 // Math: Link the m library to use math.h
 //#define PNTR_ENABLE_MATH
+#define PNTR_ENABLE_UTF8
 #define PNTR_IMPLEMENTATION
 #include "../pntr.h"
 
