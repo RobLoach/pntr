@@ -1003,6 +1003,7 @@ extern "C" {
 
 #if defined(PNTR_ENABLE_UTF8) && !defined(_DOXYGEN_)
     #include "external/utf8.h"
+    #define PNTR_STRCPY utf8cpy
     #define PNTR_STRSTR utf8str
     #define PNTR_STRCHR utf8chr
     #define PNTR_STRLEN utf8len
@@ -1018,6 +1019,23 @@ extern "C" {
      * @see PNTR_ENABLE_UTF8
      */
     typedef char pntr_codepoint_t;
+#endif
+
+#ifndef PNTR_STRCPY
+    #include <string.h>
+    /**
+     * Copies a source string, including its null-terminator, to the destination buffer.
+     *
+     * By default, will use `string.h`'s `strcpy`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8cpy`.
+     *
+     * @param dest (char*) pointer to the destination array where the content is to be copied
+     * @param src (const char*) C string to be copied
+     *
+     * @return A pointer to the destination string dest.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRCPY strcpy
 #endif
 
 #ifndef PNTR_STRSTR
@@ -3687,34 +3705,53 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
         return;
     }
 
-    // Copy the string, along with its null terminator
-    size_t length = PNTR_STRLEN(text);
-    char* newText = pntr_load_memory(length);
-    pntr_memory_copy((void*)newText, (void*)text, length);
+    // Because we'll be manipulating the text, make a copy the string.
+    size_t byteSize = PNTR_STRSIZE(text);
+    char* newText = pntr_load_memory(byteSize);
+    PNTR_STRCPY(newText, text);
 
-    // Go through and figure out where new lines should be placed in the string.
-    int currentLineLength = 0;
-    int i = 0;
-    int lastSpace = 0;
+    pntr_codepoint_t codepoint;
+    char* currentChar = newText;
+    char* lineStart = newText;
+    int lineLength = 1;
+    char* lastSpace = NULL;
 
-    while (text[i] != '\0') {
-        if (text[i] == ' ' || text[i] == '\n') {
-            // Measure the width of the line from the previous word.
-            if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x >= maxWidth) {
-                // Have the space before the line end become a new line.
-                newText[lastSpace] = '\n';
-                currentLineLength = i - lastSpace - 1; // -1 to remove the active space from the line count.
+    // Iterate through each character.
+    for (char* nextChar = PNTR_STRCODEPOINT(newText, &codepoint); codepoint; nextChar = PNTR_STRCODEPOINT(nextChar, &codepoint)) {
+        if (codepoint == ' ' || codepoint == '\n' || codepoint == '\0') {
+            int lineWidth = pntr_measure_text_ex(font, lineStart, lineLength).x;
+            if (lineWidth > maxWidth) {
+                if (lastSpace != NULL) {
+                    *lastSpace = '\n';
+                    lineStart = lastSpace + 1;
+
+                    #ifdef PNTR_ENABLE_UTF8
+                        lineLength = (int)utf8nlen(lineStart, (size_t)(currentChar - lineStart));
+                    #else
+                        lineLength = (int)(currentChar - lineStart);
+                    #endif
+                }
+                else {
+                    // No current space, so break the word up.
+                    *currentChar = '\n';
+                    lineStart = nextChar;
+                    lineLength = 0;
+                }
             }
-            lastSpace = i;
+            else {
+                lastSpace = currentChar;
+            }
         }
 
-        currentLineLength++;
-        i++;
+        currentChar = nextChar;
+        lineLength++;
     }
 
     // Perform one more check on the last line.
-    if (pntr_measure_text_ex(font, text + i - currentLineLength, currentLineLength).x >= maxWidth) {
-        newText[lastSpace] = '\n';
+    if (pntr_measure_text(font, lineStart) > maxWidth) {
+        if (lastSpace != NULL) {
+            *lastSpace = '\n';
+        }
     }
 
     // Display the new text with the newlines, and clean up the memory usage.
@@ -3786,7 +3823,6 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
     int index = 0;
 
     pntr_codepoint_t codepoint;
-
     for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
         // Stop drawing if we're only counting a certain amount of characters.
         if (textLength > 0 && index++ >= textLength) {

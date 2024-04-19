@@ -719,7 +719,7 @@ MODULE(pntr, {
             // Nothing
         });
     }
-  
+
     IT("No reported errors", {
         const char* err = "";
         if (pntr_get_error() != NULL) {
