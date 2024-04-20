@@ -3432,7 +3432,6 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     int currentCharacter = 0;
     for (int i = 1; i < image->width; i++) {
         if (pntr_image_get_color(image, i, 0).value == seperator.value) {
-            font->characters[currentCharacter] = characters[currentCharacter];
             font->srcRects[currentCharacter] = currentRectangle;
             font->glyphRects[currentCharacter] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = 0,
@@ -3450,9 +3449,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
-    #ifdef PNTR_ENABLE_UTF8
-        utf8cpy(font->characters, characters);
-    #endif
+    PNTR_STRCPY(font->characters, characters);
 
     return font;
 }
@@ -3516,7 +3513,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
     }
 
     // Set up the font data.
-    for (int currentCharIndex = 0; currentCharIndex < font->charactersLen; currentCharIndex++) {
+    for (int currentCharIndex = 0; currentCharIndex < numCharacters; currentCharIndex++) {
         // Source rectangle.
         font->srcRects[currentCharIndex] = PNTR_CLITERAL(pntr_rectangle) {
             .x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth,
@@ -3532,14 +3529,9 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
             .width = glyphWidth,
             .height = glyphHeight,
         };
-
-        // Set the character.
-        font->characters[currentCharIndex] = characters[currentCharIndex];
     }
 
-    #ifdef PNTR_ENABLE_UTF8
-        utf8cpy(font->characters, characters);
-    #endif
+    PNTR_STRCPY(font->characters, characters);
 
     return font;
 }
@@ -4108,6 +4100,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         #ifdef PNTR_ENABLE_UTF8
         {
             // Clear out the unused memory in the character list by building a new UTF-8 string
+            destination[0] = '\0';
             char* newCharacters = pntr_load_memory(PNTR_STRSIZE(font->characters));
             utf8cpy(newCharacters, font->characters);
             PNTR_FREE(font->characters);
