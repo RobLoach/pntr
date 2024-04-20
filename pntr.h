@@ -919,6 +919,26 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #ifndef PNTR_IMPLEMENTATION_ONCE
 #define PNTR_IMPLEMENTATION_ONCE
 
+#if defined(PNTR_ENABLE_UTF8) && !defined(_DOXYGEN_)
+    #include "external/utf8.h"
+    #define PNTR_STRCPY utf8cpy
+    #define PNTR_STRSTR utf8str
+    #define PNTR_STRCHR utf8chr
+    #define PNTR_STRLEN utf8len
+    #define PNTR_STRSIZE utf8size
+    #define PNTR_STRCODEPOINT utf8codepoint
+    typedef utf8_int32_t pntr_codepoint_t;
+#else
+    /**
+     * A type representing a single character or UTF-8 codepoint.
+     *
+     * With UTF-8, a single character can be up to 4 bytes, so having this type define that helps determine its size quickly.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    typedef char pntr_codepoint_t;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1000,26 +1020,6 @@ extern "C" {
  * @defgroup strings String Manipulation
  * @{
  */
-
-#if defined(PNTR_ENABLE_UTF8) && !defined(_DOXYGEN_)
-    #include "external/utf8.h"
-    #define PNTR_STRCPY utf8cpy
-    #define PNTR_STRSTR utf8str
-    #define PNTR_STRCHR utf8chr
-    #define PNTR_STRLEN utf8len
-    #define PNTR_STRSIZE utf8size
-    #define PNTR_STRCODEPOINT utf8codepoint
-    typedef utf8_int32_t pntr_codepoint_t;
-#else
-    /**
-     * A type representing a single character or UTF-8 codepoint.
-     *
-     * With UTF-8, a single character can be up to 4 bytes, so having this type define that helps determine its size quickly.
-     *
-     * @see PNTR_ENABLE_UTF8
-     */
-    typedef char pntr_codepoint_t;
-#endif
 
 #ifndef PNTR_STRCPY
     #include <string.h>
@@ -3450,7 +3450,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
-    PNTR_STRCPY(font->characters, characters);
+    PNTR_MEMCPY(font->characters, characters, PNTR_STRSIZE(characters));
 
     return font;
 }
@@ -3701,7 +3701,8 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     // Because we'll be manipulating the text, make a copy the string.
     size_t byteSize = PNTR_STRSIZE(text);
     char* newText = pntr_load_memory(byteSize);
-    PNTR_STRCPY(newText, text);
+    //PNTR_STRCPY(newText, text);
+    PNTR_MEMCPY(newText, text, byteSize);
 
     pntr_codepoint_t codepoint;
     char* currentChar = newText;
@@ -4100,14 +4101,8 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         }
 
         #ifdef PNTR_ENABLE_UTF8
-        {
-            // Clear out the unused memory in the character list by building a new UTF-8 string
-            destination[0] = '\0';
-            char* newCharacters = pntr_load_memory(PNTR_STRSIZE(font->characters));
-            utf8cpy(newCharacters, font->characters);
-            PNTR_FREE(font->characters);
-            font->characters = newCharacters;
-        }
+        // TODO: Clear out the unused memory in the character list by building a new UTF-8 string
+        destination[0] = '\0';
         #endif
 
         return font;
