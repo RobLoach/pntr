@@ -3371,6 +3371,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, 
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
+    // Create the new font
     pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
     if (font == NULL) {
         return pntr_set_error(PNTR_ERROR_NO_MEMORY);
@@ -3392,7 +3393,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, 
     }
 
     // Characters
-    font->characters = PNTR_MALLOC(characterByteSize);
+    font->characters = PNTR_MALLOC(sizeof(char) * characterByteSize);
     if (font->characters == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font->glyphRects);
@@ -3531,7 +3532,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
         };
     }
 
-    PNTR_STRCPY(font->characters, characters);
+    PNTR_MEMCPY(font->characters, characters, PNTR_STRSIZE(characters));
 
     return font;
 }
@@ -3911,7 +3912,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         #define PNTR_DEFAULT_FONT_NAME font8x8_basic
         #define PNTR_DEFAULT_FONT_GLYPH_WIDTH 8
         #define PNTR_DEFAULT_FONT_GLYPH_HEIGHT 8
-        #define PNTR_DEFAULT_FONT_CHARACTERS_LEN 97
+        #define PNTR_DEFAULT_FONT_CHARACTERS_LEN 95
 
         // Build the atlas.
         pntr_image* atlas = pntr_gen_image_color(
@@ -3935,10 +3936,11 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         }
 
         // Build the character set.
-        char characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN];
+        char characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN + 1];
         for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
             characters[i] = (char)(i + 32); // ASCII
         }
+        characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN] = '\0';
 
         // Use TTY to build the remaining font parameters.
         pntr_font* font = pntr_load_font_tty_from_image(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH, PNTR_DEFAULT_FONT_GLYPH_HEIGHT, characters);
