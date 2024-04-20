@@ -537,40 +537,13 @@ typedef enum pntr_filter {
  * @see pntr_get_error()
  */
 typedef enum pntr_error {
-    /**
-     * No error
-     */
-    PNTR_ERROR_NONE = 0,
-
-    /**
-     * Invalid arguments
-     */
-    PNTR_ERROR_INVALID_ARGS = -1,
-
-    /**
-     * Not enough memory
-     */
-    PNTR_ERROR_NO_MEMORY = -2,
-
-    /**
-     * Not supported
-     */
-    PNTR_ERROR_NOT_SUPPORTED = -3,
-
-    /**
-     * Failed to open
-     */
-    PNTR_ERROR_FAILED_TO_OPEN = -4,
-
-    /**
-     * Failed to write
-     */
-    PNTR_ERROR_FAILED_TO_WRITE = -5,
-
-    /**
-     * Unknown error occurred
-     */
-    PNTR_ERROR_UNKNOWN = -6
+    PNTR_ERROR_NONE = 0, /** No error */
+    PNTR_ERROR_INVALID_ARGS = -1, /** Invalid arguments */
+    PNTR_ERROR_NO_MEMORY = -2, /** Not enough memory */
+    PNTR_ERROR_NOT_SUPPORTED = -3, /** Not supported */
+    PNTR_ERROR_FAILED_TO_OPEN = -4, /** Failed to open */
+    PNTR_ERROR_FAILED_TO_WRITE = -5, /** Failed to write */
+    PNTR_ERROR_UNKNOWN = -6 /** Unknown error occurred */
 } pntr_error;
 
 /**
@@ -921,7 +894,6 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 
 #if defined(PNTR_ENABLE_UTF8) && !defined(_DOXYGEN_)
     #include "external/utf8.h"
-    #define PNTR_STRCPY utf8cpy
     #define PNTR_STRSTR utf8str
     #define PNTR_STRCHR utf8chr
     #define PNTR_STRLEN utf8len
@@ -1001,7 +973,7 @@ extern "C" {
      *
      * @see https://en.cppreference.com/w/c/string/byte/memcpy
      */
-    #define PNTR_MEMCPY(dest, src, n) memcpy(dest, src, n)
+    #define PNTR_MEMCPY(dest, src, n) memcpy((dest), (src), (n))
 #endif  // PNTR_MEMCPY
 
 #ifndef PNTR_MEMSET
@@ -1020,23 +992,6 @@ extern "C" {
  * @defgroup strings String Manipulation
  * @{
  */
-
-#ifndef PNTR_STRCPY
-    #include <string.h>
-    /**
-     * Copies a source string, including its null-terminator, to the destination buffer.
-     *
-     * By default, will use `string.h`'s `strcpy`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8cpy`.
-     *
-     * @param dest (char*) pointer to the destination array where the content is to be copied
-     * @param src (const char*) C string to be copied
-     *
-     * @return A pointer to the destination string dest.
-     *
-     * @see PNTR_ENABLE_UTF8
-     */
-    #define PNTR_STRCPY strcpy
-#endif
 
 #ifndef PNTR_STRSTR
     #include <string.h>
@@ -1095,17 +1050,21 @@ extern "C" {
     /**
      * Sets out_codepoint to the current utf8 codepoint in str, and returns the address of the next utf8 codepoint after the current one in str.
      *
+     * @param str The string to get the codepoint from
+     * @param out_codepoint The codepoint to set
+     *
+     * @return The address of the next codepoint.
+     *
      * @private
      * @internal
      */
-    const char* pntr_strcodepoint(const char * str, char* out_codepoint) {
+    char* pntr_strcodepoint(const char * str, char* out_codepoint) {
         if (str == NULL) {
             *out_codepoint = 0;
         }
 
-        char character = str[0];
-        *out_codepoint = character;
-        return str + 1;
+        *out_codepoint = str[0];
+        return (char*)(str + 1);
     }
 
     /**
@@ -3413,6 +3372,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
+    size_t charactersSize = PNTR_STRSIZE(characters);
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
     pntr_rectangle currentRectangle = PNTR_CLITERAL(pntr_rectangle){1, 0, 0, image->height};
 
@@ -3424,7 +3384,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
-    pntr_font* font = _pntr_new_font(numCharacters, PNTR_STRSIZE(characters), image);
+    pntr_font* font = _pntr_new_font(numCharacters, charactersSize, image);
     if (font == NULL) {
         return NULL;
     }
@@ -3450,7 +3410,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
-    PNTR_MEMCPY(font->characters, characters, PNTR_STRSIZE(characters));
+    PNTR_MEMCPY(font->characters, characters, charactersSize);
 
     return font;
 }
@@ -3506,9 +3466,10 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
 
     // Find out how many characters there are.
     int numCharacters = (int)PNTR_STRLEN(characters);
+    size_t charactersSize = PNTR_STRSIZE(characters);
 
     // Create the font.
-    pntr_font* font = _pntr_new_font(numCharacters, PNTR_STRSIZE(characters), image);
+    pntr_font* font = _pntr_new_font(numCharacters, charactersSize, image);
     if (font == NULL) {
         return NULL;
     }
@@ -3532,7 +3493,7 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
         };
     }
 
-    PNTR_MEMCPY(font->characters, characters, PNTR_STRSIZE(characters));
+    PNTR_MEMCPY(font->characters, characters, charactersSize);
 
     return font;
 }
@@ -3647,8 +3608,8 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
     int y = posY;
     int tallestCharacter = 0;
 
+    // Iterate through each character.
     pntr_codepoint_t codepoint;
-
     for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
         if (codepoint == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
@@ -3698,10 +3659,10 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
         return;
     }
 
+    // TODO: Rewrite pntr_draw_text_wrapped() to render each line individually rather than manipulating the text.
     // Because we'll be manipulating the text, make a copy the string.
     size_t byteSize = PNTR_STRSIZE(text);
     char* newText = pntr_load_memory(byteSize);
-    //PNTR_STRCPY(newText, text);
     PNTR_MEMCPY(newText, text, byteSize);
 
     pntr_codepoint_t codepoint;
@@ -3909,7 +3870,6 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         #include "external/font8x8_basic.h"
 
         // Default parameters for font8x8.
-        // TODO: pntr_load_font_default: Add UTF-8 support for the default font
         #define PNTR_DEFAULT_FONT_NAME font8x8_basic
         #define PNTR_DEFAULT_FONT_GLYPH_WIDTH 8
         #define PNTR_DEFAULT_FONT_GLYPH_HEIGHT 8
@@ -3936,7 +3896,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
             }
         }
 
-        // Build the character set.
+        // Build the character set with a null character at the end.
         char characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN + 1];
         for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
             characters[i] = (char)(i + 32); // ASCII
