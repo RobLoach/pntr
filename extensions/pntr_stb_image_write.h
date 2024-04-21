@@ -7,6 +7,16 @@
  *
  * @brief [stb_image_write](https://github.com/nothings/stb/blob/master/stb_image_write.h) integration with pntr for saving images.
  *
+ * To use *stb_image_write* for saving images, define `PNTR_STB_IMAGE` prior to including `pntr.h`. This is provided by default.
+ *
+ * @code
+ * #define PNTR_STB_IMAGE
+ * #define PNTR_IMPLEMENTATION
+ * #include "pntr.h"
+ * @endcode
+ *
+ * Image saving can be completely disabled with `PNTR_NO_SAVE_IMAGE`.
+ *
  * @see https://github.com/nothings/stb/blob/master/stb_image_write.h
  * @see PNTR_STB_IMAGE
  * @see PNTR_SAVE_IMAGE_TO_MEMORY

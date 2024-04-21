@@ -327,45 +327,15 @@ typedef union pntr_color {
      */
     struct pntr_color_rgba_t {
         #if defined(PNTR_PIXELFORMAT_RGBA)
-            /**
-             * Red channel.
-             */
-            unsigned char r;
-
-            /**
-             * Green channel.
-             */
-            unsigned char g;
-
-            /**
-             * Blue channel.
-             */
-            unsigned char b;
-
-            /**
-             * Alpha channel.
-             */
-            unsigned char a;
+            unsigned char r; /** Red channel. */
+            unsigned char g; /** Green channel. */
+            unsigned char b; /** Blue channel. */
+            unsigned char a; /** Alpha channel. */
         #elif defined(PNTR_PIXELFORMAT_ARGB)
-            /**
-             * Blue channel.
-             */
-            unsigned char b;
-
-            /**
-             * Green channel.
-             */
-            unsigned char g;
-
-            /**
-             * Red channel.
-             */
-            unsigned char r;
-
-            /**
-             * Alpha channel.
-             */
-            unsigned char a;
+            unsigned char b; /** Blue channel. */
+            unsigned char g; /** Green channel. */
+            unsigned char r; /** Red channel. */
+            unsigned char a; /** Alpha channel. */
         #endif
     } rgba;
 } pntr_color;
@@ -374,25 +344,10 @@ typedef union pntr_color {
  * A rectangle.
  */
 typedef struct pntr_rectangle {
-    /**
-     * The x position of the rectangle.
-     */
-    int x;
-
-    /**
-     * The y position of the rectangle.
-     */
-    int y;
-
-    /**
-     * The width of the rectangle.
-     */
-    int width;
-
-    /**
-     * The height of the rectangle.
-     */
-    int height;
+    int x; /** The x position of the rectangle. */
+    int y; /** The y position of the rectangle. */
+    int width; /** The width of the rectangle. */
+    int height; /** The height of the rectangle. */
 } pntr_rectangle;
 
 /**
@@ -443,15 +398,8 @@ typedef struct pntr_image {
  * A vector, represented by x and y coordinates.
  */
 typedef struct pntr_vector {
-    /**
-     * The X coordinate.
-     */
-    int x;
-
-    /**
-     * The Y coordinate.
-     */
-    int y;
+    int x; /** The X coordinate. */
+    int y; /** The Y coordinate. */
 } pntr_vector;
 
 /**
@@ -549,22 +497,10 @@ typedef enum pntr_error {
  * The associated image format.
  */
 typedef enum pntr_image_type {
-    /**
-     * Image type: Unknown.
-     */
-    PNTR_IMAGE_TYPE_UNKNOWN = 0,
-    /**
-     * Image type: PNG.
-     */
-    PNTR_IMAGE_TYPE_PNG,
-    /**
-     * Image type: JPEG.
-     */
-    PNTR_IMAGE_TYPE_JPG,
-    /**
-     * Image type: BMP.
-     */
-    PNTR_IMAGE_TYPE_BMP
+    PNTR_IMAGE_TYPE_UNKNOWN = 0, /** Image type: Unknown. */
+    PNTR_IMAGE_TYPE_PNG, /** Image type: PNG - Portable Network Graphics */
+    PNTR_IMAGE_TYPE_JPG, /** Image type: JPEG - Joint Photographic Experts Group */
+    PNTR_IMAGE_TYPE_BMP /** Image type: BMP - Bitmap */
 } pntr_image_type;
 
 #ifdef __cplusplus
@@ -959,7 +895,7 @@ extern "C" {
      *
      * @see https://en.cppreference.com/w/c/memory/realloc
      */
-    #define PNTR_REALLOC(ptr, new_size) realloc(ptr, new_size)
+    #define PNTR_REALLOC(ptr, new_size) realloc((ptr), (new_size))
 #endif  // PNTR_REALLOC
 
 #ifndef PNTR_MEMCPY
@@ -2103,7 +2039,7 @@ PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec
  * @see pntr_draw_rectangle_fill()
  */
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
-    if (color.rgba.a == 0 ||  dst == NULL || width <= 0 || height <= 0) {
+    if (color.rgba.a == 0 || dst == NULL || width <= 0 || height <= 0) {
         return;
     }
 
@@ -2638,7 +2574,7 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
  *
  * @param filePath The file path to the image.
  *
- * @return The type of the image, based on its file extension, or PNTR_IMAGE_TYPE_UNKNOWN if it's unknown.
+ * @return The type of the image, based on its file extension, or `PNTR_IMAGE_TYPE_UNKNOWN` if it's unknown.
  *
  * @see PNTR_IMAGE_TYPE_UNKNOWN
  * @see PNTR_IMAGE_TYPE_PNG
@@ -2650,15 +2586,15 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
         return PNTR_IMAGE_TYPE_UNKNOWN;
     }
 
-    if (PNTR_STRSTR(filePath, ".png") != NULL) {
+    if (PNTR_STRSTR(filePath, ".png") != NULL || PNTR_STRSTR(filePath, ".PNG") != NULL) {
         return PNTR_IMAGE_TYPE_PNG;
     }
 
-    if (PNTR_STRSTR(filePath, ".bmp") != NULL) {
+    if (PNTR_STRSTR(filePath, ".bmp") != NULL || PNTR_STRSTR(filePath, ".BMP") != NULL) {
         return PNTR_IMAGE_TYPE_BMP;
     }
 
-    if (PNTR_STRSTR(filePath, ".jpg") != NULL || PNTR_STRSTR(filePath, ".jpeg") != NULL) {
+    if (PNTR_STRSTR(filePath, ".jpg") != NULL || PNTR_STRSTR(filePath, ".jpeg") != NULL || PNTR_STRSTR(filePath, ".JPG") != NULL || PNTR_STRSTR(filePath, ".JPEG") != NULL) {
         return PNTR_IMAGE_TYPE_JPG;
     }
 
@@ -2710,6 +2646,7 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
  * @return A newly loaded image, or NULL on failure.
  *
  * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+ * @see PNTR_NO_LOAD_IMAGE
  */
 PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize) {
     if (fileData == NULL || dataSize == 0) {
@@ -2725,6 +2662,8 @@ PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const uns
  * @param fileName The name of the file to load from the file system.
  *
  * @return The newly loaded file.
+ *
+ * @see PNTR_NO_LOAD_IMAGE
  */
 PNTR_API pntr_image* pntr_load_image(const char* fileName) {
     if (fileName == NULL) {
@@ -2746,6 +2685,12 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
 
 /**
  * Draw an image onto the destination image, with tint.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param tint The color to tint the image when drawing.
  */
 PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
     if (src == NULL) {
@@ -2758,7 +2703,12 @@ PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int 
 }
 
 /**
- * Draw an image onto the destination image.
+ * Draw an image onto a destination image.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
  */
 PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
     if (src == NULL) {
@@ -3303,6 +3253,15 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
     return pntr_load_font_bmf_from_image(image, characters);
 }
 
+/**
+ * Load a BMFont from the given image data in memory.
+ *
+ * @param fileData A representation of the image data in memory.
+ * @param dataSize The size of the image data.
+ * @param characters A string representing the characters to load from the atlas.
+ *
+ * @return The newly loaded font, or NULL on failure.
+ */
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
@@ -3369,6 +3328,14 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, 
     return font;
 }
 
+/**
+ * Load a BMFont from the given image.
+ *
+ * @param image The BMFont image.
+ * @param characters A string representing the characters to load from the atlas.
+ *
+ * @return The newly loaded font, or NULL on failure.
+ */
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters) {
     if (image == NULL || characters == NULL) {
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
@@ -3387,12 +3354,14 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
+    // Build the font.
     pntr_font* font = _pntr_new_font(numCharacters, charactersSize, image);
     if (font == NULL) {
         return NULL;
     }
 
     // Set up the data structures.
+    // TODO: Allow loading BMFont characters vertically
     int currentCharacter = 0;
     for (int i = 1; i < image->width; i++) {
         if (pntr_image_get_color(image, i, 0).value == seperator.value) {
@@ -3590,7 +3559,6 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
     return output;
 }
 
-
 /**
  * Prints text on the given image, provided the length of the string.
  *
@@ -3748,9 +3716,8 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
         lineLength++;
     }
 
-    // Draw the last line.
-    int lastLineWidth = pntr_measure_text(font, lineStart);
-    if (lastLineWidth > maxWidth) {
+    // Check if the last line is too long, and split it by the last space.
+    if (pntr_measure_text(font, lineStart) > maxWidth && lastSpace != NULL) {
         #ifdef PNTR_ENABLE_UTF8
             lineLength = (int)utf8nlen(lineStart, (size_t)(lastSpace - lineStart));
         #else
@@ -4946,6 +4913,8 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
  * @param degrees The angle to normalize.
  *
  * @return The new degrees represented between 0 and 360.
+ *
+ * @internal
  */
 float _pntr_normalize_degrees(float degrees) {
     if (degrees < 0) {
