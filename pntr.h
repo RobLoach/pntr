@@ -3592,7 +3592,7 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
 
 
 /**
- * Prints text on the given image.
+ * Prints text on the given image, provided the length of the string.
  *
  * @param dst The image of which to print the text on.
  * @param font The font to use when rendering the text.
@@ -3691,27 +3691,28 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
         return;
     }
 
-    // TODO: Rewrite pntr_draw_text_wrapped() to render each line individually rather than manipulating the text.
-    // Because we'll be manipulating the text, make a copy the string.
-    size_t byteSize = PNTR_STRSIZE(text);
-    char* newText = pntr_load_memory(byteSize);
-    PNTR_MEMCPY(newText, text, byteSize);
-
     pntr_codepoint_t codepoint;
-    char* currentChar = newText;
-    char* lineStart = newText;
+    char* currentChar = (char*)text;
+    char* lineStart = currentChar;
     int lineLength = 1;
     char* lastSpace = NULL;
+    int currentY = 0;
+    pntr_vector textSize;
 
     // Iterate through each character.
-    for (char* nextChar = PNTR_STRCODEPOINT(newText, &codepoint); codepoint; nextChar = PNTR_STRCODEPOINT(nextChar, &codepoint)) {
-        if (codepoint == ' ' || codepoint == '\n' || codepoint == '\0') {
-            int lineWidth = pntr_measure_text_ex(font, lineStart, lineLength).x;
-            if (lineWidth > maxWidth) {
+    for (char* nextChar = PNTR_STRCODEPOINT(text, &codepoint); codepoint; nextChar = PNTR_STRCODEPOINT(nextChar, &codepoint)) {
+        if (codepoint == ' ' || codepoint == '\n') {
+            textSize = pntr_measure_text_ex(font, lineStart, lineLength);
+            if (textSize.x > maxWidth) {
                 if (lastSpace != NULL) {
-                    *lastSpace = '\n';
+                    #ifdef PNTR_ENABLE_UTF8
+                        lineLength = (int)utf8nlen(lineStart, (size_t)(lastSpace - lineStart));
+                    #else
+                        lineLength = (int)(lastSpace - lineStart);
+                    #endif
+                    pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+                    currentY += textSize.y;
                     lineStart = lastSpace + 1;
-
                     #ifdef PNTR_ENABLE_UTF8
                         lineLength = (int)utf8nlen(lineStart, (size_t)(currentChar - lineStart));
                     #else
@@ -3719,11 +3720,24 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
                     #endif
                 }
                 else {
-                    // No current space, so break the word up.
-                    *currentChar = '\n';
+                    // No current space, so draw what's in and move to new line.
+                    pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+                    currentY += textSize.y;
                     lineStart = nextChar;
                     lineLength = 0;
                 }
+            }
+            else if (codepoint == '\n') {
+                #ifdef PNTR_ENABLE_UTF8
+                    lineLength = (int)utf8nlen(lineStart, (size_t)(currentChar - lineStart));
+                #else
+                    lineLength = (int)(currentChar - lineStart);
+                #endif
+                pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+                currentY += textSize.y;
+                lineStart = nextChar;
+                lineLength = 0;
+                lastSpace = NULL;
             }
             else {
                 lastSpace = currentChar;
@@ -3734,16 +3748,8 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
         lineLength++;
     }
 
-    // Perform one more check on the last line.
-    if (pntr_measure_text(font, lineStart) > maxWidth) {
-        if (lastSpace != NULL) {
-            *lastSpace = '\n';
-        }
-    }
-
-    // Display the new text with the newlines, and clean up the memory usage.
-    pntr_draw_text(dst, font, newText, posX, posY, tint);
-    PNTR_FREE(newText);
+    // Draw the last line.
+    pntr_draw_text(dst, font, lineStart, posX, posY + currentY, tint);
 }
 
 #ifdef PNTR_ENABLE_VARGS
