@@ -457,12 +457,11 @@ typedef struct pntr_vector {
 /**
  * Font used to render text.
  *
- * @details If `PNTR_ENABLE_UTF8` is enabled, will allow loading fonts with UTF-8 support.
- *
  * @see pntr_load_font_tty()
  * @see pntr_load_font_ttf()
  * @see pntr_load_font_bmf()
  * @see PNTR_ENABLE_UTF8
+ * @see PNTR_ENABLE_TTF
  */
 typedef struct pntr_font {
     /**
@@ -1057,6 +1056,8 @@ extern "C" {
      *
      * @private
      * @internal
+     * @see PNTR_ENABLE_UTF8
+     * @see utf8codepoint
      */
     char* pntr_strcodepoint(const char * str, char* out_codepoint) {
         if (str == NULL) {
