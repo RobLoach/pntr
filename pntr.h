@@ -622,7 +622,8 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
+PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
 #ifdef PNTR_ENABLE_VARGS
 PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
@@ -3589,6 +3590,73 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
     return output;
 }
 
+
+/**
+ * Prints text on the given image.
+ *
+ * @param dst The image of which to print the text on.
+ * @param font The font to use when rendering the text.
+ * @param text The text to write.
+ * @param textLength How many characters to draw from the text string. If 0, it will draw until the NULL terminator.
+ * @param posX The position to print the text, starting from the top left on the X axis.
+ * @param posY The position to print the text, starting from the top left on the Y axis.
+ * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text_wrapped()
+ */
+PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint) {
+    if (dst == NULL || font == NULL || text == NULL) {
+        return;
+    }
+
+    int x = posX;
+    int y = posY;
+    int tallestCharacter = 0;
+
+    // Iterate through each character.
+    pntr_codepoint_t codepoint;
+    int count = 0;
+    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        // If there is a text length provided, only draw up to that length.
+        if (textLength > 0) {
+            if (++count > textLength) {
+                break;
+            }
+        }
+
+        // If the character is a newline, move to the next line.
+        if (codepoint == '\n') {
+            // TODO: pntr_draw_text(): Allow for center/right alignment
+            x = posX;
+            y += tallestCharacter;
+            continue;
+        }
+
+        // Find the character in the font's character index.
+        char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
+        if (!foundCharacter) {
+            continue;
+        }
+
+        // Find the index of the character in the string.
+        #ifdef PNTR_ENABLE_UTF8
+        int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+        #else
+        int i = (int)(foundCharacter - font->characters);
+        #endif
+
+        // Draw the character, unless it's a space.
+        if (codepoint != ' ')  {
+            pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+        }
+
+        x += font->glyphRects[i].x + font->glyphRects[i].width;
+        if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+            tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
+        }
+    }
+}
+
 /**
  * Prints text on the given image.
  *
@@ -3602,45 +3670,7 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
  * @see pntr_draw_text_wrapped()
  */
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint) {
-    if (dst == NULL || font == NULL || text == NULL) {
-        return;
-    }
-
-    int x = posX;
-    int y = posY;
-    int tallestCharacter = 0;
-
-    // Iterate through each character.
-    pntr_codepoint_t codepoint;
-    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
-        if (codepoint == '\n') {
-            // TODO: pntr_draw_text(): Allow for center/right alignment
-            x = posX;
-            y += tallestCharacter;
-        }
-        else {
-            char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
-            if (foundCharacter != NULL) {
-
-                // Find the index of the character in the string.
-                #ifdef PNTR_ENABLE_UTF8
-                int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
-                #else
-                int i = (int)(foundCharacter - font->characters);
-                #endif
-
-                // Draw the character, unless it's a space.
-                if (codepoint != ' ')  {
-                    pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
-                }
-
-                x += font->glyphRects[i].x + font->glyphRects[i].width;
-                if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
-                    tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
-                }
-            }
-        }
-    }
+    pntr_draw_text_len(dst, font, text, 0, posX, posY, tint);
 }
 
 /**
@@ -3713,7 +3743,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
 
     // Display the new text with the newlines, and clean up the memory usage.
     pntr_draw_text(dst, font, newText, posX, posY, tint);
-    pntr_unload_memory((void*)newText);
+    PNTR_FREE(newText);
 }
 
 #ifdef PNTR_ENABLE_VARGS
