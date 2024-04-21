@@ -3353,7 +3353,7 @@ PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, 
     }
 
     // Characters
-    font->characters = PNTR_MALLOC(sizeof(char) * characterByteSize);
+    font->characters = PNTR_MALLOC(characterByteSize);
     if (font->characters == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font->glyphRects);
@@ -3373,9 +3373,10 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
+    // Set up the initial font data.
     size_t charactersSize = PNTR_STRSIZE(characters);
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
-    pntr_rectangle currentRectangle = PNTR_CLITERAL(pntr_rectangle){1, 0, 0, image->height};
+    pntr_rectangle currentRectangle = PNTR_CLITERAL(pntr_rectangle) {1, 0, 0, image->height};
 
     // Find out how many characters there are.
     int numCharacters = 0;
@@ -4021,8 +4022,8 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
-        // Create the font data
-        size_t charactersSize = sizeof(pntr_codepoint_t) * (size_t)PNTR_FONT_TTF_GLYPH_NUM;
+        // Create the font data, with a null terminator at the end.
+        size_t charactersSize = sizeof(pntr_codepoint_t) * (size_t)PNTR_FONT_TTF_GLYPH_NUM + 1;
         pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, charactersSize, atlas);
         if (font == NULL) {
             pntr_unload_image(atlas);
@@ -4062,8 +4063,19 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         }
 
         #ifdef PNTR_ENABLE_UTF8
-        // TODO: Clear out the unused memory in the character list by building a new UTF-8 string
+        // Stick a null terminator at the end of the character string.
         destination[0] = '\0';
+
+        // Resize the character string to the correct size.
+        size_t newSize = PNTR_STRSIZE(font->characters);
+        char* newCharacters = (char*)PNTR_MALLOC(newSize);
+        if (newCharacters != NULL) {
+            PNTR_MEMCPY(newCharacters, font->characters, newSize);
+            PNTR_FREE(font->characters);
+            font->characters = newCharacters;
+        }
+        #else
+        font->characters[PNTR_FONT_TTF_GLYPH_NUM] = '\0';
         #endif
 
         return font;
