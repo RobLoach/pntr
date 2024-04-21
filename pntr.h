@@ -3702,7 +3702,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     // Iterate through each character.
     for (char* nextChar = PNTR_STRCODEPOINT(text, &codepoint); codepoint; nextChar = PNTR_STRCODEPOINT(nextChar, &codepoint)) {
         if (codepoint == ' ' || codepoint == '\n') {
-            textSize = pntr_measure_text_ex(font, lineStart, lineLength);
+            textSize = pntr_measure_text_ex(font, lineStart, lineLength - 1);
             if (textSize.x > maxWidth) {
                 if (lastSpace != NULL) {
                     #ifdef PNTR_ENABLE_UTF8
@@ -3749,6 +3749,18 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     }
 
     // Draw the last line.
+    int lastLineWidth = pntr_measure_text(font, lineStart);
+    if (lastLineWidth > maxWidth) {
+        #ifdef PNTR_ENABLE_UTF8
+            lineLength = (int)utf8nlen(lineStart, (size_t)(lastSpace - lineStart));
+        #else
+            lineLength = (int)(lastSpace - lineStart);
+        #endif
+        pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+        currentY += textSize.y;
+        lineStart = lastSpace + 1;
+    }
+
     pntr_draw_text(dst, font, lineStart, posX, posY + currentY, tint);
 }
 
