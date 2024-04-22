@@ -5,10 +5,22 @@
  * @defgroup pntr_stb_image pntr_stb_image
  * @{
  *
- * @brief [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) integration with pntr for loading images.
+ * @brief [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) integration with pntr for loading images. This is the default behavior.
+ *
+ * To use *stb_image* for loading images, define `PNTR_STB_IMAGE` prior to including `pntr.h`. This is provided by default.
+ *
+ * @code
+ * #define PNTR_STB_IMAGE
+ * #define PNTR_IMPLEMENTATION
+ * #include "pntr.h"
+ * @endcode
+ *
+ * Image loading can be completely disabled with `PNTR_NO_LOAD_IMAGE`.
+ *
  * @see https://github.com/nothings/stb/blob/master/stb_image.h
  * @see PNTR_STB_IMAGE
  * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+ * @see PNTR_NO_LOAD_IMAGE
  */
 
 /**

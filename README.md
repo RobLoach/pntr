@@ -40,16 +40,21 @@ Add these defines prior to including `pntr.h` to modify how it functions.
 | `PNTR_PIXELFORMAT_RGBA` | Use the `RGBA` format |
 | `PNTR_PIXELFORMAT_ARGB` | Use the `ARGB` pixel format |
 | `PNTR_ENABLE_DEFAULT_FONT` | Enables the default font |
-| `PNTR_ENABLE_TTF` | Enables TTF font loading |
-| `PNTR_DISABLE_ALPHABLEND` | Skips alpha blending when rendering images |
-| `PNTR_ENABLE_MATH` | Enables use of C's standard math.h library, rather than using the built in math functions |
+| `PNTR_ENABLE_MATH` | Enables use of C's standard [`math.h`](https://en.cppreference.com/w/c/numeric/math) linked library, rather than using the built in math functions |
+| `PNTR_ENABLE_TTF` | Enables support for loading [TrueType fonts](https://en.wikipedia.org/wiki/TrueType_fonts) |
+| `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
 | `PNTR_LOAD_FILE` | Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`. |
-| `PNTR_SAVE_FILE` | Callback to use when asked to save a file in `pntr_save_file()`. By default, will use `stdio.h`. |
-| `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory in `pntr_load_image_from_memory()`. By default, will use  [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) |
-| `PNTR_SAVE_IMAGE_TO_MEMORY` | Callback to use when saving an image to memory in `pntr_save_image_to_memory()`. By default, will use [cute_png](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) |
-| `PNTR_NO_CUTE_PNG_IMPLEMENTATION` | Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere. |
-| `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION` | Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using cute_png elsewhere. |
-| `PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION` | Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere. |
+| `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory via `pntr_load_image_from_memory()`. By default, will use  [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) |
+| `PNTR_SAVE_FILE` | Callback to use when saving a file via `pntr_save_file()`. By default, uses `stdio.h` |
+| `PNTR_SAVE_IMAGE_TO_MEMORY` | Callback to use when saving an image to memory via `pntr_save_image_to_memory()`. By default, will use [stb_image_write](https://github.com/nothings/stb/blob/master/stb_image_write.h) |
+| `PNTR_NO_ALPHABLEND` | Skips alpha blending when drawing pixels |
+| `PNTR_NO_STDIO` | Will disable the standard file loading/saving calls for `PNTR_LOAD_FILE` and `PNTR_SAVE_FILE` |
+| `PNTR_NO_SAVE_IMAGE` | Disables the default behavior of image saving |
+| `PNTR_NO_LOAD_IMAGE` | Disables the default behavior of image loading |
+| `PNTR_NO_CUTE_PNG_IMPLEMENTATION` | Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere |
+| `PNTR_NO_STB_TRUETYPE_IMPLEMENTATION` | Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using stb_truetype elsewhere |
+| `PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION` | Skips defining `STB_IMAGE_WRITE_IMPLEMENTATION`. useful if you're using stb_image_write elsewhere |
+| `PNTR_NO_STB_IMAGE_IMPLEMENTATION` | Skips defining `STB_IMAGE_IMPLEMENTATION`. useful if you're using stb_image_write elsewhere |
 
 ### Functions
 
@@ -104,7 +109,8 @@ void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int pos
 void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
-void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
+void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
+void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
 void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
 void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
 pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
@@ -219,13 +225,14 @@ npm run docs
 
 ## Acknowledgements
 
+- [Logo](https://www.pixilart.com/art/bob-ross-9910c4da4b3a1c8) by [Ravenist](https://www.pixilart.com/ravenist), used with [permission](https://www.reddit.com/r/PixelArt/comments/fi2b1v/oc_felt_a_little_sad_so_i_watched_bob_ross_videos/j6ordqn/)
 - [cute_png.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) by [Randy Gaul](https://github.com/RandyGaul)
 - [font8x8](https://github.com/dhepper/font8x8/) by [Daniel Hepper](https://github.com/dhepper) provides the [8x8 monochrome font](https://github.com/dhepper/font8x8/blob/master/font8x8_basic.h)
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) by [Sean Barrett](https://github.com/nothings)
 - [stb_truetype.h](https://github.com/nothings/stb/blob/master/stb_truetype.h) by [Sean Barrett](https://github.com/nothings)
+- [utf8.h](https://github.com/sheredom/utf8.h) by [Neil Henning](https://github.com/sheredom)
 - [tester](https://github.com/zpl-c/tester) from [zpl](https://github.com/zpl-c) provides the unit testing framework
 - [raylib](https://github.com/raysan5/raylib) inspired some of the design patterns
-- [Logo](https://www.pixilart.com/art/bob-ross-9910c4da4b3a1c8) by [Ravenist](https://www.pixilart.com/ravenist), used with [permission](https://www.reddit.com/r/PixelArt/comments/fi2b1v/oc_felt_a_little_sad_so_i_watched_bob_ross_videos/j6ordqn/)
 
 ## License
 

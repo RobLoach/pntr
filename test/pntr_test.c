@@ -4,6 +4,7 @@
 
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
+#define PNTR_ENABLE_UTF8
 
 #define PNTR_IMPLEMENTATION
 #define PNTR_ASSERT(condition) EQUALS((bool)(condition), true)
@@ -13,6 +14,14 @@
 #define IMAGEEQUALS PNTR_ASSERT_IMAGE_EQUALS
 #define RECTEQUALS PNTR_ASSERT_RECT_EQUALS
 #include "../pntr_assert.h"
+
+bool pntr_utf8() {
+    #ifdef PNTR_ENABLE_UTF8
+    return true;
+    #else
+    return false;
+    #endif
+}
 
 MODULE(pntr, {
     IT("pntr_load_memory(), pntr_unload_memory()", {
@@ -686,6 +695,30 @@ MODULE(pntr, {
         pntr_rectangle expected = (pntr_rectangle) {20, 20, 10, 10};
         RECTEQUALS(out, expected);
     });
+
+    if (pntr_utf8()) {
+        IT("PNTR_ENABLE_UTF8", {
+            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 38);
+            NEQUALS(font, NULL);
+
+            // Generate the image displaying UTF-8 text.
+            const char* text = "Добрий день!";
+            pntr_image* image = pntr_gen_image_text(font, text, PNTR_BLACK);
+            NEQUALS(image, NULL);
+            pntr_save_image(image, "pntr_test_utf8.png");
+
+            EQUALS(image->width, 190);
+            EQUALS(image->height, 37);
+
+            pntr_unload_font(font);
+            pntr_unload_image(image);
+        });
+    }
+    else {
+        IT("PNTR_ENABLE_UTF8: Not enabled", {
+            // Nothing
+        });
+    }
 
     IT("No reported errors", {
         const char* err = "";

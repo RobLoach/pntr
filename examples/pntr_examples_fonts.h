@@ -1,5 +1,3 @@
-#include "../pntr.h"
-
 void pntr_examples_fonts() {
     pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
 
@@ -30,7 +28,7 @@ void pntr_examples_fonts() {
 
     // TTF Font
     pntr_font* ttfFont = pntr_load_font_ttf("resources/tuffy.ttf", 28);
-    const char* ttfText = "TTF Font Example";
+    const char* ttfText = "Привіт Світ!";
     pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText, 0);
     pntr_draw_text(canvas, ttfFont, ttfText, 200, 20, PNTR_DARKPURPLE);
 
