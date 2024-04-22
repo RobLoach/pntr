@@ -895,7 +895,7 @@ extern "C" {
      *
      * @see https://en.cppreference.com/w/c/memory/realloc
      */
-    #define PNTR_REALLOC(ptr, new_size) realloc((ptr), (new_size))
+    #define PNTR_REALLOC(ptr, new_size) realloc(ptr, new_size)
 #endif  // PNTR_REALLOC
 
 #ifndef PNTR_MEMCPY
@@ -909,7 +909,7 @@ extern "C" {
      *
      * @see https://en.cppreference.com/w/c/string/byte/memcpy
      */
-    #define PNTR_MEMCPY(dest, src, n) memcpy((dest), (src), (n))
+    #define PNTR_MEMCPY(dest, src, n) memcpy(dest, src, (n))
 #endif  // PNTR_MEMCPY
 
 #ifndef PNTR_MEMSET
