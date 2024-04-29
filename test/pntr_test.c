@@ -23,6 +23,42 @@ bool pntr_utf8() {
     #endif
 }
 
+MODULE(pntr_math, {
+    IT("PNTR_SINF", {
+        EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
+    });
+
+    IT("PNTR_COSF", {
+        float value = PNTR_COSF(PNTR_PI * 2.0f);
+        if (value < 0.9f || value > 1.1f) {
+            EQUALS(0, 1);
+        }
+    });
+
+    IT("PNTR_CEILF", {
+        EQUALS((int)PNTR_CEILF(2.4f), 3);
+        EQUALS((int)PNTR_CEILF(-2.0f), -2);
+        EQUALS((int)PNTR_CEILF(0.0f), 0);
+    });
+
+    IT("PNTR_FABS", {
+        EQUALS((int)PNTR_FABSF(3.0f), 3);
+        EQUALS((int)PNTR_FABSF(-3.0f), 3);
+        EQUALS((int)PNTR_FABSF(0.0f), 0);
+    });
+
+    IT("PNTR_FLOORF", {
+        EQUALS((int)PNTR_FLOORF(2.7f), 2);
+        EQUALS((int)PNTR_FLOORF(-2.7f), -3);
+        EQUALS((int)PNTR_FLOORF(0.0f), 0);
+    });
+
+    IT("PNTR_FMODF", {
+        EQUALS((int)PNTR_FMODF(10.0f, 3.0f), 1);
+        EQUALS((int)PNTR_FMODF(9.0f, 3.0f), 0);
+    });
+})
+
 MODULE(pntr, {
     IT("pntr_load_memory(), pntr_unload_memory()", {
         void* memory = pntr_load_memory(100);
@@ -733,5 +769,6 @@ MODULE(pntr, {
 int main() {
     UNIT_CREATE("pntr");
     UNIT_MODULE(pntr);
+    UNIT_MODULE(pntr_math);
     return UNIT_RUN();
 }
