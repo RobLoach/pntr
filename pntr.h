@@ -300,6 +300,25 @@
     #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
 #endif
 
+#ifndef PNTR_CLITERAL
+    #if defined(__cplusplus)
+        #define PNTR_CLITERAL(type)      type
+    #else
+        /**
+         * Compound literal to initialize a structure.
+         *
+         * @param type The type of the structure to intiailize.
+         * @return The initialized structure.
+         * @note MSVC C++ compiler does not support compound literals (C99 feature)
+         *
+         * @code
+         * pntr_color color = PNTR_CLITERAL(pntr_color) { 255, 255, 255, 255 };
+         * @endif
+         */
+        #define PNTR_CLITERAL(type)      (type)
+    #endif
+#endif
+
 /**
  * Color, represented by an unsigned 32-bit integer.
  *
@@ -1027,7 +1046,7 @@ extern "C" {
 
 #ifndef PNTR_PI
     /**
-     * Pi
+     * Pi as a floating point value.
      *
      * @see https://en.wikipedia.org/wiki/Pi
      */
@@ -1036,7 +1055,7 @@ extern "C" {
 
 #ifndef PNTR_DEG2RAD
     /**
-     * Convert a degree to radians. PI / 180.
+     * Convert a degree to radians with a floating point value. PI / 180.
      *
      * @code
      * float radians = degrees * PNTR_DEG2RAD
@@ -1047,6 +1066,11 @@ extern "C" {
 
 #if !defined(PNTR_ENABLE_MATH) || defined(_DOXYGEN_)
     #ifndef PNTR_SINF
+        /**
+         * @internal
+         *
+         * @see PNTR_SINF
+         */
         float _pntr_sinf(float x) {
             static const float a0 = +1.91059300966915117e-31f;
             static const float a1 = +1.00086760103908896f;
@@ -1058,18 +1082,26 @@ extern "C" {
             static const float a7 = +1.38235642404333740e-4f;
             return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
         }
+
         /**
-         * Calculates sine of the given value.
+         * Calculates sine of the given value in radians.
          *
-         * @param x The input value of sinf()
+         * @param value The input value of sinf()
+         *
+         * @return The sine of the given value.
          *
          * @see https://en.cppreference.com/w/c/numeric/math/sin
          * @see https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
          */
-        #define PNTR_SINF _pntr_sinf
+        #define PNTR_SINF(value) _pntr_sinf(value)
     #endif  // PNTR_SINF
 
     #ifndef PNTR_COSF
+        /**
+         * @internal
+         *
+         * @see PNTR_COSF
+         */
         float _pntr_cosf(float x) {
             static const float a0 = 9.9995999154986614e-1f;
             static const float a1 = 1.2548995793001028e-3f;
@@ -1082,18 +1114,26 @@ extern "C" {
             static const float a8 = -1.8776444013090451e-5f;
             return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
         }
+
         /**
          * Calculates cosine of the given value.
          *
-         * @param x Floating-point value representing angle in radians
+         * @param value Floating-point value representing angle in radians
+         *
+         * @return The cosine of the given value.
          *
          * @see https://en.cppreference.com/w/c/numeric/math/cos
          * @see https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
          */
-        #define PNTR_COSF _pntr_cosf
+        #define PNTR_COSF(value) _pntr_cosf(value)
     #endif  // PNTR_COSF
 
     #ifndef PNTR_CEILF
+        /**
+         * @internal
+         *
+         * @see PNTR_CEILF
+         */
         float _pntr_ceilf(float x) {
             if (x >= 0.0f) {
                 int i = (int)x;
@@ -1104,25 +1144,30 @@ extern "C" {
                 return (r > 0.0f) ? (float)t + 1.0f: (float)t;
             }
         }
+
         /**
          * Computes the smallest integer value not less than arg.
          *
          * @param x Floating-point value
          *
+         * @return The smallest integer value not less than arg, that is ⌈arg⌉, is returned.
+         *
          * @see https://en.cppreference.com/w/c/numeric/math/ceil
          */
-        #define PNTR_CEILF _pntr_ceilf
+        #define PNTR_CEILF(x) _pntr_ceilf(x)
     #endif  // PNTR_CEILF
 
     #ifndef PNTR_FABSF
         /**
-         * Computes the absolute value of a floating point value arg.
+         * Computes the absolute value of a floating point value.
          *
-         * @param a Floating point value
+         * @param x Floating point value
+         *
+         * @return The absolute value of the given value.
          *
          * @see https://en.cppreference.com/w/c/numeric/math/fabs
          */
-        #define PNTR_FABSF(a) (((a) < 0) ? -(a) : (a))
+        #define PNTR_FABSF(x) (((x) < 0) ? -(x) : (x))
     #endif  // PNTR_FABSF
 
     #ifndef PNTR_FLOORF
@@ -1131,28 +1176,24 @@ extern "C" {
          *
          * @param x Floating point value.
          *
+         * @return The largest integer value not greater than arg.
+         *
          * @see https://en.cppreference.com/w/c/numeric/math/floor
          */
-        #define PNTR_FLOORF(x) (float)((int)x - ((x < 0.0f) ? 1 : 0))
+        #define PNTR_FLOORF(x) (float)(((int)(x)) - (((x) < 0.0f) ? 1 : 0))
     #endif  // PNTR_FLOORF
 
     #ifndef PNTR_FMODF
-        float _pntr_fmodf(float dividend, float divisor) {
-            if (divisor == 0.0f) {
-                return 0.0f;
-            }
-            float quotient = dividend / divisor;
-            return dividend - ((int)quotient) * divisor;
-        }
         /**
          * Computes the floating-point remainder of the division operation x/y.
          *
          * @param dividend floating point value
          * @param divisor floating point value
+         * @return The modulus of the division operation.
          *
          * @see https://en.cppreference.com/w/c/numeric/math/fmod
          */
-        #define PNTR_FMODF _pntr_fmodf
+        #define PNTR_FMODF(dividend, divisor) ((divisor) == 0.0f ? 0.0f : (dividend) - ((int)((dividend) / (divisor))) * (divisor))
     #endif  // PNTR_FMOD
 #else
     #ifndef PNTR_SINF
@@ -1190,10 +1231,6 @@ extern "C" {
         #define PNTR_FMODF fmodf
     #endif  // PNTR_FMODF
 #endif  // PNTR_ENABLE_MATH
-
-#ifndef PNTR_CLITERAL
-#define PNTR_CLITERAL(type) (type)
-#endif
 
 #ifndef PNTR_MAX
     /**
