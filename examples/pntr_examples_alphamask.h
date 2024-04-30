@@ -7,7 +7,7 @@ void pntr_examples_alphamask() {
     pntr_image* output = pntr_gen_image_gradient(textSize.x, textSize.y, PNTR_RED, PNTR_DARKGREEN, PNTR_BLUE, PNTR_PURPLE);
 
     // Create an alpha mask of text
-    pntr_image* imageText = pntr_gen_image_text(font, "Alpha Mask!", PNTR_WHITE);
+    pntr_image* imageText = pntr_gen_image_text(font, "Alpha Mask!", PNTR_WHITE, PNTR_BLANK);
 
     // Apply the alpha mask to the image.
     pntr_image_alpha_mask(output, imageText, 0, 0);

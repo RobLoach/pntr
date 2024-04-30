@@ -237,7 +237,7 @@ MODULE(pntr, {
         GREATER(size.x, 50);
         EQUALS(size.y, font->atlas->height);
 
-        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!", PNTR_WHITE);
+        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!", PNTR_WHITE, PNTR_BLANK);
         NEQUALS(textImage, NULL);
         EQUALS(textImage->width, size.x);
         EQUALS(textImage->height, size.y);
@@ -416,7 +416,7 @@ MODULE(pntr, {
         NEQUALS(font, NULL);
         GREATER(font->charactersLen, 20);
 
-        pntr_image* canvas = pntr_gen_image_text(font, "Hello World!", PNTR_RED);
+        pntr_image* canvas = pntr_gen_image_text(font, "Hello World!", PNTR_RED, PNTR_BLANK);
         NEQUALS(canvas, NULL);
         GREATER(canvas->width, 10);
         GREATER(canvas->height, 10);
@@ -739,7 +739,7 @@ MODULE(pntr, {
 
             // Generate the image displaying UTF-8 text.
             const char* text = "Добрий день!";
-            pntr_image* image = pntr_gen_image_text(font, text, PNTR_BLACK);
+            pntr_image* image = pntr_gen_image_text(font, text, PNTR_BLACK, PNTR_WHITE);
             NEQUALS(image, NULL);
             pntr_save_image(image, "pntr_test_utf8.png");
 
