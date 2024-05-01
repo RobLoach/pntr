@@ -154,7 +154,7 @@ pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characte
 pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 int pntr_measure_text(pntr_font* font, const char* text);
 pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength);
-pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint);
+pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor);
 pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
 pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
 pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);

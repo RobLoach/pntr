@@ -624,7 +624,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength);
-PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint);
+PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor);
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
@@ -3879,16 +3879,17 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
  * @param font The font to use when rendering the text.
  * @param text The text to render.
  * @param tint The color to tint the text by. Use PNTR_WHITE if you don't want to change the color.
+ * @param backgroundColor The color of the background to use. Use PNTR_BLANK for a transparent background.
  *
  * @return A new image with text on it, using the given font.
  */
-PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint) {
+PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor) {
     pntr_vector size = pntr_measure_text_ex(font, text, 0);
     if (size.x <= 0 || size.y <= 0) {
         return NULL;
     }
 
-    pntr_image* output = pntr_gen_image_color(size.x, size.y, PNTR_BLANK);
+    pntr_image* output = pntr_gen_image_color(size.x, size.y, backgroundColor);
     if (output == NULL) {
         return NULL;
     }
