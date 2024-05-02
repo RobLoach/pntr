@@ -196,6 +196,7 @@ pntr_image_type pntr_get_file_image_type(const char* filePath);
 | [pntr_aseprite](https://github.com/RobLoach/pntr_aseprite) | Use [Aseprite](https://github.com/RobLoach/pntr_aseprite) animated sprites in pntr |
 | [pntr_tiled](https://github.com/RobLoach/pntr_tiled) | Display [Tiled](https://www.mapeditor.org/) 2D level editor maps in pntr |
 | [pntr_portablegl](https://github.com/RobLoach/pntr_portablegl) | Use the OpenGL-esque software rendering library, [PortableGL](https://github.com/rswinkle/PortableGL), in pntr |
+| [pntr_doom](https://github.com/RobLoach/pntr_doom) | Play DOOM via [PureDOOM](https://github.com/Daivuk/PureDOOM/) rendered through pntr |
 
 ## Development
 
