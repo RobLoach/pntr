@@ -1768,7 +1768,7 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
  * @return The color with the given red, green, blue, and alpha components.
  */
 PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
-    return (pntr_color) {
+    return PNTR_CLITERAL(pntr_color) {
         .rgba = {
             #if defined(PNTR_PIXELFORMAT_RGBA)
                 .r = red,
@@ -4231,7 +4231,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return unsigned char*pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         fseek(file, 0, SEEK_END);
@@ -4243,7 +4243,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return unsigned char*pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         unsigned char* data = (unsigned char*)PNTR_MALLOC(size * sizeof(unsigned char));
@@ -4252,7 +4252,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return unsigned char*pntr_set_error(PNTR_ERROR_NO_MEMORY);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
         // Read the file
