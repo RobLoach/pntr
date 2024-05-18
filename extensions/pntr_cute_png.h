@@ -93,12 +93,12 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_
 
 pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize) {
     if (!(type == PNTR_IMAGE_TYPE_PNG || type == PNTR_IMAGE_TYPE_UNKNOWN)) {
-        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     }
 
     cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
     if (image.pix == NULL) {
-        return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
     }
 
     pntr_image* output = pntr_image_from_pixelformat((const void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
@@ -113,7 +113,7 @@ pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const uns
 
 unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize) {
     if (!(type == PNTR_IMAGE_TYPE_UNKNOWN || type == PNTR_IMAGE_TYPE_PNG)) {
-        return pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+        return (unsigned char*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     }
 
     cp_image_t cpImage = PNTR_CLITERAL(cp_image_t) {
@@ -129,7 +129,7 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_
     cp_saved_png_t png = cp_save_png_to_memory(&cpImage);
     if (png.data == NULL) {
         cp_free_png(&cpImage);
-        return pntr_set_error(PNTR_ERROR_FAILED_TO_WRITE);
+        return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_WRITE);
     }
 
     // Export the datasize
