@@ -1407,8 +1407,43 @@ extern "C" {
  * @param y The y coordinate.
  *
  * @return The pixel color at the given coordinate.
+ * @internal
  */
 #define PNTR_PIXEL(image, x, y) image->data[(y) * (image->pitch >> 2) + (x)]
+
+/**
+ * Create a new color with the given red, green, blue, and alpha values.
+ *
+ * @def PNTR_NEW_COLOR(red, green, blue, alpha)
+ * @param r The red value.
+ * @param g The green value.
+ * @param b The blue value.
+ * @param a The alpha value.
+ *
+ * @return The new color.
+ * @internal
+ */
+#ifndef PNTR_NEW_COLOR
+    #if defined(PNTR_PIXELFORMAT_RGBA)
+        #define PNTR_NEW_COLOR(red, green, blue, alpha) PNTR_CLITERAL(pntr_color) { \
+            .rgba = { \
+                .r = red, \
+                .g = green, \
+                .b = blue, \
+                .a = alpha \
+            } \
+        }
+    #elif defined(PNTR_PIXELFORMAT_ARGB)
+        #define PNTR_NEW_COLOR(red, green, blue, alpha) PNTR_CLITERAL(pntr_color) { \
+            .rgba = { \
+                .b = red, \
+                .g = green, \
+                .r = blue, \
+                .a = alpha \
+            } \
+        }
+    #endif
+#endif
 
 /**
  * The last error that was reported from pntr.
@@ -1768,21 +1803,7 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
  * @return The color with the given red, green, blue, and alpha components.
  */
 PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
-    return PNTR_CLITERAL(pntr_color) {
-        .rgba = {
-            #if defined(PNTR_PIXELFORMAT_RGBA)
-                .r = red,
-                .g = green,
-                .b = blue,
-                .a = alpha
-            #elif defined(PNTR_PIXELFORMAT_ARGB)
-                .b = blue,
-                .g = green,
-                .r = red,
-                .a = alpha
-            #endif
-        }
-    };
+    return PNTR_NEW_COLOR(red, green, blue, alpha);
 }
 
 /**
@@ -1793,7 +1814,7 @@ PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green
  * @return The color representing the given hex value.
  */
 PNTR_API inline pntr_color pntr_get_color(unsigned int hexValue) {
-    return pntr_new_color(
+    return PNTR_NEW_COLOR(
         (unsigned char)(hexValue >> 24) & 0xFF,
         (unsigned char)(hexValue >> 16) & 0xFF,
         (unsigned char)(hexValue >> 8) & 0xFF,
@@ -3081,7 +3102,7 @@ PNTR_API inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
         return color;
     }
 
-    return pntr_new_color(
+    return PNTR_NEW_COLOR(
         (unsigned char)(((float)color.rgba.r / 255.0f * (float)tint.rgba.r / 255.0f) * 255.0f),
         (unsigned char)(((float)color.rgba.g / 255.0f * (float)tint.rgba.g / 255.0f) * 255.0f),
         (unsigned char)(((float)color.rgba.b / 255.0f * (float)tint.rgba.b / 255.0f) * 255.0f),
@@ -3220,14 +3241,14 @@ PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
     switch (srcPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-            return pntr_new_color(
+            return PNTR_NEW_COLOR(
                 ((unsigned char *)srcPtr)[0],
                 ((unsigned char *)srcPtr)[1],
                 ((unsigned char *)srcPtr)[2],
                 ((unsigned char *)srcPtr)[3]
             );
         case PNTR_PIXELFORMAT_ARGB8888:
-            return pntr_new_color(
+            return PNTR_NEW_COLOR(
                 ((unsigned char *)srcPtr)[1],
                 ((unsigned char *)srcPtr)[2],
                 ((unsigned char *)srcPtr)[3],
@@ -3235,7 +3256,7 @@ PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixel
             );
         case PNTR_PIXELFORMAT_GRAYSCALE:
             // White, with alpha determining grayscale value. Use tint to change color afterwards.
-            return pntr_new_color(255, 255, 255, ((unsigned char*)srcPtr)[0]);
+            return PNTR_NEW_COLOR(255, 255, 255, ((unsigned char*)srcPtr)[0]);
     }
 
     return PNTR_BLANK;
@@ -4137,7 +4158,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
  * @see pntr_image_color_invert()
  */
 PNTR_API inline pntr_color pntr_color_invert(pntr_color color) {
-    return pntr_new_color(
+    return PNTR_NEW_COLOR(
         255 - color.rgba.r,
         255 - color.rgba.g,
         255 - color.rgba.b,
@@ -4655,7 +4676,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         pB = 255;
     }
 
-    return pntr_new_color((unsigned char)pR, (unsigned char)pG, (unsigned char)pB, color.rgba.a);
+    return PNTR_NEW_COLOR((unsigned char)pR, (unsigned char)pG, (unsigned char)pB, color.rgba.a);
 }
 
 /**
@@ -5019,7 +5040,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
  * @return The bilinear interpolated color.
  */
 PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
-    return pntr_new_color(
+    return PNTR_NEW_COLOR(
         (uint8_t)(color00.rgba.r * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.r * (1 - coordinateX) * coordinateY + color10.rgba.r * coordinateX * (1 - coordinateY) + color11.rgba.r * coordinateX * coordinateY),
         (uint8_t)(color00.rgba.g * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.g * (1 - coordinateX) * coordinateY + color10.rgba.g * coordinateX * (1 - coordinateY) + color11.rgba.g * coordinateX * coordinateY),
         (uint8_t)(color00.rgba.b * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.b * (1 - coordinateX) * coordinateY + color10.rgba.b * coordinateX * (1 - coordinateY) + color11.rgba.b * coordinateX * coordinateY),
