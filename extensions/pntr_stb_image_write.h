@@ -74,7 +74,10 @@ unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image
     #pragma GCC diagnostic ignored "-Wunused-value"
 #endif // defined(__GNUC__) || defined(__clang__)
 
-#include "../external/stb_image_write.h"
+#ifndef PNTR_STB_IMAGE_WRITE_H
+#define PNTR_STB_IMAGE_WRITE_H "../external/stb_image_write.h"
+#endif
+#include PNTR_STB_IMAGE_WRITE_H
 
 #define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
 #ifdef STB_IMAGE_WRITE_IMPLEMENTATION

@@ -81,7 +81,11 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_
     #pragma GCC diagnostic ignored "-Wunused-value"
 #endif // defined(__GNUC__) || defined(__clang__)
 
-#include "../external/cute_png.h"
+#ifndef PNTR_CUTE_PNG_H
+#define PNTR_CUTE_PNG_H "../external/cute_png.h"
+#endif
+#include PNTR_CUTE_PNG_H
+
 #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
 #ifdef CUTE_PNG_IMPLEMENTATION
     #undef CUTE_PNG_IMPLEMENTATION

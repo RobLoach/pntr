@@ -77,7 +77,10 @@ pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const un
     #pragma GCC diagnostic ignored "-Wunused-value"
 #endif // defined(__GNUC__) || defined(__clang__)
 
-#include "../external/stb_image.h"
+#ifndef PNTR_STB_IMAGE_H
+#define PNTR_STB_IMAGE_H "../external/stb_image.h"
+#endif
+#include PNTR_STB_IMAGE_H
 
 #define PNTR_NO_STB_IMAGE_IMPLEMENTATION
 #ifdef STB_IMAGE_IMPLEMENTATION
