@@ -1815,10 +1815,10 @@ PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green
  */
 PNTR_API inline pntr_color pntr_get_color(unsigned int hexValue) {
     return PNTR_NEW_COLOR(
-        (unsigned char)(hexValue >> 24) & 0xFF,
-        (unsigned char)(hexValue >> 16) & 0xFF,
-        (unsigned char)(hexValue >> 8) & 0xFF,
-        (unsigned char)hexValue & 0xFF
+        (unsigned char)((hexValue >> 24U) & (unsigned int)0xFF),
+        (unsigned char)((hexValue >> 16U) & (unsigned int)0xFF),
+        (unsigned char)((hexValue >> 8U) & (unsigned int)0xFF),
+        (unsigned char)(hexValue & (unsigned int)0xFF)
     );
 }
 
@@ -4159,9 +4159,9 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
  */
 PNTR_API inline pntr_color pntr_color_invert(pntr_color color) {
     return PNTR_NEW_COLOR(
-        255 - color.rgba.r,
-        255 - color.rgba.g,
-        255 - color.rgba.b,
+        (unsigned char)(255 - color.rgba.r),
+        (unsigned char)(255 - color.rgba.g),
+        (unsigned char)(255 - color.rgba.b),
         color.rgba.a
     );
 }
