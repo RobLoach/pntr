@@ -79,7 +79,9 @@ unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image
 #endif
 #include PNTR_STB_IMAGE_WRITE_H
 
-#define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
+#ifndef PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
+    #define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
+#endif
 #ifdef STB_IMAGE_WRITE_IMPLEMENTATION
     #undef STB_IMAGE_WRITE_IMPLEMENTATION
 #endif

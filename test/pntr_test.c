@@ -17,9 +17,9 @@
 
 bool pntr_utf8() {
     #ifdef PNTR_ENABLE_UTF8
-    return true;
+        return true;
     #else
-    return false;
+        return false;
     #endif
 }
 

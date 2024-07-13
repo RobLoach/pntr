@@ -3715,7 +3715,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
     int lineLength = 1;
     char* lastSpace = NULL;
     int currentY = 0;
-    pntr_vector textSize;
+    pntr_vector textSize = {0, 0};
 
     // Iterate through each character.
     for (char* nextChar = PNTR_STRCODEPOINT(text, &codepoint); codepoint; nextChar = PNTR_STRCODEPOINT(nextChar, &codepoint)) {

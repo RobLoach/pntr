@@ -82,7 +82,9 @@ pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const un
 #endif
 #include PNTR_STB_IMAGE_H
 
-#define PNTR_NO_STB_IMAGE_IMPLEMENTATION
+#ifndef PNTR_NO_STB_IMAGE_IMPLEMENTATION
+    #define PNTR_NO_STB_IMAGE_IMPLEMENTATION
+#endif
 #ifdef STB_IMAGE_IMPLEMENTATION
     #undef STB_IMAGE_IMPLEMENTATION
 #endif
