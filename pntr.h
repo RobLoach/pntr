@@ -1436,10 +1436,10 @@ extern "C" {
     #elif defined(PNTR_PIXELFORMAT_ARGB)
         #define PNTR_NEW_COLOR(red, green, blue, alpha) PNTR_CLITERAL(pntr_color) { \
             .rgba = { \
-                .b = red, \
+                .b = blue, \
                 .g = green, \
-                .r = blue, \
-                .a = alpha \
+                .r = red, \
+                .a = alpha, \
             } \
         }
     #endif
