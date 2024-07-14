@@ -376,25 +376,10 @@ typedef struct pntr_rectangle {
  * @see pntr_gen_image_color()
  */
 typedef struct pntr_image {
-    /**
-     * The pixel data for the image.
-     */
-    pntr_color* data;
-
-    /**
-     * The width of the image.
-     */
-    int width;
-
-    /**
-     * The height of the image.
-     */
-    int height;
-
-    /**
-     * The amount of bytes of one row of the image.
-     */
-    int pitch;
+    pntr_color* data; /** The pixel data for the image. */
+    int width; /** The width of the image. */
+    int height; /** The height of the image. */
+    int pitch; /** The amount of bytes of one row of the image. */
 
     /**
      * Whether or not the image is a portion of another image, sharing the same image data.
@@ -431,69 +416,28 @@ typedef struct pntr_vector {
  * @see PNTR_ENABLE_TTF
  */
 typedef struct pntr_font {
-    /**
-     * The image used for the character atlas for the font.
-     */
-    pntr_image* atlas;
-
-    /**
-     * The glyph source rectangles on the atlas.
-     */
-    pntr_rectangle* srcRects;
-
-    /**
-     * How the glyph appears when rendering.
-     */
-    pntr_rectangle* glyphRects;
-
-    /**
-     * An array of characters that are available in the font's atlas.
-     */
-    char* characters;
-
-    /**
-     * The number of characters that the font implements.
-     */
-    int charactersLen;
+    pntr_image* atlas; /** The image used for the character atlas for the font. */
+    pntr_rectangle* srcRects; /** The glyph source rectangles on the atlas. */
+    pntr_rectangle* glyphRects; /** How the glyph appears when rendering. */
+    char* characters; /** An array of characters that are available in the font's atlas. */
+    int charactersLen; /** The number of characters that the font implements. */
 } pntr_font;
 
 /**
  * Pixel format.
  */
 typedef enum pntr_pixelformat {
-    /**
-     * RGBA, with 8 bytes for each component.
-     */
-    PNTR_PIXELFORMAT_RGBA8888 = 0,
-
-    /**
-     * ARGB, with 8 bytes for each component.
-     */
-    PNTR_PIXELFORMAT_ARGB8888,
-
-    /**
-     * Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled.
-     */
-    PNTR_PIXELFORMAT_GRAYSCALE
+    PNTR_PIXELFORMAT_RGBA8888 = 0, /** RGBA, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_ARGB8888, /** ARGB, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_GRAYSCALE /** Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
 } pntr_pixelformat;
 
 /**
  * Possible image filters to apply.
  */
 typedef enum pntr_filter {
-    /**
-     * Nearest-neighbor interpolation for fast processing.
-     *
-     * This is good for scaling up pixel art when you want to keep the pixel art look.
-     */
-    PNTR_FILTER_NEARESTNEIGHBOR = 0,
-
-    /**
-     * Bilinear interpolation will combine multiple pixels together when processing for smoother scaling.
-     *
-     * @see pntr_color_bilinear_interpolate()
-     */
-    PNTR_FILTER_BILINEAR
+    PNTR_FILTER_NEARESTNEIGHBOR = 0, /** Nearest-neighbor interpolation for fast processing. Good for a pixel art look. */
+    PNTR_FILTER_BILINEAR /** Bilinear interpolation will combine multiple pixels together when processing for smoother scaling. */
 } pntr_filter;
 
 /**
