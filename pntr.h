@@ -1941,9 +1941,8 @@ PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vec
         return;
     }
 
-    float t_step;
-    struct pntr_vector last = point1;
-    t_step = 1.0f / (float)segments;
+    float t_step = 1.0f / (float)segments;
+    pntr_vector last = point1;
     for (int i_step = 1; i_step <= segments; ++i_step) {
         float t = t_step * (float)i_step;
         float u = 1.0f - t;
@@ -1954,7 +1953,8 @@ PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vec
         float x = w1 * (float)point1.x + w2 * (float)point2.x + w3 * (float)point3.x + w4 * (float)point4.x;
         float y = w1 * (float)point1.y + w2 * (float)point2.y + w3 * (float)point3.y + w4 * (float)point4.y;
         pntr_draw_line(dst, last.x, last.y, (int)x, (int)y, color);
-        last.x = (short)x; last.y = (short)y;
+        last.x = (int)x;
+        last.y = (int)y;
     }
 }
 
@@ -2442,6 +2442,9 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
     int left = 10000, top = 10000, bottom = 0, right = 0;
     int nodes, pixelX, pixelY, j, swap;
     int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints);
+    if (nodeX == NULL) {
+        return;
+    }
 
     /* Get polygon dimensions */
     for (i = 0; i < numPoints; i++) {
