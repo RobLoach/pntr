@@ -50,11 +50,14 @@ void pntr_examples_shapes() {
     pntr_draw_arc(canvas, 300, 120, radius, 90.0f, 180.0f, radius *1.5f, PNTR_RED);
 
     // Polyline
-    points[0] = PNTR_CLITERAL(pntr_vector) {240, 110};
-    points[1] = PNTR_CLITERAL(pntr_vector) {260, 130};
-    points[2] = PNTR_CLITERAL(pntr_vector) {220, 140};
-    points[3] = PNTR_CLITERAL(pntr_vector) {240, 160};
+    points[0] = PNTR_CLITERAL(pntr_vector) {240, 80};
+    points[1] = PNTR_CLITERAL(pntr_vector) {260, 100};
+    points[2] = PNTR_CLITERAL(pntr_vector) {220, 110};
+    points[3] = PNTR_CLITERAL(pntr_vector) {240, 130};
     pntr_draw_polyline(canvas, points, 4, PNTR_PURPLE);
+
+    // Line Curve
+    pntr_draw_line_curve(canvas, points[0], points[1], points[2], points[3], 40, PNTR_DARKBLUE);
 
     pntr_save_image(canvas, "pntr_examples_shapes.png");
     pntr_unload_image(canvas);
