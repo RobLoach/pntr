@@ -485,6 +485,7 @@ PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
 PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color);
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
+PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color);
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
@@ -1935,6 +1936,28 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
     }
 }
 
+PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || segments <= 0) {
+        return;
+    }
+
+    float t_step;
+    struct pntr_vector last = point1;
+    t_step = 1.0f/(float)segments;
+    for (int i_step = 1; i_step <= segments; ++i_step) {
+        float t = t_step * (float)i_step;
+        float u = 1.0f - t;
+        float w1 = u*u*u;
+        float w2 = 3*u*u*t;
+        float w3 = 3*u*t*t;
+        float w4 = t * t *t;
+        float x = w1 * point1.x + w2 * point2.x + w3 * point3.x + w4 * point4.x;
+        float y = w1 * point1.y + w2 * point2.y + w3 * point3.y + w4 * point4.y;
+        pntr_draw_line(dst, last.x, last.y, (int)x, (int)y, color);
+        last.x = (short)x; last.y = (short)y;
+    }
+}
+
 PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     if (color.rgba.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
         return;
@@ -2415,31 +2438,62 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
         return;
     }
 
-    // Discover the top and bottom of the polygon.
-    int ymin = dst->height + 1;
-    int ymax = -1;
-    for (int i = 0; i < numPoints; ++i) {
-        ymin = PNTR_MIN(ymin, points[i].y);
-        ymax = PNTR_MAX(ymax, points[i].y);
+    int i = 0;
+    int left = 10000, top = 10000, bottom = 0, right = 0;
+    int nodes, pixelX, pixelY, j, swap;
+    int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints);
+
+    /* Get polygon dimensions */
+    for (i = 0; i < numPoints; i++) {
+        if (left > points[i].x)
+            left = points[i].x;
+        if (right < points[i].x)
+            right = points[i].x;
+        if (top > points[i].y)
+            top = points[i].y;
+        if (bottom < points[i].y)
+            bottom = points[i].y;
     }
+    bottom++;
+    right++;
 
-    // The following algorithm is correct for convex polygons only.
-    for (int yy = ymin; yy <= ymax; yy++) {
-        int xmin = dst->width + 1;
-        int xmax = -1;
-        for (int i = 0; i < numPoints; ++i) {
-            pntr_vector point1 = points[i];
-            pntr_vector point2 = i < (numPoints - 1) ? points[i + 1] : points[0];
-
-            if ((point1.y > yy) != (point2.y > yy)) {
-                int testx = point1.x + ((point2.x - point1.x) * (yy - point1.y)) / (point2.y - point1.y);
-                xmin = PNTR_MIN(xmin, testx);
-                xmax = PNTR_MAX(xmax, testx);
-            }
+    // Polygon scanline algorithm released under public-domain by Darel Rex Finley, 2007.
+    // Loop through the rows of the image.
+    for (pixelY = top; pixelY < bottom; pixelY ++) {
+        nodes = 0; /*  Build a list of nodes. */
+        j = numPoints - 1;
+        for (i = 0; i < numPoints; i++) {
+            if (((points[i].y < pixelY) && (points[j].y >= pixelY)) ||
+                ((points[j].y < pixelY) && (points[i].y >= pixelY))) {
+                nodeX[nodes++]= (int)((float)points[i].x
+                     + ((float)pixelY - (float)points[i].y) / ((float)points[j].y - (float)points[i].y)
+                     * ((float)points[j].x - (float)points[i].x));
+            } j = i;
         }
 
-        pntr_draw_line_horizontal(dst, xmin, yy, xmax - xmin, color);
+        // Sort the nodes, via a simple “Bubble” sort.
+        i = 0;
+        while (i < nodes - 1) {
+            if (nodeX[i] > nodeX[i+1]) {
+                swap = nodeX[i];
+                nodeX[i] = nodeX[i+1];
+                nodeX[i+1] = swap;
+                if (i) i--;
+            } else i++;
+        }
+        // Fill the pixels between node pairs.
+        for (i = 0; i < nodes; i += 2) {
+            if (nodeX[i+0] >= right) break;
+            if (nodeX[i+1] > left) {
+                if (nodeX[i+0] < left) nodeX[i+0] = left ;
+                if (nodeX[i+1] > right) nodeX[i+1] = right;
+                for (pixelX = nodeX[i]; pixelX < nodeX[i + 1]; pixelX++)
+                    pntr_draw_point(dst, pixelX, pixelY, color);
+            }
+        }
     }
+
+    PNTR_FREE(nodeX);
 }
 
 /**
