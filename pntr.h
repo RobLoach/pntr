@@ -1943,16 +1943,16 @@ PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vec
 
     float t_step;
     struct pntr_vector last = point1;
-    t_step = 1.0f/(float)segments;
+    t_step = 1.0f / (float)segments;
     for (int i_step = 1; i_step <= segments; ++i_step) {
         float t = t_step * (float)i_step;
         float u = 1.0f - t;
-        float w1 = u*u*u;
-        float w2 = 3*u*u*t;
-        float w3 = 3*u*t*t;
-        float w4 = t * t *t;
-        float x = w1 * point1.x + w2 * point2.x + w3 * point3.x + w4 * point4.x;
-        float y = w1 * point1.y + w2 * point2.y + w3 * point3.y + w4 * point4.y;
+        float w1 = u * u * u;
+        float w2 = 3 * u * u * t;
+        float w3 = 3 * u * t * t;
+        float w4 = t * t * t;
+        float x = w1 * (float)point1.x + w2 * (float)point2.x + w3 * (float)point3.x + w4 * (float)point4.x;
+        float y = w1 * (float)point1.y + w2 * (float)point2.y + w3 * (float)point3.y + w4 * (float)point4.y;
         pntr_draw_line(dst, last.x, last.y, (int)x, (int)y, color);
         last.x = (short)x; last.y = (short)y;
     }
