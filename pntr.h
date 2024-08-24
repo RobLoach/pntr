@@ -421,6 +421,7 @@ typedef struct pntr_font {
     pntr_rectangle* glyphRects; /** How the glyph appears when rendering. */
     char* characters; /** An array of characters that are available in the font's atlas. */
     int charactersLen; /** The number of characters that the font implements. */
+    void* user_data; /** General extra user data that can be referenced to by the font. */
 } pntr_font;
 
 /**
