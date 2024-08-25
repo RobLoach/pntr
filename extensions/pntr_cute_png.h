@@ -43,6 +43,11 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_
 #ifndef PNTR_CUTE_PNG_IMPLEMENTATION
 #define PNTR_CUTE_PNG_IMPLEMENTATION
 
+#ifndef PNTR_MEMCMP
+    #include <string.h>
+    #define PNTR_MEMCMP(ptr1, ptr2, num) memcmp(ptr1, ptr2, num)
+#endif  // PNTR_MEMCMP
+
 #ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
     #define CUTE_PNG_IMPLEMENTATION
     #define CUTE_PNG_ALLOCA PNTR_MALLOC
@@ -50,6 +55,7 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_
     #define CUTE_PNG_FREE PNTR_FREE
     #define CUTE_PNG_CALLOC(num, size) PNTR_MALLOC((num) * (size))
     #define CUTE_PNG_REALLOC PNTR_REALLOC
+    #define CUTE_PNG_MEMCMP PNTR_MEMCMP
     #define CUTE_PNG_MEMCPY PNTR_MEMCPY
     #define CUTE_PNG_MEMSET PNTR_MEMSET
     #define CUTE_PNG_FPRINTF (void)
