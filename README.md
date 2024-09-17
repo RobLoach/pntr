@@ -26,6 +26,20 @@ int main() {
 [![Example: Fonts](examples/pntr_examples_fonts.png)](examples/pntr_examples_fonts.h)
 [![Example: Sprite](examples/pntr_examples_sprite.png)](examples/pntr_examples_sprite.h)
 
+## Integrations
+
+| Name | Description |
+| ---- | ----------- |
+| [pntr_app](https://github.com/RobLoach/pntr_app) | Application wrapper for building the same pntr code on a number of different platforms |
+| [pntr_assetsys](https://github.com/RobLoach/pntr_assetsys) | Load pntr assets from *.zip* files with [assetsys.h](https://github.com/mattiasgustavsson/libs/blob/main/assetsys.h) |
+| [pntr_physfs](https://github.com/RobLoach/pntr_physfs) | Load pntr assets from *.zip* files with [PhysicsFS](https://github.com/icculus/physfs) |
+| [pntr_nuklear](https://github.com/RobLoach/pntr_nuklear) | [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr |
+| [pntr_aseprite](https://github.com/RobLoach/pntr_aseprite) | Use [Aseprite](https://github.com/RobLoach/pntr_aseprite) animated sprites in pntr |
+| [pntr_tiled](https://github.com/RobLoach/pntr_tiled) | Display [Tiled](https://www.mapeditor.org/) 2D level editor maps in pntr |
+| [pntr_portablegl](https://github.com/RobLoach/pntr_portablegl) | Use the OpenGL-esque software rendering library, [PortableGL](https://github.com/rswinkle/PortableGL), in pntr |
+| [pntr_doom](https://github.com/RobLoach/pntr_doom) | Play DOOM via [PureDOOM](https://github.com/Daivuk/PureDOOM/) rendered through pntr |
+| [pntr_pixelfont](https://github.com/RobLoach/pntr_pixelfont) | Additional pixel fonts outside of the default |
+
 ## API
 
 This covers how to use *pntr*.
@@ -184,20 +198,6 @@ void pntr_unload_memory(void* pointer);
 void* pntr_memory_copy(void* destination, void* source, size_t size);
 pntr_image_type pntr_get_file_image_type(const char* filePath);
 ```
-
-## Integrations
-
-| Name | Description |
-| ---- | ----------- |
-| [pntr_app](https://github.com/RobLoach/pntr_app) | Application wrapper for building the same pntr code on a number of different platforms |
-| [pntr_assetsys](https://github.com/RobLoach/pntr_assetsys) | Load pntr assets from *.zip* files with [assetsys.h](https://github.com/mattiasgustavsson/libs/blob/main/assetsys.h) |
-| [pntr_physfs](https://github.com/RobLoach/pntr_physfs) | Load pntr assets from *.zip* files with [PhysicsFS](https://github.com/icculus/physfs) |
-| [pntr_nuklear](https://github.com/RobLoach/pntr_nuklear) | [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr |
-| [pntr_aseprite](https://github.com/RobLoach/pntr_aseprite) | Use [Aseprite](https://github.com/RobLoach/pntr_aseprite) animated sprites in pntr |
-| [pntr_tiled](https://github.com/RobLoach/pntr_tiled) | Display [Tiled](https://www.mapeditor.org/) 2D level editor maps in pntr |
-| [pntr_portablegl](https://github.com/RobLoach/pntr_portablegl) | Use the OpenGL-esque software rendering library, [PortableGL](https://github.com/rswinkle/PortableGL), in pntr |
-| [pntr_doom](https://github.com/RobLoach/pntr_doom) | Play DOOM via [PureDOOM](https://github.com/Daivuk/PureDOOM/) rendered through pntr |
-| [pntr_pixelfont](https://github.com/RobLoach/pntr_pixelfont) | Additional pixel fonts outside of the default |
 
 ## Development
 
