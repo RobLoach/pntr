@@ -1694,7 +1694,7 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
 /**
  * Draws a line on the destination image.
  */
-PNTR_API inline void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
+PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
     pntr_color *row = &PNTR_PIXEL(dst, posX, posY);
     while (--width >= 0) {
         row[width] = color;
@@ -1748,7 +1748,7 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
  *
  * @return The color with the given red, green, blue, and alpha components.
  */
-PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
+PNTR_API pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
     return PNTR_NEW_COLOR(red, green, blue, alpha);
 }
 
@@ -1759,7 +1759,7 @@ PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green
  *
  * @return The color representing the given hex value.
  */
-PNTR_API inline pntr_color pntr_get_color(unsigned int hexValue) {
+PNTR_API pntr_color pntr_get_color(unsigned int hexValue) {
     return PNTR_NEW_COLOR(
         (unsigned char)((hexValue >> 24U) & (unsigned int)0xFF),
         (unsigned char)((hexValue >> 16U) & (unsigned int)0xFF),
@@ -1768,42 +1768,42 @@ PNTR_API inline pntr_color pntr_get_color(unsigned int hexValue) {
     );
 }
 
-PNTR_API inline unsigned char pntr_color_r(pntr_color color) {
+PNTR_API unsigned char pntr_color_r(pntr_color color) {
     return color.rgba.r;
 }
 
-PNTR_API inline unsigned char pntr_color_g(pntr_color color) {
+PNTR_API unsigned char pntr_color_g(pntr_color color) {
     return color.rgba.g;
 }
 
-PNTR_API inline unsigned char pntr_color_b(pntr_color color) {
+PNTR_API unsigned char pntr_color_b(pntr_color color) {
     return color.rgba.b;
 }
 
-PNTR_API inline unsigned char pntr_color_a(pntr_color color) {
+PNTR_API unsigned char pntr_color_a(pntr_color color) {
     return color.rgba.a;
 }
 
-PNTR_API inline void pntr_color_set_r(pntr_color* color, unsigned char r) {
+PNTR_API void pntr_color_set_r(pntr_color* color, unsigned char r) {
     color->rgba.r = r;
 }
 
-PNTR_API inline void pntr_color_set_g(pntr_color* color, unsigned char g) {
+PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g) {
     color->rgba.g = g;
 }
 
-PNTR_API inline void pntr_color_set_b(pntr_color* color, unsigned char b) {
+PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b) {
     color->rgba.b = b;
 }
 
-PNTR_API inline void pntr_color_set_a(pntr_color* color, unsigned char a) {
+PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a) {
     color->rgba.a = a;
 }
 
 /**
  * Draws a point on the given image, without safety checks.
  */
-PNTR_API inline void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
+PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_blend_color(&PNTR_PIXEL(dst, x, y), color);
 }
 
@@ -2052,7 +2052,7 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
  * @param rec The rectangle of which to draw.
  * @param color The color of the lines for the rectangle.
  */
-PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color) {
+PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color) {
     pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, color);
 }
 
@@ -2086,7 +2086,7 @@ PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int
     }
 }
 
-PNTR_API inline void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color) {
+PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color) {
     pntr_draw_rectangle_thick(dst, rect.x, rect.y, rect.width, rect.height, thickness, color);
 }
 
@@ -2102,7 +2102,7 @@ PNTR_API inline void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectang
  *
  * @see pntr_draw_rectangle()
  */
-PNTR_API inline void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
+PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
     pntr_draw_rectangle_fill_rec(dst, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
 }
 
@@ -2168,7 +2168,7 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
     }
 }
 
-PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
+PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
     pntr_draw_rectangle_gradient_rec(dst, PNTR_CLITERAL(pntr_rectangle) {x, y, width, height}, topLeft, topRight, bottomLeft, bottomRight);
 }
 
@@ -2188,7 +2188,7 @@ PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y,
  *
  * @see pntr_draw_circle_fill()
  */
-PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0) {
         return;
     }
@@ -2369,7 +2369,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
  * @param point3 The third point in the triangle.
  * @param color What color to draw the triangle.
  */
-PNTR_API inline void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
+PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
     pntr_draw_triangle(dst, point1.x, point1.y, point2.x, point2.y, point3.x, point3.y, color);
 }
 
@@ -2403,7 +2403,7 @@ PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2
  * @param y3 The y coordinate of the third point.
  * @param color The fill color of the triangle.
  */
-PNTR_API inline void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
+PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
     pntr_draw_triangle_fill_vec(dst,
         PNTR_CLITERAL(pntr_vector) { .x = x1, .y = y1 },
         PNTR_CLITERAL(pntr_vector) { .x = x2, .y = y2 },
@@ -2412,7 +2412,7 @@ PNTR_API inline void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, in
     );
 }
 
-PNTR_API inline void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
+PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
     pntr_draw_line(dst, start.x, start.y, end.x, end.y, color);
 }
 
@@ -2757,7 +2757,7 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
  * @param posY The y-coordinate of the position where the source image will be drawn.
  * @param tint The color to tint the image when drawing.
  */
-PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
+PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
     if (src == NULL) {
         return;
     }
@@ -2775,7 +2775,7 @@ PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int 
  * @param posX The x-coordinate of the position where the source image will be drawn.
  * @param posY The y-coordinate of the position where the source image will be drawn.
  */
-PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
+PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
     if (src == NULL) {
         return;
     }
@@ -2794,7 +2794,7 @@ PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX,
  *
  * @see PNTR_NO_ALPHABLEND
  */
-PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
+PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
     pntr_blend_color(&dst, src);
     return dst;
 }
@@ -2810,7 +2810,7 @@ PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src
  *
  * @see pntr_draw_image()
  */
-PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
+PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     pntr_draw_image_tint_rec(dst, src, srcRect, posX, posY, PNTR_WHITE);
 }
 
@@ -3099,7 +3099,7 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
  *
  * @see pntr_image_color_tint()
  */
-PNTR_API inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
+PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
     if (tint.value == PNTR_WHITE_VALUE) {
         return color;
     }
@@ -3823,7 +3823,7 @@ PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int 
  *
  * @return The amount of pixels the text is when rendered with the font.
  */
-PNTR_API inline int pntr_measure_text(pntr_font* font, const char* text) {
+PNTR_API int pntr_measure_text(pntr_font* font, const char* text) {
     return pntr_measure_text_ex(font, text, 0).x;
 }
 
@@ -4159,7 +4159,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
  *
  * @see pntr_image_color_invert()
  */
-PNTR_API inline pntr_color pntr_color_invert(pntr_color color) {
+PNTR_API pntr_color pntr_color_invert(pntr_color color) {
     return PNTR_NEW_COLOR(
         (unsigned char)(255 - color.rgba.r),
         (unsigned char)(255 - color.rgba.g),
@@ -4325,7 +4325,7 @@ PNTR_API const char* pntr_load_file_text(const char *fileName) {
  *
  * @see pntr_load_file_text()
  */
-PNTR_API inline void pntr_unload_file_text(const char* text) {
+PNTR_API void pntr_unload_file_text(const char* text) {
     pntr_unload_memory((void*)text);
 }
 
@@ -4513,7 +4513,7 @@ PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
  *
  * @see pntr_load_file()
  */
-PNTR_API inline void pntr_unload_file(unsigned char* fileData) {
+PNTR_API void pntr_unload_file(unsigned char* fileData) {
     pntr_unload_memory((void*)fileData);
 }
 
@@ -4800,7 +4800,7 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     return true;
 }
 
-PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
+PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4862,7 +4862,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * @param offsetX How much to offset the Y drawing of the image, relative from its original source size.
  * @param filter Filter to be applied during the rotation.
  */
-PNTR_API inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -5041,7 +5041,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
  *
  * @return The bilinear interpolated color.
  */
-PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
+PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
     return PNTR_NEW_COLOR(
         (uint8_t)(color00.rgba.r * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.r * (1 - coordinateX) * coordinateY + color10.rgba.r * coordinateX * (1 - coordinateY) + color11.rgba.r * coordinateX * coordinateY),
         (uint8_t)(color00.rgba.g * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.g * (1 - coordinateX) * coordinateY + color10.rgba.g * coordinateX * (1 - coordinateY) + color11.rgba.g * coordinateX * coordinateY),
@@ -5065,7 +5065,7 @@ PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, p
  * @see pntr_draw_image_rec_rotated()
  * @see pntr_image_rotate()
  */
-PNTR_API inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter) {
+PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -5350,7 +5350,7 @@ PNTR_API void pntr_image_reset_clip(pntr_image* image) {
  *
  * @see PNTR_MALLOC
  */
-PNTR_API inline void* pntr_load_memory(size_t size) {
+PNTR_API void* pntr_load_memory(size_t size) {
     return PNTR_MALLOC(size);
 }
 
@@ -5378,7 +5378,7 @@ PNTR_API void pntr_unload_memory(void* pointer) {
  *
  * @see PNTR_MEMCPY
  */
-PNTR_API inline void* pntr_memory_copy(void* destination, void* source, size_t size) {
+PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size) {
     return PNTR_MEMCPY(destination, source, size);
 }
 
