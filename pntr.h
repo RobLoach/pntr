@@ -2786,7 +2786,7 @@ PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, i
         pntr_draw_rectangle_rounded(dst, x, y, width, height, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, color);
         return;
     }
-    for (int offset = 0;offset < thickness;ofset++ ) {
+    for (int offset = 0; offset < thickness; offset++ ) {
         pntr_draw_line_horizontal(dst, x + topLeftRadius - offset, y - offset, width - topLeftRadius - topRightRadius - offset, color); // Top
         pntr_draw_line_horizontal(dst, x + bottomLeftRadius - offset, y + height - offset, width - bottomLeftRadius - bottomRightRadius - 1 - offset, color); // Bottom
         pntr_draw_line_vertical(dst, x - offset, y + topLeftRadius - offset, height - topLeftRadius - bottomLeftRadius - offset, color); // Left
