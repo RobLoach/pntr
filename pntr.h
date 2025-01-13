@@ -2291,6 +2291,29 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
 }
 
 /**
+ * Draws a circle from the given center, with the given radius & line-thickness.
+ *
+ * @param dst The image to draw the circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerX The center of the circle at the Y coordinate.
+ * @param radius The radius of the circle.
+ * @param color The desired color of the circle.
+ *
+ */
+PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_circle(dst, centerX, centerY, radius, color);
+        return;
+    }
+    for (int offset = 0;offset < thickness;offset++) {
+        pntr_draw_circle(dst, centerX, centerY, radius-offset, color);
+    }
+}
+
+/**
  * Draws an ellipse on the given image.
  *
  * @param dst The image to draw the filled circle onto.
