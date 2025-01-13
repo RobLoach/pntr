@@ -2389,6 +2389,31 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
 }
 
 /**
+ * Draws an ellipse on the given image, with line-thikness.
+ *
+ * @param dst The image to draw the filled circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerX The center of the circle at the Y coordinate.
+ * @param radiusX The  horizontal radius of the circle.
+ * @param radiusY The vertical radius of the circle.
+ * @param thickness The thickness of the line
+ * @param color The desired color of the circle.
+ *
+ */
+PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_ellipse(dst, centerX, centerY, radiusX, radiusY, color);
+        return;
+    }
+    for (int offset = 0;offset < thickness;offset++) {
+        pntr_draw_ellipse(dst, centerX, centerY, radiusX-offset, radiusY-offset, color);
+    }
+}
+
+/**
  * Draw a triangle using vectors.
  *
  * @param dst Where to draw the triangle.
