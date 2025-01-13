@@ -2778,6 +2778,26 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
     pntr_draw_arc(dst, x + width - bottomRightRadius - 1, y + height - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
 }
 
+PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_rectangle_rounded(dst, x, y, width, height, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, color);
+        return;
+    }
+    for (int offset = 0;offset < thickness;ofset++ ) {
+        pntr_draw_line_horizontal(dst, x + topLeftRadius - offset, y - offset, width - topLeftRadius - topRightRadius - offset, color); // Top
+        pntr_draw_line_horizontal(dst, x + bottomLeftRadius - offset, y + height - offset, width - bottomLeftRadius - bottomRightRadius - 1 - offset, color); // Bottom
+        pntr_draw_line_vertical(dst, x - offset, y + topLeftRadius - offset, height - topLeftRadius - bottomLeftRadius - offset, color); // Left
+        pntr_draw_line_vertical(dst, x + width - 1 - offset, y + topRightRadius - offset, height - topRightRadius - bottomRightRadius - offset, color); // Right
+    }
+    pntr_draw_arc_thick(dst, x + topLeftRadius, y + topLeftRadius, (float)topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, thickness, color); // Top Left
+    pntr_draw_arc_thick(dst, x + width - topRightRadius - 1, y + topRightRadius, (float)topRightRadius, 0.0f, -90.0f, topRightRadius * 2, thickness, color); // Top Right
+    pntr_draw_arc_thick(dst, x + bottomLeftRadius, y + height - bottomLeftRadius, (float)bottomLeftRadius, -180.0f, -270.0f, bottomLeftRadius * 2, thickness, color); // Bottom Left
+    pntr_draw_arc_thick(dst, x + width - bottomRightRadius - 1, y + height - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, thickness, color); // Bottom Right
+}
+
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
     // Corners
     // TODO: Replace this with pntr_draw_arc_fill()
