@@ -2546,6 +2546,24 @@ PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoi
    }
 }
 
+PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || numPoints <= 0 || points == NULL) {
+        return;
+    }
+
+    int nextPointIndex;
+    for (int i = 0; i < numPoints; i++) {
+        if (i < numPoints - 1) {
+            nextPointIndex = i + 1;
+        }
+        else {
+            nextPointIndex = 0;
+        }
+
+        pntr_draw_line_thick(dst, points[i].x, points[i].y, points[nextPointIndex].x, points[nextPointIndex].y, thickness, color);
+   }
+}
+
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     if (dst == NULL || points == NULL || numPoints <= 0 || color.rgba.a == 0) {
         return;
