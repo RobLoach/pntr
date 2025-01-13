@@ -2707,6 +2707,35 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     }
 }
 
+PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color) {
+    if (radius == 0.0f) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+    if (segments < 0) {
+        return;
+    }
+
+    float startAngleRad = startAngle * PNTR_PI / 180.0f;
+    float endAngleRad = endAngle * PNTR_PI / 180.0f;
+
+    // Calculate how much distance between each segment
+    float stepAngle = (endAngleRad - startAngleRad) / (float)(segments);
+
+    // Draw the arc with line segments
+    int x1 = centerX + (int)((float)radius * PNTR_COSF(startAngleRad));
+    int y1 = centerY + (int)((float)radius * PNTR_SINF(startAngleRad));
+    float angle;
+    for (int i = 1; i < segments; i++) {
+        angle = startAngleRad + (float)i * stepAngle;
+        int x2 = centerX + (int)((float)radius * PNTR_COSF(angle));
+        int y2 = centerY + (int)((float)radius * PNTR_SINF(angle));
+        pntr_draw_line_thick(dst, x1, y1, x2, y2, thickness, color);
+        x1 = x2;
+        y1 = y2;
+    }
+}
+
 PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
