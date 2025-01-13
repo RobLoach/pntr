@@ -46,7 +46,7 @@ void pntr_examples_thick() {
     pntr_draw_polyline_thick(canvas, points, 4, 5, PNTR_PURPLE);
 
     // Line Curve
-    pntr_draw_line_curve_thick(canvas, points[0], points[1], points[2], points[3], 40, 5, PNTR_DARKBLUE);
+    // pntr_draw_line_curve_thick(canvas, points[0], points[1], points[2], points[3], 40, 5, PNTR_DARKBLUE);
 
     pntr_save_image(canvas, "pntr_examples_thick.png");
     pntr_unload_image(canvas);
