@@ -52,6 +52,7 @@
 #include "pntr_examples_rotate.h"
 #include "pntr_examples_shapes.h"
 #include "pntr_examples_sprite.h"
+#include "pntr_examples_thick.h"
 
 int main(int argc, char* argv[]) {
     pntr_examples_alphamask();
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]) {
     pntr_examples_rotate();
     pntr_examples_shapes();
     pntr_examples_sprite();
+    pntr_examples_thick();
 
     return 0;
 }

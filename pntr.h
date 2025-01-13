@@ -600,6 +600,17 @@ PNTR_API void pntr_unload_memory(void* pointer);
 PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
 PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath);
 
+// thick
+void pntr_draw_line_thick(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color);
+void pntr_draw_triangle_thick(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, int thickness, pntr_color color);
+void pntr_draw_triangle_thick_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, int thickness, pntr_color color);
+void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, int thickness, pntr_color color);
+void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color);
+void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color);
+void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color);
+void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color);
+void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color);
+
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
 PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color);
@@ -1937,6 +1948,23 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
     }
 }
 
+/**
+ * Draws a line on the given image, with thickness
+ */
+PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_line(dst, startPosX, startPosY, endPosX, endPosY, color);
+        return;
+    }
+
+    for (int offset = 0;offset < thickness;offset++) {
+        pntr_draw_line(dst, startPosX-offset, startPosY-offset, endPosX+offset, endPosY+offset, color);
+    }
+}
+
 PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0 || segments <= 0) {
         return;
@@ -2374,6 +2402,22 @@ PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_v
 }
 
 /**
+ * Draw a triangle using vectors, with line-thickness.
+ *
+ * @param dst Where to draw the triangle.
+ * @param point1 The first point in the triangle.
+ * @param point2 The second point in the triangle.
+ * @param point3 The third point in the triangle.
+ * @param thickness The thickness of the line
+ * @param color What color to draw the triangle.
+ */
+void pntr_draw_triangle_thick_vec(pntr_image *dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, int thickness, pntr_color color) {
+    pntr_draw_line_thick(dst, point1.x, point1.y, point2.x, point2.y, thickness, color);
+    pntr_draw_line_thick(dst, point2.x, point2.y, point3.x, point3.y, thickness, color);
+    pntr_draw_line_thick(dst, point3.x, point3.y, point1.x, point1.y, thickness, color);
+}
+
+/**
  * Draw a triangle on an image.
  *
  * @param dst The image of which to draw the triangle.
@@ -2390,6 +2434,26 @@ PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2
     pntr_draw_line(dst, x2, y2, x3, y3, color);
     pntr_draw_line(dst, x3, y3, x1, y1, color);
 }
+
+/**
+ * Draw a triangle on an image, with line-thickness.
+ *
+ * @param dst The image of which to draw the triangle.
+ * @param x1 The x coordinate of the first point.
+ * @param y1 The y coordinate of the first point.
+ * @param x2 The x coordinate of the second point.
+ * @param y2 The y coordinate of the second point.
+ * @param x3 The x coordinate of the third point.
+ * @param y3 The y coordinate of the third point.
+ * @param thickness The thickness of the line
+ * @param color The line color for the triangle.
+ */
+PNTR_API void pntr_draw_triangle_thick(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, int thickness, pntr_color color) {
+    pntr_draw_line_thick(dst, x1, y1, x2, y2, thickness, color);
+    pntr_draw_line_thick(dst, x2, y2, x3, y3, thickness, color);
+    pntr_draw_line_thick(dst, x3, y3, x1, y1, thickness, color);
+}
+
 
 /**
  * Draw a filled triangle on an image.
