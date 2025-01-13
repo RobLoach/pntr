@@ -488,6 +488,7 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color);
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
+PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color);
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
@@ -2002,6 +2003,21 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
     }
 }
 
+PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
+    if (color.rgba.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
+        return;
+    }
+
+    if (numPoints == 1) {
+        pntr_draw_point_vec(dst, points, color);
+        return;
+    }
+
+    for (int i = 0; i < numPoints - 1; i++) {
+        pntr_draw_line_thick_vec(dst, points[i], points[i + 1], thickness, color);
+    }
+}
+
 /**
  * Draw a horizontal line at the given x, y coordinates.
  *
@@ -2526,6 +2542,10 @@ PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, i
 
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
     pntr_draw_line(dst, start.x, start.y, end.x, end.y, color);
+}
+
+PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color) {
+    pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, thickness, color);
 }
 
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {

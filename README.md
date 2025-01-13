@@ -88,6 +88,7 @@ void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
 void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color);
 void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
+void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color);
 void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
 void pntr_draw_line_thick(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color);
