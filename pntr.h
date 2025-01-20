@@ -2171,21 +2171,9 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
 }
 
 PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color) {
-    if (color.rgba.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
-        return;
-    }
-
-    if (posX < dst->clip.x) {
-        width += posX - dst->clip.x;
-        posX = dst->clip.x;
-    }
-    if (posX + width >= dst->clip.x + dst->clip.width) {
-        width = dst->clip.x + dst->clip.width - posX;
-    }
-
-    while (--width >= 0) {
-        pntr_draw_circle_fill(dst, posX+width, posY, thickness/2, color);
-    }
+    pntr_draw_rectangle_fill(dst, posX, posY - thickness / 2, width, thickness, color);
+    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
+    pntr_draw_circle_fill(dst, posX + width, posY, thickness / 2, color);
 }
 
 /**
