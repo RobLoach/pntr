@@ -598,7 +598,6 @@ PNTR_API void pntr_unload_memory(void* pointer);
 PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
 PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath);
 
-// thick
 PNTR_API void pntr_draw_line_thick(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color);
 PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
