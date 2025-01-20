@@ -611,6 +611,8 @@ void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int numPoints
 void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color);
 void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color);
 void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color);
+PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color);
+PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color);
 
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
@@ -1961,8 +1963,100 @@ PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY
         return;
     }
 
-    for (int offset = 0;offset < thickness;offset++) {
-        pntr_draw_line(dst, startPosX-offset, startPosY-offset, endPosX+offset, endPosY+offset, color);
+    if (dst == NULL || color.rgba.a == 0) {
+        return;
+    }
+
+    int changeInX = (endPosX - startPosX);
+    int absChangeInX = (changeInX < 0) ? -changeInX : changeInX;
+    int changeInY = (endPosY - startPosY);
+    int absChangeInY = (changeInY < 0) ? -changeInY : changeInY;
+
+    // Drawing a straight line is fast.
+    if (startPosX == endPosX) {
+        pntr_draw_line_vertical_thick(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY, thickness, color);
+        return;
+    }
+
+    if (startPosY == endPosY) {
+        pntr_draw_line_horizontal_thick(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX, thickness, color);
+        return;
+    }
+
+    int startU, startV, endU, stepV;
+    int A, B, P;
+    int reversedXY = (absChangeInY < absChangeInX);
+
+    if (reversedXY) {
+        A = 2 * absChangeInY;
+        B = A - 2 * absChangeInX;
+        P = A - absChangeInX;
+
+        if (changeInX > 0) {
+            startU = startPosX;
+            startV = startPosY;
+            endU = endPosX;
+            //endV = endPosY;
+        }
+        else {
+            startU = endPosX;
+            startV = endPosY;
+            endU = startPosX;
+            //endV = startPosY;
+
+            // Since start and end are reversed
+            changeInX = -changeInX;
+            changeInY = -changeInY;
+        }
+
+        stepV = (changeInY < 0) ? -1 : 1;
+
+        // pntr_draw_point(dst, startU, startV, color);
+        pntr_draw_circle_fill(dst, startU, startV, thickness/2, color);
+    }
+    else {
+        A = 2 * absChangeInX;
+        B = A - 2 * absChangeInY;
+        P = A - absChangeInY;
+
+        if (changeInY > 0) {
+            startU = startPosY;
+            startV = startPosX;
+            endU = endPosY;
+        }
+        else {
+            startU = endPosY;
+            startV = endPosX;
+            endU = startPosY;
+
+            changeInX = -changeInX;
+            changeInY = -changeInY;
+        }
+
+        stepV = (changeInX < 0) ? -1 : 1;
+
+        // pntr_draw_point(dst, startV, startU, color);
+        pntr_draw_circle_fill(dst, startV, startU, thickness/2, color);
+
+    }
+
+    for (int u = startU + 1, v = startV; u <= endU; u++) {
+        if (P >= 0) {
+            v += stepV;
+            P += B;
+        }
+        else {
+            P += A;
+        }
+
+        if (reversedXY) {
+            // pntr_draw_point(dst, u, v, color);
+            pntr_draw_circle_fill(dst, u, v, thickness/2, color);
+        }
+        else {
+            // pntr_draw_point(dst, v, u, color);
+            pntr_draw_circle_fill(dst, v, u, thickness/2, color);
+        }
     }
 }
 
@@ -2053,6 +2147,26 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
     }
 }
 
+PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color) {
+    if (color.rgba.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
+        return;
+    }
+
+    if (posX < dst->clip.x) {
+        width += posX - dst->clip.x;
+        posX = dst->clip.x;
+    }
+    if (posX + width >= dst->clip.x + dst->clip.width) {
+        width = dst->clip.x + dst->clip.width - posX;
+    }
+
+    while (--width >= 0) {
+        pntr_draw_circle_fill(dst, posX+width, posY, thickness/2, color);
+    }
+}
+
+
+
 /**
  * Draw a vertical line at the given x, y coordinates.
  *
@@ -2086,6 +2200,24 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
         for (int y = 0; y < height; y++) {
             pntr_blend_color(&PNTR_PIXEL(dst, posX, posY + y), color);
         }
+    }
+}
+
+PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color) {
+    if (color.rgba.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
+        return;
+    }
+
+    if (posY < dst->clip.y) {
+        height += posY - dst->clip.y;
+        posY = dst->clip.y;
+    }
+    if (posY + height >= dst->clip.y + dst->clip.height) {
+        height = dst->clip.y + dst->clip.height - posY;
+    }
+
+    for (int y = 0; y < height; y++) {
+        pntr_draw_circle_fill(dst, posX, y, thickness/2, color);
     }
 }
 
@@ -2324,8 +2456,37 @@ PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, 
         pntr_draw_circle(dst, centerX, centerY, radius, color);
         return;
     }
-    for (int offset = 0;offset < thickness;offset++) {
-        pntr_draw_circle(dst, centerX, centerY, radius-offset, color);
+    if (dst == NULL || color.rgba.a == 0) {
+        return;
+    }
+
+    if (radius < 0) {
+        radius = -radius;
+    }
+
+    // Check that the circle is in the bounds.
+    if (centerX + radius < dst->clip.x || centerY + radius < dst->clip.y || centerX - radius > dst->clip.x + dst->clip.width || centerY - radius > dst->clip.y + dst->clip.height) {
+        return;
+    }
+
+    int largestX = radius;
+    int r2 = radius * radius;
+    for (int y = 0; y <= radius; ++y) {
+        int y2 = y * y;
+        for (int x = largestX; x >= 0; --x) {
+            if (x * x + y2 <= r2) {
+                pntr_draw_circle_fill(dst, centerX + x, centerY + y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - x, centerY + y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX + x, centerY - y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - x, centerY - y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX + y, centerY + x, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - y, centerY + x, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX + y, centerY - x, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - y, centerY - x, thickness/2, color);
+                largestX = x;
+                break;
+            }
+        }
     }
 }
 
@@ -2447,8 +2608,38 @@ PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY,
         pntr_draw_ellipse(dst, centerX, centerY, radiusX, radiusY, color);
         return;
     }
-    for (int offset = 0;offset < thickness;offset++) {
-        pntr_draw_ellipse(dst, centerX, centerY, radiusX-offset, radiusY-offset, color);
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
+        return;
+    }
+
+    int x = 0;
+    if (radiusX < 0) {
+        radiusX = -radiusX;
+    }
+    if (radiusY < 0) {
+        radiusY = -radiusY;
+    }
+
+    int radiusXSquared = radiusX * radiusX;
+    int radiusXSquared2 = radiusXSquared * 2;
+    int radiusYSquared = radiusY * radiusY;
+    int radiusYSquared2 = radiusYSquared * 2;
+    int error = radiusYSquared - radiusXSquared * radiusY;
+
+    while (radiusY >= 0) {
+        pntr_draw_circle_fill(dst, centerX + x, centerY + radiusY, thickness/2, color);
+        pntr_draw_circle_fill(dst, centerX - x, centerY + radiusY, thickness/2, color);
+        pntr_draw_circle_fill(dst, centerX - x, centerY - radiusY, thickness/2, color);
+        pntr_draw_circle_fill(dst, centerX + x, centerY - radiusY, thickness/2, color);
+
+        if (error <= 0) {
+            x++;
+            error += radiusYSquared2 * x + radiusYSquared;
+        }
+        if (error > 0) {
+            radiusY--;
+            error -= radiusXSquared2 * radiusY - radiusXSquared;
+        }
     }
 }
 
