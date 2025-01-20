@@ -2188,8 +2188,6 @@ PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int pos
     }
 }
 
-
-
 /**
  * Draw a vertical line at the given x, y coordinates.
  *
