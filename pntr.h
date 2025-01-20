@@ -2212,21 +2212,9 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
 }
 
 PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color) {
-    if (color.rgba.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
-        return;
-    }
-
-    if (posY < dst->clip.y) {
-        height += posY - dst->clip.y;
-        posY = dst->clip.y;
-    }
-    if (posY + height >= dst->clip.y + dst->clip.height) {
-        height = dst->clip.y + dst->clip.height - posY;
-    }
-
-    for (int y = 0; y < height; y++) {
-        pntr_draw_circle_fill(dst, posX, y, thickness/2, color);
-    }
+    pntr_draw_rectangle_fill(dst, posX - thickness / 2, posY, thickness, height, color);
+    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
+    pntr_draw_circle_fill(dst, posX, posY + height, thickness / 2, color);
 }
 
 /**
