@@ -30,6 +30,10 @@
  * ## Sprite
  * @include pntr_examples_sprite.h
  * @image html pntr_examples_sprite.png
+ *
+ * ## Thick
+ * @include pntr_examples_thick.h
+ * @image html pntr_examples_thick.png
  */
 
 #ifndef _DOXYGEN_
