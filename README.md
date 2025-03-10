@@ -30,7 +30,7 @@ int main() {
 
 | Name | Description |
 | ---- | ----------- |
-| [pntr_app](https://github.com/RobLoach/pntr_app) | Application wrapper for building the same pntr code on a number of different platforms |
+| [pntr_app](https://github.com/RobLoach/pntr_app) | Application wrapper for running the same pntr code in raylib, SDL, Web, libretro, or in a CLI |
 | [pntr_assetsys](https://github.com/RobLoach/pntr_assetsys) | Load pntr assets from *.zip* files with [assetsys.h](https://github.com/mattiasgustavsson/libs/blob/main/assetsys.h) |
 | [pntr_physfs](https://github.com/RobLoach/pntr_physfs) | Load pntr assets from *.zip* files with [PhysicsFS](https://github.com/icculus/physfs) |
 | [pntr_nuklear](https://github.com/RobLoach/pntr_nuklear) | [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) immediate-mode graphical user interface for pntr |
