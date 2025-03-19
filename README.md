@@ -1,6 +1,6 @@
 # pntr <a href="https://github.com/robloach/pntr"><img src="examples/resources/logo-55x55.png" align=left width=55 height=55 /></a>
 
-Image manipulation library for [C99](https://en.wikipedia.org/wiki/C99_(C_standard_revision)) or C++, with a focus on ease-of-use.
+Header-only CPU graphics library for [C99](https://en.wikipedia.org/wiki/C99_(C_standard_revision)) or C++, with a focus on ease-of-use.
 
 ## Usage
 
@@ -26,6 +26,17 @@ int main() {
 [![Example: Fonts](examples/pntr_examples_fonts.png)](examples/pntr_examples_fonts.h)
 [![Example: Sprite](examples/pntr_examples_sprite.png)](examples/pntr_examples_sprite.h)
 
+## Features
+
+- Draw rectangles, circles, ellipses, triangles, lines, arcs, etc
+- Clipping
+- Load and save images (PNG)
+- Draw sprites with scaling and rotation
+- Alpha-blending, alpha masks, invert, brightness, etc
+- Font rendering (TTF, BMF, TTY)
+- UTF-8
+- RGBA or ARGB pixel bit order
+
 ## Integrations
 
 | Name | Description |
@@ -42,18 +53,18 @@ int main() {
 
 ## API
 
-This covers how to use *pntr*.
+In order to use *pntr*, you must define `PNTR_IMPLEMENTATION` prior in one of your *.c* files prior to including `pntr.h`.
 
 ### Configuration
 
-Add these defines prior to including `pntr.h` to modify how it functions.
+You can modify how *pntr* functions based on the following defines:
 
 | Define | Description |
 | --- | --- |
 | `PNTR_IMPLEMENTATION` | Define this in one of your `.c` or `.cpp` files before including `pntr.h` |
 | `PNTR_PIXELFORMAT_RGBA` | Use the `RGBA` format |
 | `PNTR_PIXELFORMAT_ARGB` | Use the `ARGB` pixel format |
-| `PNTR_ENABLE_DEFAULT_FONT` | Enables the default font |
+| `PNTR_ENABLE_DEFAULT_FONT` | Enables the default 8x8 pixel font |
 | `PNTR_ENABLE_MATH` | Enables use of C's standard [`math.h`](https://en.cppreference.com/w/c/numeric/math) linked library, rather than using the built in math functions |
 | `PNTR_ENABLE_TTF` | Enables support for loading [TrueType fonts](https://en.wikipedia.org/wiki/TrueType_fonts) |
 | `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
@@ -140,6 +151,7 @@ void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX
 void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
 void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
 void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
+
 pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 pntr_color pntr_get_color(unsigned int hexValue);
 unsigned char pntr_color_r(pntr_color color);

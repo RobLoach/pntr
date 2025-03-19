@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
 project(pntr
-    DESCRIPTION "pntr: Paint the things"
+    DESCRIPTION "pntr: Header-only CPU graphics library for C99 and C++"
     HOMEPAGE_URL "https://github.com/robloach/pntr"
     VERSION 0.0.1
     LANGUAGES C

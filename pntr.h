@@ -1,5 +1,5 @@
 /**
- * pntr: Image manipulation library for C99 and C++, with a focus on ease-of-use.
+ * pntr: Header-only CPU graphics library for C99 and C++, with a focus on ease-of-use.
  *
  *   https://github.com/robloach/pntr
  *
@@ -60,7 +60,7 @@
  * @defgroup pntr pntr
  * @{
  *
- * @brief Image manipulation library for C99 or C++, with a focus on ease-of-use.
+ * @brief Header-only CPU graphics library for C99 or C++, with a focus on ease-of-use.
  *
  * Make sure to define `PNTR_IMPLEMENTATION` before including in one of your `.c` files.
  *
@@ -118,7 +118,7 @@
     #define PNTR_PIXELFORMAT_ARGB
 
     /**
-     * Enables support for pntr's default font. It's a small 8x8 font.
+     * Enables support for pntr's default monochrome 8x8 font.
      *
      * @see pntr_load_font_default()
      */
@@ -1583,6 +1583,8 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  * @param out The normalized rectangle.
  *
  * @return True if the intersect of the rectangle has a width and height greater than 0, false otherwise.
+ *
+ * @internal
  */
 PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destX, int destY, int destWidth, int destHeight, pntr_rectangle *out) {
     if (width <= 0 || height <= 0) {
@@ -1706,7 +1708,7 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
 }
 
 /**
- * Draws a line on the destination image.
+ * Draws a line on the destination image, ignoring clipping and bounds.
  */
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
     pntr_color *row = &PNTR_PIXEL(dst, posX, posY);
@@ -4302,7 +4304,7 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
 /**
  * Load the default font.
  *
- * This must be unloaded manually afterwards with pntr_unload_font().
+ * This must be unloaded manually afterwards with `pntr_unload_font()`.
  *
  * Define `PNTR_ENABLE_DEFAULT_FONT` to allow using the default 8x8 font.
  *
@@ -4516,20 +4518,20 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             #endif
         }
 
-        #ifdef PNTR_ENABLE_UTF8
         // Stick a null terminator at the end of the character string.
-        destination[0] = '\0';
+        #ifdef PNTR_ENABLE_UTF8
+            destination[0] = '\0';
 
-        // Resize the character string to the correct size.
-        size_t newSize = PNTR_STRSIZE(font->characters);
-        char* newCharacters = (char*)PNTR_MALLOC(newSize);
-        if (newCharacters != NULL) {
-            PNTR_MEMCPY(newCharacters, font->characters, newSize);
-            PNTR_FREE(font->characters);
-            font->characters = newCharacters;
-        }
+            // Resize the character string to the correct size.
+            size_t newSize = PNTR_STRSIZE(font->characters);
+            char* newCharacters = (char*)PNTR_MALLOC(newSize);
+            if (newCharacters != NULL) {
+                PNTR_MEMCPY(newCharacters, font->characters, newSize);
+                PNTR_FREE(font->characters);
+                font->characters = newCharacters;
+            }
         #else
-        font->characters[PNTR_FONT_TTF_GLYPH_NUM] = '\0';
+            font->characters[PNTR_FONT_TTF_GLYPH_NUM] = '\0';
         #endif
 
         return font;
@@ -4682,6 +4684,8 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
  *
  * @see pntr_load_file()
  * @see pntr_unload_file_text()
+ *
+ * @return A null-terminated string with the contents of the file.
  */
 PNTR_API const char* pntr_load_file_text(const char *fileName) {
     unsigned int bytesRead;
@@ -4726,7 +4730,7 @@ PNTR_API void pntr_unload_file_text(const char* text) {
 /**
  * Saves a file to the file system.
  *
- * You can define your own callback for this by defining PNTR_SAVE_FILE.
+ * You can define your own callback for this by defining `PNTR_SAVE_FILE`.
  *
  * @param fileName The name of the file to save.
  * @param data A pointer to the memory data in memory.
@@ -4879,8 +4883,8 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
  * @see pntr_save_file()
  */
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
-    unsigned int dataSize;
     pntr_image_type type = pntr_get_file_image_type(fileName);
+    unsigned int dataSize;
     unsigned char* data = pntr_save_image_to_memory(image, type, &dataSize);
     if (data == NULL) {
         return false;
@@ -5748,9 +5752,11 @@ PNTR_API void* pntr_load_memory(size_t size) {
  * @see PNTR_FREE
  */
 PNTR_API void pntr_unload_memory(void* pointer) {
-    if (pointer != NULL) {
-        PNTR_FREE(pointer);
+    if (pointer == NULL) {
+        return;
     }
+
+    PNTR_FREE(pointer);
 }
 
 /**

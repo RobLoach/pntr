@@ -2,7 +2,7 @@
   "name": "pntr",
   "version": "0.0.1",
   "private": true,
-  "description": "pntr: Image manipulation library for C99 and C++, with a focus on ease-of-use.",
+  "description": "pntr: Header-only CPU graphics library for C99 and C++, with a focus on ease-of-use.",
   "main": "pntr.h",
   "scripts": {
     "test": "ctest --test-dir build -V",
