@@ -2172,6 +2172,14 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
 }
 
 PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color) {
+    if (thickness == 0) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_line_horizontal(dst, posX, posY, width, color);
+        return;
+    }
+
     pntr_draw_rectangle_fill(dst, posX, posY - thickness / 2, width, thickness, color);
     pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
     pntr_draw_circle_fill(dst, posX + width, posY, thickness / 2, color);
@@ -2214,6 +2222,13 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
 }
 
 PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color) {
+    if (thickness == 0) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_line_vertical(dst, posX, posY, height, color);
+        return;
+    }
     pntr_draw_rectangle_fill(dst, posX - thickness / 2, posY, thickness, height, color);
     pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
     pntr_draw_circle_fill(dst, posX, posY + height, thickness / 2, color);
@@ -2367,8 +2382,17 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
         return;
     }
 
+    if (radius == 0) {
+        return;
+    }
+
     if (radius < 0) {
         radius = -radius;
+    }
+
+    if (radius == 1) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
     }
 
     // Check that the circle is in the bounds.
@@ -2411,8 +2435,17 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
  * @see pntr_draw_circle()
  */
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+    if (radius == 0) {
+        return;
+    }
+
     if (radius < 0) {
         radius = -radius;
+    }
+
+    if (radius == 1) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
     }
 
     if (dst == NULL || color.rgba.a == 0 || radius == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
@@ -2955,6 +2988,11 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
 }
 
 PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color) {
+    if (topLeftRadius == 0 && topRightRadius == 0 && bottomLeftRadius == 0 && bottomRightRadius == 0) {
+        pntr_draw_rectangle(dst, x, y, width, height, color);
+        return;
+    }
+
     pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
     pntr_draw_line_horizontal(dst, x + bottomLeftRadius, y + height, width - bottomLeftRadius - bottomRightRadius - 1, color); // Bottom
     pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
@@ -2988,6 +3026,11 @@ PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, i
 }
 
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
+    if (cornerRadius == 0) {
+        pntr_draw_rectangle_fill(dst, x, y, width, height, color);
+        return;
+    }
+
     // Corners
     // TODO: Replace this with pntr_draw_arc_fill()
     pntr_draw_circle_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, color); // Top Left
