@@ -43,6 +43,8 @@
 #define PNTR_ENABLE_UTF8
 #define PNTR_ENABLE_VARGS
 
+//#define PNTR_CUTE_PNG
+
 // Math: Link the m library to use math.h
 //#define PNTR_ENABLE_MATH
 
