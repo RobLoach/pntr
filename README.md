@@ -29,13 +29,13 @@ int main() {
 ## Features
 
 - Draw rectangles, circles, ellipses, triangles, lines, arcs, etc
+- RGBA or ARGB pixel bit order
 - Clipping
 - Load and save images (PNG)
 - Draw sprites with scaling and rotation
 - Alpha-blending, alpha masks, invert, brightness, etc
 - Font rendering (TTF, BMF, TTY)
 - UTF-8
-- RGBA or ARGB pixel bit order
 
 ## Integrations
 
@@ -54,6 +54,11 @@ int main() {
 ## API
 
 In order to use *pntr*, you must define `PNTR_IMPLEMENTATION` prior in one of your *.c* files prior to including `pntr.h`.
+
+``` c
+#define PNTR_IMPLEMENTATION
+#include "pntr.h"
+```
 
 ### Configuration
 
