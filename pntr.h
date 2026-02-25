@@ -2342,6 +2342,11 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
         return;
     }
 
+    // Protect against division by zero.
+    if (rect.width == 0 || rect.height == 0) {
+        return;
+    }
+
     float width = (float)rect.width;
     float height = (float)rect.height;
     for (int x = dstRect.x; x < dstRect.x + dstRect.width; x++) {
@@ -2371,7 +2376,7 @@ PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int wi
  *
  * @param dst The image to draw the circle onto.
  * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
+ * @param centerY The center of the circle at the Y coordinate.
  * @param radius The radius of the circle.
  * @param color The desired color of the circle.
  *
@@ -2428,7 +2433,7 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
  *
  * @param dst The image to draw the filled circle onto.
  * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
+ * @param centerY The center of the circle at the Y coordinate.
  * @param radius The radius of the circle.
  * @param color The desired fill color of the circle.
  *
@@ -2474,7 +2479,7 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
  *
  * @param dst The image to draw the circle onto.
  * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
+ * @param centerY The center of the circle at the Y coordinate.
  * @param radius The radius of the circle.
  * @param color The desired color of the circle.
  *
@@ -2525,11 +2530,11 @@ PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, 
  * Draws an ellipse on the given image.
  *
  * @param dst The image to draw the filled circle onto.
- * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
- * @param radiusX The  horizontal radius of the circle.
- * @param radiusY The vertical radius of the circle.
- * @param color The desired color of the circle.
+ * @param centerX The center of the ellipse at the X coordinate.
+ * @param centerY The center of the ellipse at the Y coordinate.
+ * @param radiusX The  horizontal radius of the ellipse.
+ * @param radiusY The vertical radius of the ellipse.
+ * @param color The desired color of the ellipse.
  *
  * @see pntr_draw_ellipse_fill()
  */
@@ -2575,11 +2580,11 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
  * TODO: pntr_draw_ellipse_fill: Add anti-aliased
  *
  * @param dst The image to draw the filled circle onto.
- * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
- * @param radiusX The  horizontal radius of the circle.
- * @param radiusY The vertical radius of the circle.
- * @param color The desired fill color of the circle.
+ * @param centerX The center of the ellipse at the X coordinate.
+ * @param centerY The center of the ellipse at the Y coordinate.
+ * @param radiusX The  horizontal radius of the ellipse.
+ * @param radiusY The vertical radius of the ellipse.
+ * @param color The desired fill color of the ellipse.
  *
  * @see pntr_draw_circle_fill()
  */
@@ -2623,12 +2628,12 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
  * Draws an ellipse on the given image, with line-thikness.
  *
  * @param dst The image to draw the filled circle onto.
- * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
- * @param radiusX The  horizontal radius of the circle.
- * @param radiusY The vertical radius of the circle.
+ * @param centerX The center of the ellipse at the X coordinate.
+ * @param centerY The center of the ellipse at the Y coordinate.
+ * @param radiusX The  horizontal radius of the ellipse.
+ * @param radiusY The vertical radius of the ellipse.
  * @param thickness The thickness of the line
- * @param color The desired color of the circle.
+ * @param color The desired color of the ellipse.
  *
  */
 PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, int thickness, pntr_color color) {
@@ -2697,7 +2702,7 @@ PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_v
  * @param thickness The thickness of the line
  * @param color What color to draw the triangle.
  */
-void pntr_draw_triangle_thick_vec(pntr_image *dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, int thickness, pntr_color color) {
+PNTR_API void pntr_draw_triangle_thick_vec(pntr_image *dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, int thickness, pntr_color color) {
     pntr_draw_line_thick(dst, point1.x, point1.y, point2.x, point2.y, thickness, color);
     pntr_draw_line_thick(dst, point2.x, point2.y, point3.x, point3.y, thickness, color);
     pntr_draw_line_thick(dst, point3.x, point3.y, point1.x, point1.y, thickness, color);
@@ -4785,7 +4790,8 @@ PNTR_API void pntr_unload_file_text(const char* text) {
  */
 PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite) {
     if (fileName == NULL || data == NULL) {
-        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+        return false;
     }
 
     #ifdef PNTR_SAVE_FILE
@@ -4793,19 +4799,22 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
     #else
         FILE *file = fopen(fileName, "wb");
         if (file == NULL) {
-            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return false;
         }
 
         size_t count = fwrite(data, sizeof(unsigned char), bytesToWrite, file);
 
         if (count <= 0) {
             fclose(file);
-            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return false;
         }
 
         if (count != (size_t)bytesToWrite) {
             fclose(file);
-            return pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return false;
         }
 
         return fclose(file) == 0;
@@ -5292,7 +5301,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * @param scaleX The scale of which to apply to the width of the image.
  * @param scaleY The scale of which to apply to the height of the image.
  * @param offsetX How much to offset the X drawing of the image, relative from its original source size.
- * @param offsetX How much to offset the Y drawing of the image, relative from its original source size.
+ * @param offsetY How much to offset the Y drawing of the image, relative from its original source size.
  * @param filter Filter to be applied during the rotation.
  */
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
