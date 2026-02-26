@@ -2145,9 +2145,12 @@ PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int
  * @param width How long the line should be.
  * @param color The color of the line.
  *
- * TODO: pntr_draw_line_horizontal: Support negative width.
  */
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
+    if (width < 0) {
+        posX += width;
+        width = -width;
+    }
     if (color.rgba.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
         return;
     }
@@ -2194,9 +2197,12 @@ PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int pos
  * @param height How tall the line should be.
  * @param color The color of the line.
  *
- * TODO: pntr_draw_line_vertical: Support negative height.
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
+    if (height < 0) {
+        posY += height;
+        height = -height;
+    }
     if (color.rgba.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
         return;
     }
