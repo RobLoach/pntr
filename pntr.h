@@ -2529,7 +2529,7 @@ PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, 
 /**
  * Draws an ellipse on the given image.
  *
- * @param dst The image to draw the filled circle onto.
+ * @param dst The image to draw the ellipse onto.
  * @param centerX The center of the ellipse at the X coordinate.
  * @param centerY The center of the ellipse at the Y coordinate.
  * @param radiusX The  horizontal radius of the ellipse.
@@ -2579,14 +2579,14 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
  *
  * TODO: pntr_draw_ellipse_fill: Add anti-aliased
  *
- * @param dst The image to draw the filled circle onto.
+ * @param dst The image to draw the filled ellipse onto.
  * @param centerX The center of the ellipse at the X coordinate.
  * @param centerY The center of the ellipse at the Y coordinate.
  * @param radiusX The  horizontal radius of the ellipse.
  * @param radiusY The vertical radius of the ellipse.
  * @param color The desired fill color of the ellipse.
  *
- * @see pntr_draw_circle_fill()
+ * @see pntr_draw_ellipse()
  */
 PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
     if (radiusX < 0) {
@@ -2625,9 +2625,9 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
 }
 
 /**
- * Draws an ellipse on the given image, with line-thikness.
+ * Draws an ellipse on the given image, with line-thickness.
  *
- * @param dst The image to draw the filled circle onto.
+ * @param dst The image to draw the ellipse onto.
  * @param centerX The center of the ellipse at the X coordinate.
  * @param centerY The center of the ellipse at the Y coordinate.
  * @param radiusX The  horizontal radius of the ellipse.
