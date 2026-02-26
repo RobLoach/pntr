@@ -4235,10 +4235,11 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
  * @see PNTR_ENABLE_VARGS
  *
  * @note Requires \c PNTR_ENABLE_VARGS to be used.
+ * @note This is truncated to a length of PNTR_DRAW_TEXT_EX_STRING_LENGTH.
  */
 PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...) {
     #ifndef PNTR_DRAW_TEXT_EX_STRING_LENGTH
-    #define PNTR_DRAW_TEXT_EX_STRING_LENGTH 256
+    #define PNTR_DRAW_TEXT_EX_STRING_LENGTH 512
     #endif
     char output[PNTR_DRAW_TEXT_EX_STRING_LENGTH];
 
