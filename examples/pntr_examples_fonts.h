@@ -41,6 +41,11 @@ void pntr_examples_fonts() {
     pntr_draw_rectangle(canvas, 225, 50, 150, 60, PNTR_BLUE);
     pntr_draw_text_wrapped(canvas, bmFont, "The quick brown fox jumps over the lazy dog.", 225, 50, 150, PNTR_RED);
 
+    // draw_text_ex: printf-style formatted text
+    int score = 42;
+    float fps = 60.5f;
+    pntr_draw_text_ex(canvas, defaultFont, 10, 190, PNTR_DARKGREEN, 0, "Score: %d  FPS: %.1f", score, fps);
+
     pntr_save_image(canvas, "pntr_examples_fonts.png");
 
     pntr_unload_font(defaultFont);

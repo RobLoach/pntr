@@ -525,7 +525,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
 PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
 #ifdef PNTR_ENABLE_VARGS
-PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
+PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...);
 #endif
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
@@ -2823,14 +2823,15 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
     }
 
     int i = 0;
-    int left = 10000, top = 10000, bottom = 0, right = 0;
+    // Big numbers to find the max/min values
+    int left = points[0].x, top = points[0].y, bottom = points[0].y, right = points[0].x;
     int nodes, pixelX, pixelY, j, swap;
     int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints);
     if (nodeX == NULL) {
         return;
     }
 
-    /* Get polygon dimensions */
+    // Get polygon dimensions
     for (i = 0; i < numPoints; i++) {
         if (left > points[i].x)
             left = points[i].x;
@@ -2901,11 +2902,11 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
 }
 
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
-    if (radius == 0.0f) {
+    if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments < 0) {
+    if (segments <= 0) {
         return;
     }
 
@@ -2941,11 +2942,11 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
 }
 
 PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color) {
-    if (radius == 0.0f) {
+    if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments < 0) {
+    if (segments <= 0) {
         return;
     }
 
@@ -2974,7 +2975,7 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments < 0) {
+    if (segments <= 0) {
         return;
     }
     float startAngleRad = startAngle * PNTR_PI / 180.0f;
@@ -4234,6 +4235,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
  * @param posX The position to print the text, starting from the top left on the X axis.
  * @param posY The position to print the text, starting from the top left on the Y axis.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ * @param maxlen The maximum number of characters to write, including the NULL terminator. Use 0 for the default of PNTR_DRAW_TEXT_EX_STRING_LENGTH.
  * @param text The text to write. Must be NULL terminated.
  * @param ... The arguments to pass for the format.
  *
@@ -4241,17 +4243,20 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
  * @see PNTR_ENABLE_VARGS
  *
  * @note Requires \c PNTR_ENABLE_VARGS to be used.
- * @note This is truncated to a length of PNTR_DRAW_TEXT_EX_STRING_LENGTH.
  */
-PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...) {
+PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...) {
     #ifndef PNTR_DRAW_TEXT_EX_STRING_LENGTH
+    /**
+     * The default amount of maxlen for use in pntr_draw_text_ex.
+     */
     #define PNTR_DRAW_TEXT_EX_STRING_LENGTH 512
     #endif
-    char output[PNTR_DRAW_TEXT_EX_STRING_LENGTH];
+    int length = (maxlen > 0) ? maxlen : PNTR_DRAW_TEXT_EX_STRING_LENGTH;
+    char output[length];
 
     va_list arg_ptr;
     va_start(arg_ptr, text);
-    vsnprintf(output, PNTR_DRAW_TEXT_EX_STRING_LENGTH, text, arg_ptr);
+    vsnprintf(output, length, text, arg_ptr);
     va_end(arg_ptr);
 
     pntr_draw_text(dst, font, output, posX, posY, tint);
