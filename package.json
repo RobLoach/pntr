@@ -10,7 +10,8 @@
     "build": "cmake --build build",
     "prebuild": "cmake -B build",
     "predocs": "npm it",
-    "docs": "gh-pages -d docs/html"
+    "docs": "doxygen .Doxyfile",
+    "postdocs": "gh-pages -d docs/html"
   },
   "repository": {
     "type": "git",
