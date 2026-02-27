@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['height_12',['height',['../structpntr__rectangle.html#a7d903ecaa63040e0f7e3983e66042ef5',1,'pntr_rectangle::height()'],['../structpntr__image.html#a804f5f942b813425c2792294a2efe2db',1,'pntr_image::height()']]]
+  ['manipulation_20library_0',['pntr: Image Manipulation Library',['../index.html',1,'']]],
+  ['mask_1',['Alpha Mask',['../Examples.html#autotoc_md3',1,'']]]
 ];

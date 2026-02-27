@@ -1,4 +1,0 @@
-var searchData=
-[
-  ['value_356',['value',['../unionpntr__color.html#ab65ad53cc3f47dcff70018280fdfa9c3',1,'pntr_color']]]
-];

@@ -25,27 +25,20 @@
 var NAVTREE =
 [
   [ "pntr", "index.html", [
-    [ "pntr: Image Manipulation Library", "index.html", [
-      [ "Usage", "index.html#autotoc_md1", null ]
-    ] ],
+    [ "pntr: Image Manipulation Library", "index.html", "index" ],
     [ "Zlib License", "md_LICENSE.html", null ],
     [ "Examples", "Examples.html", null ],
-    [ "Modules", "modules.html", "modules" ],
+    [ "Topics", "topics.html", "topics" ],
     [ "Data Structures", "annotated.html", [
       [ "Data Structures", "annotated.html", "annotated_dup" ],
-      [ "Data Structure Index", "classes.html", null ],
-      [ "Data Fields", "functions.html", [
-        [ "All", "functions.html", null ],
-        [ "Variables", "functions_vars.html", null ]
-      ] ]
+      [ "Data Structure Index", "classes.html", null ]
     ] ]
   ] ]
 ];
 
 var NAVTREEINDEX =
 [
-"Examples.html",
-"structpntr__image.html#a804f5f942b813425c2792294a2efe2db"
+"Examples.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

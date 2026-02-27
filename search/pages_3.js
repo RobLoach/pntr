@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['zlib_20license_403',['Zlib License',['../md_LICENSE.html',1,'']]]
+  ['manipulation_20library_0',['pntr: Image Manipulation Library',['../index.html',1,'']]]
 ];
