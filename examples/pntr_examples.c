@@ -3,37 +3,37 @@
  *
  * @brief These are a few examples of pntr in use.
  *
- * ## Alpha Mask
- * @include pntr_examples_alphamask.h
- * @image html pntr_examples_alphamask.png
- *
- * ## Fonts
- * @include pntr_examples_fonts.h
- * @image html pntr_examples_fonts.png
+ * ## Shapes
+ * @image html pntr_examples_shapes.png
+ * @include pntr_examples_shapes.h
  *
  * ## Image
- * @include pntr_examples_image.h
  * @image html pntr_examples_image.png
+ * @include pntr_examples_image.h
  *
  * ## Resize
- * @include pntr_examples_resize.h
  * @image html pntr_examples_resize.png
+ * @include pntr_examples_resize.h
+ *
+ * ## Fonts
+ * @image html pntr_examples_fonts.png
+ * @include pntr_examples_fonts.h
+ *
+ * ## Alpha Mask
+ * @image html pntr_examples_alphamask.png
+ * @include pntr_examples_alphamask.h
  *
  * ## Rotate
- * @include pntr_examples_rotate.h
  * @image html pntr_examples_rotate.png
- *
- * ## Shapes
- * @include pntr_examples_shapes.h
- * @image html pntr_examples_shapes.png
+ * @include pntr_examples_rotate.h
  *
  * ## Sprite
- * @include pntr_examples_sprite.h
  * @image html pntr_examples_sprite.png
+ * @include pntr_examples_sprite.h
  *
  * ## Thick
- * @include pntr_examples_thick.h
  * @image html pntr_examples_thick.png
+ * @include pntr_examples_thick.h
  */
 
 #ifndef _DOXYGEN_
@@ -42,7 +42,6 @@
 #define PNTR_ENABLE_TTF
 #define PNTR_ENABLE_UTF8
 #define PNTR_ENABLE_VARGS
-
 //#define PNTR_CUTE_PNG
 
 // Math: Link the m library to use math.h

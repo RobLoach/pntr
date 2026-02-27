@@ -36,6 +36,7 @@ int main() {
 - Alpha-blending, alpha masks, invert, brightness, etc
 - Font rendering (TTF, BMF, TTY)
 - UTF-8
+- [Documentation](https://robloach.github.io/pntr/)
 
 ## Integrations
 
@@ -50,6 +51,7 @@ int main() {
 | [pntr_portablegl](https://github.com/RobLoach/pntr_portablegl) | Use the OpenGL-esque software rendering library, [PortableGL](https://github.com/rswinkle/PortableGL), in pntr |
 | [pntr_doom](https://github.com/RobLoach/pntr_doom) | Play DOOM via [PureDOOM](https://github.com/Daivuk/PureDOOM/) rendered through pntr |
 | [pntr_pixelfont](https://github.com/RobLoach/pntr_pixelfont) | Additional pixel fonts outside of the default |
+| [zig_pntr](https://github.com/konsumer/zig_pntr) | Zig wrapper for pntr |
 
 ## API
 
@@ -251,7 +253,7 @@ To build the documentation, use [Doxygen](https://www.doxygen.nl)...
 doxygen .Doxyfile
 ```
 
-To publish the documentation, [Node.js](https://nodejs.org)...
+To publish the documentation, use [Node.js](https://nodejs.org)...
 ``` bash
 npm run docs
 ```
@@ -271,7 +273,7 @@ npm run docs
 
 Unless stated otherwise, all works are:
 
-- Copyright (c) 2023 [Rob Loach](https://robloach.net)
+- Copyright (c) 2026 [Rob Loach](https://robloach.net)
 
 ... and licensed under:
 

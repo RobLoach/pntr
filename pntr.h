@@ -28,11 +28,11 @@
  *
  * @file pntr.h
  *
- * @copyright 2023 Rob Loach (@RobLoach, https://robloach.net)
+ * @copyright 2026 Rob Loach (@RobLoach, https://robloach.net)
  *
  * @license Zlib
  *
- * Copyright (c) 2023 Rob Loach (@RobLoach, https://robloach.net)
+ * Copyright (c) 2026 Rob Loach (@RobLoach, https://robloach.net)
  *
  * This software is provided "as-is", without any express or implied warranty. In no event
  * will the authors be held liable for any damages arising from the use of this software.

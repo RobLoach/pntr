@@ -2,6 +2,7 @@ void pntr_examples_fonts() {
     pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
 
     // Default Font
+    // #define PNTR_ENABLE_DEFAULT_FONT
     pntr_font* defaultFont = pntr_load_font_default();
 
     pntr_draw_image(canvas, defaultFont->atlas, 0, 0);
@@ -28,7 +29,7 @@ void pntr_examples_fonts() {
 
     // TTF Font
     pntr_font* ttfFont = pntr_load_font_ttf("resources/tuffy.ttf", 28);
-    const char* ttfText = "Привіт Світ!";
+    const char* ttfText = "Привіт Світ!"; // #define PNTR_ENABLE_UTF8
     pntr_vector textSize = pntr_measure_text_ex(ttfFont, ttfText, 0);
     pntr_draw_text(canvas, ttfFont, ttfText, 200, 20, PNTR_DARKPURPLE);
 
