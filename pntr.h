@@ -3361,7 +3361,7 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
             }
 
             unsigned char* source = (unsigned char*)imageData;
-            for (int i = 0; i < width * height; i++) {
+            for (size_t i = 0; i < (size_t)width * (size_t)height; i++) {
                 output->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
             }
 
@@ -3373,7 +3373,7 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
             pntr_image* output = pntr_new_image(width, height);
 
             pntr_color* source = (pntr_color*)imageData;
-            for (int i = 0; i < width * height; i++) {
+            for (size_t i = 0; i < (size_t)width * (size_t)height; i++) {
                 output->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
             }
 
@@ -4512,7 +4512,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         int rows = PNTR_FONT_TTF_GLYPH_NUM / columns;
         int width = fontSize * columns;
         int height = fontSize * rows;
-        unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
+        unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)width * (size_t)height);
         if (bitmap == NULL) {
             return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
