@@ -4527,6 +4527,14 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             return (pntr_font*)pntr_set_error(PNTR_ERROR_UNKNOWN);
         }
 
+        // Get font metrics for accurate glyph positioning
+        stbtt_fontinfo fontInfo;
+        stbtt_InitFont(&fontInfo, fileData, stbtt_GetFontOffsetForIndex(fileData, 0));
+        float scale = stbtt_ScaleForPixelHeight(&fontInfo, (float)fontSize);
+        int ascent;
+        stbtt_GetFontVMetrics(&fontInfo, &ascent, NULL, NULL);
+        int ascentPixels = (int)((float)ascent * scale);
+
         // Port the bitmap to a pntr_image as the font atlas
         pntr_image* atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         PNTR_FREE(bitmap);
@@ -4564,9 +4572,9 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             // Find where the glyphs will be rendered
             font->glyphRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
-                .y = (int)(characterData[i].yoff + ((float)fontSize / 1.5f)), // TODO: Determine correct y glyph value
+                .y = ascentPixels + (int)characterData[i].yoff,
                 .width = (int)characterData[i].xadvance,
-                .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
+                .height = characterData[i].y1 - characterData[i].y0
             };
 
             // Set up the active character

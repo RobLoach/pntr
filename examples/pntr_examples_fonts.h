@@ -12,8 +12,8 @@ void pntr_examples_fonts() {
 
     // BM Font
     pntr_font* bmFont = pntr_load_font_bmf("resources/bmfont.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
-    pntr_draw_rectangle_fill(canvas, 0, 90, 200, 20, PNTR_BLACK);
-    pntr_draw_text(canvas, bmFont, "BM Font Example", 10, 90, PNTR_WHITE);
+    pntr_draw_rectangle_fill(canvas, 0, 80, 200, 20, PNTR_BLACK);
+    pntr_draw_text(canvas, bmFont, "BM Font Example", 10, 80, PNTR_WHITE);
 
     // TTY Font
     pntr_font* ttyFont = pntr_load_font_tty("resources/ttyfont-16x16.png", 16, 16,
