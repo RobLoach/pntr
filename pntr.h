@@ -1040,7 +1040,16 @@ extern "C" {
             static const float a5 = +2.08026600266304389e-2f;
             static const float a6 = -3.03996055049204407e-3f;
             static const float a7 = +1.38235642404333740e-4f;
-            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
+            float sign = 1.0f;
+            x = _pntr_normalize_anglef(x);
+            if (x < 0.0f) {
+                sign = -1.0f;
+                x = -x;
+            }
+            if (x > PNTR_PI / 2.0f) {
+                x = PNTR_PI - x;
+            }
+            return sign * (a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7)))))));
         }
 
         /**
@@ -1072,7 +1081,16 @@ extern "C" {
             static const float a6 = -3.8510875386947414e-3f;
             static const float a7 = 4.7196604604366623e-4f;
             static const float a8 = -1.8776444013090451e-5f;
-            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
+            float sign = 1.0f;
+            x = _pntr_normalize_anglef(x);
+            if (x < 0.0f) {
+                x = -x;
+            }
+            if (x > PNTR_PI / 2.0f) {
+                x = PNTR_PI - x;
+                sign = -1.0f;
+            }
+            return sign * (a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8))))))));
         }
 
         /**
