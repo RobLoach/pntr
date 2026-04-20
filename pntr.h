@@ -1025,13 +1025,33 @@ extern "C" {
 #endif
 
 #if !defined(PNTR_ENABLE_MATH) || defined(_DOXYGEN_)
+    #if !defined(PNTR_SINF) || !defined(PNTR_COSF)
+        /**
+         * @internal
+         *
+         * @see PNTR_SINF
+         * @see PNTR_COSF
+         */
+        static float _pntr_normalize_anglef(float x) {
+            const float tau = PNTR_PI * 2.0f;
+            long quotient = (long)(x / tau);
+            x -= (float)quotient * tau;
+            if (x > PNTR_PI) {
+                x -= tau;
+            }
+            else if (x < -PNTR_PI) {
+                x += tau;
+            }
+            return x;
+        }
+    #endif
     #ifndef PNTR_SINF
         /**
          * @internal
          *
          * @see PNTR_SINF
          */
-        float _pntr_sinf(float x) {
+        static float _pntr_sinf(float x) {
             static const float a0 = +1.91059300966915117e-31f;
             static const float a1 = +1.00086760103908896f;
             static const float a2 = -1.21276126894734565e-2f;
@@ -1040,7 +1060,16 @@ extern "C" {
             static const float a5 = +2.08026600266304389e-2f;
             static const float a6 = -3.03996055049204407e-3f;
             static const float a7 = +1.38235642404333740e-4f;
-            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
+            float sign = 1.0f;
+            x = _pntr_normalize_anglef(x);
+            if (x < 0.0f) {
+                sign = -1.0f;
+                x = -x;
+            }
+            if (x > PNTR_PI / 2.0f) {
+                x = PNTR_PI - x;
+            }
+            return sign * (a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7)))))));
         }
 
         /**
@@ -1062,7 +1091,7 @@ extern "C" {
          *
          * @see PNTR_COSF
          */
-        float _pntr_cosf(float x) {
+        static float _pntr_cosf(float x) {
             static const float a0 = 9.9995999154986614e-1f;
             static const float a1 = 1.2548995793001028e-3f;
             static const float a2 = -5.0648546280678015e-1f;
@@ -1072,7 +1101,16 @@ extern "C" {
             static const float a6 = -3.8510875386947414e-3f;
             static const float a7 = 4.7196604604366623e-4f;
             static const float a8 = -1.8776444013090451e-5f;
-            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
+            float sign = 1.0f;
+            x = _pntr_normalize_anglef(x);
+            if (x < 0.0f) {
+                x = -x;
+            }
+            if (x > PNTR_PI / 2.0f) {
+                x = PNTR_PI - x;
+                sign = -1.0f;
+            }
+            return sign * (a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8))))))));
         }
 
         /**
