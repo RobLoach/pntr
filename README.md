@@ -262,7 +262,7 @@ npm run docs
 
 - [Logo](https://www.pixilart.com/art/bob-ross-9910c4da4b3a1c8) by [Ravenist](https://www.pixilart.com/ravenist), used with [permission](https://www.reddit.com/r/PixelArt/comments/fi2b1v/oc_felt_a_little_sad_so_i_watched_bob_ross_videos/j6ordqn/)
 - [cute_png.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_png.h) by [Randy Gaul](https://github.com/RandyGaul)
-- [font8x8](https://github.com/dhepper/font8x8/) by [Daniel Hepper](https://github.com/dhepper) provides the [8x8 monochrome font](https://github.com/dhepper/font8x8/blob/master/font8x8_basic.h)
+- [mcufont](https://maurycyz.com/projects/mcufont/) by [Maurycy Zarzycki](https://maurycyz.com) provides the 5x5 monochrome font
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) by [Sean Barrett](https://github.com/nothings)
 - [stb_truetype.h](https://github.com/nothings/stb/blob/master/stb_truetype.h) by [Sean Barrett](https://github.com/nothings)
 - [utf8.h](https://github.com/sheredom/utf8.h) by [Neil Henning](https://github.com/sheredom)
