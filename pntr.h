@@ -118,7 +118,7 @@
     #define PNTR_PIXELFORMAT_ARGB
 
     /**
-     * Enables support for pntr's default monochrome 8x8 font.
+     * Enables support for pntr's default monochrome 5x5 font.
      *
      * @see pntr_load_font_default()
      */
@@ -4399,7 +4399,7 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
  *
  * This must be unloaded manually afterwards with `pntr_unload_font()`.
  *
- * Define `PNTR_ENABLE_DEFAULT_FONT` to allow using the default 8x8 font.
+ * Define `PNTR_ENABLE_DEFAULT_FONT` to allow using the default 5x5 font.
  *
  * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_font_default()
  * @code
@@ -4412,50 +4412,38 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
  * @see PNTR_ENABLE_DEFAULT_FONT
  * @see PNTR_DEFAULT_FONT
  */
+#ifdef PNTR_ENABLE_DEFAULT_FONT
+    // https://maurycyz.com/projects/mcufont/
+    #include "external/mcufont.h"
+#endif
 PNTR_API pntr_font* pntr_load_font_default(void) {
     #ifdef PNTR_DEFAULT_FONT
         return PNTR_DEFAULT_FONT();
     #elif defined(PNTR_ENABLE_DEFAULT_FONT)
-        // Load font8x8 character atlas.
-        // https://github.com/dhepper/font8x8
-        #include "external/font8x8_basic.h"
+        // Supported characters for the mcufont 5x5 font.
+        static const char characters[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'-+=.,!?:'";
+        int numChars = (int)(sizeof(characters) - 1);
 
-        // Default parameters for font8x8.
-        #define PNTR_DEFAULT_FONT_NAME font8x8_basic
-        #define PNTR_DEFAULT_FONT_GLYPH_WIDTH 8
-        #define PNTR_DEFAULT_FONT_GLYPH_HEIGHT 8
-        #define PNTR_DEFAULT_FONT_CHARACTERS_LEN 95
-
-        // Build the atlas.
-        pntr_image* atlas = pntr_gen_image_color(
-            PNTR_DEFAULT_FONT_GLYPH_WIDTH * PNTR_DEFAULT_FONT_CHARACTERS_LEN,
-            PNTR_DEFAULT_FONT_GLYPH_HEIGHT,
-            PNTR_BLANK);
+        // Each glyph is rendered on a 6x6 grid (5x5 pixels + 1px spacing).
+        pntr_image* atlas = pntr_gen_image_color(6 * numChars, 6, PNTR_BLANK);
         if (atlas == NULL) {
             return NULL;
         }
 
-        // Iterate through all the characters and draw them manually.
-        for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
-            const unsigned char* bitmap = PNTR_DEFAULT_FONT_NAME[i];
-            for (int x = 0; x < 8; x++) {
-                for (int y = 0; y < 8; y++) {
-                    if (bitmap[y] & 1 << x) {
-                        pntr_draw_point(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH * i + x, y, PNTR_WHITE);
+        for (int i = 0; i < numChars; i++) {
+            const uint8_t* bitmap = fnt_get_sym(characters[i]);
+            if (bitmap != NULL) {
+                for (int y = 0; y < 5; y++) {
+                    for (int x = 0; x < 5; x++) {
+                        if ((bitmap[y] >> (4 - x)) & 1) {
+                            pntr_draw_point(atlas, 6 * i + x, y, PNTR_WHITE);
+                        }
                     }
                 }
             }
         }
 
-        // Build the character set with a null character at the end.
-        char characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN + 1];
-        for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
-            characters[i] = (char)(i + 32); // ASCII
-        }
-        characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN] = '\0';
-
-        // Use TTY to build the remaining font parameters.
-        pntr_font* font = pntr_load_font_tty_from_image(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH, PNTR_DEFAULT_FONT_GLYPH_HEIGHT, characters);
+        pntr_font* font = pntr_load_font_tty_from_image(atlas, 6, 6, characters);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return NULL;
