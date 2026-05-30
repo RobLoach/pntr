@@ -5573,20 +5573,17 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
         return;
     }
 
-    // Determine source rectangle.
-    if (srcRect.width <= 0) {
-        srcRect.width = src->width;
-    }
-    if (srcRect.height <= 0) {
-        srcRect.height = src->height;
-    }
-
     if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
         return;
     }
 
-    // Figure out the destination scale.
     if (scaleX == 0 || scaleY == 0) {
+        return;
+    }
+
+    rotation = _pntr_normalize_degrees(rotation);
+    if (rotation == 0.0f) {
+        pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter);
         return;
     }
 
@@ -5594,90 +5591,67 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
     float cosTheta = PNTR_COSF(radians);
     float sinTheta = PNTR_SINF(radians);
 
-    float newWidth = (float)srcRect.width * scaleX;
-    float newHeight = (float)srcRect.height * scaleY;
+    float scaledWidth = (float)srcRect.width * scaleX;
+    float scaledHeight = (float)srcRect.height * scaleY;
 
-    newWidth = (int)PNTR_CEILF(PNTR_FABSF(newWidth * cosTheta) + PNTR_FABSF(newHeight * sinTheta));
-    newHeight = (int)PNTR_CEILF(PNTR_FABSF(newWidth * sinTheta) + PNTR_FABSF(newHeight * cosTheta));
+    int newWidth = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * cosTheta) + PNTR_FABSF(scaledHeight * sinTheta));
+    int newHeight = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * sinTheta) + PNTR_FABSF(scaledHeight * cosTheta));
 
-    float offsetXRatio = originX / (float)srcRect.width * (float)newWidth;
-    float offsetYRatio = originY / (float)srcRect.height * (float)newHeight;
-    float centerX = (float)srcRect.width / 2.0f;
-    float centerY = (float)srcRect.height / 2.0f;
+    int offsetXRatio = (int)(originX / (float)srcRect.width * (float)newWidth);
+    int offsetYRatio = (int)(originY / (float)srcRect.height * (float)newHeight);
 
-    int destX, destY;
+    if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width ||
+        posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
+        return;
+    }
+
+    float centerX = scaledWidth / 2.0f;
+    float centerY = scaledHeight / 2.0f;
     float srcX, srcY;
+    int srcXint, srcYint;
 
-    for (int y = 0; y < (int)newHeight; y++) {
-        destY = posY - (int)offsetYRatio + y;
-        if (destY < 0 || destY >= dst->height) {
+    for (int y = 0; y < newHeight; y++) {
+        int destY = posY + y - offsetYRatio;
+        if (destY < dst->clip.y || destY >= dst->clip.y + dst->clip.height) {
             continue;
         }
 
-        for (int x = 0; x < (int)newWidth; x++) {
-            destX = posX - (int)offsetXRatio + x;
-            if (destX < 0 || destX >= dst->width) {
+        for (int x = 0; x < newWidth; x++) {
+            int destX = posX + x - offsetXRatio;
+            if (destX < dst->clip.x || destX >= dst->clip.x + dst->clip.width) {
                 continue;
             }
 
-            srcX = ((float)x - newWidth / 2.0f) * cosTheta - ((float)y - newHeight / 2.0f) * sinTheta + centerX;
-            srcY = ((float)x - newWidth / 2.0f) * sinTheta + ((float)y - newHeight / 2.0f) * cosTheta + centerY;
+            float rotX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
+            float rotY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
 
-            // srcX *= xRatio;
-            // srcY *= yRatio;
-            if (srcX < srcRect.x || srcX >= srcRect.width || srcY < srcRect.y || srcY >= srcRect.height) {
+            srcX = rotX / scaleX;
+            srcY = rotY / scaleY;
+
+            if (srcX < 0 || srcX >= srcRect.width || srcY < 0 || srcY >= srcRect.height) {
                 continue;
             }
+
+            srcXint = (int)srcX + srcRect.x;
+            srcYint = (int)srcY + srcRect.y;
 
             if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
-                pntr_draw_point_unsafe(dst,
-                    destX,
-                    destY,
-                    PNTR_PIXEL(src, (int)srcX, (int)srcY)
-                );
+                pntr_draw_point_unsafe(dst, destX, destY, PNTR_PIXEL(src, srcXint, srcYint));
+            } else {
+                if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
+                    continue;
+                }
+                pntr_draw_point_unsafe(dst, destX, destY, pntr_color_bilinear_interpolate(
+                    PNTR_PIXEL(src, srcXint, srcYint),
+                    PNTR_PIXEL(src, srcXint, srcYint + 1),
+                    PNTR_PIXEL(src, srcXint + 1, srcYint),
+                    PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
+                    srcX - PNTR_FLOORF(srcX),
+                    srcY - PNTR_FLOORF(srcY)
+                ));
             }
         }
-
     }
-
-
-    // Make sure we're actually drawing on the screen.
-    // pntr_rectangle dstRect;
-    // if (!_pntr_rectangle_intersect(posX - (int)offsetXRatio, posY - (int)offsetYRatio, newWidth, newHeight, dst->width, dst->height, &dstRect)) {
-    //     return;
-    // }
-
-    //pntr_draw_rectangle_rec(dst, dstRect, 1, PNTR_RED);
-
-
-
-    // float srcX;
-    // float srcY;
-    // // int srcXint;
-    // // int srcYint;
-
-    // for (int y = 0; y < dstRect.height; y++) {
-    //     int dstYRelationToOriginal = posY - (int)offsetYRatio + y;
-    //     for (int x = 0; x < dstRect.width; x++) {
-    //         int dstXRelationToOriginal = posX - (int)offsetXRatio + x;
-
-    //         srcX = (float)(dstXRelationToOriginal - newWidth / 2) * cosTheta - (float)(dstYRelationToOriginal - newHeight / 2) * sinTheta + centerX;
-    //         srcY = (float)(dstXRelationToOriginal - newWidth / 2) * sinTheta + (float)(dstYRelationToOriginal - newHeight / 2) * cosTheta + centerY;
-
-    //         srcXint = (int)srcX + srcRect.x;
-    //         srcYint = (int)srcY + srcRect.y;
-
-    //         if (srcX < 0 || srcX >= srcRect.width || srcY < 0 || srcY >= srcRect.height) {
-    //             continue;
-    //         }
-
-    //         pntr_draw_point_unsafe(dst,
-    //             outputRect.x + x,
-    //             outputRect.y + y,
-    //             PNTR_PIXEL(src, srcXint, srcYint)
-    //         );
-    //     }
-    // }
 }
 
 /**
