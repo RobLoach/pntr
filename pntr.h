@@ -5581,7 +5581,7 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
         return;
     }
 
-    rotation = _pntr_normalize_degrees(rotation);
+    rotation = (rotation < 0) ? 360.0f - PNTR_FMODF(-rotation, 360.0f) : PNTR_FMODF(rotation, 360.0f);
     if (rotation == 0.0f) {
         pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter);
         return;
