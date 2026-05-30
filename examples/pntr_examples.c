@@ -1,76 +1,75 @@
+/**
+ * @page Examples Examples
+ *
+ * @brief These are a few examples of pntr in use.
+ *
+ * ## Shapes
+ * @image html pntr_examples_shapes.png
+ * @include pntr_examples_shapes.h
+ *
+ * ## Image
+ * @image html pntr_examples_image.png
+ * @include pntr_examples_image.h
+ *
+ * ## Resize
+ * @image html pntr_examples_resize.png
+ * @include pntr_examples_resize.h
+ *
+ * ## Fonts
+ * @image html pntr_examples_fonts.png
+ * @include pntr_examples_fonts.h
+ *
+ * ## Alpha Mask
+ * @image html pntr_examples_alphamask.png
+ * @include pntr_examples_alphamask.h
+ *
+ * ## Rotate
+ * @image html pntr_examples_rotate.png
+ * @include pntr_examples_rotate.h
+ *
+ * ## Sprite
+ * @image html pntr_examples_sprite.png
+ * @include pntr_examples_sprite.h
+ *
+ * ## Thick
+ * @image html pntr_examples_thick.png
+ * @include pntr_examples_thick.h
+ */
+
+#ifndef _DOXYGEN_
+
 #define PNTR_ENABLE_DEFAULT_FONT
-#define PNTR_ENABLE_FILTER_SMOOTH
 #define PNTR_ENABLE_TTF
+#define PNTR_ENABLE_UTF8
+#define PNTR_ENABLE_VARGS
+//#define PNTR_CUTE_PNG
 
-#define PNTR_ENABLE_MATH
-//#define PNTR_DISABLE_MATH
+// Math: Link the m library to use math.h
+//#define PNTR_ENABLE_MATH
 
-#define PNTR_APP_IMPLEMENTATION
-#include "pntr_app.h"
+#define PNTR_IMPLEMENTATION
+#include "../pntr.h"
 
-#include "examples/examples.h"
+#include "pntr_examples_alphamask.h"
+#include "pntr_examples_fonts.h"
+#include "pntr_examples_image.h"
+#include "pntr_examples_resize.h"
+#include "pntr_examples_rotate.h"
+#include "pntr_examples_shapes.h"
+#include "pntr_examples_sprite.h"
+#include "pntr_examples_thick.h"
 
-bool Init(void* userData) {
-    examples_init();
+int main(int argc, char* argv[]) {
+    pntr_examples_alphamask();
+    pntr_examples_fonts();
+    pntr_examples_image();
+    pntr_examples_resize();
+    pntr_examples_rotate();
+    pntr_examples_shapes();
+    pntr_examples_sprite();
+    pntr_examples_thick();
 
-    return true;
+    return 0;
 }
 
-bool Update(pntr_image* screen, void* userData) {
-    examples_update(screen);
-
-    return true;
-}
-
-void Event(pntr_app_event* event, void* userData) {
-    switch (event->type) {
-        case PNTR_APP_EVENTTYPE_KEY_DOWN: {
-            if (event->key == PNTR_APP_KEY_RIGHT) {
-                examples_next();
-            }
-            if (event->key == PNTR_APP_KEY_LEFT) {
-                examples_previous();
-            }
-            if (event->key == PNTR_APP_KEY_F1) {
-                examples_screenshot();
-            }
-        }
-        break;
-        case PNTR_APP_EVENTTYPE_MOUSE_BUTTON_DOWN: {
-            if (event->mouseButton == PNTR_APP_MOUSE_BUTTON_LEFT) {
-                examples_next();
-            }
-            if (event->mouseButton == PNTR_APP_MOUSE_BUTTON_RIGHT) {
-                examples_previous();
-            }
-        }
-        break;
-        case PNTR_APP_EVENTTYPE_GAMEPAD_BUTTON_DOWN: {
-            if (event->gamepadButton == PNTR_APP_GAMEPAD_BUTTON_RIGHT_FACE_DOWN) {
-                examples_next();
-            }
-            if (event->gamepadButton == PNTR_APP_GAMEPAD_BUTTON_RIGHT_FACE_RIGHT) {
-                examples_previous();
-            }
-        }
-        break;
-    }
-}
-
-void Close(void* userData) {
-    examples_unload();
-}
-
-pntr_app Main(int argc, char* argv[]) {
-    return (pntr_app) {
-        .width = 400,
-        .height = 225,
-        .title = "pntr_app: Examples",
-        .init = Init,
-        .update = Update,
-        .close = Close,
-        .event = Event,
-        .fps = 60,
-        //.userData = PNTR_MALLOC(sizeof(AppData)),
-    };
-}
+#endif

@@ -1,29 +1,38 @@
 /**
- * pntr: Image manipulation library for C99 and C++, with a focus on ease-of-use.
+ * pntr: Header-only CPU graphics library for C99 and C++, with a focus on ease-of-use.
+ *
+ *   https://github.com/robloach/pntr
  *
  * Configuration:
  * - PNTR_IMPLEMENTATION: Define this in one of your .c files, before including pntr.h
  * - PNTR_PIXELFORMAT_RGBA: Use the RGBA format
  * - PNTR_PIXELFORMAT_ARGB: Use the ARGB pixel format
+ * - PNTR_NO_ALPHABLEND: Skips alpha blending when rendering images
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
- * - PNTR_ENABLE_TTF: Enables TTF font loading
- * - PNTR_ENABLE_FILTER_SMOOTH: When resizing images, use stb_image, which is slower, but can look better.
- * - PNTR_DISABLE_PNG: Disables loading/saving PNG images via cute_png
- * - PNTR_DISABLE_ALPHABLEND: Skips alpha blending when rendering images
- * - PNTR_DISABLE_MATH: Disables dependency on C's math.h library. Will disable PNTR_ENABLE_FILTER_SMOOTH, and PNTR_ENABLE_TTF.
- * - PNTR_LOAD_FILE: Callback to use when asked to load a file. Must match the pntr_load_file() definition.
- * - PNTR_SAVE_FILE: Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+ * - PNTR_ENABLE_JPEG: When available, support JPEG image loading
+ * - PNTR_ENABLE_MATH: When enabled, will use C's math.h library, rather than internal implementations
+ * - PNTR_ENABLE_TTF: Enables support for loading TrueType fonts
+ * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
+ * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
+ * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
+ * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
+ * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
+ * - PNTR_SAVE_IMAGE_TO_MEMORY: Callback to save an image to memory in pntr_save_image_to_memory(). By default, will use cute_png.
+ * - PNTR_NO_STDIO: When enabled, will disable the standard file loading/saving calls for PNTR_LOAD_FILE and PNTR_SAVE_FILE.
+ * - PNTR_NO_SAVE_IMAGE: Disables the default behaviour of saving images.
+ * - PNTR_NO_LOAD_IMAGE: Disables the default behavior of loading images.
  * - PNTR_NO_CUTE_PNG_IMPLEMENTATION: Skips defining CUTE_PNG_IMPLEMENTATION. Useful if you're using cute_png elsewhere.
+ * - PNTR_NO_STB_IMAGE_IMPLEMENTATION: Skips defining STB_IMAGE_IMPLEMENTATION. Useful if you're using stb_image elsewhere.
+ * - PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION: Skips defining STB_IMAGE_WRITE_IMPLEMENTATION. Useful if you're using stb_image_write elsewhere.
  * - PNTR_NO_STB_TRUETYPE_IMPLEMENTATION: Skips defining STB_TRUETYPE_IMPLEMENTATION. Useful if you're using stb_truetype elsewhere.
- * - PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION: Skips defining STB_IMAGE_RESIZE_IMPLEMENTATION. Useful if you're using stb_image_resize elsewhere.
  *
  * @file pntr.h
  *
- * @copyright 2023 Rob Loach (@RobLoach, https://robloach.net)
+ * @copyright 2026 Rob Loach (@RobLoach, https://robloach.net)
  *
  * @license Zlib
  *
- * Copyright (c) 2023 Rob Loach (@RobLoach, https://robloach.net)
+ * Copyright (c) 2026 Rob Loach (@RobLoach, https://robloach.net)
  *
  * This software is provided "as-is", without any express or implied warranty. In no event
  * will the authors be held liable for any damages arising from the use of this software.
@@ -50,6 +59,26 @@
 /**
  * @defgroup pntr pntr
  * @{
+ *
+ * @brief Header-only CPU graphics library for C99 or C++, with a focus on ease-of-use.
+ *
+ * Make sure to define `PNTR_IMPLEMENTATION` before including in one of your `.c` files.
+ *
+ * @code
+ * #define PNTR_IMPLEMENTATION
+ * #include "pntr.h"
+ *
+ * int main() {
+ *     pntr_image* image = pntr_new_image(200, 200);
+ *     pntr_draw_circle_fill(image, 100, 100, 80, PNTR_RED);
+ *     pntr_save_image(image, "output.png");
+ *     pntr_unload_image(image);
+ *
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @see PNTR_IMPLEMENTATION
  */
 
 #ifdef _DOXYGEN_
@@ -59,9 +88,18 @@
      */
 
     /**
-     * Define `PNTR_IMPLEMENTATION` in one of your `.c` files before including `pntr.h`.
+     * Define `PNTR_IMPLEMENTATION` in **one** of your `.c` files before including `pntr.h`.
      *
      * This will let pntr.h know where to implement its functions.
+     *
+     * @code
+     * #define PNTR_IMPLEMENTATION
+     * #include "pntr.h"
+     *
+     * int main() {
+     *     return 0;
+     * }
+     * @endcode
      */
     #define PNTR_IMPLEMENTATION
 
@@ -80,63 +118,126 @@
     #define PNTR_PIXELFORMAT_ARGB
 
     /**
-     * Enables support for pntr's default font. It's a small 8x8 font.
+     * Enables support for pntr's default monochrome 8x8 font.
      *
      * @see pntr_load_font_default()
      */
     #define PNTR_ENABLE_DEFAULT_FONT
 
     /**
-     * Enables TTF font loading via stb_truetype.
+     * Enables support for loading TrueType fonts with `stb_truetype.h`.
      *
      * @see pntr_load_font_ttf()
+     * @see https://github.com/nothings/stb/blob/master/stb_truetype.h
      */
     #define PNTR_ENABLE_TTF
 
     /**
-     * When resizing images, use stb_image, which is slower, but can look better.
+     * Enable UTF-8 character set support for font loading, and text rendering, with `utf8.h`.
      *
-     * @see PNTR_FILTER_SMOOTH
+     * @note When this is enabled, there is an increase in font memory usage.
+     *
+     * @see https://github.com/sheredom/utf8.h
      */
-    #define PNTR_ENABLE_FILTER_SMOOTH
+    #define PNTR_ENABLE_UTF8
 
     /**
-     * Disables loading/saving PNG images, and will avoid loading cute_png.h.
+     * Callback to use when saving an image to memory. By default, will use stb_image_write.
+     *
+     * @see pntr_save_image_to_memory()
+     * @see PNTR_STB_IMAGE
+     * @see PNTR_CUTE_PNG
+     * @see pntr_stb_image_save_image_to_memory()
+     * @see pntr_cute_png_save_image_to_memory()
+     */
+    #define PNTR_SAVE_IMAGE_TO_MEMORY
+
+    /**
+     * Callback to use when loading an image. By default, will use stb_image.
+     *
+     * @see pntr_stb_image_load_image_from_memory()
+     * @see pntr_cute_png_load_image_from_memory()
+     * @see pntr_load_image_from_memory()
+     * @see PNTR_CUTE_PNG
+     * @see PNTR_STB_IMAGE
+     */
+    #define PNTR_LOAD_IMAGE_FROM_MEMORY
+
+    /**
+     * When enabled, will use C's standard math.h library for math functions, rather than pntr's internally build in methods.
+     */
+    #define PNTR_ENABLE_MATH
+
+    /**
+     * Callback to use when loading a file. Must match the `pntr_load_file()` definition.
+     *
+     * @see pntr_load_file()
+     * @see PNTR_NO_STDIO
+     */
+    #define PNTR_LOAD_FILE
+
+    /**
+     * Callback to use when saving a file. Must match the `pntr_save_file()` definition.
+     *
+     * @see pntr_save_file()
+     * @see PNTR_NO_STDIO
+     */
+    #define PNTR_SAVE_FILE
+
+    /**
+     * When defined, will use `stb_image.h` for loading images, and `stb_image_write.h` for saving.
+     *
+     * @details By default, `stb_image` will be used if a custom implementation isn't defined.
      *
      * @see pntr_load_image()
+     * @see pntr_save_image()
+     * @see PNTR_CUTE_PNG
+     * @see PNTR_SAVE_IMAGE_TO_MEMORY
+     * @see PNTR_LOAD_IMAGE_FROM_MEMORY
      */
-    #define PNTR_DISABLE_PNG
+    #define PNTR_STB_IMAGE
+
+    /**
+     * When defined, will use `cute_png.h` for loading and saving.
+     *
+     * @details While cute_png takes up less memory than stb_image, it doesn't support as many of the features.
+     *
+     * @see pntr_load_image()
+     * @see pntr_save_image()
+     * @see PNTR_STB_IMAGE
+     * @see PNTR_SAVE_IMAGE_TO_MEMORY
+     * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+     */
+    #define PNTR_CUTE_PNG
 
     /**
      * Skips alpha blending when rendering images. Defining this will improve performance.
      *
      * @see pntr_color_alpha_blend()
      */
-    #define PNTR_DISABLE_ALPHABLEND
+    #define PNTR_NO_ALPHABLEND
 
     /**
-     * Will disable pntr's dependency on C's math.h library.
+     * Will disable the default use of `stdio.h` for file saving/loading with `PNTR_LOAD_FILE` and `PNTR_SAVE_FILE`.
      *
-     * This will disable PNTR_ENABLE_FILTER_SMOOTH and PNTR_ENABLE_TTF.
-     *
-     * @see PNTR_ENABLE_FILTER_SMOOTH
-     * @see PNTR_ENABLE_TTF
+     * @see PNTR_LOAD_FILE
+     * @see PNTR_SAVE_FILE
      */
-    #define PNTR_DISABLE_MATH
+    #define PNTR_NO_STDIO
 
     /**
-     * Callback to use when asked to load a file. Must match the pntr_load_file() definition.
+     * Will disable image loading.
      *
-     * @see pntr_load_file()
+     * @see PNTR_LOAD_IMAGE_FROM_MEMORY
      */
-    #define PNTR_LOAD_FILE
+    #define PNTR_NO_LOAD_IMAGE
 
     /**
-     * Callback to use when asked to save a file. Must match the pntr_save_file() definition.
+     * Will disable image saving.
      *
-     * @see pntr_save_file()
+     * @see PNTR_SAVE_IMAGE_TO_MEMORY
      */
-    #define PNTR_SAVE_FILE
+    #define PNTR_NO_SAVE_IMAGE
 
     /**
      * Skips defining `CUTE_PNG_IMPLEMENTATION`. Useful if you're using cute_png elsewhere.
@@ -144,9 +245,14 @@
     #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
 
     /**
-     * Skips defining `STB_IMAGE_RESIZE_IMPLEMENTATION`. Useful if you're using stb_image_resize elsewhere.
+     * Skips defining `STB_IMAGE_WRITE_IMPLEMENTATION`. Useful if you're using stb_image_write elsewhere.
      */
-    #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
+    #define PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION
+
+    /**
+     * Skips defining `STB_IMAGE_IMPLEMENTATION`. Useful if you're using stb_image elsewhere.
+     */
+    #define PNTR_NO_STB_IMAGE_IMPLEMENTATION
 
     /**
      * Skips defining `STB_TRUETYPE_IMPLEMENTATION`. Useful if you're using stb_truetype elsewhere.
@@ -177,64 +283,91 @@
     #undef PNTR_PIXELFORMAT_ARGB
 #endif
 
+#ifdef PNTR_PIXELFORMAT
+    #undef PNTR_PIXELFORMAT
+#endif
+#ifdef PNTR_PIXELFORMAT_RGBA
+    /**
+     * The set pixel format for the application.
+     *
+     * Will become either `PNTR_PIXELFORMAT_ARGB8888` or `PNTR_PIXELFORMAT_RGBA8888`, with the default being `PNTR_PIXELFORMAT_RGBA8888`.
+     *
+     * @see PNTR_PIXELFORMAT_RGBA8888
+     * @see PNTR_PIXELFORMAT_ARGB8888
+     */
+    #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
+#elif defined(PNTR_PIXELFORMAT_ARGB)
+    #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
+#endif
+
+#ifndef PNTR_CLITERAL
+    #if defined(__cplusplus)
+        #define PNTR_CLITERAL(type)      type
+    #else
+        /**
+         * Compound literal to initialize a structure.
+         *
+         * @param type The type of the structure to intiailize.
+         * @return The initialized structure.
+         * @note MSVC C++ compiler does not support compound literals (C99 feature)
+         *
+         * @code
+         * pntr_color color = PNTR_CLITERAL(pntr_color) { 255, 255, 255, 255 };
+         * @endif
+         */
+        #define PNTR_CLITERAL(type)      (type)
+    #endif
+#endif
+
 /**
  * Color, represented by an unsigned 32-bit integer.
  *
- * Has four components: Red, Green, Blue, and Alpha.
+ * Has four components: Red, Green, Blue, and Alpha. Depending on the pixel format, will
+ * shift the order in which the components are defines.
  *
  * @see pntr_new_color()
  * @see pntr_get_color()
+ * @see PNTR_PIXELFORMAT_RGBA
+ * @see PNTR_PIXELFORMAT_ARGB
  */
 typedef union pntr_color {
     /**
-     * The color data, represented by an unsigned 32-bit integer.
+     * The color value, represented by an unsigned 32-bit integer.
      */
-    uint32_t data;
+    uint32_t value;
 
-    struct {
+    /**
+     * Union data representing the 32-bit integer, split into four bytes.
+     *
+     * The order in which the values are sorted depends on which pixel format you're using.
+     *
+     * @see PNTR_PIXELFORMAT_RGBA
+     * @see PNTR_PIXELFORMAT_ARGB
+     */
+    struct pntr_color_rgba_t {
         #if defined(PNTR_PIXELFORMAT_RGBA)
-            /**
-             * Red channel.
-             */
-            unsigned char r;
-
-            /**
-             * Green channel.
-             */
-            unsigned char g;
-
-            /**
-             * Blue channel.
-             */
-            unsigned char b;
-
-            /**
-             * Alpha channel.
-             */
-            unsigned char a;
+            unsigned char r; /** Red channel. */
+            unsigned char g; /** Green channel. */
+            unsigned char b; /** Blue channel. */
+            unsigned char a; /** Alpha channel. */
         #elif defined(PNTR_PIXELFORMAT_ARGB)
-            /**
-             * Blue channel.
-             */
-            unsigned char b;
-
-            /**
-             * Green channel.
-             */
-            unsigned char g;
-
-            /**
-             * Red channel.
-             */
-            unsigned char r;
-
-            /**
-             * Alpha channel.
-             */
-            unsigned char a;
+            unsigned char b; /** Blue channel. */
+            unsigned char g; /** Green channel. */
+            unsigned char r; /** Red channel. */
+            unsigned char a; /** Alpha channel. */
         #endif
-    };
+    } rgba;
 } pntr_color;
+
+/**
+ * A rectangle.
+ */
+typedef struct pntr_rectangle {
+    int x; /** The x position of the rectangle. */
+    int y; /** The y position of the rectangle. */
+    int width; /** The width of the rectangle. */
+    int height; /** The height of the rectangle. */
+} pntr_rectangle;
 
 /**
  * An image, represented by pixel data.
@@ -243,153 +376,102 @@ typedef union pntr_color {
  * @see pntr_gen_image_color()
  */
 typedef struct pntr_image {
-    /**
-     * The pixel data for the image.
-     */
-    pntr_color* data;
+    pntr_color* data; /** The pixel data for the image. */
+    int width; /** The width of the image. */
+    int height; /** The height of the image. */
+    int pitch; /** The amount of bytes of one row of the image. */
 
     /**
-     * The width of the image.
-     */
-    int width;
-
-    /**
-     * The height of the image.
-     */
-    int height;
-
-    /**
-     * The amount of bytes of one row of the image.
-     */
-    int pitch;
-
-    /**
-     * Whether or not the image is a portion of another image.
+     * Whether or not the image is a portion of another image, sharing the same image data.
+     *
+     * @see pntr_image_subimage()
      */
     bool subimage;
+
+    /**
+     * A rectangle representing the region of the image that can be changed.
+     *
+     * @see pntr_image_set_clip()
+     * @see pntr_image_reset_clip()
+     * @see pntr_image_get_clip()
+     */
+    pntr_rectangle clip;
 } pntr_image;
 
 /**
  * A vector, represented by x and y coordinates.
  */
 typedef struct pntr_vector {
-    /**
-     * The X coordinate.
-     */
-    int x;
-
-    /**
-     * The Y coordinate.
-     */
-    int y;
+    int x; /** The X coordinate. */
+    int y; /** The Y coordinate. */
 } pntr_vector;
 
 /**
- * A rectangle.
- */
-typedef struct pntr_rectangle {
-    /**
-     * The x position of the rectangle.
-     */
-    int x;
-
-    /**
-     * The y position of the rectangle.
-     */
-    int y;
-
-    /**
-     * The width of the rectangle.
-     */
-    int width;
-
-    /**
-     * The height of the rectangle.
-     */
-    int height;
-} pntr_rectangle;
-
-/**
- * Font.
+ * Font used to render text.
  *
  * @see pntr_load_font_tty()
  * @see pntr_load_font_ttf()
  * @see pntr_load_font_bmf()
+ * @see PNTR_ENABLE_UTF8
+ * @see PNTR_ENABLE_TTF
  */
 typedef struct pntr_font {
-    /**
-     * The image used for the character atlas for the font.
-     */
-    pntr_image* atlas;
-
-    /**
-     * The glyph source rectangles on the atlas.
-     */
-    pntr_rectangle* srcRects;
-
-    /**
-     * How the glyph appears when rendering.
-     */
-    pntr_rectangle* glyphRects;
-
-    /**
-     * An array of characters that are available in the font's atlas.
-     */
-    char* characters;
-
-    /**
-     * The number of characters that the font implements.
-     */
-    int charactersLen;
+    pntr_image* atlas; /** The image used for the character atlas for the font. */
+    pntr_rectangle* srcRects; /** The glyph source rectangles on the atlas. */
+    pntr_rectangle* glyphRects; /** How the glyph appears when rendering. */
+    char* characters; /** An array of characters that are available in the font's atlas. */
+    int charactersLen; /** The number of characters that the font implements. */
+    void* user_data; /** General extra user data that can be referenced to by the font. */
 } pntr_font;
 
 /**
  * Pixel format.
  */
 typedef enum pntr_pixelformat {
-    /**
-     * RGBA, with 8 bytes for each component.
-     */
-    PNTR_PIXELFORMAT_RGBA8888 = 0,
-
-    /**
-     * ARGB, with 8 bytes for each component.
-     */
-    PNTR_PIXELFORMAT_ARGB8888,
-
-    /**
-     * Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled.
-     */
-    PNTR_PIXELFORMAT_GRAYSCALE
+    PNTR_PIXELFORMAT_RGBA8888 = 0, /** RGBA, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_ARGB8888, /** ARGB, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_GRAYSCALE /** Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
 } pntr_pixelformat;
 
 /**
  * Possible image filters to apply.
  */
 typedef enum pntr_filter {
-    /**
-     * Nearest-neighbor interpolation for fast processing.
-     *
-     * This is good for scaling up pixel art when you want to keep the pixel art look.
-     */
-    PNTR_FILTER_NEARESTNEIGHBOR = 0,
-
-    /**
-     * Bilinear interpolation will combine multiple pixels together when processing for smoother scaling.
-     *
-     * @see pntr_color_bilinear_interpolate()
-     */
-    PNTR_FILTER_BILINEAR,
-
-    /**
-     * The smooth filter will use stb_image_resize, which combines a number of different filtering algorithms.
-     *
-     * If the smooth filter is not available with PNTR_DISABLE_FILTER_SMOOTH, will fall back to PNTR_FILTER_BILINEAR.
-     *
-     * @see PNTR_DISABLE_FILTER_SMOOTH
-     */
-    PNTR_FILTER_SMOOTH
+    PNTR_FILTER_NEARESTNEIGHBOR = 0, /** Nearest-neighbor interpolation for fast processing. Good for a pixel art look. */
+    PNTR_FILTER_BILINEAR /** Bilinear interpolation will combine multiple pixels together when processing for smoother scaling. */
 } pntr_filter;
+
+/**
+ * Error states definitions.
+ *
+ * @see pntr_set_error()
+ * @see pntr_get_error()
+ */
+typedef enum pntr_error {
+    PNTR_ERROR_NONE = 0, /** No error */
+    PNTR_ERROR_INVALID_ARGS = -1, /** Invalid arguments */
+    PNTR_ERROR_NO_MEMORY = -2, /** Not enough memory */
+    PNTR_ERROR_NOT_SUPPORTED = -3, /** Not supported */
+    PNTR_ERROR_FAILED_TO_OPEN = -4, /** Failed to open */
+    PNTR_ERROR_FAILED_TO_WRITE = -5, /** Failed to write */
+    PNTR_ERROR_UNKNOWN = -6 /** Unknown error occurred */
+} pntr_error;
+
+/**
+ * The associated image format.
+ */
+typedef enum pntr_image_type {
+    PNTR_IMAGE_TYPE_UNKNOWN = 0, /** Image type: Unknown. */
+    PNTR_IMAGE_TYPE_PNG, /** Image type: PNG - Portable Network Graphics */
+    PNTR_IMAGE_TYPE_JPG, /** Image type: JPEG - Joint Photographic Experts Group */
+    PNTR_IMAGE_TYPE_BMP /** Image type: BMP - Bitmap */
+} pntr_image_type;
+
+typedef enum pntr_text_align {
+    PNTR_TEXT_ALIGN_LEFT = 0, /** Text alignment: Left */
+    PNTR_TEXT_ALIGN_CENTER,   /** Text alignment: Center */
+    PNTR_TEXT_ALIGN_RIGHT     /** Text alignment: Right */
+} pntr_text_align;
 
 #ifdef __cplusplus
 extern "C" {
@@ -400,16 +482,22 @@ PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color colo
 PNTR_API pntr_image* pntr_image_copy(pntr_image* image);
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height);
 PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height);
+PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image);
+PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height);
+PNTR_API void pntr_image_set_clip_rec(pntr_image* image, pntr_rectangle clip);
+PNTR_API void pntr_image_reset_clip(pntr_image* image);
 PNTR_API void pntr_unload_image(pntr_image* image);
 PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color);
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color);
 PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
+PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color);
 PNTR_API void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
+PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color);
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
-PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
-PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color);
+PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
+PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color);
 PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
@@ -435,18 +523,24 @@ PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, i
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical);
-PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical);
+PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
+PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, bool flipHorizontal, bool flipVertical, pntr_filter filter, pntr_color tint);
-PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color color);
+PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
+PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
+PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint);
+PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
+#ifdef PNTR_ENABLE_VARGS
+PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...);
+#endif
 PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
-PNTR_API unsigned char pntr_color_get_r(pntr_color color);
-PNTR_API unsigned char pntr_color_get_g(pntr_color color);
-PNTR_API unsigned char pntr_color_get_b(pntr_color color);
-PNTR_API unsigned char pntr_color_get_a(pntr_color color);
+PNTR_API unsigned char pntr_color_r(pntr_color color);
+PNTR_API unsigned char pntr_color_g(pntr_color color);
+PNTR_API unsigned char pntr_color_b(pntr_color color);
+PNTR_API unsigned char pntr_color_a(pntr_color color);
 PNTR_API void pntr_color_set_r(pntr_color* color, unsigned char r);
 PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g);
 PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b);
@@ -455,13 +549,14 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
 PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite);
 PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat);
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName);
-PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize);
+PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize);
 PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
-PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char* fileData, unsigned int dataSize);
+PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char* fileData, unsigned int dataSize);
 PNTR_API pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
+PNTR_API void* pntr_set_error(pntr_error error);
 PNTR_API const char* pntr_get_error(void);
-PNTR_API void* pntr_set_error(const char* error);
+PNTR_API pntr_error pntr_get_error_code(void);
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter);
 PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
@@ -480,8 +575,8 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
-PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text);
-PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint);
+PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength);
+PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor);
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters);
 PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters);
@@ -493,22 +588,41 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize);
 PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize);
 PNTR_API pntr_color pntr_color_invert(pntr_color color);
 PNTR_API void pntr_image_color_invert(pntr_image* image);
+PNTR_API pntr_color pntr_color_grayscale(pntr_color color);
+PNTR_API void pntr_image_color_grayscale(pntr_image* image);
 PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);
 PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold);
-PNTR_API void pntr_image_crop(pntr_image* image, int x, int y, int width, int height);
+PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height);
 PNTR_API void pntr_image_alpha_crop(pntr_image* image, float threshold);
 PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor);
 PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical);
 PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast);
 PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast);
 PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
-PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
+PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill);
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_filter filter);
 PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight);
 PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
 PNTR_API void* pntr_load_memory(size_t size);
 PNTR_API void pntr_unload_memory(void* pointer);
 PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
+PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath);
+
+PNTR_API void pntr_draw_line_thick(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color);
+PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color);
+PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
+PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color);
+PNTR_API void pntr_draw_triangle_thick(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, int thickness, pntr_color color);
+PNTR_API void pntr_draw_triangle_thick_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, int thickness, pntr_color color);
+PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, int thickness, pntr_color color);
+PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color);
+PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color);
+PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color);
+PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color);
+PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color);
+PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color);
+PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color);
+PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, int thickness, pntr_color color);
 
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
@@ -518,179 +632,184 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 }
 #endif
 
-#if defined(__cplusplus)
-    #define PNTR_CLITERAL(type) type
-#else
-    #define PNTR_CLITERAL(type) (type)
-#endif
+/**
+ * @defgroup colors Colors
+ * @{
+ */
 
 #ifndef PNTR_LIGHTGRAY
 /**
  * Light gray.
  */
-#define PNTR_LIGHTGRAY  PNTR_CLITERAL(pntr_color) { .r = 200, .g = 200, .b = 200, .a = 255 }
+#define PNTR_LIGHTGRAY  pntr_new_color(200, 200, 200, 255)
 #endif
 #ifndef PNTR_GRAY
 /**
  * Gray.
  */
-#define PNTR_GRAY       PNTR_CLITERAL(pntr_color) { .r = 130, .g = 130, .b = 130, .a = 255 }
+#define PNTR_GRAY       pntr_new_color(130, 130, 130, 255)
 #endif
 #ifndef PNTR_DARKGRAY
 /**
  * Dark gray.
  */
-#define PNTR_DARKGRAY   PNTR_CLITERAL(pntr_color) { .r = 80,  .g = 80,  .b = 80,  .a = 255 }
+#define PNTR_DARKGRAY   pntr_new_color(80, 80,  80, 255)
 #endif
 #ifndef PNTR_YELLOW
 /**
  * Yellow.
  */
-#define PNTR_YELLOW     PNTR_CLITERAL(pntr_color) { .r = 253, .g = 249, .b = 0,   .a = 255 }
+#define PNTR_YELLOW     pntr_new_color(253, 249, 0, 255)
 #endif
 #ifndef PNTR_GOLD
 /**
  * Gold.
  */
-#define PNTR_GOLD       PNTR_CLITERAL(pntr_color) { .r = 255, .g = 203, .b = 0,   .a = 255 }
+#define PNTR_GOLD       pntr_new_color(255, 203, 0, 255)
 #endif
 #ifndef PNTR_ORANGE
 /**
  * Orange.
  */
-#define PNTR_ORANGE     PNTR_CLITERAL(pntr_color) { .r = 255, .g = 161, .b = 0,   .a = 255 }
+#define PNTR_ORANGE     pntr_new_color(255, 161, 0, 255)
 #endif
 #ifndef PNTR_PINK
 /**
  * Pink.
  */
-#define PNTR_PINK       PNTR_CLITERAL(pntr_color) { .r = 255, .g = 109, .b = 194, .a = 255 }
+#define PNTR_PINK       pntr_new_color(255, 109, 194, 255)
 #endif
 #ifndef PNTR_RED
 /**
  * Red.
  */
-#define PNTR_RED        PNTR_CLITERAL(pntr_color) { .r = 230, .g = 41,  .b = 55,  .a = 255 }
+#define PNTR_RED        pntr_new_color(230, 41, 55, 255)
 #endif
 #ifndef PNTR_MAROON
 /**
  * Maroon.
  */
-#define PNTR_MAROON     PNTR_CLITERAL(pntr_color) { .r = 190, .g = 33,  .b = 55,  .a = 255 }
+#define PNTR_MAROON     pntr_new_color(190, 33, 55, 255)
 #endif
 #ifndef PNTR_GREEN
 /**
  * Green.
  */
-#define PNTR_GREEN      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 228, .b = 48,  .a = 255 }
+#define PNTR_GREEN      pntr_new_color(0, 228, 48, 255)
 #endif
 #ifndef PNTR_LIME
 /**
  * Lime.
  */
-#define PNTR_LIME       PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 158, .b = 47,  .a = 255 }
+#define PNTR_LIME       pntr_new_color(0, 158, 47, 255)
 #endif
 #ifndef PNTR_DARKGREEN
 /**
  * Dark green.
  */
-#define PNTR_DARKGREEN  PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 117, .b = 44,  .a = 255 }
+#define PNTR_DARKGREEN  pntr_new_color(0, 117, 44, 255)
 #endif
 #ifndef PNTR_SKYBLUE
 /**
  * Sky blue.
  */
-#define PNTR_SKYBLUE    PNTR_CLITERAL(pntr_color) { .r = 102, .g = 191, .b = 255, .a = 255 }
+#define PNTR_SKYBLUE    pntr_new_color(102, 191, 255, 255)
 #endif
 #ifndef PNTR_BLUE
 /**
  * Blue.
  */
-#define PNTR_BLUE       PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 121, .b = 241, .a = 255 }
+#define PNTR_BLUE       pntr_new_color(0, 121, 241, 255)
 #endif
 #ifndef PNTR_DARKBLUE
 /**
  * Dark blue.
  */
-#define PNTR_DARKBLUE   PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 82,  .b = 172, .a = 255 }
+#define PNTR_DARKBLUE   pntr_new_color(0, 82, 172, 255)
 #endif
 #ifndef PNTR_PURPLE
 /**
  * Purple.
  */
-#define PNTR_PURPLE     PNTR_CLITERAL(pntr_color) { .r = 200, .g = 122, .b = 255, .a = 255 }
+#define PNTR_PURPLE     pntr_new_color(200, 122, 255, 255)
 #endif
 #ifndef PNTR_VIOLET
 /**
  * Violet.
  */
-#define PNTR_VIOLET     PNTR_CLITERAL(pntr_color) { .r = 135, .g = 60,  .b = 190, .a = 255 }
+#define PNTR_VIOLET     pntr_new_color(135, 60, 190, 255)
 #endif
 #ifndef PNTR_DARKPURPLE
 /**
  * Dark purple.
  */
-#define PNTR_DARKPURPLE PNTR_CLITERAL(pntr_color) { .r = 112, .g = 31,  .b = 126, .a = 255 }
+#define PNTR_DARKPURPLE pntr_new_color(112, 31, 126, 255)
 #endif
 #ifndef PNTR_BEIGE
 /**
  * Beige.
  */
-#define PNTR_BEIGE      PNTR_CLITERAL(pntr_color) { .r = 211, .g = 176, .b = 131, .a = 255 }
+#define PNTR_BEIGE      pntr_new_color(211, 176, 131, 255)
 #endif
 #ifndef PNTR_BROWN
 /**
  * Brown.
  */
-#define PNTR_BROWN      PNTR_CLITERAL(pntr_color) { .r = 127, .g = 106, .b = 79,  .a = 255 }
+#define PNTR_BROWN      pntr_new_color(127, 106, 79, 255)
 #endif
 #ifndef PNTR_DARKBROWN
 /**
  * Dark brown.
  */
-#define PNTR_DARKBROWN  PNTR_CLITERAL(pntr_color) { .r = 76,  .g = 63,  .b = 47,  .a = 255 }
+#define PNTR_DARKBROWN  pntr_new_color(76, 63, 47, 255)
 #endif
 #ifndef PNTR_WHITE
 /**
  * White.
  */
-#define PNTR_WHITE      PNTR_CLITERAL(pntr_color) { .r = 255, .g = 255, .b = 255, .a = 255 }
+#define PNTR_WHITE      pntr_new_color(255, 255, 255, 255)
 #endif
 
-#ifndef PNTR_WHITE_DATA
+#ifndef PNTR_WHITE_VALUE
 /**
  * The integer representation of PNTR_WHITE.
+ *
+ * @note This is the same as \c PNTR_WHITE.value .
  *
  * @private
  * @internal
  */
-#define PNTR_WHITE_DATA 4294967295
-#endif  // PNTR_WHITE_DATA
+#define PNTR_WHITE_VALUE 4294967295
+#endif  // PNTR_WHITE_VALUE
 
 #ifndef PNTR_BLACK
 /**
  * Black.
  */
-#define PNTR_BLACK      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 255 }
+#define PNTR_BLACK      pntr_new_color(0, 0, 0, 255)
 #endif
 #ifndef PNTR_BLANK
 /**
  * Blank, or transparent.
  */
-#define PNTR_BLANK      PNTR_CLITERAL(pntr_color) { .r = 0,   .g = 0,   .b = 0,   .a = 0   }
+#define PNTR_BLANK      pntr_new_color(0, 0, 0, 0)
 #endif
 #ifndef PNTR_MAGENTA
 /**
  * Magenta.
  */
-#define PNTR_MAGENTA    PNTR_CLITERAL(pntr_color) { .r = 255, .g = 0,   .b = 255, .a = 255 }
+#define PNTR_MAGENTA    pntr_new_color(255, 0, 255, 255)
 #endif
 #ifndef PNTR_RAYWHITE
 /**
  * The white used in raylib.
  */
-#define PNTR_RAYWHITE   PNTR_CLITERAL(pntr_color) { .r = 245, .g = 245, .b = 245, .a = 255 }
+#define PNTR_RAYWHITE   pntr_new_color(245, 245, 245, 255)
 #endif
+
+/**
+ * @}
+ */
 
 #endif  // PNTR_H__
 
@@ -698,40 +817,88 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
 #ifndef PNTR_IMPLEMENTATION_ONCE
 #define PNTR_IMPLEMENTATION_ONCE
 
+#if defined(PNTR_ENABLE_UTF8) && !defined(_DOXYGEN_)
+    #include "external/utf8.h"
+    #define PNTR_STRSTR utf8str
+    #define PNTR_STRCHR utf8chr
+    #define PNTR_STRLEN utf8len
+    #define PNTR_STRSIZE utf8size
+    #define PNTR_STRCODEPOINT utf8codepoint
+    typedef utf8_int32_t pntr_codepoint_t;
+#else
+    /**
+     * A type representing a single character or UTF-8 codepoint.
+     *
+     * With UTF-8, a single character can be up to 4 bytes, so having this type define that helps determine its size quickly.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    typedef char pntr_codepoint_t;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @defgroup memory Memory
+ * @{
+ */
 
 #ifndef PNTR_MALLOC
     #include <stdlib.h>
     /**
      * Allocates the requested memory and returns a pointer to it.
+     *
+     * @param size (size_t) number of bytes to allocate
+     *
+     * @return On success, returns the pointer to the beginning of newly allocated memory.
+     * @see PNTR_FREE
+     * @see https://en.cppreference.com/w/c/memory/malloc
      */
-    #define PNTR_MALLOC(size) malloc((size_t)(size))
+    #define PNTR_MALLOC(size) malloc(size)
 #endif  // PNTR_MALLOC
 
 #ifndef PNTR_FREE
     #include <stdlib.h>
     /**
      * Deallocates the previously allocated memory.
+     *
+     * @param ptr (void*) pointer to the memory to deallocate
+     *
+     * @see PNTR_MALLOC
+     * @see https://en.cppreference.com/w/c/memory/free
      */
-    #define PNTR_FREE(obj) free((void*)(obj))
+    #define PNTR_FREE(ptr) free(ptr)
 #endif  // PNTR_FREE
 
 #ifndef PNTR_REALLOC
     #include <stdlib.h>
     /**
      * Attempts to resize the memory block pointed to that was previously allocated.
+     *
+     * @param ptr (void*) pointer to the memory area to be reallocated
+     * @param new_size (size_t) new size of the array in bytes
+     *
+     * @return On success, returns the pointer to the beginning of newly allocated memory. To avoid a memory leak, the returned pointer must be deallocated with free or realloc. The original pointer ptr is invalidated and any access to it is undefined behavior (even if reallocation was in-place).
+     *
+     * @see https://en.cppreference.com/w/c/memory/realloc
      */
-    #define PNTR_REALLOC realloc
+    #define PNTR_REALLOC(ptr, new_size) realloc(ptr, new_size)
 #endif  // PNTR_REALLOC
 
 #ifndef PNTR_MEMCPY
     #include <string.h>
     /**
      * Copies data from memory area src to the destination memory.
+     *
+     * @param dest (void*) pointer to the object to copy to
+     * @param src (const void*) pointer to the object to copy from
+     * @param n (size_t) number of bytes to copy
+     *
+     * @see https://en.cppreference.com/w/c/string/byte/memcpy
      */
-    #define PNTR_MEMCPY(dest, src, n) memcpy((void*)(dest), (const void*)(src), (size_t)(n))
+    #define PNTR_MEMCPY(dest, src, n) memcpy(dest, src, (n))
 #endif  // PNTR_MEMCPY
 
 #ifndef PNTR_MEMSET
@@ -739,37 +906,162 @@ extern "C" {
     /**
      * Copies the character c (an unsigned char) to the first n characters of the string pointed to, by the argument str.
      */
-    #define PNTR_MEMSET memset
+    #define PNTR_MEMSET(str, c, n) memset((str), (c), (n))
 #endif  // PNTR_MEMSET
 
+/**
+ * @}
+ */
+
+/**
+ * @defgroup strings String Manipulation
+ * @{
+ */
+
+#ifndef PNTR_STRSTR
+    #include <string.h>
+    /**
+     * Returns a pointer to the first occurrence of str2 in str1, or a null pointer if str2 is not part of str1.
+     *
+     * By default, will use string.h's `strstr`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8str`.
+     *
+     * @param str1 (const char*) C string to be scanned.
+     * @param str2 (const char*) containing the sequence of characters to match.
+     *
+     * @return A pointer to the first occurrence in str1 of the entire sequence of characters specified in str2, or a null pointer if the sequence is not present in str1.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRSTR strstr
+#endif
+
+#ifndef PNTR_STRCHR
+    #include <string.h>
+    /**
+     * Returns a pointer to the first occurance of a character in a string.
+     *
+     * By default, will use string.h's `strchr`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8chr`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRCHR strchr
+#endif
+
+#ifndef PNTR_STRLEN
+    #include <string.h>
+    /**
+     * Returns the length of a string.
+     *
+     * By default, will use string.h's `strlen`. When `PNTR_ENABLE_UTF8` is enabled, will be `utf8len`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRLEN strlen
+#endif
+
+#ifndef PNTR_STRSIZE
+    #include <string.h>
+    /**
+     * Calculates the amount of bytes in a string, including the null character.
+     *
+     * By default, will use string.h's `strlen(text) + 1`. When `PNTR_ENABLE_UTF8` is enabled, this will be `utf8size`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     */
+    #define PNTR_STRSIZE(text) ((PNTR_STRLEN(text) + (size_t)1))
+#endif
+
+#ifndef PNTR_STRCODEPOINT
+    /**
+     * Sets out_codepoint to the current utf8 codepoint in str, and returns the address of the next utf8 codepoint after the current one in str.
+     *
+     * @param str The string to get the codepoint from
+     * @param out_codepoint The codepoint to set
+     *
+     * @return The address of the next codepoint.
+     *
+     * @private
+     * @internal
+     * @see PNTR_ENABLE_UTF8
+     * @see utf8codepoint
+     */
+    char* pntr_strcodepoint(const char * str, char* out_codepoint) {
+        if (str == NULL) {
+            *out_codepoint = 0;
+        }
+
+        *out_codepoint = str[0];
+        return (char*)(str + 1);
+    }
+
+    /**
+     * Sets out_codepoint to the current utf8 codepoint in str, and returns the address of the next utf8 codepoint after the current one in str.
+     *
+     * When `PNTR_ENABLE_UTF8` is enabled, will be `utf8codepoint`.
+     *
+     * @see PNTR_ENABLE_UTF8
+     * @see pntr_strcodepoint
+     */
+    #define PNTR_STRCODEPOINT pntr_strcodepoint
+#endif
+
+/**
+ * @}
+ */
+
+/**
+ * @defgroup math Math
+ * @{
+ */
+
 #ifndef PNTR_PI
+    /**
+     * Pi as a floating point value.
+     *
+     * @see https://en.wikipedia.org/wiki/Pi
+     */
     #define PNTR_PI 3.1415926535897932f
 #endif
 
 #ifndef PNTR_DEG2RAD
     /**
-     * Convert a degree to radians. PI / 180.
+     * Convert a degree to radians with a floating point value. PI / 180.
+     *
+     * @code
+     * float radians = degrees * PNTR_DEG2RAD
+     * @endcode
      */
     #define PNTR_DEG2RAD 0.017453293f
 #endif
 
-#ifdef PNTR_DISABLE_MATH
-    #ifdef PNTR_ENABLE_TTF
-        // TTF requires math.h
-        #undef PNTR_ENABLE_TTF
+#if !defined(PNTR_ENABLE_MATH) || defined(_DOXYGEN_)
+    #if !defined(PNTR_SINF) || !defined(PNTR_COSF)
+        /**
+         * @internal
+         *
+         * @see PNTR_SINF
+         * @see PNTR_COSF
+         */
+        static float _pntr_normalize_anglef(float x) {
+            const float tau = PNTR_PI * 2.0f;
+            long quotient = (long)(x / tau);
+            x -= (float)quotient * tau;
+            if (x > PNTR_PI) {
+                x -= tau;
+            }
+            else if (x < -PNTR_PI) {
+                x += tau;
+            }
+            return x;
+        }
     #endif
-    #ifdef PNTR_ENABLE_FILTER_SMOOTH
-        // stb_image_resize requires math.h
-        #undef PNTR_ENABLE_FILTER_SMOOTH
-    #endif
-
     #ifndef PNTR_SINF
         /**
-         * Calculates sine of the given value.
+         * @internal
          *
-         * https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         * @see PNTR_SINF
          */
-        float _pntr_sinf(float x) {
+        static float _pntr_sinf(float x) {
             static const float a0 = +1.91059300966915117e-31f;
             static const float a1 = +1.00086760103908896f;
             static const float a2 = -1.21276126894734565e-2f;
@@ -778,18 +1070,38 @@ extern "C" {
             static const float a5 = +2.08026600266304389e-2f;
             static const float a6 = -3.03996055049204407e-3f;
             static const float a7 = +1.38235642404333740e-4f;
-            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7))))));
+            float sign = 1.0f;
+            x = _pntr_normalize_anglef(x);
+            if (x < 0.0f) {
+                sign = -1.0f;
+                x = -x;
+            }
+            if (x > PNTR_PI / 2.0f) {
+                x = PNTR_PI - x;
+            }
+            return sign * (a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*a7)))))));
         }
-        #define PNTR_SINF _pntr_sinf
+
+        /**
+         * Calculates sine of the given value in radians.
+         *
+         * @param value The input value of sinf()
+         *
+         * @return The sine of the given value.
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/sin
+         * @see https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         */
+        #define PNTR_SINF(value) _pntr_sinf(value)
     #endif  // PNTR_SINF
 
     #ifndef PNTR_COSF
         /**
-         * Calculates cosine of the given value.
+         * @internal
          *
-         * https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         * @see PNTR_COSF
          */
-        float _pntr_cosf(float x) {
+        static float _pntr_cosf(float x) {
             static const float a0 = 9.9995999154986614e-1f;
             static const float a1 = 1.2548995793001028e-3f;
             static const float a2 = -5.0648546280678015e-1f;
@@ -799,12 +1111,37 @@ extern "C" {
             static const float a6 = -3.8510875386947414e-3f;
             static const float a7 = 4.7196604604366623e-4f;
             static const float a8 = -1.8776444013090451e-5f;
-            return a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8)))))));
+            float sign = 1.0f;
+            x = _pntr_normalize_anglef(x);
+            if (x < 0.0f) {
+                x = -x;
+            }
+            if (x > PNTR_PI / 2.0f) {
+                x = PNTR_PI - x;
+                sign = -1.0f;
+            }
+            return sign * (a0 + x*(a1 + x*(a2 + x*(a3 + x*(a4 + x*(a5 + x*(a6 + x*(a7 + x*a8))))))));
         }
-        #define PNTR_COSF _pntr_cosf
+
+        /**
+         * Calculates cosine of the given value.
+         *
+         * @param value Floating-point value representing angle in radians
+         *
+         * @return The cosine of the given value.
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/cos
+         * @see https://github.com/Immediate-Mode-UI/Nuklear/blob/master/nuklear.h
+         */
+        #define PNTR_COSF(value) _pntr_cosf(value)
     #endif  // PNTR_COSF
 
     #ifndef PNTR_CEILF
+        /**
+         * @internal
+         *
+         * @see PNTR_CEILF
+         */
         float _pntr_ceilf(float x) {
             if (x >= 0.0f) {
                 int i = (int)x;
@@ -815,57 +1152,67 @@ extern "C" {
                 return (r > 0.0f) ? (float)t + 1.0f: (float)t;
             }
         }
-        #define PNTR_CEILF _pntr_ceilf
+
+        /**
+         * Computes the smallest integer value not less than arg.
+         *
+         * @param x Floating-point value
+         *
+         * @return The smallest integer value not less than arg, that is ⌈arg⌉, is returned.
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/ceil
+         */
+        #define PNTR_CEILF(x) _pntr_ceilf(x)
     #endif  // PNTR_CEILF
 
     #ifndef PNTR_FABSF
-        #define PNTR_FABSF(a) (((a) < 0) ? -(a) : (a))
+        /**
+         * Computes the absolute value of a floating point value.
+         *
+         * @param x Floating point value
+         *
+         * @return The absolute value of the given value.
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/fabs
+         */
+        #define PNTR_FABSF(x) (((x) < 0) ? -(x) : (x))
     #endif  // PNTR_FABSF
 
     #ifndef PNTR_FLOORF
-        #define PNTR_FLOORF(x) (float)((int)x - ((x < 0.0f) ? 1 : 0))
+        /**
+         * Computes the largest integer value not greater than arg.
+         *
+         * @param x Floating point value.
+         *
+         * @return The largest integer value not greater than arg.
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/floor
+         */
+        #define PNTR_FLOORF(x) (float)(((int)(x)) - (((x) < 0.0f) ? 1 : 0))
     #endif  // PNTR_FLOORF
 
-    #ifndef PNTR_SQRTF
-        /**
-         * Calculate the square root using fast inverse square root.
-         *
-         * https://en.wikipedia.org/wiki/Fast_inverse_square_root
-        float _pntr_sqrtf(float number) {
-            long i;
-            float x2, y;
-            x2 = number * 0.5f;
-            y  = number;
-            i  = *(long*)&y;
-            i  = 0x5f3759df - (i >> 1);
-            y  = *(float*)&i;
-            y  = y * (1.5f - (x2 * y * y)); // threehalfs
-            return 1.0f / y;
-        }
-        */
-        #define PNTR_SQRTF _pntr_sqrtf
-    #endif  // PNTR_SQRTF
-
     #ifndef PNTR_FMODF
-        float _pntr_fmodf(float dividend, float divisor) {
-            if (divisor == 0.0f) {
-                return 0.0f;
-            }
-            float quotient = dividend / divisor;
-            return dividend - ((int)quotient) * divisor;
-        }
-        #define PNTR_FMODF _pntr_fmodf
+        /**
+         * Computes the floating-point remainder of the division operation x/y.
+         *
+         * @param dividend floating point value
+         * @param divisor floating point value
+         * @return The modulus of the division operation.
+         *
+         * @see https://en.cppreference.com/w/c/numeric/math/fmod
+         */
+        #define PNTR_FMODF(dividend, divisor) ((divisor) == 0.0f ? 0.0f : (dividend) - ((int)((dividend) / (divisor))) * (divisor))
     #endif  // PNTR_FMOD
 #else
-    #ifndef PNTR_COSF
-        #include <math.h>
-        #define PNTR_COSF cosf
-    #endif  // PNTR_COSF
-
     #ifndef PNTR_SINF
         #include <math.h>
         #define PNTR_SINF sinf
     #endif  // PNTR_SINF
+
+    #ifndef PNTR_COSF
+        #include <math.h>
+        #define PNTR_COSF cosf
+    #endif  // PNTR_COSF
 
     #ifndef PNTR_CEILF
         #include <math.h>
@@ -891,15 +1238,16 @@ extern "C" {
         #include <math.h>
         #define PNTR_FMODF fmodf
     #endif  // PNTR_FMODF
-#endif  // PNTR_DISABLE_MATH
-
-#if !defined(PNTR_LOAD_FILE) || !defined(PNTR_SAVE_FILE)
-    #include <stdio.h> // FILE, fopen, fread
-#endif  // PNTR_LOAD_FILE, PNTR_SAVE_FILE
+#endif  // PNTR_ENABLE_MATH
 
 #ifndef PNTR_MAX
     /**
      * Return the largest value of the two given values.
+     *
+     * @param a The first value to compare.
+     * @param b The second value to compare.
+     *
+     * @return Which value is larger.
      */
     #define PNTR_MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
@@ -907,72 +1255,18 @@ extern "C" {
 #ifndef PNTR_MIN
     /**
      * Return the smallest value of the two given values.
+     *
+     * @param a The first value to compare.
+     * @param b The second value to compare.
+     *
+     * @return Which value is smaller.
      */
     #define PNTR_MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-#ifndef PNTR_PIXELFORMAT
-    #if defined(PNTR_PIXELFORMAT_RGBA)
-        /**
-         * The set pixel format for the application.
-         */
-        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_RGBA8888
-    #elif defined(PNTR_PIXELFORMAT_ARGB)
-        #define PNTR_PIXELFORMAT PNTR_PIXELFORMAT_ARGB8888
-    #endif
-#endif  // PNTR_PIXELFORMAT
-
-// cute_png
-#ifndef PNTR_DISABLE_PNG
-    #ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
-        #define CUTE_PNG_IMPLEMENTATION
-        #define CUTE_PNG_ALLOCA PNTR_MALLOC
-        #define CUTE_PNG_ALLOC PNTR_MALLOC
-        #define CUTE_PNG_FREE PNTR_FREE
-        #define CUTE_PNG_CALLOC(num, size) PNTR_MALLOC((num) * (size))
-        #define CUTE_PNG_REALLOC PNTR_REALLOC
-        #define CUTE_PNG_MEMCPY PNTR_MEMCPY
-        #define CUTE_PNG_MEMSET PNTR_MEMSET
-        #define CUTE_PNG_FPRINTF (void)
-        #define CUTE_PNG_ASSERT(condition) 0 // Skip assertions
-        #define CUTE_PNG_SEEK_SET 0
-        #define CUTE_PNG_SEEK_END 0
-        #define CUTE_PNG_FILE void
-        #define CUTE_PNG_FOPEN(filename, mode) (CUTE_PNG_FILE*)filename
-        #define CUTE_PNG_FSEEK(stream, offset, origin) offset
-        #define CUTE_PNG_FREAD(data, size, num, fp) (void)(data)
-        #define CUTE_PNG_FTELL(fp) 0
-        #define CUTE_PNG_FWRITE(data, size, num, fp) (void)(data)
-        #define CUTE_PNG_FCLOSE (void)
-        #define CUTE_PNG_FERROR(fp) 1
-        #define CUTE_PNG_ATLAS_MUST_FIT 1
-        #define CUTE_PNG_ATLAS_FLIP_Y_AXIS_FOR_UV 0
-        #define CUTE_PNG_ATLAS_EMPTY_COLOR 0
-    #endif  // PNTR_NO_CUTE_PNG_IMPLEMENTATION
-
-    #if defined(__GNUC__) || defined(__clang__)
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wpragmas"
-        #pragma GCC diagnostic ignored "-Wunknown-pragmas"
-        #pragma GCC diagnostic ignored "-Wsign-conversion"
-        #pragma GCC diagnostic ignored "-Wconversion"
-        #pragma GCC diagnostic ignored "-Wunused-function"
-        #pragma GCC diagnostic ignored "-Wunused-variable"
-        #pragma GCC diagnostic ignored "-Wsign-compare"
-        #pragma GCC diagnostic ignored "-Wunused-value"
-    #endif // defined(__GNUC__) || defined(__clang__)
-
-    #include "external/cute_png.h"
-    #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
-    #ifdef CUTE_PNG_IMPLEMENTATION
-        #undef CUTE_PNG_IMPLEMENTATION
-    #endif
-
-    #if defined(__GNUC__) || defined(__clang__)
-        #pragma GCC diagnostic pop
-    #endif // defined(__GNUC__) || defined(__clang__)
-
-#endif // PNTR_DISABLE_PNG
+/**
+ * @}
+ */
 
 // STB TrueType
 #ifdef PNTR_ENABLE_TTF
@@ -981,6 +1275,89 @@ extern "C" {
             #undef STB_TRUETYPE_IMPLEMENTATION
         #endif  // STB_TRUETYPE_IMPLEMENTATION
     #else  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+
+        #ifndef STBTT_ifloor
+            #define STBTT_ifloor(x) ((int)PNTR_FLOORF(x))
+        #endif
+
+        #ifndef STBTT_iceil
+            #define STBTT_iceil(x) ((int)PNTR_CEILF(x))
+        #endif
+
+        #ifndef STBTT_fmod
+            #define STBTT_fmod(x, y) PNTR_FMODF((x), (y))
+        #endif
+
+        #ifndef STBTT_cos
+            #define STBTT_cos(x) PNTR_COSF((float)(x))
+        #endif
+
+        #ifndef STBTT_fabs
+            #define STBTT_fabs(x) PNTR_FABSF(x)
+        #endif
+
+        #ifndef PNTR_ENABLE_MATH
+            #ifndef STBTT_sqrt
+                float _pntr_sqrtf(float number) {
+                    float guess = number / 2.0f;
+                    float epsilon = 1e-6f;
+                    while (true) {
+                        float next_guess = 0.5f * (guess + number / guess);
+                        if (PNTR_FABSF(next_guess - guess) < epsilon) {
+                            return next_guess;
+                        }
+                        guess = next_guess;
+                    }
+                }
+                #define STBTT_sqrt(x) _pntr_sqrtf(x)
+            #endif  // PNTR_SQRTF
+
+            #ifndef STBTT_pow
+                float _pntr_pow(float base, float exponent) {
+                    float result = 1.0f;
+                    if (exponent >= 0) {
+                        for (int i = 0; i < exponent; i++) {
+                            result *= base;
+                        }
+                    } else {
+                        for (int i = 0; i > exponent; i--) {
+                            result /= base;
+                        }
+                    }
+                    return result;
+                }
+                #define STBTT_pow(x, y) _pntr_pow((x), (y))
+            #endif
+
+            #ifndef STBTT_acos
+                float _pntr_acos(float x) {
+                    float negate = (float)(x < 0);
+                    x = PNTR_FABSF(x);
+                    float ret = -0.0187293f;
+                    ret = ret * x;
+                    ret = ret + 0.0742610f;
+                    ret = ret * x;
+                    ret = ret - 0.2121144f;
+                    ret = ret * x;
+                    ret = ret + 1.5707288f;
+                    ret = ret * STBTT_sqrt(1.0f - x);
+                    ret = ret - 2 * negate * ret;
+                    return negate * PNTR_PI + ret;
+                }
+                #define STBTT_acos(x) _pntr_acos((x))
+            #endif
+        #else  // PNTR_ENABLE_MATH
+            #ifndef STBTT_sqrt
+                #define STBTT_sqrt(x) sqrt(x)
+            #endif
+            #ifndef STBTT_pow
+                #define STBTT_pow(x, y) pow(x, y)
+            #endif
+            #ifndef STBTT_acos
+                #define STBTT_acos(x) acos(x)
+            #endif
+        #endif  // PNTR_ENABLE_MATH
+
         #ifndef STBTT_malloc
             #define STBTT_malloc(x,u) ((void)(u), PNTR_MALLOC(x))
         #endif  // STBTT_malloc
@@ -994,14 +1371,16 @@ extern "C" {
         #endif  // STBTT_assert
 
         #ifndef STBTT_strlen
-            #include <string.h>
-            #define STBTT_strlen(x) strlen(x)
+            #define STBTT_strlen(x) PNTR_STRLEN(x)
         #endif  // STBTT_strlen
 
         #ifndef STBTT_memcpy
             #define STBTT_memcpy PNTR_MEMCPY
-            #define STBTT_memset PNTR_MEMSET
         #endif  // STBTT_memcpy
+
+        #ifndef STBTT_memset
+            #define STBTT_memset PNTR_MEMSET
+        #endif  // STBTT_memset
 
         #define STB_TRUETYPE_IMPLEMENTATION
     #endif  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
@@ -1022,46 +1401,11 @@ extern "C" {
     #endif  // defined(__GNUC__) || defined(__clang__)
 #endif  // PNTR_ENABLE_TTF
 
-// STB Image Resize
-#ifdef PNTR_ENABLE_FILTER_SMOOTH
-    #ifdef PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-        #ifdef STB_IMAGE_RESIZE_IMPLEMENTATION
-            #undef STB_IMAGE_RESIZE_IMPLEMENTATION
-        #endif  // STB_IMAGE_RESIZE_IMPLEMENTATION
-        // Just declare the function that we need from stb_image_resize.
-        int stbir_resize_uint8_srgb(const unsigned char *input_pixels, int input_w, int input_h, int input_stride_in_bytes,
-            unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-            int num_channels, int alpha_channel, int flags);
-    #else  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-        #define STB_IMAGE_RESIZE_IMPLEMENTATION
-        #ifndef STBIR_MALLOC
-            #define STBIR_MALLOC(size, context) ((void)(context), PNTR_MALLOC(size))
-        #endif  // STBIR_MALLOC
-        #ifndef STBIR_FREE
-            #define STBIR_FREE(ptr, context) ((void)(context), PNTR_FREE(ptr))
-        #endif  // STBIR_FREE
-        #ifndef STBIR_ASSERT
-            #define STBIR_ASSERT(val) ((void)(val))
-        #endif  // STBIR_ASSERT
-
-        #if defined(__GNUC__) || defined(__clang__)
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wpragmas"
-            #pragma GCC diagnostic ignored "-Wunknown-pragmas"
-            #pragma GCC diagnostic ignored "-Wsign-conversion"
-            #pragma GCC diagnostic ignored "-Wconversion"
-            #pragma GCC diagnostic ignored "-Wunused-parameter"
-        #endif  // defined(__GNUC__) || defined(__clang__)
-
-        #include "external/stb_image_resize.h"
-
-        #if defined(__GNUC__) || defined(__clang__)
-            #pragma GCC diagnostic pop
-        #endif  // defined(__GNUC__) || defined(__clang__)
-
-        #define PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-    #endif  // PTNR_NO_STB_IMAGE_RESIZE_IMPLEMENTATION
-#endif  // PNTR_ENABLE_FILTER_SMOOTH
+#ifdef PNTR_ENABLE_VARGS
+    // For pntr_draw_text_ex()
+    #include <stdarg.h> // va_list, va_start, va_end
+    #include <stdio.h> // vsprintf
+#endif
 
 /**
  * Retrieve the pixel at the given x,y coordinate of the image.
@@ -1071,8 +1415,43 @@ extern "C" {
  * @param y The y coordinate.
  *
  * @return The pixel color at the given coordinate.
+ * @internal
  */
 #define PNTR_PIXEL(image, x, y) image->data[(y) * (image->pitch >> 2) + (x)]
+
+/**
+ * Create a new color with the given red, green, blue, and alpha values.
+ *
+ * @def PNTR_NEW_COLOR(red, green, blue, alpha)
+ * @param r The red value.
+ * @param g The green value.
+ * @param b The blue value.
+ * @param a The alpha value.
+ *
+ * @return The new color.
+ * @internal
+ */
+#ifndef PNTR_NEW_COLOR
+    #if defined(PNTR_PIXELFORMAT_RGBA)
+        #define PNTR_NEW_COLOR(red, green, blue, alpha) PNTR_CLITERAL(pntr_color) { \
+            .rgba = { \
+                .r = red, \
+                .g = green, \
+                .b = blue, \
+                .a = alpha \
+            } \
+        }
+    #elif defined(PNTR_PIXELFORMAT_ARGB)
+        #define PNTR_NEW_COLOR(red, green, blue, alpha) PNTR_CLITERAL(pntr_color) { \
+            .rgba = { \
+                .b = blue, \
+                .g = green, \
+                .r = red, \
+                .a = alpha, \
+            } \
+        }
+    #endif
+#endif
 
 /**
  * The last error that was reported from pntr.
@@ -1084,14 +1463,23 @@ extern "C" {
  * @internal
  * @private
  */
-const char* _pntr_error;
+pntr_error _pntr_error;
 
-/**
- * Gets the last error that was reported.
- *
- * @return The last error, or NULL if there wasn't an error.
- */
-PNTR_API inline const char* pntr_get_error(void) {
+PNTR_API const char* pntr_get_error(void) {
+    switch (_pntr_error) {
+        case PNTR_ERROR_NONE: return NULL;
+        case PNTR_ERROR_INVALID_ARGS: return "Invalid arguments";
+        case PNTR_ERROR_NO_MEMORY: return "No memory";
+        case PNTR_ERROR_NOT_SUPPORTED: return "Not supported";
+        case PNTR_ERROR_FAILED_TO_OPEN: return "Failed to open";
+        case PNTR_ERROR_FAILED_TO_WRITE: return "Failed to write";
+        case PNTR_ERROR_UNKNOWN: return "Unknown error";
+    }
+
+    return NULL;
+}
+
+PNTR_API pntr_error pntr_get_error_code(void) {
     return _pntr_error;
 }
 
@@ -1102,8 +1490,13 @@ PNTR_API inline const char* pntr_get_error(void) {
  *
  * @return Always returns NULL.
  */
-PNTR_API inline void* pntr_set_error(const char* error) {
+PNTR_API void* pntr_set_error(pntr_error error) {
     _pntr_error = error;
+
+    #ifdef PNTR_SET_ERROR
+    PNTR_SET_ERROR(error);
+    #endif
+
     return NULL;
 }
 
@@ -1121,22 +1514,23 @@ PNTR_API inline void* pntr_set_error(const char* error) {
  */
 PNTR_API pntr_image* pntr_new_image(int width, int height) {
     if (width <= 0 || height <= 0) {
-        return pntr_set_error("pntr_new_image() requires a valid width and height");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* image = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
     if (image == NULL) {
-        return pntr_set_error("pntr_new_image() failed to allocate memory for pntr_image");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     image->pitch = width * (int)sizeof(pntr_color);
     image->width = width;
     image->height = height;
+    pntr_image_reset_clip(image);
     image->subimage = false;
-    image->data = (pntr_color*)PNTR_MALLOC(image->pitch * height);
+    image->data = (pntr_color*)PNTR_MALLOC((size_t)(image->pitch * height));
     if (image->data == NULL) {
         PNTR_FREE(image);
-        return pntr_set_error("pntr_new_image() failed to allocate memory for pntr_image data");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     return image;
@@ -1167,15 +1561,16 @@ PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color colo
  */
 PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
     if (image == NULL) {
-        return pntr_set_error("pntr_image_copy() requires valid image data");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_image* newImage = pntr_new_image(image->width, image->height);
+    pntr_image* newImage = pntr_gen_image_color(image->width, image->height, PNTR_BLANK);
     if (newImage == NULL) {
         return NULL;
     }
 
-    PNTR_MEMCPY(newImage->data, image->data, newImage->pitch * newImage->height);
+    pntr_draw_image(newImage, image, 0, 0);
+    newImage->clip = image->clip;
 
     return newImage;
 }
@@ -1186,31 +1581,31 @@ PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
  * @param dst The destination color.
  * @param src The source color.
  *
- * @see PNTR_DISABLE_ALPHABLEND
+ * @see PNTR_NO_ALPHABLEND
  * @see pntr_color_alpha_blend()
  */
 PNTR_API
-#ifdef PNTR_DISABLE_ALPHABLEND
+#ifdef PNTR_NO_ALPHABLEND
 inline
 #endif
 void pntr_blend_color(pntr_color* dst, pntr_color src) {
-    if (src.a == 255) {
+    if (src.rgba.a == 255) {
         *dst = src;
         return;
     }
-    #ifndef PNTR_DISABLE_ALPHABLEND
-        if (src.a == 0) {
+    #ifndef PNTR_NO_ALPHABLEND
+        if (src.rgba.a == 0) {
             return;
         }
 
-        unsigned int alpha = (unsigned int)src.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
-        unsigned int dstAlpha = (unsigned int)dst->a * (256 - alpha);
-        dst->a = (unsigned char)((alpha * 256 + dstAlpha) >> 8);
+        unsigned int alpha = (unsigned int)src.rgba.a + 1;     // We are shifting by 8 (dividing by 256), so we need to take that excess into account
+        unsigned int dstAlpha = (unsigned int)dst->rgba.a * (256 - alpha);
+        dst->rgba.a = (unsigned char)((alpha * 256 + dstAlpha) >> 8);
 
-        if (dst->a > 0) {
-            dst->r = (unsigned char)((((unsigned int)src.r * alpha * 256 + (unsigned int)dst->r * dstAlpha) / dst->a) >> 8);
-            dst->g = (unsigned char)((((unsigned int)src.g * alpha * 256 + (unsigned int)dst->g * dstAlpha) / dst->a) >> 8);
-            dst->b = (unsigned char)((((unsigned int)src.b * alpha * 256 + (unsigned int)dst->b * dstAlpha) / dst->a) >> 8);
+        if (dst->rgba.a > 0) {
+            dst->rgba.r = (unsigned char)((((unsigned int)src.rgba.r * alpha * 256 + (unsigned int)dst->rgba.r * dstAlpha) / dst->rgba.a) >> 8);
+            dst->rgba.g = (unsigned char)((((unsigned int)src.rgba.g * alpha * 256 + (unsigned int)dst->rgba.g * dstAlpha) / dst->rgba.a) >> 8);
+            dst->rgba.b = (unsigned char)((((unsigned int)src.rgba.b * alpha * 256 + (unsigned int)dst->rgba.b * dstAlpha) / dst->rgba.a) >> 8);
         }
     #endif
 }
@@ -1220,7 +1615,7 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  *
  * @code
  * pntr_rectangle dstRect;
- * if (!_pntr_rectangle_intersect(10, 10, 20, 20, image->width, image>height, dstRect)) {
+ * if (!_pntr_rectangle_intersect(10, 10, 20, 20, image->clip.x, image->clip.y, image->clip.width, image>clip.height, dstRect)) {
  *     return;
  * }
  * @endcode
@@ -1229,25 +1624,29 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  * @param y The input rectangle's y coordinate.
  * @param width The input rectangle's width.
  * @param height The input rectangle's height.
+ * @param destX The destination x coordinate.
+ * @param destY The destination y coordinate.
  * @param destWidth The destination rectangle's width.
  * @param destHeight The destination rectangle's height.
  * @param out The normalized rectangle.
  *
  * @return True if the intersect of the rectangle has a width and height greater than 0, false otherwise.
+ *
+ * @internal
  */
-PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destWidth, int destHeight, pntr_rectangle *out) {
+PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destX, int destY, int destWidth, int destHeight, pntr_rectangle *out) {
     if (width <= 0 || height <= 0) {
         return false;
     }
 
-    out->x = PNTR_MAX(x, 0);
-    out->width = PNTR_MIN(x + width, destWidth) - out->x;
+    out->x = PNTR_MAX(x, destX);
+    out->width = PNTR_MIN(x + width, destX + destWidth) - out->x;
     if (out->width <= 0) {
         return false;
     }
 
-    out->y = PNTR_MAX(y, 0);
-    out->height = PNTR_MIN(y + height, destHeight) - out->y;
+    out->y = PNTR_MAX(y, destY);
+    out->height = PNTR_MIN(y + height, destY + destHeight) - out->y;
     if (out->height <= 0) {
         return false;
     }
@@ -1273,11 +1672,11 @@ PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int
  */
 PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
-        return pntr_set_error("pntr_image_from_image() requires valid source image");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_rectangle dstRect;
-    if (!_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &dstRect)) {
+    if (!_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &dstRect)) {
         return NULL;
     }
 
@@ -1286,10 +1685,10 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
         return NULL;
     }
 
-    for (int y = 0; y < dstRect.height; y++) {
-        PNTR_MEMCPY(&PNTR_PIXEL(result, 0, y),
-            &PNTR_PIXEL(image, dstRect.x, dstRect.y + y),
-            result->pitch);
+    for (int destY = 0; destY < dstRect.height; destY++) {
+        PNTR_MEMCPY(&PNTR_PIXEL(result, 0, destY),
+            &PNTR_PIXEL(image, dstRect.x, dstRect.y + destY),
+            (size_t)result->pitch);
     }
 
     return result;
@@ -1313,25 +1712,26 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
  */
 PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
-        return pntr_set_error("pntr_image_subimage requires a valid image");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Ensure we are referencing an actual portion of the image.
     pntr_rectangle dstRect;
-    if (!_pntr_rectangle_intersect(x, y, width, height, image->width, image->height, &dstRect)) {
+    if (!_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &dstRect)) {
         return NULL;
     }
 
     // Build the subimage.
     pntr_image* subimage = (pntr_image*)PNTR_MALLOC(sizeof(pntr_image));
     if (subimage == NULL) {
-        return pntr_set_error("pntr_image_subimage() failed to allocate memory for pntr_image");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     subimage->pitch = image->pitch;
     subimage->width = dstRect.width;
     subimage->height = dstRect.height;
     subimage->subimage = true;
+    pntr_image_reset_clip(subimage);
     subimage->data = &PNTR_PIXEL(image, dstRect.x, dstRect.y);
 
     return subimage;
@@ -1356,9 +1756,9 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
 }
 
 /**
- * Draws a line on the destination image.
+ * Draws a line on the destination image, ignoring clipping and bounds.
  */
-PNTR_API inline void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
+PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
     pntr_color *row = &PNTR_PIXEL(dst, posX, posY);
     while (--width >= 0) {
         row[width] = color;
@@ -1368,6 +1768,8 @@ PNTR_API inline void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, 
 /**
  * Clears an image with the given color.
  *
+ * @details Clearing the background ignores clipping.
+ *
  * @param image The image to clear.
  * @param color The color to fill the image with.
  */
@@ -1376,10 +1778,19 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
         return;
     }
 
-    // Blank
-    if (color.a == 0) {
-        PNTR_MEMSET((void*)image->data, 0, (size_t)(image->height * image->pitch));
-        return;
+    // Blank or white can have some performance optimization.
+    if (!image->subimage) {
+        // White
+        if (color.value == PNTR_WHITE_VALUE) {
+            PNTR_MEMSET((void*)image->data, 255, (size_t)(image->height * image->pitch));
+            return;
+        }
+
+        // Blank
+        if (color.rgba.a == 0) {
+            PNTR_MEMSET((void*)image->data, 0, (size_t)(image->height * image->pitch));
+            return;
+        }
     }
 
     // Draw the first line
@@ -1387,7 +1798,7 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
 
     // Copy the line for the rest of the background
     for (int y = 1; y < image->height; y++) {
-        PNTR_MEMCPY(&PNTR_PIXEL(image, 0, y), image->data, image->pitch);
+        PNTR_MEMCPY(&PNTR_PIXEL(image, 0, y), image->data, (size_t)image->pitch);
     }
 }
 
@@ -1401,13 +1812,8 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
  *
  * @return The color with the given red, green, blue, and alpha components.
  */
-PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
-    return PNTR_CLITERAL(pntr_color){
-        .r = red,
-        .g = green,
-        .b = blue,
-        .a = alpha
-    };
+PNTR_API pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha) {
+    return PNTR_NEW_COLOR(red, green, blue, alpha);
 }
 
 /**
@@ -1417,51 +1823,51 @@ PNTR_API inline pntr_color pntr_new_color(unsigned char red, unsigned char green
  *
  * @return The color representing the given hex value.
  */
-PNTR_API inline pntr_color pntr_get_color(unsigned int hexValue) {
-    return PNTR_CLITERAL(pntr_color){
-        .r = (unsigned char)(hexValue >> 24) & 0xFF,
-        .g = (unsigned char)(hexValue >> 16) & 0xFF,
-        .b = (unsigned char)(hexValue >> 8) & 0xFF,
-        .a = (unsigned char)hexValue & 0xFF
-    };
+PNTR_API pntr_color pntr_get_color(unsigned int hexValue) {
+    return PNTR_NEW_COLOR(
+        (unsigned char)((hexValue >> 24U) & (unsigned int)0xFF),
+        (unsigned char)((hexValue >> 16U) & (unsigned int)0xFF),
+        (unsigned char)((hexValue >> 8U) & (unsigned int)0xFF),
+        (unsigned char)(hexValue & (unsigned int)0xFF)
+    );
 }
 
-PNTR_API inline unsigned char pntr_color_get_r(pntr_color color) {
-    return color.r;
+PNTR_API unsigned char pntr_color_r(pntr_color color) {
+    return color.rgba.r;
 }
 
-PNTR_API inline unsigned char pntr_color_get_g(pntr_color color) {
-    return color.g;
+PNTR_API unsigned char pntr_color_g(pntr_color color) {
+    return color.rgba.g;
 }
 
-PNTR_API inline unsigned char pntr_color_get_b(pntr_color color) {
-    return color.b;
+PNTR_API unsigned char pntr_color_b(pntr_color color) {
+    return color.rgba.b;
 }
 
-PNTR_API inline unsigned char pntr_color_get_a(pntr_color color) {
-    return color.a;
+PNTR_API unsigned char pntr_color_a(pntr_color color) {
+    return color.rgba.a;
 }
 
-PNTR_API inline void pntr_color_set_r(pntr_color* color, unsigned char r) {
-    color->r = r;
+PNTR_API void pntr_color_set_r(pntr_color* color, unsigned char r) {
+    color->rgba.r = r;
 }
 
-PNTR_API inline void pntr_color_set_g(pntr_color* color, unsigned char g) {
-    color->g = g;
+PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g) {
+    color->rgba.g = g;
 }
 
-PNTR_API inline void pntr_color_set_b(pntr_color* color, unsigned char b) {
-    color->b = b;
+PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b) {
+    color->rgba.b = b;
 }
 
-PNTR_API inline void pntr_color_set_a(pntr_color* color, unsigned char a) {
-    color->a = a;
+PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a) {
+    color->rgba.a = a;
 }
 
 /**
  * Draws a point on the given image, without safety checks.
  */
-PNTR_API inline void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
+PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_blend_color(&PNTR_PIXEL(dst, x, y), color);
 }
 
@@ -1469,16 +1875,28 @@ PNTR_API inline void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_
  * Draws a pixel on the given image.
  */
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
-    if ((color.a == 0) || (dst == NULL) || (x < 0) || (x >= dst->width) || (y < 0) || (y >= dst->height)) {
+   if ((color.rgba.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
         return;
     }
 
     pntr_draw_point_unsafe(dst, x, y, color);
 }
 
-void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) {
+PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) {
     if (point != NULL) {
         pntr_draw_point(dst, point->x, point->y, color);
+    }
+}
+
+PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || points == NULL || pointsCount <= 0) {
+        return;
+    }
+
+    for (int i = 0; i < pointsCount; i++) {
+        if (points[i].x >= dst->clip.x && points[i].x < dst->clip.x + dst->clip.width && points[i].y >= dst->clip.y && points[i].y < dst->clip.y + dst->clip.height) {
+            pntr_draw_point_unsafe(dst, points[i].x, points[i].y, color);
+        }
     }
 }
 
@@ -1491,7 +1909,7 @@ void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) 
  * @see pntr_draw_line_vertical()
  */
 PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
-    if (dst == NULL || color.a == 0) {
+    if (dst == NULL || color.rgba.a == 0) {
         return;
     }
 
@@ -1583,8 +2001,161 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
     }
 }
 
+/**
+ * Draws a line on the given image, with thickness
+ */
+PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_line(dst, startPosX, startPosY, endPosX, endPosY, color);
+        return;
+    }
+
+    if (dst == NULL || color.rgba.a == 0) {
+        return;
+    }
+
+    int changeInX = (endPosX - startPosX);
+    int absChangeInX = (changeInX < 0) ? -changeInX : changeInX;
+    int changeInY = (endPosY - startPosY);
+    int absChangeInY = (changeInY < 0) ? -changeInY : changeInY;
+
+    // Drawing a straight line is fast.
+    if (startPosX == endPosX) {
+        pntr_draw_line_vertical_thick(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY, thickness, color);
+        return;
+    }
+
+    if (startPosY == endPosY) {
+        pntr_draw_line_horizontal_thick(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX, thickness, color);
+        return;
+    }
+
+    int startU, startV, endU, stepV;
+    int A, B, P;
+    int reversedXY = (absChangeInY < absChangeInX);
+
+    if (reversedXY) {
+        A = 2 * absChangeInY;
+        B = A - 2 * absChangeInX;
+        P = A - absChangeInX;
+
+        if (changeInX > 0) {
+            startU = startPosX;
+            startV = startPosY;
+            endU = endPosX;
+            //endV = endPosY;
+        }
+        else {
+            startU = endPosX;
+            startV = endPosY;
+            endU = startPosX;
+            //endV = startPosY;
+
+            // Since start and end are reversed
+            changeInX = -changeInX;
+            changeInY = -changeInY;
+        }
+
+        stepV = (changeInY < 0) ? -1 : 1;
+
+        // pntr_draw_point(dst, startU, startV, color);
+        pntr_draw_circle_fill(dst, startU, startV, thickness/2, color);
+    }
+    else {
+        A = 2 * absChangeInX;
+        B = A - 2 * absChangeInY;
+        P = A - absChangeInY;
+
+        if (changeInY > 0) {
+            startU = startPosY;
+            startV = startPosX;
+            endU = endPosY;
+        }
+        else {
+            startU = endPosY;
+            startV = endPosX;
+            endU = startPosY;
+
+            changeInX = -changeInX;
+            changeInY = -changeInY;
+        }
+
+        stepV = (changeInX < 0) ? -1 : 1;
+
+        // pntr_draw_point(dst, startV, startU, color);
+        pntr_draw_circle_fill(dst, startV, startU, thickness/2, color);
+
+    }
+
+    for (int u = startU + 1, v = startV; u <= endU; u++) {
+        if (P >= 0) {
+            v += stepV;
+            P += B;
+        }
+        else {
+            P += A;
+        }
+
+        if (reversedXY) {
+            // pntr_draw_point(dst, u, v, color);
+            pntr_draw_circle_fill(dst, u, v, thickness/2, color);
+        }
+        else {
+            // pntr_draw_point(dst, v, u, color);
+            pntr_draw_circle_fill(dst, v, u, thickness/2, color);
+        }
+    }
+}
+
+PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || segments <= 0) {
+        return;
+    }
+
+    float t_step = 1.0f / (float)segments;
+    pntr_vector last = point1;
+    for (int i_step = 1; i_step <= segments; ++i_step) {
+        float t = t_step * (float)i_step;
+        float u = 1.0f - t;
+        float w1 = u * u * u;
+        float w2 = 3 * u * u * t;
+        float w3 = 3 * u * t * t;
+        float w4 = t * t * t;
+        float x = w1 * (float)point1.x + w2 * (float)point2.x + w3 * (float)point3.x + w4 * (float)point4.x;
+        float y = w1 * (float)point1.y + w2 * (float)point2.y + w3 * (float)point3.y + w4 * (float)point4.y;
+        pntr_draw_line(dst, last.x, last.y, (int)x, (int)y, color);
+        last.x = (int)x;
+        last.y = (int)y;
+    }
+}
+
+PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, int thickness, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || segments <= 0) {
+        return;
+    }
+
+    float t_step = 1.0f / (float)segments;
+    pntr_vector last = point1;
+    for (int i_step = 1; i_step <= segments; ++i_step) {
+        float t = t_step * (float)i_step;
+        float u = 1.0f - t;
+        float w1 = u * u * u;
+        float w2 = 3 * u * u * t;
+        float w3 = 3 * u * t * t;
+        float w4 = t * t * t;
+        float x = w1 * (float)point1.x + w2 * (float)point2.x + w3 * (float)point3.x + w4 * (float)point4.x;
+        float y = w1 * (float)point1.y + w2 * (float)point2.y + w3 * (float)point3.y + w4 * (float)point4.y;
+        pntr_draw_line_thick(dst, last.x, last.y, (int)x, (int)y, thickness, color);
+        last.x = (int)x;
+        last.y = (int)y;
+    }
+}
+
 PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
-    if (color.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
+    if (color.rgba.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
         return;
     }
 
@@ -1598,6 +2169,21 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
     }
 }
 
+PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
+    if (color.rgba.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
+        return;
+    }
+
+    if (numPoints == 1) {
+        pntr_draw_point_vec(dst, points, color);
+        return;
+    }
+
+    for (int i = 0; i < numPoints - 1; i++) {
+        pntr_draw_line_thick_vec(dst, points[i], points[i + 1], thickness, color);
+    }
+}
+
 /**
  * Draw a horizontal line at the given x, y coordinates.
  *
@@ -1607,22 +2193,25 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
  * @param width How long the line should be.
  * @param color The color of the line.
  *
- * TODO: pntr_draw_line_horizontal: Support negative width.
  */
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posY < 0 || posY >= dst->height || posX >= dst->width) {
+    if (width < 0) {
+        posX += width;
+        width = -width;
+    }
+    if (color.rgba.a == 0 || dst == NULL || posY < dst->clip.y || posY >= dst->clip.y + dst->clip.height || posX >= dst->clip.x + dst->clip.width || posX + width < dst->clip.x) {
         return;
     }
 
-    if (posX < 0) {
-        width += posX;
-        posX = 0;
+    if (posX < dst->clip.x) {
+        width += posX - dst->clip.x;
+        posX = dst->clip.x;
     }
-    if (posX + width >= dst->width) {
-        width = dst->width - posX;
+    if (posX + width >= dst->clip.x + dst->clip.width) {
+        width = dst->clip.x + dst->clip.width - posX;
     }
 
-    if (color.a == 255) {
+    if (color.rgba.a == 255) {
         pntr_put_horizontal_line_unsafe(dst, posX, posY, width, color);
     }
     else {
@@ -1633,8 +2222,22 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
     }
 }
 
+PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color) {
+    if (thickness == 0) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_line_horizontal(dst, posX, posY, width, color);
+        return;
+    }
+
+    pntr_draw_rectangle_fill(dst, posX, posY - thickness / 2, width, thickness, color);
+    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
+    pntr_draw_circle_fill(dst, posX + width, posY, thickness / 2, color);
+}
+
 /**
- * Draw a horizontal line at the given x, y coordinates.
+ * Draw a vertical line at the given x, y coordinates.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -1642,22 +2245,25 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
  * @param height How tall the line should be.
  * @param color The color of the line.
  *
- * TODO: pntr_draw_line_vertical: Support negative height.
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
-    if (color.a == 0 || dst == NULL || posX < 0 || posX >= dst->width || posY >= dst->height) {
+    if (height < 0) {
+        posY += height;
+        height = -height;
+    }
+    if (color.rgba.a == 0 || dst == NULL || posX < dst->clip.x || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height || posY + height < dst->clip.y) {
         return;
     }
 
-    if (posY < 0) {
-        height += posY;
-        posY = 0;
+    if (posY < dst->clip.y) {
+        height += posY - dst->clip.y;
+        posY = dst->clip.y;
     }
-    if (posY + height >= dst->height) {
-        height = dst->height - posY;
+    if (posY + height >= dst->clip.y + dst->clip.height) {
+        height = dst->clip.y + dst->clip.height - posY;
     }
 
-    if (color.a == 255) {
+    if (color.rgba.a == 255) {
         for (int y = 0; y < height; y++) {
             PNTR_PIXEL(dst, posX, posY + y) = color;
         }
@@ -1669,16 +2275,28 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
     }
 }
 
+PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color) {
+    if (thickness == 0) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_line_vertical(dst, posX, posY, height, color);
+        return;
+    }
+    pntr_draw_rectangle_fill(dst, posX - thickness / 2, posY, thickness, height, color);
+    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
+    pntr_draw_circle_fill(dst, posX, posY + height, thickness / 2, color);
+}
+
 /**
  * Draws a rectangle using a rectangle.
  *
  * @param dst Where to draw the rectangle.
  * @param rec The rectangle of which to draw.
- * @param thickness How thick the border of the rectangle should be.
  * @param color The color of the lines for the rectangle.
  */
-PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, int thickness, pntr_color color) {
-    pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, thickness, color);
+PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color) {
+    pntr_draw_rectangle(dst, rec.x, rec.y, rec.width, rec.height, color);
 }
 
 /**
@@ -1689,29 +2307,30 @@ PNTR_API inline void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec
  * @param posY The Y position.
  * @param width How wide the rectangle should be.
  * @param height How tall the rectangle should be.
- * @param thickness How thick the line border should be.
  * @param color The color of the line.
  *
  * @see pntr_draw_rectangle_rec()
  * @see pntr_draw_rectangle_fill()
  */
-PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
-    if (color.a == 0 || thickness <= 0 || dst == NULL || width <= 0 || height <= 0) {
+PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
+    if (color.rgba.a == 0 || dst == NULL || width <= 0 || height <= 0) {
         return;
     }
 
-    if (thickness == 1) {
-        pntr_draw_line_horizontal(dst, posX, posY, width, color);
-        pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
-        pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
-        pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
+    pntr_draw_line_horizontal(dst, posX, posY, width, color);
+    pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
+    pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
+    pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
+}
+
+PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
+    for (int i = 0; i < thickness; i++) {
+        pntr_draw_rectangle(dst, posX + i, posY + i, width - i * 2, height - i * 2, color);
     }
-    else {
-        pntr_draw_rectangle_fill(dst, posX, posY, width, thickness, color);
-        pntr_draw_rectangle_fill(dst, posX, posY + thickness, thickness, height - thickness * 2, color);
-        pntr_draw_rectangle_fill(dst, posX + width - thickness, posY + thickness, thickness, height - thickness * 2, color);
-        pntr_draw_rectangle_fill(dst, posX, posY + height - thickness, width, thickness, color);
-    }
+}
+
+PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color) {
+    pntr_draw_rectangle_thick(dst, rect.x, rect.y, rect.width, rect.height, thickness, color);
 }
 
 /**
@@ -1726,7 +2345,7 @@ PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width
  *
  * @see pntr_draw_rectangle()
  */
-PNTR_API inline void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
+PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
     pntr_draw_rectangle_fill_rec(dst, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
 }
 
@@ -1740,16 +2359,16 @@ PNTR_API inline void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int pos
  * @see pntr_draw_rectangle_fill()
  */
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
-    if (color.a == 0 || dst == NULL) {
+    if (color.rgba.a == 0 || dst == NULL) {
         return;
     }
 
-    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &rect)) {
+    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->clip.x, dst->clip.y, dst->clip.width, dst->clip.height, &rect)) {
         return;
     }
 
     // When the color is solid, we can do some performance improvements.
-    if (color.a == 255) {
+    if (color.rgba.a == 255) {
         pntr_put_horizontal_line_unsafe(dst, rect.x, rect.y, rect.width, color);
 
         pntr_color* srcPixel = &PNTR_PIXEL(dst, rect.x, rect.y);
@@ -1773,7 +2392,12 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
     }
 
     pntr_rectangle dstRect;
-    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->width, dst->height, &dstRect)) {
+    if (!_pntr_rectangle_intersect(rect.x, rect.y, rect.width, rect.height, dst->clip.x, dst->clip.y, dst->clip.width, dst->clip.height, &dstRect)) {
+        return;
+    }
+
+    // Protect against division by zero.
+    if (rect.width == 0 || rect.height == 0) {
         return;
     }
 
@@ -1792,7 +2416,7 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
     }
 }
 
-PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
+PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
     pntr_draw_rectangle_gradient_rec(dst, PNTR_CLITERAL(pntr_rectangle) {x, y, width, height}, topLeft, topRight, bottomLeft, bottomRight);
 }
 
@@ -1806,14 +2430,18 @@ PNTR_API inline void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y,
  *
  * @param dst The image to draw the circle onto.
  * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
+ * @param centerY The center of the circle at the Y coordinate.
  * @param radius The radius of the circle.
  * @param color The desired color of the circle.
  *
  * @see pntr_draw_circle_fill()
  */
-PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-    if (dst == NULL || color.a == 0) {
+PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0) {
+        return;
+    }
+
+    if (radius == 0) {
         return;
     }
 
@@ -1821,8 +2449,13 @@ PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY,
         radius = -radius;
     }
 
+    if (radius == 1) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+
     // Check that the circle is in the bounds.
-    if (centerX + radius < 0 || centerY + radius < 0 || centerX - radius > dst->width || centerY - radius > dst->height) {
+    if (centerX + radius < dst->clip.x || centerY + radius < dst->clip.y || centerX - radius > dst->clip.x + dst->clip.width || centerY - radius > dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1854,18 +2487,27 @@ PNTR_API inline void pntr_draw_circle(pntr_image* dst, int centerX, int centerY,
  *
  * @param dst The image to draw the filled circle onto.
  * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
+ * @param centerY The center of the circle at the Y coordinate.
  * @param radius The radius of the circle.
  * @param color The desired fill color of the circle.
  *
  * @see pntr_draw_circle()
  */
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+    if (radius == 0) {
+        return;
+    }
+
     if (radius < 0) {
         radius = -radius;
     }
 
-    if (dst == NULL || color.a == 0 || radius == 0 || centerX + radius < 0 || centerX - radius >= dst->width || centerY + radius < 0 || centerY - radius > dst->height) {
+    if (radius == 1) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+
+    if (dst == NULL || color.rgba.a == 0 || radius == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -1887,49 +2529,112 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
 }
 
 /**
+ * Draws a circle from the given center, with the given radius & line-thickness.
+ *
+ * @param dst The image to draw the circle onto.
+ * @param centerX The center of the circle at the X coordinate.
+ * @param centerY The center of the circle at the Y coordinate.
+ * @param radius The radius of the circle.
+ * @param color The desired color of the circle.
+ *
+ */
+PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_circle(dst, centerX, centerY, radius, color);
+        return;
+    }
+    if (dst == NULL || color.rgba.a == 0) {
+        return;
+    }
+
+    if (radius < 0) {
+        radius = -radius;
+    }
+
+    // Check that the circle is in the bounds.
+    if (centerX + radius < dst->clip.x || centerY + radius < dst->clip.y || centerX - radius > dst->clip.x + dst->clip.width || centerY - radius > dst->clip.y + dst->clip.height) {
+        return;
+    }
+
+    int largestX = radius;
+    int r2 = radius * radius;
+    for (int y = 0; y <= radius; ++y) {
+        int y2 = y * y;
+        for (int x = largestX; x >= 0; --x) {
+            if (x * x + y2 <= r2) {
+                pntr_draw_circle_fill(dst, centerX + x, centerY + y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - x, centerY + y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX + x, centerY - y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - x, centerY - y, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX + y, centerY + x, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - y, centerY + x, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX + y, centerY - x, thickness/2, color);
+                pntr_draw_circle_fill(dst, centerX - y, centerY - x, thickness/2, color);
+                largestX = x;
+                break;
+            }
+        }
+    }
+}
+
+/**
  * Draws an ellipse on the given image.
  *
- * @param dst The image to draw the filled circle onto.
- * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
- * @param radiusX The  horizontal radius of the circle.
- * @param radiusY The vertical radius of the circle.
- * @param color The desired color of the circle.
+ * @param dst The image to draw the ellipse onto.
+ * @param centerX The center of the ellipse at the X coordinate.
+ * @param centerY The center of the ellipse at the Y coordinate.
+ * @param radiusX The  horizontal radius of the ellipse.
+ * @param radiusY The vertical radius of the ellipse.
+ * @param color The desired color of the ellipse.
  *
  * @see pntr_draw_ellipse_fill()
  */
 PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
         return;
     }
+    if (radiusX < 0) radiusX = -radiusX;
+    if (radiusY < 0) radiusY = -radiusY;
 
-    int x = 0;
-    if (radiusX < 0) {
-        radiusX = -radiusX;
-    }
-    if (radiusY < 0) {
-        radiusY = -radiusY;
-    }
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
+    long x = 0, y = radiusY;
+    long dx = 0, dy = 2 * rx2 * y;
+    long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
 
-    int radiusXSquared = radiusX * radiusX;
-    int radiusXSquared2 = radiusXSquared * 2;
-    int radiusYSquared = radiusY * radiusY;
-    int radiusYSquared2 = radiusYSquared * 2;
-    int error = radiusYSquared - radiusXSquared * radiusY;
-
-    while (radiusY >= 0) {
-        pntr_draw_point(dst, centerX + x, centerY + radiusY, color);
-        pntr_draw_point(dst, centerX - x, centerY + radiusY, color);
-        pntr_draw_point(dst, centerX - x, centerY - radiusY, color);
-        pntr_draw_point(dst, centerX + x, centerY - radiusY, color);
-
-        if (error <= 0) {
-            x++;
-            error += radiusYSquared2 * x + radiusYSquared;
+    while (dx < dy) {
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY - y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY - y), color);
+        x++;
+        dx += 2 * ry2;
+        if (p < 0) {
+            p += ry2 + dx;
+        } else {
+            y--;
+            dy -= 2 * rx2;
+            p += ry2 + dx - dy;
         }
-        if (error > 0) {
-            radiusY--;
-            error -= radiusXSquared2 * radiusY - radiusXSquared;
+    }
+
+    p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
+    while (y >= 0) {
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY - y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY - y), color);
+        y--;
+        dy -= 2 * rx2;
+        if (p > 0) {
+            p += rx2 - dy;
+        } else {
+            x++;
+            dx += 2 * ry2;
+            p += rx2 - dy + dx;
         }
     }
 }
@@ -1939,47 +2644,105 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
  *
  * TODO: pntr_draw_ellipse_fill: Add anti-aliased
  *
- * @param dst The image to draw the filled circle onto.
- * @param centerX The center of the circle at the X coordinate.
- * @param centerX The center of the circle at the Y coordinate.
- * @param radiusX The  horizontal radius of the circle.
- * @param radiusY The vertical radius of the circle.
- * @param color The desired fill color of the circle.
+ * @param dst The image to draw the filled ellipse onto.
+ * @param centerX The center of the ellipse at the X coordinate.
+ * @param centerY The center of the ellipse at the Y coordinate.
+ * @param radiusX The  horizontal radius of the ellipse.
+ * @param radiusY The vertical radius of the ellipse.
+ * @param color The desired fill color of the ellipse.
  *
- * @see pntr_draw_circle_fill()
+ * @see pntr_draw_ellipse()
  */
 PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
-    if (radiusX < 0) {
-        radiusX = -radiusX;
-    }
-    if (radiusY < 0) {
-        radiusY = -radiusY;
-    }
+    if (radiusX < 0) radiusX = -radiusX;
+    if (radiusY < 0) radiusY = -radiusY;
 
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.a == 0 || centerX + radiusX < 0 || centerX - radiusX > dst->width || centerY + radiusY < 0 || centerY - radiusY > dst->height) {
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
         return;
     }
 
-    int x = 0;
-    int radiusXSquared = radiusX * radiusX;
-    int radiusXSquared2 = radiusXSquared * 2;
-    int radiusYSquared = radiusY * radiusY;
-    int radiusYSquared2 = radiusYSquared * 2;
-    int error = radiusYSquared - radiusXSquared * radiusY;
+    int largestX = radiusX;
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
 
-    while (radiusY >= 0) {
-        pntr_draw_line_horizontal(dst, centerX - x, centerY + radiusY, x, color);
-        pntr_draw_line_horizontal(dst, centerX - x, centerY - radiusY, x, color);
-        pntr_draw_line_horizontal(dst, centerX, centerY + radiusY, x, color);
-        pntr_draw_line_horizontal(dst, centerX, centerY - radiusY, x, color);
-
-        if (error <= 0) {
-            x++;
-            error += radiusYSquared2 * x + radiusYSquared;
+    for (int y = 0; y <= radiusY; y++) {
+        long y2 = (long)y * y;
+        for (int x = largestX; x >= 0; x--) {
+            if ((long)x * x * ry2 + y2 * rx2 <= rx2 * ry2) {
+                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x, color);
+                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x, color);
+                pntr_draw_line_horizontal(dst, centerX, centerY + y, x, color);
+                pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
+                largestX = x;
+                break;
+            }
         }
-        if (error > 0) {
-            radiusY--;
-            error -= radiusXSquared2 * radiusY - radiusXSquared;
+    }
+}
+
+/**
+ * Draws an ellipse on the given image, with line-thickness.
+ *
+ * @param dst The image to draw the ellipse onto.
+ * @param centerX The center of the ellipse at the X coordinate.
+ * @param centerY The center of the ellipse at the Y coordinate.
+ * @param radiusX The  horizontal radius of the ellipse.
+ * @param radiusY The vertical radius of the ellipse.
+ * @param thickness The thickness of the line
+ * @param color The desired color of the ellipse.
+ *
+ */
+PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    if (thickness == 1) {
+        pntr_draw_ellipse(dst, centerX, centerY, radiusX, radiusY, color);
+        return;
+    }
+    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
+        return;
+    }
+    if (radiusX < 0) radiusX = -radiusX;
+    if (radiusY < 0) radiusY = -radiusY;
+
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
+    long x = 0, y = radiusY;
+    long dx = 0, dy = 2 * rx2 * y;
+    long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
+    int t2 = thickness / 2;
+
+    while (dx < dy) {
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY - y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY - y), t2, color);
+        x++;
+        dx += 2 * ry2;
+        if (p < 0) {
+            p += ry2 + dx;
+        } else {
+            y--;
+            dy -= 2 * rx2;
+            p += ry2 + dx - dy;
+        }
+    }
+
+    p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
+    while (y >= 0) {
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY - y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY - y), t2, color);
+        y--;
+        dy -= 2 * rx2;
+        if (p > 0) {
+            p += rx2 - dy;
+        } else {
+            x++;
+            dx += 2 * ry2;
+            p += rx2 - dy + dx;
         }
     }
 }
@@ -1993,8 +2756,24 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
  * @param point3 The third point in the triangle.
  * @param color What color to draw the triangle.
  */
-PNTR_API inline void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
+PNTR_API void pntr_draw_triangle_vec(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_color color) {
     pntr_draw_triangle(dst, point1.x, point1.y, point2.x, point2.y, point3.x, point3.y, color);
+}
+
+/**
+ * Draw a triangle using vectors, with line-thickness.
+ *
+ * @param dst Where to draw the triangle.
+ * @param point1 The first point in the triangle.
+ * @param point2 The second point in the triangle.
+ * @param point3 The third point in the triangle.
+ * @param thickness The thickness of the line
+ * @param color What color to draw the triangle.
+ */
+PNTR_API void pntr_draw_triangle_thick_vec(pntr_image *dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, int thickness, pntr_color color) {
+    pntr_draw_line_thick(dst, point1.x, point1.y, point2.x, point2.y, thickness, color);
+    pntr_draw_line_thick(dst, point2.x, point2.y, point3.x, point3.y, thickness, color);
+    pntr_draw_line_thick(dst, point3.x, point3.y, point1.x, point1.y, thickness, color);
 }
 
 /**
@@ -2016,6 +2795,26 @@ PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2
 }
 
 /**
+ * Draw a triangle on an image, with line-thickness.
+ *
+ * @param dst The image of which to draw the triangle.
+ * @param x1 The x coordinate of the first point.
+ * @param y1 The y coordinate of the first point.
+ * @param x2 The x coordinate of the second point.
+ * @param y2 The y coordinate of the second point.
+ * @param x3 The x coordinate of the third point.
+ * @param y3 The y coordinate of the third point.
+ * @param thickness The thickness of the line
+ * @param color The line color for the triangle.
+ */
+PNTR_API void pntr_draw_triangle_thick(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, int thickness, pntr_color color) {
+    pntr_draw_line_thick(dst, x1, y1, x2, y2, thickness, color);
+    pntr_draw_line_thick(dst, x2, y2, x3, y3, thickness, color);
+    pntr_draw_line_thick(dst, x3, y3, x1, y1, thickness, color);
+}
+
+
+/**
  * Draw a filled triangle on an image.
  *
  * @param dst The image of which to draw the triangle.
@@ -2027,7 +2826,7 @@ PNTR_API void pntr_draw_triangle(pntr_image* dst, int x1, int y1, int x2, int y2
  * @param y3 The y coordinate of the third point.
  * @param color The fill color of the triangle.
  */
-PNTR_API inline void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
+PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, int y2, int x3, int y3, pntr_color color) {
     pntr_draw_triangle_fill_vec(dst,
         PNTR_CLITERAL(pntr_vector) { .x = x1, .y = y1 },
         PNTR_CLITERAL(pntr_vector) { .x = x2, .y = y2 },
@@ -2036,12 +2835,16 @@ PNTR_API inline void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, in
     );
 }
 
-PNTR_API inline void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
+PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
     pntr_draw_line(dst, start.x, start.y, end.x, end.y, color);
 }
 
+PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color) {
+    pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, thickness, color);
+}
+
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
-    if (dst == NULL || color.a == 0 || numPoints <= 0 || points == NULL) {
+    if (dst == NULL || color.rgba.a == 0 || numPoints <= 0 || points == NULL) {
         return;
     }
 
@@ -2058,36 +2861,89 @@ PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoi
    }
 }
 
-PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
-    if (dst == NULL || points == NULL || numPoints <= 0 || color.a == 0) {
+PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || numPoints <= 0 || points == NULL) {
         return;
     }
 
-    // Discover the top and bottom of the polygon.
-    int ymin = dst->height + 1;
-    int ymax = -1;
-    for (int i = 0; i < numPoints; ++i) {
-        ymin = PNTR_MIN(ymin, points[i].y);
-        ymax = PNTR_MAX(ymax, points[i].y);
-    }
-
-    // The following algorithm is correct for convex polygons only.
-    for (int yy = ymin; yy <= ymax; yy++) {
-        int xmin = dst->width + 1;
-        int xmax = -1;
-        for (int i = 0; i < numPoints; ++i) {
-            pntr_vector point1 = points[i];
-            pntr_vector point2 = i < (numPoints - 1) ? points[i + 1] : points[0];
-
-            if ((point1.y > yy) != (point2.y > yy)) {
-                int testx = point1.x + ((point2.x - point1.x) * (yy - point1.y)) / (point2.y - point1.y);
-                xmin = PNTR_MIN(xmin, testx);
-                xmax = PNTR_MAX(xmax, testx);
-            }
+    int nextPointIndex;
+    for (int i = 0; i < numPoints; i++) {
+        if (i < numPoints - 1) {
+            nextPointIndex = i + 1;
+        }
+        else {
+            nextPointIndex = 0;
         }
 
-        pntr_draw_line_horizontal(dst, xmin, yy, xmax - xmin, color);
+        pntr_draw_line_thick(dst, points[i].x, points[i].y, points[nextPointIndex].x, points[nextPointIndex].y, thickness, color);
+   }
+}
+
+PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
+    if (dst == NULL || points == NULL || numPoints <= 0 || color.rgba.a == 0) {
+        return;
     }
+
+    int i = 0;
+    // Big numbers to find the max/min values
+    int left = points[0].x, top = points[0].y, bottom = points[0].y, right = points[0].x;
+    int nodes, pixelX, pixelY, j, swap;
+    int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints);
+    if (nodeX == NULL) {
+        return;
+    }
+
+    // Get polygon dimensions
+    for (i = 0; i < numPoints; i++) {
+        if (left > points[i].x)
+            left = points[i].x;
+        if (right < points[i].x)
+            right = points[i].x;
+        if (top > points[i].y)
+            top = points[i].y;
+        if (bottom < points[i].y)
+            bottom = points[i].y;
+    }
+    bottom++;
+    right++;
+
+    // Polygon scanline algorithm released under public-domain by Darel Rex Finley, 2007.
+    // Loop through the rows of the image.
+    for (pixelY = top; pixelY < bottom; pixelY ++) {
+        nodes = 0; /*  Build a list of nodes. */
+        j = numPoints - 1;
+        for (i = 0; i < numPoints; i++) {
+            if (((points[i].y < pixelY) && (points[j].y >= pixelY)) ||
+                ((points[j].y < pixelY) && (points[i].y >= pixelY))) {
+                nodeX[nodes++]= (int)((float)points[i].x
+                     + ((float)pixelY - (float)points[i].y) / ((float)points[j].y - (float)points[i].y)
+                     * ((float)points[j].x - (float)points[i].x));
+            } j = i;
+        }
+
+        // Sort the nodes, via a simple “Bubble” sort.
+        i = 0;
+        while (i < nodes - 1) {
+            if (nodeX[i] > nodeX[i+1]) {
+                swap = nodeX[i];
+                nodeX[i] = nodeX[i+1];
+                nodeX[i+1] = swap;
+                if (i) i--;
+            } else i++;
+        }
+        // Fill the pixels between node pairs.
+        for (i = 0; i < nodes; i += 2) {
+            if (nodeX[i+0] >= right) break;
+            if (nodeX[i+1] > left) {
+                if (nodeX[i+0] < left) nodeX[i+0] = left ;
+                if (nodeX[i+1] > right) nodeX[i+1] = right;
+                for (pixelX = nodeX[i]; pixelX < nodeX[i + 1]; pixelX++)
+                    pntr_draw_point(dst, pixelX, pixelY, color);
+            }
+        }
+    }
+
+    PNTR_FREE(nodeX);
 }
 
 /**
@@ -2108,11 +2964,11 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
 }
 
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
-    if (radius == 0.0f) {
+    if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments < 0) {
+    if (segments <= 0) {
         return;
     }
 
@@ -2138,12 +2994,41 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     */
 
     // Draw each line segment
-    float angle;
     for (int i = 0; i < segments; i++) {
+        endAngleRad = startAngleRad + (float)i * stepAngle;
+        pntr_draw_point(dst,
+            centerX + (int)(radius * PNTR_COSF(endAngleRad)), // TODO: arc angle: Is the - correct here?
+            centerY + (int)(radius * PNTR_SINF(endAngleRad)),
+            color);
+    }
+}
+
+PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color) {
+    if (radius <= 0.0f) {
+        pntr_draw_point(dst, centerX, centerY, color);
+        return;
+    }
+    if (segments <= 0) {
+        return;
+    }
+
+    float startAngleRad = startAngle * PNTR_PI / 180.0f;
+    float endAngleRad = endAngle * PNTR_PI / 180.0f;
+
+    // Calculate how much distance between each segment
+    float stepAngle = (endAngleRad - startAngleRad) / (float)(segments);
+
+    // Draw the arc with line segments
+    int x1 = centerX + (int)((float)radius * PNTR_COSF(startAngleRad));
+    int y1 = centerY + (int)((float)radius * PNTR_SINF(startAngleRad));
+    float angle;
+    for (int i = 1; i < segments; i++) {
         angle = startAngleRad + (float)i * stepAngle;
-        int x = centerX + (int)(radius * PNTR_COSF(angle)); // TODO: arc angle: Is the - correct here?
-        int y = centerY + (int)(radius * PNTR_SINF(angle));
-        pntr_draw_point(dst, x, y, color);
+        int x2 = centerX + (int)((float)radius * PNTR_COSF(angle));
+        int y2 = centerY + (int)((float)radius * PNTR_SINF(angle));
+        pntr_draw_line_thick(dst, x1, y1, x2, y2, thickness, color);
+        x1 = x2;
+        y1 = y2;
     }
 }
 
@@ -2152,7 +3037,7 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments < 0) {
+    if (segments <= 0) {
         return;
     }
     float startAngleRad = startAngle * PNTR_PI / 180.0f;
@@ -2162,12 +3047,11 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
     float stepAngle = (endAngleRad - startAngleRad) / (float)segments;
     pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)segments + (size_t)1);
 
-    float angle;
     // TODO: pntr_draw_arc_fill(): Is pntr_draw_polygon_fill ample here?
     for (int i = 0; i < segments; i++) {
-        angle = startAngleRad + (float)i * stepAngle;
-        points[i].x = centerX + (int)(radius * PNTR_COSF(angle));
-        points[i].y = centerY + (int)(radius * PNTR_SINF(angle));
+        endAngleRad = startAngleRad + (float)i * stepAngle;
+        points[i].x = centerX + (int)(radius * PNTR_COSF(endAngleRad));
+        points[i].y = centerY + (int)(radius * PNTR_SINF(endAngleRad));
     }
 
     points[segments].x = centerX;
@@ -2178,28 +3062,54 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
 }
 
 PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color) {
+    if (topLeftRadius == 0 && topRightRadius == 0 && bottomLeftRadius == 0 && bottomRightRadius == 0) {
+        pntr_draw_rectangle(dst, x, y, width, height, color);
+        return;
+    }
+
     pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
-    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, y + height, width - bottomLeftRadius - bottomRightRadius, color); // Bottom
+    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, y + height, width - bottomLeftRadius - bottomRightRadius - 1, color); // Bottom
     pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
-    pntr_draw_line_vertical(dst, x + width, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
+    pntr_draw_line_vertical(dst, x + width - 1, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
 
     // TODO: pntr_draw_rectangle_rounded(): Do the angles here make sense?
     pntr_draw_arc(dst, x + topLeftRadius, y + topLeftRadius, (float)topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
-    pntr_draw_arc(dst, x + width - topRightRadius, y + topRightRadius, (float)topRightRadius, 0.0f, -90.0f, topRightRadius * 2, color); // Top Right
+    pntr_draw_arc(dst, x + width - topRightRadius - 1, y + topRightRadius, (float)topRightRadius, 0.0f, -90.0f, topRightRadius * 2, color); // Top Right
     pntr_draw_arc(dst, x + bottomLeftRadius, y + height - bottomLeftRadius, (float)bottomLeftRadius, -180.0f, -270.0f, bottomLeftRadius * 2, color); // Bottom Left
-    pntr_draw_arc(dst, x + width - bottomRightRadius, y + height - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+    pntr_draw_arc(dst, x + width - bottomRightRadius - 1, y + height - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+}
+
+PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color) {
+    if (thickness < 1) {
+        return;
+    }
+    for (int i = 0; i < thickness; i++) {
+        pntr_draw_rectangle_rounded(dst,
+            x + i, y + i, width - i * 2, height - i * 2,
+            topLeftRadius - i > 0 ? topLeftRadius - i : 0,
+            topRightRadius - i > 0 ? topRightRadius - i : 0,
+            bottomLeftRadius - i > 0 ? bottomLeftRadius - i : 0,
+            bottomRightRadius - i > 0 ? bottomRightRadius - i : 0,
+            color);
+    }
 }
 
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
+    if (cornerRadius == 0) {
+        pntr_draw_rectangle_fill(dst, x, y, width, height, color);
+        return;
+    }
+
     // Corners
+    // TODO: Replace this with pntr_draw_arc_fill()
     pntr_draw_circle_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, color); // Top Left
-    pntr_draw_circle_fill(dst, x + width - cornerRadius, y + cornerRadius, cornerRadius, color); // Top Right
+    pntr_draw_circle_fill(dst, x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, color); // Top Right
     pntr_draw_circle_fill(dst, x + cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Left
-    pntr_draw_circle_fill(dst, x + width - cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Right
+    pntr_draw_circle_fill(dst, x + width - cornerRadius - 1, y + height - cornerRadius, cornerRadius, color); // Bottom Right
 
     // Edge bars
     pntr_draw_rectangle_fill(dst, x, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Left bar
-    pntr_draw_rectangle_fill(dst, x + width - cornerRadius, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Right bar
+    pntr_draw_rectangle_fill(dst, x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Right bar
     pntr_draw_rectangle_fill(dst, x + cornerRadius, y, width - cornerRadius * 2, cornerRadius, color); // Top bar
     pntr_draw_rectangle_fill(dst, x + cornerRadius, y + height - cornerRadius, width - cornerRadius * 2, cornerRadius, color); // Bottom bar
 
@@ -2225,30 +3135,90 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
 }
 
 /**
- * Load an image from memory buffer.
+ * Get the file type of the given image, based on its filename.
  *
- * Not supported if PNTR_DISABLE_PNG is defined.
+ * @param filePath The file path to the image.
  *
- * @see PNTR_DISABLE_PNG
+ * @return The type of the image, based on its file extension, or `PNTR_IMAGE_TYPE_UNKNOWN` if it's unknown.
+ *
+ * @see PNTR_IMAGE_TYPE_UNKNOWN
+ * @see PNTR_IMAGE_TYPE_PNG
+ * @see PNTR_IMAGE_TYPE_BMP
+ * @see PNTR_IMAGE_TYPE_JPG
  */
-PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, unsigned int dataSize) {
-    if (fileData == NULL || dataSize <= 0) {
-        return pntr_set_error("pntr_load_image_from_memory() requires valid file data");
+PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
+    if (filePath == NULL) {
+        return PNTR_IMAGE_TYPE_UNKNOWN;
     }
 
-    #ifdef PNTR_DISABLE_PNG
-        return pntr_set_error("pntr_load_image_from_memory() requires PNG support. PNTR_DISABLE_PNG was defined.");
+    if (PNTR_STRSTR(filePath, ".png") != NULL || PNTR_STRSTR(filePath, ".PNG") != NULL) {
+        return PNTR_IMAGE_TYPE_PNG;
+    }
+
+    if (PNTR_STRSTR(filePath, ".bmp") != NULL || PNTR_STRSTR(filePath, ".BMP") != NULL) {
+        return PNTR_IMAGE_TYPE_BMP;
+    }
+
+    if (PNTR_STRSTR(filePath, ".jpg") != NULL || PNTR_STRSTR(filePath, ".jpeg") != NULL || PNTR_STRSTR(filePath, ".JPG") != NULL || PNTR_STRSTR(filePath, ".JPEG") != NULL) {
+        return PNTR_IMAGE_TYPE_JPG;
+    }
+
+    return PNTR_IMAGE_TYPE_UNKNOWN;
+}
+
+// Load stb_image or cute_png.
+#ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
+    #ifdef PNTR_STB_IMAGE
+        #include "extensions/pntr_stb_image.h"
+    #elif defined(PNTR_CUTE_PNG)
+        #include "extensions/pntr_cute_png.h"
     #else
-        cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
-        if (image.pix == NULL) {
-            return pntr_set_error(cp_error_reason);
-        }
-
-        pntr_image* output = pntr_image_from_pixelformat((const void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
-        cp_free_png(&image);
-
-        return output;
+        // Allow disabling image loading.
+        #ifdef PNTR_NO_LOAD_IMAGE
+            #define PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize) NULL
+        #else
+            // Default to stb_image.
+            #include "extensions/pntr_stb_image.h"
+        #endif
     #endif
+#endif
+
+#ifndef PNTR_SAVE_IMAGE_TO_MEMORY
+    #ifdef PNTR_STB_IMAGE
+        #include "extensions/pntr_stb_image_write.h"
+    #elif defined(PNTR_CUTE_PNG)
+        #include "extensions/pntr_cute_png.h"
+    #else
+        // Allow disabling image saving.
+        #ifdef PNTR_NO_SAVE_IMAGE
+            #define PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize) NULL
+        #else
+            // Default to stb_image_write.
+            #include "extensions/pntr_stb_image_write.h"
+        #endif
+    #endif
+#endif
+
+/**
+ * Load an image from memory buffer.
+ *
+ * @note This can be overloaded by defining \c PNTR_LOAD_IMAGE_FROM_MEMORY .
+ *
+ * @param type The type of image to load.
+ * @param fileData The data of the file to be loaded.
+ * @param dataSize The size of the file data.
+ *
+ * @return A newly loaded image, or NULL on failure.
+ *
+ * @see PNTR_LOAD_IMAGE_FROM_MEMORY
+ * @see PNTR_NO_LOAD_IMAGE
+ */
+PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize) {
+    if (fileData == NULL || dataSize == 0) {
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+    }
+
+    return PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize);
 }
 
 /**
@@ -2257,19 +3227,22 @@ PNTR_API pntr_image* pntr_load_image_from_memory(const unsigned char *fileData, 
  * @param fileName The name of the file to load from the file system.
  *
  * @return The newly loaded file.
+ *
+ * @see PNTR_NO_LOAD_IMAGE
  */
 PNTR_API pntr_image* pntr_load_image(const char* fileName) {
     if (fileName == NULL) {
-        return pntr_set_error("pntr_load_image() requires a valid fileName");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     unsigned int bytesRead;
     const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
     if (fileData == NULL) {
-        return pntr_set_error("Failed to load file");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
     }
 
-    pntr_image* output = pntr_load_image_from_memory(fileData, bytesRead);
+    pntr_image_type type = pntr_get_file_image_type(fileName);
+    pntr_image* output = pntr_load_image_from_memory(type, fileData, bytesRead);
     pntr_unload_file((unsigned char*)fileData);
 
     return output;
@@ -2277,8 +3250,14 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
 
 /**
  * Draw an image onto the destination image, with tint.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param tint The color to tint the image when drawing.
  */
-PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
+PNTR_API void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int posX, int posY, pntr_color tint) {
     if (src == NULL) {
         return;
     }
@@ -2289,9 +3268,14 @@ PNTR_API inline void pntr_draw_image_tint(pntr_image* dst, pntr_image* src, int 
 }
 
 /**
- * Draw an image onto the destination image.
+ * Draw an image onto a destination image.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
  */
-PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
+PNTR_API void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX, int posY) {
     if (src == NULL) {
         return;
     }
@@ -2308,9 +3292,9 @@ PNTR_API inline void pntr_draw_image(pntr_image* dst, pntr_image* src, int posX,
  *
  * @return The new alpha-blended color.
  *
- * @see PNTR_DISABLE_ALPHABLEND
+ * @see PNTR_NO_ALPHABLEND
  */
-PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
+PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
     pntr_blend_color(&dst, src);
     return dst;
 }
@@ -2326,7 +3310,7 @@ PNTR_API inline pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src
  *
  * @see pntr_draw_image()
  */
-PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
+PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     pntr_draw_image_tint_rec(dst, src, srcRect, posX, posY, PNTR_WHITE);
 }
 
@@ -2343,27 +3327,38 @@ PNTR_API inline void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_
  * @see pntr_draw_image()
  */
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
-    if (dst == NULL || src == NULL || posX >= dst->width || posY >= dst->height) {
+    if (dst == NULL || src == NULL || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
         return;
     }
 
-    // Scaling is not supported
-    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, srcRect.width, srcRect.height };
+    // Make sure the source rectangle is within bounds.
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
+            srcRect.width <= 0 ? src->width : srcRect.width,
+            srcRect.height <= 0 ? src->height : srcRect.height,
+            0, 0,
+            src->width, src->height, &srcRect)) {
+        return;
+    }
 
     // Update the source coordinates based on the destination
-    if (dstRect.x < 0) {
-        srcRect.x -= dstRect.x;
-        srcRect.width += dstRect.x;
+    if (posX < dst->clip.x) {
+        srcRect.x -= posX - dst->clip.x;
+        srcRect.width += posX - dst->clip.x;
+        posX = dst->clip.x;
     }
-    if (dstRect.y < 0) {
-        srcRect.y -= dstRect.y;
-        srcRect.height += dstRect.y;
+    if (posY < dst->clip.y) {
+        srcRect.y -= posY - dst->clip.y;
+        srcRect.height += posY - dst->clip.y;
+        posY = dst->clip.y;
     }
 
+    // Confine the destination.
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, srcRect.width, srcRect.height };
     if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
-            PNTR_MIN(dstRect.width, srcRect.width),
-            PNTR_MIN(dstRect.height, srcRect.height),
-            dst->width, dst->height, &dstRect)) {
+            srcRect.width,
+            srcRect.height,
+            dst->clip.x, dst->clip.y,
+            dst->clip.width, dst->clip.height, &dstRect)) {
         return;
     }
 
@@ -2375,7 +3370,7 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
     pntr_color *dstPixel = dst->data + dst_skip * dstRect.y + dstRect.x;
     pntr_color *srcPixel = src->data + src_skip * srcRect.y + srcRect.x;
 
-    if (tint.data == PNTR_WHITE_DATA) {
+    if (tint.value == PNTR_WHITE_VALUE) {
         while (dstRect.height-- > 0) {
             for (int x = 0; x < dstRect.width; ++x) {
                 pntr_blend_color(dstPixel + x, srcPixel[x]);
@@ -2411,7 +3406,7 @@ PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_re
  */
 PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int width, int height, pntr_pixelformat pixelFormat) {
     if (imageData == NULL || width <= 0 || height <= 0 || pixelFormat < 0) {
-        return pntr_set_error("pntr_image_from_data() requires valid imageData");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Check how we are to convert the pixel format.
@@ -2423,7 +3418,7 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
             }
 
             unsigned char* source = (unsigned char*)imageData;
-            for (int i = 0; i < width * height; i++) {
+            for (size_t i = 0; i < (size_t)width * (size_t)height; i++) {
                 output->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
             }
 
@@ -2435,7 +3430,7 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
             pntr_image* output = pntr_new_image(width, height);
 
             pntr_color* source = (pntr_color*)imageData;
-            for (int i = 0; i < width * height; i++) {
+            for (size_t i = 0; i < (size_t)width * (size_t)height; i++) {
                 output->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
             }
 
@@ -2443,7 +3438,7 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
         }
 
         default: {
-            return pntr_set_error("Unknown pixel format");
+            return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
         }
     }
 }
@@ -2461,12 +3456,8 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
  * @see pntr_image_resize()
  */
 PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter) {
-    if (image == NULL) {
-        return pntr_set_error("pntr_image_scale() requires a valid image");
-    }
-
-    if (scaleX <= 0.0f || scaleY <= 0.0f) {
-        return pntr_set_error("pntr_image_scale() requires a valid scale values");
+    if (image == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     return pntr_image_resize(image, (int)((float)image->width * scaleX), (int)((float)image->height * scaleY), filter);
@@ -2483,11 +3474,10 @@ PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float sca
  * @return The newly resized image.
  *
  * @see pntr_image_scale()
- * @see PNTR_ENABLE_FILTER_SMOOTH
  */
 PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newHeight, pntr_filter filter) {
     if (image == NULL || newWidth <= 0 || newHeight <= 0 || filter < 0) {
-        return pntr_set_error("pntr_image_resize() requires a valid image and width/height");
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* output = pntr_new_image(newWidth, newHeight);
@@ -2495,40 +3485,7 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
         return NULL;
     }
 
-    #ifndef PNTR_ENABLE_FILTER_SMOOTH
-        if (filter == PNTR_FILTER_SMOOTH) {
-            filter = PNTR_FILTER_BILINEAR;
-        }
-    #endif
-
     switch (filter) {
-        case PNTR_FILTER_SMOOTH: {
-            #ifndef PNTR_ENABLE_FILTER_SMOOTH
-                return NULL;
-            #else
-                int result = stbir_resize_uint8_srgb(
-                    (const unsigned char*)image->data,
-                    image->width, image->height,
-                    0, // Input stride
-                    (unsigned char*)output->data,
-                    output->width, output->height,
-                    0, // Output stride
-                    4, // Number of channels
-                    // TODO: pntr_image_resize() - Is the alpha channel always 3?
-                    #if defined(PNTR_PIXELFORMAT_RGBA)
-                        3, // Alpha channel
-                    #elif defined(PNTR_PIXELFORMAT_ARGB)
-                        3, // Alpha channel
-                    #endif
-                    0);
-
-                if (result == 0) {
-                    pntr_unload_image(output);
-                    return pntr_set_error("Failed to reszize imagess");
-                }
-            #endif
-        }
-        break;
         case PNTR_FILTER_BILINEAR: {
             float xRatio = (float)image->width / (float)newWidth;
             float yRatio = (float)image->height / (float)newHeight;
@@ -2568,6 +3525,8 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
         break;
     }
 
+    // TODO: Copy the clip values scaled from the original image?
+
     return output;
 }
 
@@ -2586,7 +3545,6 @@ PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical)
     }
 
     pntr_color swap;
-
     if (vertical) {
         for (int y = 0; y < image->height / 2; y++) {
             for (int x = 0; x < image->width; x++) {
@@ -2620,10 +3578,10 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
         return;
     }
 
-    for (int y = 0; y < image->height; y++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
         pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
-            if (pixel->data == color.data) {
+        for (int x = image->clip.x; x < image->clip.x + image->clip.width; x++) {
+            if (pixel->value == color.value) {
                 *pixel = replace;
             }
             pixel++;
@@ -2641,13 +3599,17 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
  *
  * @see pntr_image_color_tint()
  */
-PNTR_API inline pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
-    return PNTR_CLITERAL(pntr_color) {
-        .r = (unsigned char)(((float)color.r / 255.0f * (float)tint.r / 255.0f) * 255.0f),
-        .g = (unsigned char)(((float)color.g / 255.0f * (float)tint.g / 255.0f) * 255.0f),
-        .b = (unsigned char)(((float)color.b / 255.0f * (float)tint.b / 255.0f) * 255.0f),
-        .a = (unsigned char)(((float)color.a / 255.0f * (float)tint.a / 255.0f) * 255.0f)
-    };
+PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
+    if (tint.value == PNTR_WHITE_VALUE) {
+        return color;
+    }
+
+    return PNTR_NEW_COLOR(
+        (unsigned char)(((float)color.rgba.r / 255.0f * (float)tint.rgba.r / 255.0f) * 255.0f),
+        (unsigned char)(((float)color.rgba.g / 255.0f * (float)tint.rgba.g / 255.0f) * 255.0f),
+        (unsigned char)(((float)color.rgba.b / 255.0f * (float)tint.rgba.b / 255.0f) * 255.0f),
+        (unsigned char)(((float)color.rgba.a / 255.0f * (float)tint.rgba.a / 255.0f) * 255.0f)
+    );
 }
 
 /**
@@ -2668,14 +3630,14 @@ PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor) {
 
     if (factor < 0.0f) {
         factor = 1.0f + factor;
-        color.r = (unsigned char)((float)color.r * factor);
-        color.g = (unsigned char)((float)color.g * factor);
-        color.b = (unsigned char)((float)color.b * factor);
+        color.rgba.r = (unsigned char)((float)color.rgba.r * factor);
+        color.rgba.g = (unsigned char)((float)color.rgba.g * factor);
+        color.rgba.b = (unsigned char)((float)color.rgba.b * factor);
     }
     else {
-        color.r = (unsigned char)(((float)(255 - color.r) * factor) + color.r);
-        color.g = (unsigned char)(((float)(255 - color.r) * factor) + color.r);
-        color.b = (unsigned char)(((float)(255 - color.r) * factor) + color.r);
+        color.rgba.r = (unsigned char)(((float)(255 - color.rgba.r) * factor) + color.rgba.r);
+        color.rgba.g = (unsigned char)(((float)(255 - color.rgba.g) * factor) + color.rgba.g);
+        color.rgba.b = (unsigned char)(((float)(255 - color.rgba.b) * factor) + color.rgba.b);
     }
 
     return color;
@@ -2700,10 +3662,10 @@ PNTR_API pntr_color pntr_color_fade(pntr_color color, float factor) {
     }
 
     if (factor < 0.0f) {
-        color.a = (unsigned char)((float)color.a * (1.0f + factor));
+        color.rgba.a = (unsigned char)((float)color.rgba.a * (1.0f + factor));
     }
     else {
-        color.a = (unsigned char)(((float)(255 - color.a) * factor) + color.a);
+        color.rgba.a = (unsigned char)(((float)(255 - color.rgba.a) * factor) + color.rgba.a);
     }
 
     return color;
@@ -2729,10 +3691,10 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float factor) {
         factor = 1.0f;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
-            if (pixel->a > 0) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
+            if (pixel->rgba.a > 0) {
                 *pixel = pntr_color_fade(*pixel, factor);
             }
             pixel++;
@@ -2755,15 +3717,15 @@ PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat
 
     switch (dstPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-            *((uint32_t*)(dstPtr)) = ((uint32_t)color.a << 24) | ((uint32_t)color.b << 16) | ((uint32_t)color.g << 8) | (uint32_t)color.r;
+            *((uint32_t*)(dstPtr)) = ((uint32_t)color.rgba.a << 24) | ((uint32_t)color.rgba.b << 16) | ((uint32_t)color.rgba.g << 8) | (uint32_t)color.rgba.r;
         break;
         case PNTR_PIXELFORMAT_ARGB8888:
-            *((uint32_t*)(dstPtr)) = ((uint32_t)color.b << 24) | ((uint32_t)color.g << 16) | ((uint32_t)color.r << 8) | (uint32_t)color.a;
+            *((uint32_t*)(dstPtr)) = ((uint32_t)color.rgba.b << 24) | ((uint32_t)color.rgba.g << 16) | ((uint32_t)color.rgba.r << 8) | (uint32_t)color.rgba.a;
         break;
         case PNTR_PIXELFORMAT_GRAYSCALE: {
-            float r = (float)color.r / 255.0f;
-            float g = (float)color.g / 255.0f;
-            float b = (float)color.b / 255.0f;
+            float r = (float)color.rgba.r / 255.0f;
+            float g = (float)color.rgba.g / 255.0f;
+            float b = (float)color.rgba.b / 255.0f;
             ((unsigned char *)dstPtr)[0] = (unsigned char)((r * 0.299f + g * 0.587f + b * 0.114f) * 255.0f);
         }
         break;
@@ -2781,27 +3743,22 @@ PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat) {
     switch (srcPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-            return PNTR_CLITERAL(pntr_color) {
-                .r = ((unsigned char *)srcPtr)[0],
-                .g = ((unsigned char *)srcPtr)[1],
-                .b = ((unsigned char *)srcPtr)[2],
-                .a = ((unsigned char *)srcPtr)[3]
-            };
+            return PNTR_NEW_COLOR(
+                ((unsigned char *)srcPtr)[0],
+                ((unsigned char *)srcPtr)[1],
+                ((unsigned char *)srcPtr)[2],
+                ((unsigned char *)srcPtr)[3]
+            );
         case PNTR_PIXELFORMAT_ARGB8888:
-            return PNTR_CLITERAL(pntr_color) {
-                .a = ((unsigned char *)srcPtr)[0],
-                .r = ((unsigned char *)srcPtr)[1],
-                .g = ((unsigned char *)srcPtr)[2],
-                .b = ((unsigned char *)srcPtr)[3]
-            };
+            return PNTR_NEW_COLOR(
+                ((unsigned char *)srcPtr)[1],
+                ((unsigned char *)srcPtr)[2],
+                ((unsigned char *)srcPtr)[3],
+                ((unsigned char *)srcPtr)[0]
+            );
         case PNTR_PIXELFORMAT_GRAYSCALE:
             // White, with alpha determining grayscale value. Use tint to change color afterwards.
-            return PNTR_CLITERAL(pntr_color) {
-                .r = 255,
-                .g = 255,
-                .b = 255,
-                .a = ((unsigned char*)srcPtr)[0]
-            };
+            return PNTR_NEW_COLOR(255, 255, 255, ((unsigned char*)srcPtr)[0]);
     }
 
     return PNTR_BLANK;
@@ -2820,9 +3777,9 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
         return;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_tint(*pixel, tint);
             pixel++;
         }
@@ -2837,7 +3794,7 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
  *
  * @return The newly loaded font.
  *
- * @example examples/resources/bmfont.png
+ * @see examples/resources/bmfont.png
  */
 PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -2848,12 +3805,21 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
     return pntr_load_font_bmf_from_image(image, characters);
 }
 
+/**
+ * Load a BMFont from the given image data in memory.
+ *
+ * @param fileData A representation of the image data in memory.
+ * @param dataSize The size of the image data.
+ * @param characters A string representing the characters to load from the atlas.
+ *
+ * @return The newly loaded font, or NULL on failure.
+ */
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL) {
-        return pntr_set_error("pntr_load_font_bmf_from_memory() requires valid file data, size and characters");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
+    pntr_image* image = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, dataSize);
     if (image == NULL) {
         return NULL;
     }
@@ -2865,78 +3831,92 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData
  * Creates a new pntr_font object, with the number of allocated characters, using the given image.
  *
  * @param numCharacters The amount of glyphs to prepare within the font.
+ * @param characterByteSize The amount of bytes required to store the characters. If in ASCII, this is numCharacters.
  * @param atlas A pre-created image for the glyph atlas.
  *
  * @return The new font object allocated in memory.
  *
  * @internal
  */
-PNTR_API pntr_font* _pntr_new_font(int numCharacters, pntr_image* atlas) {
+PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pntr_image* atlas) {
     if (numCharacters <= 0) {
-        return pntr_set_error("requires at least one character for fonts, none found");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_font* font = PNTR_MALLOC(sizeof(pntr_font));
+    // Create the new font
+    pntr_font* font = (pntr_font*)PNTR_MALLOC(sizeof(pntr_font));
     if (font == NULL) {
-        return pntr_set_error("pntr_new_font() failed to allocate pntr_font memory");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     // Source Rectangles
-    font->srcRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)numCharacters);
+    font->srcRects = (pntr_rectangle*)PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)numCharacters);
     if (font->srcRects == NULL) {
         PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for source rects");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     // Glyph Rectangles
-    font->glyphRects = PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)numCharacters);
+    font->glyphRects = (pntr_rectangle*)PNTR_MALLOC(sizeof(pntr_rectangle) * (size_t)numCharacters);
     if (font->glyphRects == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for glyphRects");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     // Characters
-    font->characters = PNTR_MALLOC(sizeof(char) * (size_t)numCharacters);
+    font->characters = (char*)PNTR_MALLOC(characterByteSize);
     if (font->characters == NULL) {
         PNTR_FREE(font->srcRects);
         PNTR_FREE(font->glyphRects);
         PNTR_FREE(font);
-        return pntr_set_error("Failed to allocate memory for characters");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
+    font->characters[0] = '\0';
     font->charactersLen = numCharacters;
     font->atlas = atlas;
 
     return font;
 }
 
+/**
+ * Load a BMFont from the given image.
+ *
+ * @param image The BMFont image.
+ * @param characters A string representing the characters to load from the atlas.
+ *
+ * @return The newly loaded font, or NULL on failure.
+ */
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters) {
     if (image == NULL || characters == NULL) {
-        return pntr_set_error("pntr_load_font_bmf_from_image() requires a valid image and characters");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
+    // Set up the initial font data.
+    size_t charactersSize = PNTR_STRSIZE(characters);
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
-    pntr_rectangle currentRectangle = PNTR_CLITERAL(pntr_rectangle){1, 0, 0, image->height};
+    pntr_rectangle currentRectangle = PNTR_CLITERAL(pntr_rectangle) {1, 0, 0, image->height};
 
     // Find out how many characters there are.
     int numCharacters = 0;
     for (int i = 0; i < image->width; i++) {
-        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
+        if (pntr_image_get_color(image, i, 0).value == seperator.value) {
             numCharacters++;
         }
     }
 
-    pntr_font* font = _pntr_new_font(numCharacters, image);
+    // Build the font.
+    pntr_font* font = _pntr_new_font(numCharacters, charactersSize, image);
     if (font == NULL) {
         return NULL;
     }
 
     // Set up the data structures.
+    // TODO: Allow loading BMFont characters vertically
     int currentCharacter = 0;
     for (int i = 1; i < image->width; i++) {
-        if (pntr_image_get_color(image, i, 0).data == seperator.data) {
-            font->characters[currentCharacter] = characters[currentCharacter];
+        if (pntr_image_get_color(image, i, 0).value == seperator.value) {
             font->srcRects[currentCharacter] = currentRectangle;
             font->glyphRects[currentCharacter] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = 0,
@@ -2954,6 +3934,8 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
         }
     }
 
+    PNTR_MEMCPY(font->characters, characters, charactersSize);
+
     return font;
 }
 
@@ -2967,7 +3949,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
  *
  * @return The newly loaded TTY font.
  *
- * @example examples/resources/ttyfont-16x16.png
+ * @see examples/resources/ttyfont-16x16.png
  */
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -2984,11 +3966,11 @@ PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int
 }
 
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
-    if (fileData == NULL || dataSize <= 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
-        return pntr_set_error("pntr_load_font_tty_from_memory() requires valid file data, size, glyph size, and characters");
+    if (fileData == NULL || dataSize == 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_image* image = pntr_load_image_from_memory(fileData, dataSize);
+    pntr_image* image = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, dataSize);
     if (image == NULL) {
         return NULL;
     }
@@ -3003,24 +3985,21 @@ PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData
 
 PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
     if (image == NULL || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
-        return pntr_set_error("pntr_load_font_tty_from_image() requires a valid image and characters");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Find out how many characters there are.
-    int numCharacters = 0;
-	int i = 0;
-	while (characters[i++] != '\0') {
-		numCharacters++;
-	}
+    int numCharacters = (int)PNTR_STRLEN(characters);
+    size_t charactersSize = PNTR_STRSIZE(characters);
 
     // Create the font.
-    pntr_font* font = _pntr_new_font(numCharacters, image);
+    pntr_font* font = _pntr_new_font(numCharacters, charactersSize, image);
     if (font == NULL) {
         return NULL;
     }
 
     // Set up the font data.
-    for (int currentCharIndex = 0; currentCharIndex < font->charactersLen; currentCharIndex++) {
+    for (int currentCharIndex = 0; currentCharIndex < numCharacters; currentCharIndex++) {
         // Source rectangle.
         font->srcRects[currentCharIndex] = PNTR_CLITERAL(pntr_rectangle) {
             .x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth,
@@ -3036,10 +4015,9 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
             .width = glyphWidth,
             .height = glyphHeight,
         };
-
-        // Set the character.
-        font->characters[currentCharIndex] = characters[currentCharIndex];
     }
+
+    PNTR_MEMCPY(font->characters, characters, charactersSize);
 
     return font;
 }
@@ -3048,8 +4026,6 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
  * Unloads the given font from memory.
  *
  * @param font The font to unload from memory.
- *
- * @see pntr_load_font()
  */
 PNTR_API void pntr_unload_font(pntr_font* font) {
     if (font == NULL) {
@@ -3069,12 +4045,10 @@ PNTR_API void pntr_unload_font(pntr_font* font) {
  * @param font The font to copy.
  *
  * @return A new font that is a copy of the given font.
- *
- * @see pntr_load_font()
  */
 PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
     if (font == NULL) {
-        return pntr_set_error("pntr_font_copy requires a valid font");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* atlas = pntr_image_copy(font->atlas);
@@ -3082,7 +4056,8 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
         return NULL;
     }
 
-    pntr_font* output = _pntr_new_font(font->charactersLen, atlas);
+    size_t charactersSize = PNTR_STRSIZE(font->characters);
+    pntr_font* output = _pntr_new_font(font->charactersLen, charactersSize, atlas);
     if (output == NULL) {
         pntr_unload_image(atlas);
         return NULL;
@@ -3090,7 +4065,7 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
 
     PNTR_MEMCPY(output->srcRects, font->srcRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
     PNTR_MEMCPY(output->glyphRects, font->glyphRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
-    PNTR_MEMCPY(output->characters, font->characters, sizeof(char) * (size_t)output->charactersLen);
+    PNTR_MEMCPY(output->characters, font->characters, charactersSize);
 
     return output;
 }
@@ -3107,7 +4082,7 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
  */
 PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY, pntr_filter filter) {
     if (font == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
-        return pntr_set_error("pntr_font_copy requires a valid font and scale");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Create the new font.
@@ -3137,6 +4112,72 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
 }
 
 /**
+ * Prints text on the given image, provided the length of the string.
+ *
+ * @param dst The image of which to print the text on.
+ * @param font The font to use when rendering the text.
+ * @param text The text to write.
+ * @param textLength How many characters to draw from the text string. If 0, it will draw until the NULL terminator.
+ * @param posX The position to print the text, starting from the top left on the X axis.
+ * @param posY The position to print the text, starting from the top left on the Y axis.
+ * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text_wrapped()
+ */
+PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint) {
+    if (dst == NULL || font == NULL || text == NULL) {
+        return;
+    }
+
+    int x = posX;
+    int y = posY;
+    int tallestCharacter = 0;
+
+    // Iterate through each character.
+    pntr_codepoint_t codepoint;
+    int count = 0;
+    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        // If there is a text length provided, only draw up to that length.
+        if (textLength > 0) {
+            if (++count > textLength) {
+                break;
+            }
+        }
+
+        // If the character is a newline, move to the next line.
+        if (codepoint == '\n') {
+            // TODO: pntr_draw_text(): Allow for center/right alignment
+            x = posX;
+            y += tallestCharacter;
+            continue;
+        }
+
+        // Find the character in the font's character index.
+        char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
+        if (!foundCharacter) {
+            continue;
+        }
+
+        // Find the index of the character in the string.
+        #ifdef PNTR_ENABLE_UTF8
+        int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+        #else
+        int i = (int)(foundCharacter - font->characters);
+        #endif
+
+        // Draw the character, unless it's a space.
+        if (codepoint != ' ')  {
+            pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+        }
+
+        x += font->glyphRects[i].x + font->glyphRects[i].width;
+        if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+            tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
+        }
+    }
+}
+
+/**
  * Prints text on the given image.
  *
  * @param dst The image of which to print the text on.
@@ -3145,39 +4186,181 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
  * @param posX The position to print the text, starting from the top left on the X axis.
  * @param posY The position to print the text, starting from the top left on the Y axis.
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text_wrapped()
  */
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint) {
+    pntr_draw_text_len(dst, font, text, 0, posX, posY, tint);
+}
+
+/**
+ * Draws text on the given image with horizontal alignment.
+ *
+ * @param dst The image to draw on.
+ * @param font The font to use.
+ * @param text The text to draw. Multi-line supported via \\n.
+ * @param posX The reference X position (left edge for LEFT, center for CENTER, right edge for RIGHT).
+ * @param posY The top Y position.
+ * @param align The horizontal alignment.
+ * @param tint The tint color.
+ *
+ * @see pntr_draw_text()
+ */
+PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
         return;
     }
 
-    int x = posX;
-    int y = posY;
-    int tallestCharacter;
+    if (align == PNTR_TEXT_ALIGN_LEFT) {
+        pntr_draw_text(dst, font, text, posX, posY, tint);
+        return;
+    }
 
-    const char * currentChar = text;
-    while (currentChar != NULL && *currentChar != '\0') {
-        if (*currentChar == '\n') {
-            // TODO: pntr_draw_text(): Allow for center/right alignment
-            x = posX;
-            y += tallestCharacter;
+    const char* lineStart = text;
+    int currentY = posY;
+
+    while (lineStart != NULL) {
+        const char* lineEnd = PNTR_STRCHR(lineStart, '\n');
+        int lineLen = (int)(lineEnd != NULL ? lineEnd - lineStart : (int)PNTR_STRLEN(lineStart));
+        pntr_vector size = pntr_measure_text_ex(font, lineStart, lineLen);
+        int lineX;
+        if (align == PNTR_TEXT_ALIGN_CENTER) {
+            lineX = posX - size.x / 2;
+        } else {
+            lineX = posX - size.x;
         }
-        else {
-            for (int i = 0; i < font->charactersLen; i++) {
-                if (font->characters[i] == *currentChar) {
-                    pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
-                    x += font->glyphRects[i].x + font->glyphRects[i].width;
-                    if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
-                        tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
-                    }
-                    break;
+        pntr_draw_text_len(dst, font, lineStart, lineLen, lineX, currentY, tint);
+        currentY += size.y;
+        lineStart = (lineEnd != NULL) ? lineEnd + 1 : NULL;
+    }
+}
+
+/**
+ * Draws word-wrapped text on the given image.
+ *
+ * @param dst The image of which to print the text on.
+ * @param font The font to use when rendering the text.
+ * @param text The text to write. Must be NULL terminated.
+ * @param posX The position to print the text, starting from the top left on the X axis.
+ * @param posY The position to print the text, starting from the top left on the Y axis.
+ * @param maxWidth The maximum width for each line.
+ * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ *
+ * @see pntr_draw_text()
+ */
+PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint) {
+    if (dst == NULL || font == NULL || text == NULL) {
+        return;
+    }
+
+    pntr_codepoint_t codepoint;
+    char* currentChar = (char*)text;
+    char* lineStart = currentChar;
+    int lineLength = 1;
+    char* lastSpace = NULL;
+    int currentY = 0;
+    pntr_vector textSize = {0, 0};
+
+    // Iterate through each character.
+    for (char* nextChar = PNTR_STRCODEPOINT(text, &codepoint); codepoint; nextChar = PNTR_STRCODEPOINT(nextChar, &codepoint)) {
+        if (codepoint == ' ' || codepoint == '\n') {
+            textSize = pntr_measure_text_ex(font, lineStart, lineLength - 1);
+            if (textSize.x > maxWidth) {
+                if (lastSpace != NULL) {
+                    #ifdef PNTR_ENABLE_UTF8
+                        lineLength = (int)utf8nlen(lineStart, (size_t)(lastSpace - lineStart));
+                    #else
+                        lineLength = (int)(lastSpace - lineStart);
+                    #endif
+                    pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+                    currentY += textSize.y;
+                    lineStart = lastSpace + 1;
+                    #ifdef PNTR_ENABLE_UTF8
+                        lineLength = (int)utf8nlen(lineStart, (size_t)(currentChar - lineStart));
+                    #else
+                        lineLength = (int)(currentChar - lineStart);
+                    #endif
                 }
+                else {
+                    // No current space, so draw what's in and move to new line.
+                    pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+                    currentY += textSize.y;
+                    lineStart = nextChar;
+                    lineLength = 0;
+                }
+            }
+            else if (codepoint == '\n') {
+                #ifdef PNTR_ENABLE_UTF8
+                    lineLength = (int)utf8nlen(lineStart, (size_t)(currentChar - lineStart));
+                #else
+                    lineLength = (int)(currentChar - lineStart);
+                #endif
+                pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+                currentY += textSize.y;
+                lineStart = nextChar;
+                lineLength = 0;
+                lastSpace = NULL;
+            }
+            else {
+                lastSpace = currentChar;
             }
         }
 
-        currentChar++;
+        currentChar = nextChar;
+        lineLength++;
     }
+
+    // Check if the last line is too long, and split it by the last space.
+    if (pntr_measure_text(font, lineStart) > maxWidth && lastSpace != NULL) {
+        #ifdef PNTR_ENABLE_UTF8
+            lineLength = (int)utf8nlen(lineStart, (size_t)(lastSpace - lineStart));
+        #else
+            lineLength = (int)(lastSpace - lineStart);
+        #endif
+        pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
+        currentY += textSize.y;
+        lineStart = lastSpace + 1;
+    }
+
+    pntr_draw_text(dst, font, lineStart, posX, posY + currentY, tint);
 }
+
+#ifdef PNTR_ENABLE_VARGS
+/**
+ * Prints text on the given image, with the provided format.
+ *
+ * @param dst The image of which to print the text on.
+ * @param font The font to use when rendering the text.
+ * @param posX The position to print the text, starting from the top left on the X axis.
+ * @param posY The position to print the text, starting from the top left on the Y axis.
+ * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
+ * @param maxlen The maximum number of characters to write, including the NULL terminator. Use 0 for the default of PNTR_DRAW_TEXT_EX_STRING_LENGTH.
+ * @param text The text to write. Must be NULL terminated.
+ * @param ... The arguments to pass for the format.
+ *
+ * @see printf
+ * @see PNTR_ENABLE_VARGS
+ *
+ * @note Requires \c PNTR_ENABLE_VARGS to be used.
+ */
+PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...) {
+    #ifndef PNTR_DRAW_TEXT_EX_STRING_LENGTH
+    /**
+     * The default amount of maxlen for use in pntr_draw_text_ex.
+     */
+    #define PNTR_DRAW_TEXT_EX_STRING_LENGTH 512
+    #endif
+    int length = (maxlen > 0) ? maxlen : PNTR_DRAW_TEXT_EX_STRING_LENGTH;
+    char output[length];
+
+    va_list arg_ptr;
+    va_start(arg_ptr, text);
+    vsnprintf(output, (size_t)length, text, arg_ptr);
+    va_end(arg_ptr);
+
+    pntr_draw_text(dst, font, output, posX, posY, tint);
+}
+#endif
 
 /**
  * Measures the horizontal length of the text when rendered with the given font.
@@ -3187,11 +4370,20 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
  *
  * @return The amount of pixels the text is when rendered with the font.
  */
-PNTR_API inline int pntr_measure_text(pntr_font* font, const char* text) {
-    return pntr_measure_text_ex(font, text).x;
+PNTR_API int pntr_measure_text(pntr_font* font, const char* text) {
+    return pntr_measure_text_ex(font, text, 0).x;
 }
 
-PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
+/**
+ * Measures the width and height of the given text when rendered with the font.
+ *
+ * @param font The font to use when rendering the text.
+ * @param text The text to measure the length of.
+ * @param textLength (Optional) How long the string to measure is from text. Provide 0 to determine the string length with a null character.
+ *
+ * @return A vector containing the width and height of the text when rendered by the font.
+ */
+PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength) {
     if (font == NULL || text == NULL) {
         return PNTR_CLITERAL(pntr_vector){0, 0};
     }
@@ -3199,30 +4391,42 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
     pntr_vector output = PNTR_CLITERAL(pntr_vector) { .x = 0, .y = 0 };
     int currentX = 0;
     int currentY = 0;
-    const char * currentChar = text;
+    int index = 0;
 
-    while (currentChar != NULL && *currentChar != '\0') {
-        if (*currentChar == '\n') {
+    pntr_codepoint_t codepoint;
+    for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        // Stop drawing if we're only counting a certain amount of characters.
+        if (textLength > 0 && index++ >= textLength) {
+            break;
+        }
+
+        // Consider any newlines
+        if (codepoint == '\n') {
             output.y += currentY;
             currentX = 0;
+            continue;
         }
-        else {
-            for (int i = 0; i < font->charactersLen; i++) {
-                if (font->characters[i] == *currentChar) {
-                    currentX += font->glyphRects[i].x + font->glyphRects[i].width;
-                    if (currentX > output.x) {
-                        output.x = currentX;
-                    }
 
-                    // Find the tallest character
-                    if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
-                        currentY = font->glyphRects[i].y + font->glyphRects[i].height;
-                    }
-                    break;
-                }
+        // Find the index of the character in the font atlas.
+        char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
+        if (foundCharacter != NULL) {
+            // Find the index of the character in the string.
+            #ifdef PNTR_ENABLE_UTF8
+            int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+            #else
+            int i = (int)(foundCharacter - font->characters);
+            #endif
+
+            currentX += font->glyphRects[i].x + font->glyphRects[i].width;
+            if (currentX > output.x) {
+                output.x = currentX;
+            }
+
+            // Find the tallest character
+            if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
+                currentY = font->glyphRects[i].y + font->glyphRects[i].height;
             }
         }
-        currentChar++;
     }
 
     // Has at least one line.
@@ -3237,16 +4441,17 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text) {
  * @param font The font to use when rendering the text.
  * @param text The text to render.
  * @param tint The color to tint the text by. Use PNTR_WHITE if you don't want to change the color.
+ * @param backgroundColor The color of the background to use. Use PNTR_BLANK for a transparent background.
  *
  * @return A new image with text on it, using the given font.
  */
-PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint) {
-    pntr_vector size = pntr_measure_text_ex(font, text);
+PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor) {
+    pntr_vector size = pntr_measure_text_ex(font, text, 0);
     if (size.x <= 0 || size.y <= 0) {
         return NULL;
     }
 
-    pntr_image* output = pntr_gen_image_color(size.x, size.y, PNTR_BLANK);
+    pntr_image* output = pntr_gen_image_color(size.x, size.y, backgroundColor);
     if (output == NULL) {
         return NULL;
     }
@@ -3258,13 +4463,14 @@ PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr
 /**
  * Load the default font.
  *
- * This must be unloaded manually afterwards with pntr_unload_font().
+ * This must be unloaded manually afterwards with `pntr_unload_font()`.
  *
- * Define PNTR_ENABLE_DEFAULT_FONT to allow using the default 8x8 font.
+ * Define `PNTR_ENABLE_DEFAULT_FONT` to allow using the default 8x8 font.
  *
  * You can change this by defining your own PNTR_DEFAULT_FONT. It must match the definition of pntr_load_font_default()
- *
+ * @code
  * #define PNTR_DEFAULT_FONT load_my_font
+ * @endcode
  *
  * @return The default font, which must be unloaded when finished using.
  *
@@ -3284,7 +4490,7 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
         #define PNTR_DEFAULT_FONT_NAME font8x8_basic
         #define PNTR_DEFAULT_FONT_GLYPH_WIDTH 8
         #define PNTR_DEFAULT_FONT_GLYPH_HEIGHT 8
-        #define PNTR_DEFAULT_FONT_CHARACTERS_LEN 97
+        #define PNTR_DEFAULT_FONT_CHARACTERS_LEN 95
 
         // Build the atlas.
         pntr_image* atlas = pntr_gen_image_color(
@@ -3292,12 +4498,12 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
             PNTR_DEFAULT_FONT_GLYPH_HEIGHT,
             PNTR_BLANK);
         if (atlas == NULL) {
-            return pntr_set_error("pntr_load_font_default() failed to build atlas");
+            return NULL;
         }
 
         // Iterate through all the characters and draw them manually.
         for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
-            unsigned char* bitmap = PNTR_DEFAULT_FONT_NAME[i];
+            const unsigned char* bitmap = PNTR_DEFAULT_FONT_NAME[i];
             for (int x = 0; x < 8; x++) {
                 for (int y = 0; y < 8; y++) {
                     if (bitmap[y] & 1 << x) {
@@ -3307,22 +4513,23 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
             }
         }
 
-        // Build the character set.
-        char characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN];
+        // Build the character set with a null character at the end.
+        char characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN + 1];
         for (int i = 0; i < PNTR_DEFAULT_FONT_CHARACTERS_LEN; i++) {
             characters[i] = (char)(i + 32); // ASCII
         }
+        characters[PNTR_DEFAULT_FONT_CHARACTERS_LEN] = '\0';
 
         // Use TTY to build the remaining font parameters.
         pntr_font* font = pntr_load_font_tty_from_image(atlas, PNTR_DEFAULT_FONT_GLYPH_WIDTH, PNTR_DEFAULT_FONT_GLYPH_HEIGHT, characters);
         if (font == NULL) {
             pntr_unload_image(atlas);
-            return pntr_set_error("Failed to load default font from image");
+            return NULL;
         }
 
         return font;
     #else
-        return pntr_set_error("pntr_load_font_default() requires PNTR_ENABLE_DEFAULT_FONT");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #endif
 }
 
@@ -3336,17 +4543,17 @@ PNTR_API pntr_font* pntr_load_font_default(void) {
  *
  * @return The newly loaded truetype font.
  *
- * @example examples/resources/tuffy.ttf
+ * @see examples/resources/tuffy.ttf
  *
  * @see PNTR_ENABLE_TTF
  */
 PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     if (fileName == NULL || fontSize <= 0) {
-        return pntr_set_error("pntr_load_font_ttf() requires a valid fileName and font size.");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifndef PNTR_ENABLE_TTF
-        return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
         unsigned int bytesRead;
         unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
@@ -3372,57 +4579,88 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
  *
  * @return The newly loaded truetype font.
  *
- * @example examples/resources/tuffy.ttf
+ * @see examples/resources/tuffy.ttf
  *
  * @see PNTR_ENABLE_TTF
  */
 PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize) {
     if (fileData == NULL || dataSize == 0 || fontSize <= 0) {
-        return pntr_set_error("TTF Fonts requires valid file data, data size, and fontSize.");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifndef PNTR_ENABLE_TTF
-        return pntr_set_error("pntr_load_font_ttf requires PNTR_ENABLE_TTF");
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
+        // Which ASCII character to start rendering into the atlas
+        #define PNTR_FONT_TTF_GLYPH_START 32
+
+        // Find out how many glyhs we should prepare
+        #ifndef PNTR_FONT_TTF_GLYPH_NUM
+            #ifdef PNTR_ENABLE_UTF8
+                // Up to the Cyrillic Supplement, minus the first 32 ascii characters
+                // https://www.w3schools.com/charsets/ref_html_utf8.asp
+                #define PNTR_FONT_TTF_GLYPH_NUM 1295
+            #else
+                // ASCII characater set
+                #define PNTR_FONT_TTF_GLYPH_NUM 95
+            #endif
+        #endif
+
         // Create the bitmap data with ample space based on the font size
-        int width = fontSize * 10;
-        int height = fontSize * 10;
-        unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)(width * height));
+        int columns = 32;
+        int rows = PNTR_FONT_TTF_GLYPH_NUM / columns;
+        int width = fontSize * columns;
+        int height = fontSize * rows;
+        unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)width * (size_t)height);
         if (bitmap == NULL) {
-            return pntr_set_error("Failed to allocate memory for bitmap");
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
-        #define PNTR_NUM_GLYPHS 95
-        stbtt_bakedchar characterData[PNTR_NUM_GLYPHS];
-        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, 32, PNTR_NUM_GLYPHS, characterData);
+        // Bake the font into the bitmap
+        stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
+        int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, PNTR_FONT_TTF_GLYPH_START, PNTR_FONT_TTF_GLYPH_NUM, characterData);
 
         // Check to make sure the font was baked correctly
         if (result == 0) {
             PNTR_FREE(bitmap);
-            return pntr_set_error("When baking font, no rows were created");
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_UNKNOWN);
         }
 
-        // Port the bitmap to a pntr_image as the atlas.
+        // Get font metrics for accurate glyph positioning
+        stbtt_fontinfo fontInfo;
+        stbtt_InitFont(&fontInfo, fileData, stbtt_GetFontOffsetForIndex(fileData, 0));
+        float scale = stbtt_ScaleForPixelHeight(&fontInfo, (float)fontSize);
+        int ascent;
+        stbtt_GetFontVMetrics(&fontInfo, &ascent, NULL, NULL);
+        int ascentPixels = (int)((float)ascent * scale);
+
+        // Port the bitmap to a pntr_image as the font atlas
         pntr_image* atlas = pntr_image_from_pixelformat((const void*)bitmap, width, height, PNTR_PIXELFORMAT_GRAYSCALE);
         PNTR_FREE(bitmap);
         if (atlas == NULL) {
-            return pntr_set_error("Failed to convert pixel format for font");
+            return NULL;
         }
 
-        // Clear up the unused atlas space from memory from top left
+        // Clear up the unused atlas space from memory, from the top left
         pntr_rectangle crop = pntr_image_alpha_border(atlas, 0.0f);
         pntr_image_crop(atlas, 0, 0, crop.x + crop.width, crop.y + crop.height);
 
-        // Create the font
-        pntr_font* font = _pntr_new_font(PNTR_NUM_GLYPHS, atlas);
+        // Create the font data, with a null terminator at the end.
+        size_t charactersSize = sizeof(pntr_codepoint_t) * (size_t)PNTR_FONT_TTF_GLYPH_NUM + 1;
+        pntr_font* font = _pntr_new_font(PNTR_FONT_TTF_GLYPH_NUM, charactersSize, atlas);
         if (font == NULL) {
             pntr_unload_image(atlas);
             return NULL;
         }
 
         // Capture each glyph data
-        for (int i = 0; i < PNTR_NUM_GLYPHS; i++) {
-            // Calculate the source rectangles.
+        #ifdef PNTR_ENABLE_UTF8
+        char* destination = font->characters; // Where to write the new character.
+        #endif
+
+        // Build each character
+        for (int i = 0; i < PNTR_FONT_TTF_GLYPH_NUM; i++) {
+            // Calculate the source rectangles
             font->srcRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = characterData[i].x0,
                 .y = characterData[i].y0,
@@ -3430,17 +4668,38 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
                 .height = characterData[i].y1 - characterData[i].y0
             };
 
-            // Find where the glyphs will be rendered.
+            // Find where the glyphs will be rendered
             font->glyphRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
-                .y = (int)characterData[i].yoff + (int)((float)fontSize / 1.5f), // TODO: Determine correct y glyph value
+                .y = ascentPixels + (int)characterData[i].yoff,
                 .width = (int)characterData[i].xadvance,
-                .height = (int)((float)fontSize / 3.0f) // TODO: Determine the correct glyph height
+                .height = characterData[i].y1 - characterData[i].y0
             };
 
-            // Set up the active character.
-            font->characters[i] = (char)(32 + i);
+            // Set up the active character
+            #ifndef PNTR_ENABLE_UTF8
+                font->characters[i] = (char)(PNTR_FONT_TTF_GLYPH_START + i);
+            #else
+                // Append the character to the destination, considering the remaining memory
+                destination = utf8catcodepoint(destination, (pntr_codepoint_t)(PNTR_FONT_TTF_GLYPH_START + i), charactersSize - (size_t)(destination - font->characters));
+            #endif
         }
+
+        // Stick a null terminator at the end of the character string.
+        #ifdef PNTR_ENABLE_UTF8
+            destination[0] = '\0';
+
+            // Resize the character string to the correct size.
+            size_t newSize = PNTR_STRSIZE(font->characters);
+            char* newCharacters = (char*)PNTR_MALLOC(newSize);
+            if (newCharacters != NULL) {
+                PNTR_MEMCPY(newCharacters, font->characters, newSize);
+                PNTR_FREE(font->characters);
+                font->characters = newCharacters;
+            }
+        #else
+            font->characters[PNTR_FONT_TTF_GLYPH_NUM] = '\0';
+        #endif
 
         return font;
     #endif
@@ -3455,13 +4714,13 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
  *
  * @see pntr_image_color_invert()
  */
-PNTR_API inline pntr_color pntr_color_invert(pntr_color color) {
-    return PNTR_CLITERAL(pntr_color) {
-        .r = 255 - color.r,
-        .g = 255 - color.g,
-        .b = 255 - color.b,
-        .a = color.a
-    };
+PNTR_API pntr_color pntr_color_invert(pntr_color color) {
+    return PNTR_NEW_COLOR(
+        (unsigned char)(255 - color.rgba.r),
+        (unsigned char)(255 - color.rgba.g),
+        (unsigned char)(255 - color.rgba.b),
+        color.rgba.a
+    );
 }
 
 /**
@@ -3476,10 +4735,45 @@ PNTR_API void pntr_image_color_invert(pntr_image* image) {
         return;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_invert(*pixel);
+            pixel++;
+        }
+    }
+}
+
+/**
+ * Converts the given color to grayscale using standard luminance weights.
+ *
+ * @param color The color to convert.
+ *
+ * @return The grayscale version of the color with alpha preserved.
+ *
+ * @see pntr_image_color_grayscale()
+ */
+PNTR_API pntr_color pntr_color_grayscale(pntr_color color) {
+    unsigned char l = (unsigned char)(0.299f * (float)color.rgba.r + 0.587f * (float)color.rgba.g + 0.114f * (float)color.rgba.b);
+    return PNTR_NEW_COLOR(l, l, l, color.rgba.a);
+}
+
+/**
+ * Converts the given image to grayscale.
+ *
+ * @param image The image to convert.
+ *
+ * @see pntr_color_grayscale()
+ */
+PNTR_API void pntr_image_color_grayscale(pntr_image* image) {
+    if (image == NULL) {
+        return;
+    }
+
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
+            *pixel = pntr_color_grayscale(*pixel);
             pixel++;
         }
     }
@@ -3505,14 +4799,22 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
         factor = 1.0f;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_brightness(*pixel, factor);
             pixel++;
         }
     }
 }
+
+#ifndef PNTR_LOAD_FILE
+    #ifdef PNTR_NO_STDIO
+        #define PNTR_LOAD_FILE(fileName, bytesRead) NULL
+    #else
+        #include <stdio.h> // FILE, fopen, fread
+    #endif
+#endif  // PNTR_LOAD_FILE
 
 /**
  * Loads a file from the file system.
@@ -3531,7 +4833,7 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
  */
 PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
     if (fileName == NULL) {
-        return pntr_set_error("pntr_load_file() requires a valid fileName");
+        return (unsigned char*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     #ifdef PNTR_LOAD_FILE
@@ -3542,7 +4844,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return pntr_set_error("Failed to open file");
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         fseek(file, 0, SEEK_END);
@@ -3554,7 +4856,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return pntr_set_error("Failed to read file");
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
         unsigned char* data = (unsigned char*)PNTR_MALLOC(size * sizeof(unsigned char));
@@ -3563,7 +4865,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-            return pntr_set_error("Failed to allocate data for file");
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
         // Read the file
@@ -3582,7 +4884,10 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
  *
  * @param fileName The file to load.
  *
- * @see pntr_unload_file()
+ * @see pntr_load_file()
+ * @see pntr_unload_file_text()
+ *
+ * @return A null-terminated string with the contents of the file.
  */
 PNTR_API const char* pntr_load_file_text(const char *fileName) {
     unsigned int bytesRead;
@@ -3605,14 +4910,29 @@ PNTR_API const char* pntr_load_file_text(const char *fileName) {
     return (const char*)output;
 }
 
-PNTR_API inline void pntr_unload_file_text(const char* text) {
+/**
+ * Unload the file text data from memory.
+ *
+ * @param text The text to unload.
+ *
+ * @see pntr_load_file_text()
+ */
+PNTR_API void pntr_unload_file_text(const char* text) {
     pntr_unload_memory((void*)text);
 }
+
+#ifndef PNTR_SAVE_FILE
+    #ifdef PNTR_NO_STDIO
+        #define PNTR_SAVE_FILE(fileName, data, bytesToWrite) NULL
+    #else
+        #include <stdio.h> // FILE, fopen, fwrite
+    #endif
+#endif  // PNTR_SAVE_FILE
 
 /**
  * Saves a file to the file system.
  *
- * You can define your own callback for this by defining PNTR_SAVE_FILE.
+ * You can define your own callback for this by defining `PNTR_SAVE_FILE`.
  *
  * @param fileName The name of the file to save.
  * @param data A pointer to the memory data in memory.
@@ -3624,7 +4944,8 @@ PNTR_API inline void pntr_unload_file_text(const char* text) {
  */
 PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite) {
     if (fileName == NULL || data == NULL) {
-        return pntr_set_error("pntr_save_file() requires a valid fileName");
+        pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+        return false;
     }
 
     #ifdef PNTR_SAVE_FILE
@@ -3632,19 +4953,22 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
     #else
         FILE *file = fopen(fileName, "wb");
         if (file == NULL) {
-            return pntr_set_error("Failed to open file for writing");
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return false;
         }
 
         size_t count = fwrite(data, sizeof(unsigned char), bytesToWrite, file);
 
         if (count <= 0) {
             fclose(file);
-            return pntr_set_error("Failed to write data to file");
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return false;
         }
 
         if (count != (size_t)bytesToWrite) {
             fclose(file);
-            return pntr_set_error("Failed to write the correct amount of data");
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return false;
         }
 
         return fclose(file) == 0;
@@ -3677,7 +5001,7 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
             break;
         default:
             bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte;
-            pntr_set_error("Unknown pixel format for pntr_get_pixel_data_size");
+            pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
             break;
     }
 
@@ -3695,17 +5019,17 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
  */
 PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat) {
     if (image == NULL) {
-        return pntr_set_error("requires a valid image");
+        return pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     int imageSize = pntr_get_pixel_data_size(image->width, image->height, pixelFormat);
     if (imageSize <= 0) {
-        return pntr_set_error("Resulted in no image");
+        return pntr_set_error(PNTR_ERROR_UNKNOWN);
     }
 
-    void* data = PNTR_MALLOC(imageSize);
+    void* data = PNTR_MALLOC((size_t)imageSize);
     if (data == NULL) {
-        return pntr_set_error("Failed to allocate memory for new image with different pixel format");
+        return pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     int pixelSize = pntr_get_pixel_data_size(1, 1, pixelFormat);
@@ -3732,52 +5056,25 @@ PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSi
 /**
  * Gets a PNG representation of the given image in memory.
  *
- * If PNTR_DISABLE_PNG is defined, this function will not be supported.
+ * @note This method can be overloaded by defining \c PNTR_SAVE_IMAGE_TO_MEMORY .
  *
  * @param image The image to save to memory.
+ * @param type The type of the image. Use PNTR_IMAGE_TYPE_UNKNOWN if unknown. PNTR_IMAGE_TYPE_PNG, PNTR_IMAGE_TYPE_JPG, etc.
  * @param dataSize Where to put the resulting size of the image. Use NULL if you do not care about getting the file size.
  *
- * @return The image data in memory. This data must be freed when finished using.
+ * @return The image data in memory. This data must be freed when finished using. NULL on failure.
  *
- * @see PNTR_DISABLE_PNG
+ * @see PNTR_SAVE_IMAGE_TO_MEMORY
+ * @see PNTR_IMAGE_TYPE_PNG
+ * @see PNTR_IMAGE_TYPE_JPG
+ * @see PNTR_IMAGE_TYPE_UNKNOWN
  */
-PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned int* dataSize) {
+PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize) {
     if (image == NULL) {
-        return pntr_set_error("Requires an actual image");
+        return (unsigned char*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    #ifdef PNTR_DISABLE_PNG
-        if (dataSize != NULL) {
-            *dataSize = 0;
-        }
-        return pntr_set_error("Saving images requires to not define PNTR_DISABLE_PNG");
-    #else
-        cp_image_t cpImage = PNTR_CLITERAL(cp_image_t) {
-            .w = image->width,
-            .h = image->height
-        };
-
-        cpImage.pix = (cp_pixel_t*)pntr_image_to_pixelformat(image, NULL, PNTR_PIXELFORMAT_RGBA8888);
-        if (cpImage.pix == NULL) {
-            return pntr_set_error("Failed to port image to RGBA8888");
-        }
-
-        cp_saved_png_t png = cp_save_png_to_memory(&cpImage);
-        if (png.data == NULL) {
-            cp_free_png(&cpImage);
-            return pntr_set_error("Failed to save image to memory");
-        }
-
-        // Export the datasize
-        if (dataSize != NULL) {
-            *dataSize = (unsigned int)png.size;
-        }
-
-        // Free up the temporary copy
-        cp_free_png(&cpImage);
-
-        return (unsigned char*)png.data;
-    #endif  // PNTR_DISABLE_PNG
+    return PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize);
 }
 
 /**
@@ -3792,8 +5089,9 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, unsigned in
  * @see pntr_save_file()
  */
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
+    pntr_image_type type = pntr_get_file_image_type(fileName);
     unsigned int dataSize;
-    unsigned char* data = pntr_save_image_to_memory(image, &dataSize);
+    unsigned char* data = pntr_save_image_to_memory(image, type, &dataSize);
     if (data == NULL) {
         return false;
     }
@@ -3811,8 +5109,8 @@ PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
  *
  * @see pntr_load_file()
  */
-PNTR_API inline void pntr_unload_file(unsigned char* fileData) {
-    pntr_unload_memory(fileData);
+PNTR_API void pntr_unload_file(unsigned char* fileData) {
+    pntr_unload_memory((void*)fileData);
 }
 
 /**
@@ -3836,7 +5134,7 @@ PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float thresho
 
     for (int y = 0; y < image->height; y++) {
         for (int x = 0; x < image->width; x++) {
-            if (image->data[y * (image->pitch >> 2) + x].a > alphaThreshold) {
+            if (image->data[y * (image->pitch >> 2) + x].rgba.a > alphaThreshold) {
                 if (x < xMin) {
                     xMin = x;
                 }
@@ -3877,23 +5175,31 @@ PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float thresho
  *
  * @see pntr_image_from_image()
  */
-PNTR_API void pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
+PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
-        return;
+        return false;
     }
 
     pntr_image* newImage = pntr_image_from_image(image, x, y, width, height);
     if (newImage == NULL) {
-        return;
+        return false;
     }
 
-    PNTR_FREE(image->data);
+    // Clear the data if it isn't owned by another image.
+    if (!image->subimage) {
+        PNTR_FREE(image->data);
+    }
+
     image->data = newImage->data;
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
     image->subimage = false;
+    pntr_image_reset_clip(image);
+
     PNTR_FREE(newImage);
+
+    return true;
 }
 
 /**
@@ -3935,7 +5241,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
 
     contrast = (1.0f + contrast) * contrast;
 
-    float pR = (float)color.r / 255.0f - 0.5f;
+    float pR = (float)color.rgba.r / 255.0f - 0.5f;
     pR *= contrast;
     pR += 0.5f;
     pR *= 255;
@@ -3946,7 +5252,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         pR = 255;
     }
 
-    float pG = (float)color.g / 255.0f - 0.5f;
+    float pG = (float)color.rgba.g / 255.0f - 0.5f;
     pG *= contrast;
     pG += 0.5f;
     pG *= 255;
@@ -3957,7 +5263,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         pG = 255;
     }
 
-    float pB = (float)color.b / 255.0f - 0.5f;
+    float pB = (float)color.rgba.b / 255.0f - 0.5f;
     pB *= contrast;
     pB += 0.5f;
     pB *= 255;
@@ -3968,12 +5274,7 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         pB = 255;
     }
 
-    return PNTR_CLITERAL(pntr_color) {
-        .r = (unsigned char)pR,
-        .g = (unsigned char)pG,
-        .b = (unsigned char)pB,
-        .a = color.a,
-    };
+    return PNTR_NEW_COLOR((unsigned char)pR, (unsigned char)pG, (unsigned char)pB, color.rgba.a);
 }
 
 /**
@@ -3996,9 +5297,9 @@ PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast) {
         contrast = 1.0f;
     }
 
-    for (int y = 0; y < image->height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = 0; x < image->width; x++) {
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_contrast(*pixel, contrast);
             pixel++;
         }
@@ -4012,6 +5313,8 @@ PNTR_API void pntr_image_color_contrast(pntr_image* image, float contrast) {
  * @param alphaMask An image that has the alphaMask data.
  * @param posX Where to position the alpha mask on the image.
  * @param posY Where to position the alpha mask on the image.
+ *
+ * @todo // TODO: Add a pntr_draw_image_alpha_mask function.
  */
 PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY) {
     if (image == NULL || alphaMask == NULL) {
@@ -4034,15 +5337,16 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
     if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
             PNTR_MIN(dstRect.width, srcRect.width),
             PNTR_MIN(dstRect.height, srcRect.height),
-            image->width, image->height, &dstRect)) {
+            image->clip.x, image->clip.y,
+            image->clip.width, image->clip.height, &dstRect)) {
         return;
     }
 
     for (int y = 0; y < dstRect.height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, posX, posY + y);
+        pntr_color* pixel = &PNTR_PIXEL(image, dstRect.x, dstRect.y + y);
         for (int x = 0; x < dstRect.width; x++) {
-            if (pixel->a > 0) {
-                pixel->a = PNTR_PIXEL(alphaMask, x, y).a;
+            if (pixel->rgba.a > 0) {
+                pixel->rgba.a = PNTR_PIXEL(alphaMask, x, y).rgba.a;
             }
             pixel++;
         }
@@ -4058,32 +5362,59 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
  * @param offsetX How to offset the image once its canvas is resized. Use 0 if you like to keep the original image on the left.
  * @param offsetY How to offset the image once its canvas is resized. Use 0 if you like to keep the original image at the top.
  * @param fill The color to use for the background of the new image.
+ *
+ * @return True or false depending on if the image was resized correctly.
  */
-PNTR_API void pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
+PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
     if (image == NULL) {
-        return;
+        pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+        return false;
     }
 
     pntr_image* newImage = pntr_gen_image_color(newWidth, newHeight, fill);
     if (newImage == NULL) {
-        pntr_set_error("pntr_image_resize_canvas: Failed to build new image");
-        return;
+        return false;
     }
 
     pntr_draw_image(newImage, image, offsetX, offsetY);
 
-    pntr_color* oldData = image->data;
+    bool hadDefaultClip = (image->clip.x == 0 && image->clip.y == 0 &&
+        image->clip.width == image->width && image->clip.height == image->height);
+    pntr_rectangle oldClip = image->clip;
+
+    // Clear the image if it's not a subimage
+    if (!image->subimage) {
+        PNTR_FREE(image->data);
+    }
+
     image->data = newImage->data;
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
     image->subimage = false;
 
-    PNTR_FREE(oldData);
+    if (hadDefaultClip) {
+        pntr_image_reset_clip(image);
+    } else {
+        int cx = oldClip.x + offsetX;
+        int cy = oldClip.y + offsetY;
+        int cx2 = cx + oldClip.width;
+        int cy2 = cy + oldClip.height;
+        if (cx < 0) cx = 0;
+        if (cy < 0) cy = 0;
+        if (cx2 > newWidth) cx2 = newWidth;
+        if (cy2 > newHeight) cy2 = newHeight;
+        image->clip.x = cx;
+        image->clip.y = cy;
+        image->clip.width = (cx2 > cx) ? cx2 - cx : 0;
+        image->clip.height = (cy2 > cy) ? cy2 - cy : 0;
+    }
+
     PNTR_FREE(newImage);
+    return true;
 }
 
-PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4092,42 +5423,60 @@ PNTR_API inline void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, i
         PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         flipHorizontal,
-        flipVertical
+        flipVertical,
+        flipDiagonal
     );
 }
 
-PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical) {
+PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
+    // If we are not flipping at all, use the simpler draw function.
+    if (!flipHorizontal && !flipVertical && !flipDiagonal) {
+        pntr_draw_image_tint_rec(dst, src, srcRec, posX, posY, PNTR_WHITE);
+        return;
+    }
+
     if (dst == NULL || src == NULL) {
         return;
     }
 
-    if (!_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, src->width, src->height, &srcRec)) {
+    if (!_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, 0, 0, src->width, src->height, &srcRec)) {
         return;
     }
 
-    // If we are not flipping at all, use the simpler draw function.
-    if (flipHorizontal == false && flipVertical == false) {
-        pntr_draw_image_rec(dst, src, srcRec, posX, posY);
-        return;
-    }
-
-    for (int x = 0; x < srcRec.width; x++) {
-        if (posX + x < 0 || posX + x > dst->width) {
-            continue;
-        }
-        for (int y = 0; y < srcRec.height; y++) {
-            if (posY + y < 0 || posY + y > dst->height) {
-                continue;
+    int dstX, dstY;
+    for (int y = 0; y < srcRec.height; y++) {
+        for (int x = 0; x < srcRec.width; x++) {
+            // Determine the destination pixels based on flip parameters
+            if (flipDiagonal) {
+                dstX = flipHorizontal ? srcRec.height - y - 1 : y;
+                dstY = flipVertical ? srcRec.width - x - 1 : x;
             }
-            pntr_color source = pntr_image_get_color(src,
-                flipHorizontal ? srcRec.x + srcRec.width - x : srcRec.x + x,
-                flipVertical ? srcRec.y + srcRec.height - y : srcRec.y + y);
-            pntr_draw_point(dst, posX + x, posY + y, source);
+            else {
+                dstY = flipVertical ? srcRec.height - y - 1 : y;
+                dstX = flipHorizontal ? srcRec.width - x - 1 : x;
+            }
+
+            pntr_draw_point(dst, posX + dstX, posY + dstY,
+                pntr_image_get_color(src, x, y)
+            );
         }
     }
 }
 
-PNTR_API inline void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+/**
+ * Draw a scaled image.
+ *
+ * @param dst Pointer to the destination image where the output will be stored.
+ * @param src Pointer to the source image that will be drawn onto the destination image.
+ * @param posX Where to draw the scaled image, at the X coordinate.
+ * @param posY Where to draw the scaled image, at the Y coordinate.
+ * @param scaleX The scale of which to apply to the width of the image.
+ * @param scaleY The scale of which to apply to the height of the image.
+ * @param offsetX How much to offset the X drawing of the image, relative from its original source size.
+ * @param offsetY How much to offset the Y drawing of the image, relative from its original source size.
+ * @param filter Filter to be applied during the rotation.
+ */
+PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4145,7 +5494,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
         return;
     }
 
-    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, src->width, src->height, &srcRect)) {
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
         return;
     }
 
@@ -4155,14 +5504,13 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
     switch (filter) {
-        case PNTR_FILTER_SMOOTH:
         case PNTR_FILTER_BILINEAR: {
             float xRatio = (float)srcRect.width / (float)newWidth;
             float yRatio = (float)srcRect.height / (float)newHeight;
 
             for (int y = 0; y < newHeight; y++) {
                 int yPosition = posY + y - offsetYRatio;
-                if (yPosition < 0 || yPosition >= dst->height) {
+                if (yPosition < dst->clip.y || yPosition >= dst->clip.y + dst->clip.height) {
                     continue;
                 }
                 float srcY = (float)y * yRatio;
@@ -4170,7 +5518,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
                 int srcYPixelPlusOne = y == newHeight - 1 ? (int)srcYPixel : (int)srcYPixel + 1;
                 for (int x = 0; x < newWidth; x++) {
                     int xPosition = posX + x - offsetXRatio;
-                    if (xPosition < 0 || xPosition >= dst->width) {
+                    if (xPosition < dst->clip.x || xPosition >= dst->clip.x + dst->clip.width) {
                         continue;
                     }
                     float srcX = (float)x * xRatio;
@@ -4195,13 +5543,13 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 
             for (int y = 0; y < newHeight; y++) {
                 int yPosition = posY + y - offsetYRatio;
-                if (yPosition < 0 || yPosition >= dst->height) {
+                if (yPosition < dst->clip.y || yPosition >= dst->clip.y + dst->clip.height) {
                     continue;
                 }
                 int y2 = (y * yRatio) >> 16;
                 for (int x = 0; x < newWidth; x++) {
                     int xPosition = posX + x - offsetXRatio;
-                    if (xPosition < 0 || xPosition >= dst->width) {
+                    if (xPosition < dst->clip.x || xPosition >= dst->clip.x + dst->clip.width) {
                         continue;
                     }
                     int x2 = (x * xRatio) >> 16;
@@ -4338,11 +5686,14 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
  * @param degrees The angle to normalize.
  *
  * @return The new degrees represented between 0 and 360.
+ *
+ * @internal
  */
 float _pntr_normalize_degrees(float degrees) {
     if (degrees < 0) {
         return 360.0f - PNTR_FMODF(-degrees, 360.0f);
     }
+
     return PNTR_FMODF(degrees, 360.0f);
 }
 
@@ -4419,13 +5770,13 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
  *
  * @return The bilinear interpolated color.
  */
-PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
-    return PNTR_CLITERAL(pntr_color) {
-        .r = (uint8_t)(color00.r * (1 - coordinateX) * (1 - coordinateY) + color01.r * (1 - coordinateX) * coordinateY + color10.r * coordinateX * (1 - coordinateY) + color11.r * coordinateX * coordinateY),
-        .g = (uint8_t)(color00.g * (1 - coordinateX) * (1 - coordinateY) + color01.g * (1 - coordinateX) * coordinateY + color10.g * coordinateX * (1 - coordinateY) + color11.g * coordinateX * coordinateY),
-        .b = (uint8_t)(color00.b * (1 - coordinateX) * (1 - coordinateY) + color01.b * (1 - coordinateX) * coordinateY + color10.b * coordinateX * (1 - coordinateY) + color11.b * coordinateX * coordinateY),
-        .a = (uint8_t)(color00.a * (1 - coordinateX) * (1 - coordinateY) + color01.a * (1 - coordinateX) * coordinateY + color10.a * coordinateX * (1 - coordinateY) + color11.a * coordinateX * coordinateY)
-    };
+PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
+    return PNTR_NEW_COLOR(
+        (uint8_t)(color00.rgba.r * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.r * (1 - coordinateX) * coordinateY + color10.rgba.r * coordinateX * (1 - coordinateY) + color11.rgba.r * coordinateX * coordinateY),
+        (uint8_t)(color00.rgba.g * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.g * (1 - coordinateX) * coordinateY + color10.rgba.g * coordinateX * (1 - coordinateY) + color11.rgba.g * coordinateX * coordinateY),
+        (uint8_t)(color00.rgba.b * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.b * (1 - coordinateX) * coordinateY + color10.rgba.b * coordinateX * (1 - coordinateY) + color11.rgba.b * coordinateX * coordinateY),
+        (uint8_t)(color00.rgba.a * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.a * (1 - coordinateX) * coordinateY + color10.rgba.a * coordinateX * (1 - coordinateY) + color11.rgba.a * coordinateX * coordinateY)
+    );
 }
 
 /**
@@ -4443,7 +5794,7 @@ PNTR_API inline pntr_color pntr_color_bilinear_interpolate(pntr_color color00, p
  * @see pntr_draw_image_rec_rotated()
  * @see pntr_image_rotate()
  */
-PNTR_API inline void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter) {
+PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -4514,7 +5865,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         }
 
         // Exit if it's not even on the screen.
-        if (dstRect.x + dstRect.width < 0 || dstRect.y + dstRect.height < 0 || dstRect.x > dst->width || dstRect.y > dst->height) {
+        if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
             return;
         }
 
@@ -4558,7 +5909,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
     // Make sure we're actually drawing on the screen.
-    if (posX - offsetXRatio + newWidth < 0 || posX - offsetXRatio >= dst->width || posY - offsetYRatio + newHeight < 0 || posY - offsetYRatio >= dst->height) {
+    if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width || posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -4566,19 +5917,18 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     float centerY = (float)srcRect.height / 2.0f;
     int srcXint, srcYint;
     float srcX, srcY;
-    int destX, destY;
 
     for (int y = 0; y < newHeight; y++) {
         // Only draw onto the screen.
-        destY = posY + y - offsetYRatio;
-        if (destY < 0 || destY >= dst->height) {
+        int destY = posY + y - offsetYRatio;
+        if (destY < dst->clip.y || destY >= dst->clip.y + dst->clip.height) {
             continue;
         }
 
         for (int x = 0; x < newWidth; x++) {
             // Make sure we're actually drawing onto the screen.
-            destX = posX + x - offsetXRatio;
-            if (destX < 0 || destX >= dst->width ) {
+            int destX = posX + x - offsetXRatio;
+            if (destX < dst->clip.x || destX >= dst->clip.x + dst->clip.width ) {
                 continue;
             }
 
@@ -4647,6 +5997,80 @@ PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color t
 }
 
 /**
+ * Get the clip rectangle from the given image. Anything outside of the clip cannot be changed.
+ *
+ * @param image The image of which to get the clip rectangle for.
+ *
+ * @return The clip rectangle associated with the given image.
+ */
+PNTR_API pntr_rectangle pntr_image_get_clip(pntr_image* image) {
+    if (image == NULL) {
+        return PNTR_CLITERAL(pntr_rectangle) {
+            .x = 0,
+            .y = 0,
+            .width = 0,
+            .height = 0
+        };
+    }
+
+    return image->clip;
+}
+
+/**
+ * Set the clipping rectangle for the given image to restrict drawing within.
+ *
+ * @param image The image to set the clipping rectangle.
+ * @param x The X coordinate for the clipping rectangle.
+ * @param y The Y coordinate for the clipping rectangle.
+ * @param width The width of the desired clipping rectangle.
+ * @param height The height of the desired clipping rectangle.
+ *
+ * @see pntr_image_set_clip_rec()
+ * @see pntr_image_reset_clip()
+ */
+PNTR_API void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height) {
+    if (image == NULL) {
+        return;
+    }
+
+    pntr_rectangle clip;
+    if (_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &clip)) {
+        image->clip = clip;
+    }
+}
+
+/**
+ * Set the clipping rectangle for the given image to restrict drawing within, using a rectangle.
+ *
+ * @param image The image to set the clipping rectangle.
+ * @param clip The rectangle to set the new clip boundries.
+ *
+ * @see pntr_image_set_clip()
+ * @see pntr_image_reset_clip()
+ */
+PNTR_API void pntr_image_set_clip_rec(pntr_image* image, pntr_rectangle clip) {
+    pntr_image_set_clip(image, clip.x, clip.y, clip.width, clip.height);
+}
+
+/**
+ * Reset the clipping rectangle for the given image.
+ *
+ * @param image The image to reset the clipping image for.
+ *
+ * @see pntr_image_set_clip()
+ */
+PNTR_API void pntr_image_reset_clip(pntr_image* image) {
+    if (image == NULL) {
+        return;
+    }
+
+    image->clip.x = 0;
+    image->clip.y = 0;
+    image->clip.width = image->width;
+    image->clip.height = image->height;
+}
+
+/**
  * Allocates the given amount of bytes in size.
  *
  * @param size The amount of bytes to allocate to memory.
@@ -4655,7 +6079,7 @@ PNTR_API pntr_image* pntr_gen_image_gradient(int width, int height, pntr_color t
  *
  * @see PNTR_MALLOC
  */
-PNTR_API inline void* pntr_load_memory(size_t size) {
+PNTR_API void* pntr_load_memory(size_t size) {
     return PNTR_MALLOC(size);
 }
 
@@ -4667,9 +6091,11 @@ PNTR_API inline void* pntr_load_memory(size_t size) {
  * @see PNTR_FREE
  */
 PNTR_API void pntr_unload_memory(void* pointer) {
-    if (pointer != NULL) {
-        PNTR_FREE(pointer);
+    if (pointer == NULL) {
+        return;
     }
+
+    PNTR_FREE(pointer);
 }
 
 /**
@@ -4683,7 +6109,7 @@ PNTR_API void pntr_unload_memory(void* pointer) {
  *
  * @see PNTR_MEMCPY
  */
-PNTR_API inline void* pntr_memory_copy(void* destination, void* source, size_t size) {
+PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size) {
     return PNTR_MEMCPY(destination, source, size);
 }
 

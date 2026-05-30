@@ -1,22 +1,20 @@
-void example_shapes_init() {
-    // Nothing
-}
+void pntr_examples_shapes() {
+    pntr_image* canvas = pntr_gen_image_color(400, 225, PNTR_RAYWHITE);
 
-const char* example_shapes_update(pntr_image* canvas) {
     // Define some colors
     pntr_color lightGreen = PNTR_GREEN;
-    lightGreen.a = 180;
+    lightGreen.rgba.a = 180;
     pntr_color lightBlue = PNTR_BLUE;
-    lightBlue.a = 180;
+    lightBlue.rgba.a = 180;
 
     // Rectangles
     pntr_draw_rectangle_fill(canvas, 10, 30, 50, 50, PNTR_RED);
     pntr_draw_rectangle_fill(canvas, 20, 40, 50, 50, lightGreen);
     pntr_draw_rectangle_fill(canvas, 30, 50, 50, 50, lightBlue);
 
-    pntr_draw_rectangle(canvas, 10, 120, 50, 50, 5, PNTR_RED);
-    pntr_draw_rectangle(canvas, 20, 130, 50, 50, 5, PNTR_GREEN);
-    pntr_draw_rectangle(canvas, 30, 140, 50, 50, 5, PNTR_BLUE);
+    pntr_draw_rectangle_thick(canvas, 10, 120, 50, 50, 5, PNTR_RED);
+    pntr_draw_rectangle_thick(canvas, 20, 130, 50, 50, 5, PNTR_GREEN);
+    pntr_draw_rectangle_thick(canvas, 30, 140, 50, 50, 5, PNTR_BLUE);
 
     // Circle
     pntr_draw_circle(canvas, 110, 60, 21, PNTR_RED);
@@ -52,15 +50,15 @@ const char* example_shapes_update(pntr_image* canvas) {
     pntr_draw_arc(canvas, 300, 120, radius, 90.0f, 180.0f, radius *1.5f, PNTR_RED);
 
     // Polyline
-    points[0] = PNTR_CLITERAL(pntr_vector) {240, 110};
-    points[1] = PNTR_CLITERAL(pntr_vector) {260, 130};
-    points[2] = PNTR_CLITERAL(pntr_vector) {220, 140};
-    points[3] = PNTR_CLITERAL(pntr_vector) {240, 160};
+    points[0] = PNTR_CLITERAL(pntr_vector) {240, 80};
+    points[1] = PNTR_CLITERAL(pntr_vector) {260, 100};
+    points[2] = PNTR_CLITERAL(pntr_vector) {220, 110};
+    points[3] = PNTR_CLITERAL(pntr_vector) {240, 130};
     pntr_draw_polyline(canvas, points, 4, PNTR_PURPLE);
 
-    return "Shapes";
-}
+    // Line Curve
+    pntr_draw_line_curve(canvas, points[0], points[1], points[2], points[3], 40, PNTR_DARKBLUE);
 
-void example_shapes_unload() {
-    // Nothing
+    pntr_save_image(canvas, "pntr_examples_shapes.png");
+    pntr_unload_image(canvas);
 }
