@@ -467,6 +467,12 @@ typedef enum pntr_image_type {
     PNTR_IMAGE_TYPE_BMP /** Image type: BMP - Bitmap */
 } pntr_image_type;
 
+typedef enum pntr_text_align {
+    PNTR_TEXT_ALIGN_LEFT = 0, /** Text alignment: Left */
+    PNTR_TEXT_ALIGN_CENTER,   /** Text alignment: Center */
+    PNTR_TEXT_ALIGN_RIGHT     /** Text alignment: Right */
+} pntr_text_align;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -523,6 +529,7 @@ PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX,
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
+PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint);
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
 #ifdef PNTR_ENABLE_VARGS
 PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...);
@@ -4167,6 +4174,48 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
  */
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint) {
     pntr_draw_text_len(dst, font, text, 0, posX, posY, tint);
+}
+
+/**
+ * Draws text on the given image with horizontal alignment.
+ *
+ * @param dst The image to draw on.
+ * @param font The font to use.
+ * @param text The text to draw. Multi-line supported via \\n.
+ * @param posX The reference X position (left edge for LEFT, center for CENTER, right edge for RIGHT).
+ * @param posY The top Y position.
+ * @param align The horizontal alignment.
+ * @param tint The tint color.
+ *
+ * @see pntr_draw_text()
+ */
+PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint) {
+    if (dst == NULL || font == NULL || text == NULL) {
+        return;
+    }
+
+    if (align == PNTR_TEXT_ALIGN_LEFT) {
+        pntr_draw_text(dst, font, text, posX, posY, tint);
+        return;
+    }
+
+    const char* lineStart = text;
+    int currentY = posY;
+
+    while (lineStart != NULL) {
+        const char* lineEnd = PNTR_STRCHR(lineStart, '\n');
+        int lineLen = (int)(lineEnd != NULL ? lineEnd - lineStart : (int)PNTR_STRLEN(lineStart));
+        pntr_vector size = pntr_measure_text_ex(font, lineStart, lineLen);
+        int lineX;
+        if (align == PNTR_TEXT_ALIGN_CENTER) {
+            lineX = posX - size.x / 2;
+        } else {
+            lineX = posX - size.x;
+        }
+        pntr_draw_text_len(dst, font, lineStart, lineLen, lineX, currentY, tint);
+        currentY += size.y;
+        lineStart = (lineEnd != NULL) ? lineEnd + 1 : NULL;
+    }
 }
 
 /**
