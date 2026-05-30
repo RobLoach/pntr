@@ -26,6 +26,9 @@ void pntr_examples_shapes() {
     // Line
     pntr_draw_line(canvas, 200, 50, 250, 80, PNTR_DARKGREEN);
 
+    // Anti-aliased line
+    pntr_draw_line_aa(canvas, 200, 80, 250, 50, PNTR_MAROON);
+
     // Triangle
     pntr_draw_triangle_fill(canvas,
         250, 50,
