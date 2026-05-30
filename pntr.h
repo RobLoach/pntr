@@ -598,6 +598,7 @@ PNTR_API void pntr_unload_memory(void* pointer);
 PNTR_API void* pntr_memory_copy(void* destination, void* source, size_t size);
 PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath);
 
+PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 PNTR_API void pntr_draw_line_thick(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color);
 PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color);
 PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color);
@@ -1893,8 +1894,7 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
 /**
  * Draws a line on the given image.
  *
- * TODO: pntr_draw_line: Add anti-aliased, and thickness to the lines.
- *
+ * @see pntr_draw_line_aa()
  * @see pntr_draw_line_horizontal()
  * @see pntr_draw_line_vertical()
  */
@@ -1988,6 +1988,95 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
         else {
             pntr_draw_point(dst, v, u, color);
         }
+    }
+}
+
+/**
+ * Draws an anti-aliased line using Xiaolin Wu's algorithm.
+ *
+ * @see pntr_draw_line()
+ */
+PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0) {
+        return;
+    }
+
+    int absDx = (endPosX > startPosX) ? endPosX - startPosX : startPosX - endPosX;
+    int absDy = (endPosY > startPosY) ? endPosY - startPosY : startPosY - endPosY;
+
+    if (absDx == 0) {
+        pntr_draw_line_vertical(dst, startPosX, (startPosY < endPosY) ? startPosY : endPosY, absDy, color);
+        return;
+    }
+    if (absDy == 0) {
+        pntr_draw_line_horizontal(dst, (startPosX < endPosX) ? startPosX : endPosX, startPosY, absDx, color);
+        return;
+    }
+
+    unsigned char baseAlpha = color.rgba.a;
+    float x0 = (float)startPosX, y0 = (float)startPosY;
+    float x1 = (float)endPosX, y1 = (float)endPosY;
+    int steep = absDy > absDx;
+
+    if (steep) {
+        float tmp = x0; x0 = y0; y0 = tmp;
+        tmp = x1; x1 = y1; y1 = tmp;
+    }
+    if (x0 > x1) {
+        float tmp = x0; x0 = x1; x1 = tmp;
+        tmp = y0; y0 = y1; y1 = tmp;
+    }
+
+    float gradient = (y1 - y0) / (x1 - x0);
+
+    // First endpoint
+    float xend = PNTR_FLOORF(x0 + 0.5f);
+    float yend = y0 + gradient * (xend - x0);
+    float xgap = 1.0f - (x0 + 0.5f - PNTR_FLOORF(x0 + 0.5f));
+    int xpxl1 = (int)xend;
+    int ypxl1 = (int)PNTR_FLOORF(yend);
+    float frac = yend - PNTR_FLOORF(yend);
+
+    color.rgba.a = (unsigned char)((1.0f - frac) * xgap * (float)baseAlpha);
+    if (steep) pntr_draw_point(dst, ypxl1, xpxl1, color);
+    else pntr_draw_point(dst, xpxl1, ypxl1, color);
+
+    color.rgba.a = (unsigned char)(frac * xgap * (float)baseAlpha);
+    if (steep) pntr_draw_point(dst, ypxl1 + 1, xpxl1, color);
+    else pntr_draw_point(dst, xpxl1, ypxl1 + 1, color);
+
+    float intery = yend + gradient;
+
+    // Second endpoint
+    xend = PNTR_FLOORF(x1 + 0.5f);
+    yend = y1 + gradient * (xend - x1);
+    xgap = x1 + 0.5f - PNTR_FLOORF(x1 + 0.5f);
+    int xpxl2 = (int)xend;
+    int ypxl2 = (int)PNTR_FLOORF(yend);
+    frac = yend - PNTR_FLOORF(yend);
+
+    color.rgba.a = (unsigned char)((1.0f - frac) * xgap * (float)baseAlpha);
+    if (steep) pntr_draw_point(dst, ypxl2, xpxl2, color);
+    else pntr_draw_point(dst, xpxl2, ypxl2, color);
+
+    color.rgba.a = (unsigned char)(frac * xgap * (float)baseAlpha);
+    if (steep) pntr_draw_point(dst, ypxl2 + 1, xpxl2, color);
+    else pntr_draw_point(dst, xpxl2, ypxl2 + 1, color);
+
+    // Main loop
+    for (int x = xpxl1 + 1; x < xpxl2; x++) {
+        frac = intery - PNTR_FLOORF(intery);
+        int iy = (int)PNTR_FLOORF(intery);
+
+        color.rgba.a = (unsigned char)((1.0f - frac) * (float)baseAlpha);
+        if (steep) pntr_draw_point(dst, iy, x, color);
+        else pntr_draw_point(dst, x, iy, color);
+
+        color.rgba.a = (unsigned char)(frac * (float)baseAlpha);
+        if (steep) pntr_draw_point(dst, iy + 1, x, color);
+        else pntr_draw_point(dst, x, iy + 1, color);
+
+        intery += gradient;
     }
 }
 
