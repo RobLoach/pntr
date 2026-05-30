@@ -2586,34 +2586,45 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
     if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
         return;
     }
+    if (radiusX < 0) radiusX = -radiusX;
+    if (radiusY < 0) radiusY = -radiusY;
 
-    int x = 0;
-    if (radiusX < 0) {
-        radiusX = -radiusX;
-    }
-    if (radiusY < 0) {
-        radiusY = -radiusY;
-    }
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
+    long x = 0, y = radiusY;
+    long dx = 0, dy = 2 * rx2 * y;
+    long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
 
-    int radiusXSquared = radiusX * radiusX;
-    int radiusXSquared2 = radiusXSquared * 2;
-    int radiusYSquared = radiusY * radiusY;
-    int radiusYSquared2 = radiusYSquared * 2;
-    int error = radiusYSquared - radiusXSquared * radiusY;
-
-    while (radiusY >= 0) {
-        pntr_draw_point(dst, centerX + x, centerY + radiusY, color);
-        pntr_draw_point(dst, centerX - x, centerY + radiusY, color);
-        pntr_draw_point(dst, centerX - x, centerY - radiusY, color);
-        pntr_draw_point(dst, centerX + x, centerY - radiusY, color);
-
-        if (error <= 0) {
-            x++;
-            error += radiusYSquared2 * x + radiusYSquared;
+    while (dx < dy) {
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY - y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY - y), color);
+        x++;
+        dx += 2 * ry2;
+        if (p < 0) {
+            p += ry2 + dx;
+        } else {
+            y--;
+            dy -= 2 * rx2;
+            p += ry2 + dx - dy;
         }
-        if (error > 0) {
-            radiusY--;
-            error -= radiusXSquared2 * radiusY - radiusXSquared;
+    }
+
+    p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
+    while (y >= 0) {
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY + y), color);
+        pntr_draw_point(dst, (int)(centerX + x), (int)(centerY - y), color);
+        pntr_draw_point(dst, (int)(centerX - x), (int)(centerY - y), color);
+        y--;
+        dy -= 2 * rx2;
+        if (p > 0) {
+            p += rx2 - dy;
+        } else {
+            x++;
+            dx += 2 * ry2;
+            p += rx2 - dy + dx;
         }
     }
 }
@@ -2633,37 +2644,28 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
  * @see pntr_draw_ellipse()
  */
 PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
-    if (radiusX < 0) {
-        radiusX = -radiusX;
-    }
-    if (radiusY < 0) {
-        radiusY = -radiusY;
-    }
+    if (radiusX < 0) radiusX = -radiusX;
+    if (radiusY < 0) radiusY = -radiusY;
 
     if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
         return;
     }
 
-    int x = 0;
-    int radiusXSquared = radiusX * radiusX;
-    int radiusXSquared2 = radiusXSquared * 2;
-    int radiusYSquared = radiusY * radiusY;
-    int radiusYSquared2 = radiusYSquared * 2;
-    int error = radiusYSquared - radiusXSquared * radiusY;
+    int largestX = radiusX;
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
 
-    while (radiusY >= 0) {
-        pntr_draw_line_horizontal(dst, centerX - x, centerY + radiusY, x, color);
-        pntr_draw_line_horizontal(dst, centerX - x, centerY - radiusY, x, color);
-        pntr_draw_line_horizontal(dst, centerX, centerY + radiusY, x, color);
-        pntr_draw_line_horizontal(dst, centerX, centerY - radiusY, x, color);
-
-        if (error <= 0) {
-            x++;
-            error += radiusYSquared2 * x + radiusYSquared;
-        }
-        if (error > 0) {
-            radiusY--;
-            error -= radiusXSquared2 * radiusY - radiusXSquared;
+    for (int y = 0; y <= radiusY; y++) {
+        long y2 = (long)y * y;
+        for (int x = largestX; x >= 0; x--) {
+            if ((long)x * x * ry2 + y2 * rx2 <= rx2 * ry2) {
+                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x, color);
+                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x, color);
+                pntr_draw_line_horizontal(dst, centerX, centerY + y, x, color);
+                pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
+                largestX = x;
+                break;
+            }
         }
     }
 }
@@ -2691,34 +2693,46 @@ PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY,
     if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
         return;
     }
+    if (radiusX < 0) radiusX = -radiusX;
+    if (radiusY < 0) radiusY = -radiusY;
 
-    int x = 0;
-    if (radiusX < 0) {
-        radiusX = -radiusX;
-    }
-    if (radiusY < 0) {
-        radiusY = -radiusY;
-    }
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
+    long x = 0, y = radiusY;
+    long dx = 0, dy = 2 * rx2 * y;
+    long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
+    int t2 = thickness / 2;
 
-    int radiusXSquared = radiusX * radiusX;
-    int radiusXSquared2 = radiusXSquared * 2;
-    int radiusYSquared = radiusY * radiusY;
-    int radiusYSquared2 = radiusYSquared * 2;
-    int error = radiusYSquared - radiusXSquared * radiusY;
-
-    while (radiusY >= 0) {
-        pntr_draw_circle_fill(dst, centerX + x, centerY + radiusY, thickness/2, color);
-        pntr_draw_circle_fill(dst, centerX - x, centerY + radiusY, thickness/2, color);
-        pntr_draw_circle_fill(dst, centerX - x, centerY - radiusY, thickness/2, color);
-        pntr_draw_circle_fill(dst, centerX + x, centerY - radiusY, thickness/2, color);
-
-        if (error <= 0) {
-            x++;
-            error += radiusYSquared2 * x + radiusYSquared;
+    while (dx < dy) {
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY - y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY - y), t2, color);
+        x++;
+        dx += 2 * ry2;
+        if (p < 0) {
+            p += ry2 + dx;
+        } else {
+            y--;
+            dy -= 2 * rx2;
+            p += ry2 + dx - dy;
         }
-        if (error > 0) {
-            radiusY--;
-            error -= radiusXSquared2 * radiusY - radiusXSquared;
+    }
+
+    p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
+    while (y >= 0) {
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY + y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX + x), (int)(centerY - y), t2, color);
+        pntr_draw_circle_fill(dst, (int)(centerX - x), (int)(centerY - y), t2, color);
+        y--;
+        dy -= 2 * rx2;
+        if (p > 0) {
+            p += rx2 - dy;
+        } else {
+            x++;
+            dx += 2 * ry2;
+            p += rx2 - dy + dx;
         }
     }
 }
