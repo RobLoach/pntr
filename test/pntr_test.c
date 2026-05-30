@@ -532,6 +532,17 @@ MODULE(pntr, {
         EQUALS(image->height, 400);
         COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_RED);
         COLOREQUALS(pntr_image_get_color(image, 150, 150), PNTR_BLUE);
+        pntr_rectangle expectedClip = {0, 0, 400, 400};
+        RECTEQUALS(pntr_image_get_clip(image), expectedClip);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_resize_canvas() preserves custom clip", {
+        pntr_image* image = pntr_gen_image_color(200, 200, PNTR_BLUE);
+        pntr_image_set_clip(image, 10, 10, 50, 50);
+        pntr_image_resize_canvas(image, 300, 300, 20, 20, PNTR_RED);
+        pntr_rectangle expectedCustomClip = {30, 30, 50, 50};
+        RECTEQUALS(pntr_image_get_clip(image), expectedCustomClip);
         pntr_unload_image(image);
     });
 

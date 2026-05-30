@@ -5277,6 +5277,10 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
 
     pntr_draw_image(newImage, image, offsetX, offsetY);
 
+    bool hadDefaultClip = (image->clip.x == 0 && image->clip.y == 0 &&
+        image->clip.width == image->width && image->clip.height == image->height);
+    pntr_rectangle oldClip = image->clip;
+
     // Clear the image if it's not a subimage
     if (!image->subimage) {
         PNTR_FREE(image->data);
@@ -5286,10 +5290,24 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     image->width = newImage->width;
     image->height = newImage->height;
     image->pitch = newImage->pitch;
-
-    // TODO: pntr_image_resize_canvas - Adust the new image clip with the original one.
-    pntr_image_reset_clip(image);
     image->subimage = false;
+
+    if (hadDefaultClip) {
+        pntr_image_reset_clip(image);
+    } else {
+        int cx = oldClip.x + offsetX;
+        int cy = oldClip.y + offsetY;
+        int cx2 = cx + oldClip.width;
+        int cy2 = cy + oldClip.height;
+        if (cx < 0) cx = 0;
+        if (cy < 0) cy = 0;
+        if (cx2 > newWidth) cx2 = newWidth;
+        if (cy2 > newHeight) cy2 = newHeight;
+        image->clip.x = cx;
+        image->clip.y = cy;
+        image->clip.width = (cx2 > cx) ? cx2 - cx : 0;
+        image->clip.height = (cy2 > cy) ? cy2 - cy : 0;
+    }
 
     PNTR_FREE(newImage);
     return true;
