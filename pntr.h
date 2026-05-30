@@ -5566,6 +5566,9 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 }
 
 PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, bool flipHorizontal, bool flipVertical, pntr_filter filter, pntr_color tint) {
+    (void)flipHorizontal;
+    (void)flipVertical;
+    (void)tint;
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -5578,7 +5581,7 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
         srcRect.height = src->height;
     }
 
-    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, src->width, src->height, &srcRect)) {
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
         return;
     }
 
@@ -5605,23 +5608,20 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
     int destX, destY;
     float srcX, srcY;
 
-    float xRatio = (float)srcRect.width / newWidth;
-    float yRatio = (float)srcRect.height / newHeight;
-
-    for (int y = 0; y < newHeight; y++) {
+    for (int y = 0; y < (int)newHeight; y++) {
         destY = posY - (int)offsetYRatio + y;
         if (destY < 0 || destY >= dst->height) {
             continue;
         }
 
-        for (int x = 0; x < newWidth; x++) {
+        for (int x = 0; x < (int)newWidth; x++) {
             destX = posX - (int)offsetXRatio + x;
             if (destX < 0 || destX >= dst->width) {
                 continue;
             }
 
-            srcX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
-            srcY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+            srcX = ((float)x - newWidth / 2.0f) * cosTheta - ((float)y - newHeight / 2.0f) * sinTheta + centerX;
+            srcY = ((float)x - newWidth / 2.0f) * sinTheta + ((float)y - newHeight / 2.0f) * cosTheta + centerY;
 
             // srcX *= xRatio;
             // srcY *= yRatio;
