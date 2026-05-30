@@ -580,6 +580,8 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize);
 PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData, unsigned int dataSize, int fontSize);
 PNTR_API pntr_color pntr_color_invert(pntr_color color);
 PNTR_API void pntr_image_color_invert(pntr_image* image);
+PNTR_API pntr_color pntr_color_grayscale(pntr_color color);
+PNTR_API void pntr_image_color_grayscale(pntr_image* image);
 PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);
 PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold);
 PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height);
@@ -4673,6 +4675,41 @@ PNTR_API void pntr_image_color_invert(pntr_image* image) {
         pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
         for (int x = 0; x < image->clip.width; x++) {
             *pixel = pntr_color_invert(*pixel);
+            pixel++;
+        }
+    }
+}
+
+/**
+ * Converts the given color to grayscale using standard luminance weights.
+ *
+ * @param color The color to convert.
+ *
+ * @return The grayscale version of the color with alpha preserved.
+ *
+ * @see pntr_image_color_grayscale()
+ */
+PNTR_API pntr_color pntr_color_grayscale(pntr_color color) {
+    unsigned char l = (unsigned char)(0.299f * (float)color.rgba.r + 0.587f * (float)color.rgba.g + 0.114f * (float)color.rgba.b);
+    return PNTR_NEW_COLOR(l, l, l, color.rgba.a);
+}
+
+/**
+ * Converts the given image to grayscale.
+ *
+ * @param image The image to convert.
+ *
+ * @see pntr_color_grayscale()
+ */
+PNTR_API void pntr_image_color_grayscale(pntr_image* image) {
+    if (image == NULL) {
+        return;
+    }
+
+    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
+        pntr_color* pixel = &PNTR_PIXEL(image, image->clip.x, y);
+        for (int x = 0; x < image->clip.width; x++) {
+            *pixel = pntr_color_grayscale(*pixel);
             pixel++;
         }
     }
