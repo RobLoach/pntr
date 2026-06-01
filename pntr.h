@@ -2003,21 +2003,19 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
 
     int absDx = (endPosX > startPosX) ? endPosX - startPosX : startPosX - endPosX;
     int absDy = (endPosY > startPosY) ? endPosY - startPosY : startPosY - endPosY;
-
     if (absDx == 0) {
         pntr_draw_line_vertical(dst, startPosX, (startPosY < endPosY) ? startPosY : endPosY, absDy, color);
         return;
     }
-    if (absDy == 0) {
+    else if (absDy == 0) {
         pntr_draw_line_horizontal(dst, (startPosX < endPosX) ? startPosX : endPosX, startPosY, absDx, color);
         return;
     }
 
-    unsigned char baseAlpha = color.rgba.a;
+    float baseAlpha = (float)color.rgba.a;
     float x0 = (float)startPosX, y0 = (float)startPosY;
     float x1 = (float)endPosX, y1 = (float)endPosY;
     int steep = absDy > absDx;
-
     if (steep) {
         float tmp = x0; x0 = y0; y0 = tmp;
         tmp = x1; x1 = y1; y1 = tmp;
@@ -2028,8 +2026,6 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
     }
 
     float gradient = (y1 - y0) / (x1 - x0);
-
-    // First endpoint
     float xend = PNTR_FLOORF(x0 + 0.5f);
     float yend = y0 + gradient * (xend - x0);
     float xgap = 1.0f - (x0 + 0.5f - PNTR_FLOORF(x0 + 0.5f));
@@ -2037,13 +2033,17 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
     int ypxl1 = (int)PNTR_FLOORF(yend);
     float frac = yend - PNTR_FLOORF(yend);
 
-    color.rgba.a = (unsigned char)((1.0f - frac) * xgap * (float)baseAlpha);
-    if (steep) pntr_draw_point(dst, ypxl1, xpxl1, color);
-    else pntr_draw_point(dst, xpxl1, ypxl1, color);
+    color.rgba.a = (unsigned char)((1.0f - frac) * xgap * baseAlpha);
+    if (steep)
+        pntr_draw_point(dst, ypxl1, xpxl1, color);
+    else
+        pntr_draw_point(dst, xpxl1, ypxl1, color);
 
-    color.rgba.a = (unsigned char)(frac * xgap * (float)baseAlpha);
-    if (steep) pntr_draw_point(dst, ypxl1 + 1, xpxl1, color);
-    else pntr_draw_point(dst, xpxl1, ypxl1 + 1, color);
+    color.rgba.a = (unsigned char)(frac * xgap * baseAlpha);
+    if (steep)
+        pntr_draw_point(dst, ypxl1 + 1, xpxl1, color);
+    else
+        pntr_draw_point(dst, xpxl1, ypxl1 + 1, color);
 
     float intery = yend + gradient;
 
@@ -2055,26 +2055,33 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
     int ypxl2 = (int)PNTR_FLOORF(yend);
     frac = yend - PNTR_FLOORF(yend);
 
-    color.rgba.a = (unsigned char)((1.0f - frac) * xgap * (float)baseAlpha);
-    if (steep) pntr_draw_point(dst, ypxl2, xpxl2, color);
-    else pntr_draw_point(dst, xpxl2, ypxl2, color);
+    color.rgba.a = (unsigned char)((1.0f - frac) * xgap * baseAlpha);
+    if (steep)
+        pntr_draw_point(dst, ypxl2, xpxl2, color);
+    else
+        pntr_draw_point(dst, xpxl2, ypxl2, color);
 
-    color.rgba.a = (unsigned char)(frac * xgap * (float)baseAlpha);
-    if (steep) pntr_draw_point(dst, ypxl2 + 1, xpxl2, color);
-    else pntr_draw_point(dst, xpxl2, ypxl2 + 1, color);
+    color.rgba.a = (unsigned char)(frac * xgap * baseAlpha);
+    if (steep)
+        pntr_draw_point(dst, ypxl2 + 1, xpxl2, color);
+    else
+        pntr_draw_point(dst, xpxl2, ypxl2 + 1, color);
 
-    // Main loop
     for (int x = xpxl1 + 1; x < xpxl2; x++) {
         frac = intery - PNTR_FLOORF(intery);
         int iy = (int)PNTR_FLOORF(intery);
 
-        color.rgba.a = (unsigned char)((1.0f - frac) * (float)baseAlpha);
-        if (steep) pntr_draw_point(dst, iy, x, color);
-        else pntr_draw_point(dst, x, iy, color);
+        color.rgba.a = (unsigned char)((1.0f - frac) * baseAlpha);
+        if (steep)
+            pntr_draw_point(dst, iy, x, color);
+        else
+            pntr_draw_point(dst, x, iy, color);
 
-        color.rgba.a = (unsigned char)(frac * (float)baseAlpha);
-        if (steep) pntr_draw_point(dst, iy + 1, x, color);
-        else pntr_draw_point(dst, x, iy + 1, color);
+        color.rgba.a = (unsigned char)(frac * baseAlpha);
+        if (steep)
+            pntr_draw_point(dst, iy + 1, x, color);
+        else
+            pntr_draw_point(dst, x, iy + 1, color);
 
         intery += gradient;
     }
