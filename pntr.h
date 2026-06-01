@@ -5573,7 +5573,10 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
         return;
     }
 
-    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
+            srcRect.width <= 0 ? src->width : srcRect.width,
+            srcRect.height <= 0 ? src->height : srcRect.height,
+            0, 0, src->width, src->height, &srcRect)) {
         return;
     }
 
