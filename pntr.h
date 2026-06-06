@@ -527,7 +527,7 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, bool flipHorizontal, bool flipVertical, pntr_filter filter, pntr_color tint);
+PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint);
@@ -5565,10 +5565,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
     }
 }
 
-PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, bool flipHorizontal, bool flipVertical, pntr_filter filter, pntr_color tint) {
-    (void)flipHorizontal;
-    (void)flipVertical;
-    (void)tint;
+PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -5612,6 +5609,7 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
     float centerY = scaledHeight / 2.0f;
     float srcX, srcY;
     int srcXint, srcYint;
+    pntr_color srcColor;
 
     for (int y = 0; y < newHeight; y++) {
         int destY = posY + y - offsetYRatio;
@@ -5639,19 +5637,34 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
             srcYint = (int)srcY + srcRect.y;
 
             if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
-                pntr_draw_point_unsafe(dst, destX, destY, PNTR_PIXEL(src, srcXint, srcYint));
-            } else {
+                srcColor = PNTR_PIXEL(src, srcXint, srcYint);
+            } else if (filter == PNTR_FILTER_BILINEAR) {
+                // Avoid going outside the source rect.
                 if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
                     continue;
                 }
-                pntr_draw_point_unsafe(dst, destX, destY, pntr_color_bilinear_interpolate(
+                srcColor = pntr_color_bilinear_interpolate(
                     PNTR_PIXEL(src, srcXint, srcYint),
                     PNTR_PIXEL(src, srcXint, srcYint + 1),
                     PNTR_PIXEL(src, srcXint + 1, srcYint),
                     PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
                     srcX - PNTR_FLOORF(srcX),
                     srcY - PNTR_FLOORF(srcY)
-                ));
+                );
+            }
+            else {
+                // Unsupported filter
+                return;
+            }
+
+            // Draw the pixel
+            if (tint.value != PNTR_WHITE_VALUE) {
+                //pntr_draw_point_unsafe(dst, destX, destY, pntr_color_tint(srcColor, tint));
+                pntr_blend_color(&PNTR_PIXEL(dst, destX, destY), pntr_color_tint(srcColor, tint));
+            }
+            else {
+                //pntr_draw_point_unsafe(dst, destX, destY, srcColor);
+                pntr_blend_color(&PNTR_PIXEL(dst, destX, destY), srcColor);
             }
         }
     }

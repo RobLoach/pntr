@@ -28,7 +28,7 @@ void pntr_examples_image() {
 
     // Draw a rotated and scaled image
     pntr_rectangle fullRect = { 0, 0, 0, 0 };
-    pntr_draw_image_rotozoom(canvas, image, fullRect, 330, 80, 45.0f, 0.5f, 0.5f, 0.0f, 0.0f, false, false, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+    pntr_draw_image_rotozoom(canvas, image, fullRect, 225, 140, 45.0f, 0.5f, 0.5f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_GREEN);
 
     pntr_save_image(canvas, "pntr_examples_image.png");
 
