@@ -26,6 +26,10 @@ void pntr_examples_image() {
     // Draw the resized image
     pntr_draw_image_flipped(canvas, image, 240, 30, true, false, true);
 
+    // Draw a rotated and scaled image
+    pntr_rectangle fullRect = { 0, 0, 0, 0 };
+    pntr_draw_image_rotozoom(canvas, image, fullRect, 225, 140, 45.0f, 0.5f, 0.5f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_GREEN);
+
     pntr_save_image(canvas, "pntr_examples_image.png");
 
     pntr_unload_image(image);

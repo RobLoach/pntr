@@ -527,6 +527,7 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint);
@@ -5657,6 +5658,111 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
             }
         }
         break;
+    }
+}
+
+PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint) {
+    if (dst == NULL || src == NULL) {
+        return;
+    }
+
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
+            srcRect.width <= 0 ? src->width : srcRect.width,
+            srcRect.height <= 0 ? src->height : srcRect.height,
+            0, 0, src->width, src->height, &srcRect)) {
+        return;
+    }
+
+    if (scaleX == 0 || scaleY == 0) {
+        return;
+    }
+
+    rotation = (rotation < 0) ? 360.0f - PNTR_FMODF(-rotation, 360.0f) : PNTR_FMODF(rotation, 360.0f);
+    if (rotation == 0.0f) {
+        pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter);
+        return;
+    }
+
+    float radians = rotation * PNTR_DEG2RAD;
+    float cosTheta = PNTR_COSF(radians);
+    float sinTheta = PNTR_SINF(radians);
+
+    float scaledWidth = (float)srcRect.width * scaleX;
+    float scaledHeight = (float)srcRect.height * scaleY;
+
+    int newWidth = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * cosTheta) + PNTR_FABSF(scaledHeight * sinTheta));
+    int newHeight = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * sinTheta) + PNTR_FABSF(scaledHeight * cosTheta));
+
+    int offsetXRatio = (int)(originX / (float)srcRect.width * (float)newWidth);
+    int offsetYRatio = (int)(originY / (float)srcRect.height * (float)newHeight);
+
+    if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width ||
+        posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
+        return;
+    }
+
+    float centerX = scaledWidth / 2.0f;
+    float centerY = scaledHeight / 2.0f;
+    float srcX, srcY;
+    int srcXint, srcYint;
+    pntr_color srcColor;
+
+    for (int y = 0; y < newHeight; y++) {
+        int destY = posY + y - offsetYRatio;
+        if (destY < dst->clip.y || destY >= dst->clip.y + dst->clip.height) {
+            continue;
+        }
+
+        for (int x = 0; x < newWidth; x++) {
+            int destX = posX + x - offsetXRatio;
+            if (destX < dst->clip.x || destX >= dst->clip.x + dst->clip.width) {
+                continue;
+            }
+
+            float rotX = (float)(x - newWidth / 2) * cosTheta - (float)(y - newHeight / 2) * sinTheta + centerX;
+            float rotY = (float)(x - newWidth / 2) * sinTheta + (float)(y - newHeight / 2) * cosTheta + centerY;
+
+            srcX = rotX / scaleX;
+            srcY = rotY / scaleY;
+
+            if (srcX < 0 || srcX >= srcRect.width || srcY < 0 || srcY >= srcRect.height) {
+                continue;
+            }
+
+            srcXint = (int)srcX + srcRect.x;
+            srcYint = (int)srcY + srcRect.y;
+
+            if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
+                srcColor = PNTR_PIXEL(src, srcXint, srcYint);
+            } else if (filter == PNTR_FILTER_BILINEAR) {
+                // Avoid going outside the source rect.
+                if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
+                    continue;
+                }
+                srcColor = pntr_color_bilinear_interpolate(
+                    PNTR_PIXEL(src, srcXint, srcYint),
+                    PNTR_PIXEL(src, srcXint, srcYint + 1),
+                    PNTR_PIXEL(src, srcXint + 1, srcYint),
+                    PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
+                    srcX - PNTR_FLOORF(srcX),
+                    srcY - PNTR_FLOORF(srcY)
+                );
+            }
+            else {
+                // Unsupported filter
+                return;
+            }
+
+            // Draw the pixel
+            if (tint.value != PNTR_WHITE_VALUE) {
+                //pntr_draw_point_unsafe(dst, destX, destY, pntr_color_tint(srcColor, tint));
+                pntr_blend_color(&PNTR_PIXEL(dst, destX, destY), pntr_color_tint(srcColor, tint));
+            }
+            else {
+                //pntr_draw_point_unsafe(dst, destX, destY, srcColor);
+                pntr_blend_color(&PNTR_PIXEL(dst, destX, destY), srcColor);
+            }
+        }
     }
 }
 
