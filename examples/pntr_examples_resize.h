@@ -9,17 +9,17 @@ void pntr_examples_resize() {
     pntr_draw_image_scaled(canvas, originalImage,
         canvas->width / 4 - originalImage->width * size / 2.0f,
         canvas->height / 2 - originalImage->height * size / 2.0f,
-        size, size, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+        size, size, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
 
     pntr_draw_image_scaled(canvas, originalImage,
         canvas->width / 2 + canvas->width / 4 - originalImage->width * size / 2.0f,
         canvas->height / 2 - originalImage->height * size / 2.0f,
-        size, size, 0.0f, 0.0f, PNTR_FILTER_BILINEAR);
+        size, size, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
 
     pntr_draw_image_scaled(canvas, originalImage,
         canvas->width / 2  - originalImage->width * 0.75f / 2.0f,
         canvas->height / 2 - originalImage->height * 0.75f / 2.0f,
-        0.75f, 0.75, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+        0.75f, 0.75, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
 
     pntr_save_image(canvas, "pntr_examples_resize.png");
 

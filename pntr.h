@@ -525,8 +525,8 @@ PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX
 PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
-PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
-PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter);
+PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
+PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
@@ -5572,7 +5572,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * @param offsetY How much to offset the Y drawing of the image, relative from its original source size.
  * @param filter Filter to be applied during the rotation.
  */
-PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -5582,10 +5582,10 @@ PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX,
         posX, posY,
         scaleX, scaleY,
         offsetX, offsetY,
-        filter);
+        filter, tint);
 }
 
-PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter) {
+PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
         return;
     }
@@ -5620,14 +5620,18 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
                     float srcX = (float)x * xRatio;
                     int srcXPixel = srcRect.y + (int)srcX;
                     int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcXPixel : (int)srcXPixel + 1;
-                    pntr_draw_point_unsafe(dst, xPosition, yPosition, pntr_color_bilinear_interpolate(
+                    pntr_color pixel = pntr_color_bilinear_interpolate(
                         src->data[srcYPixel * (src->pitch >> 2) + srcXPixel],
                         src->data[srcYPixelPlusOne * (src->pitch >> 2) + srcXPixel],
                         src->data[srcYPixel * (src->pitch >> 2) + srcXPixelPlusOne],
                         src->data[srcYPixelPlusOne * (src->pitch >> 2) + srcXPixelPlusOne],
                         srcX - PNTR_FLOORF(srcX),
                         srcY - PNTR_FLOORF(srcY)
-                    ));
+                    );
+                    if (tint.value != PNTR_WHITE_VALUE) {
+                        pixel = pntr_color_tint(pixel, tint);
+                    }
+                    pntr_draw_point_unsafe(dst, xPosition, yPosition, pixel);
                 }
             }
         }
@@ -5649,11 +5653,11 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
                         continue;
                     }
                     int x2 = (x * xRatio) >> 16;
-                    pntr_draw_point_unsafe(dst,
-                        xPosition,
-                        yPosition,
-                        PNTR_PIXEL(src, srcRect.x + x2, srcRect.y + y2)
-                    );
+                    pntr_color pixel = PNTR_PIXEL(src, srcRect.x + x2, srcRect.y + y2);
+                    if (tint.value != PNTR_WHITE_VALUE) {
+                        pixel = pntr_color_tint(pixel, tint);
+                    }
+                    pntr_draw_point_unsafe(dst, xPosition, yPosition, pixel);
                 }
             }
         }
@@ -5679,7 +5683,7 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
 
     rotation = (rotation < 0) ? 360.0f - PNTR_FMODF(-rotation, 360.0f) : PNTR_FMODF(rotation, 360.0f);
     if (rotation == 0.0f) {
-        pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter);
+        pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter, tint);
         return;
     }
 
