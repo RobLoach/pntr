@@ -599,6 +599,96 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
+        IT("pntr_draw_image_rotozoom()", {
+            IT("pntr_draw_image_rotozoom() with no rotation delegates to the scaled drawing path", {
+                // Source image: blue, with a red column from x=6 to x=9.
+                // The source rectangle has x != y to catch mixing up srcRect.x and srcRect.y.
+                pntr_image* src = pntr_gen_image_color(10, 10, PNTR_BLUE);
+                NEQUALS(src, NULL);
+                pntr_draw_rectangle_fill(src, 6, 0, 4, 10, PNTR_RED);
+                pntr_rectangle srcRect = {6, 0, 4, 4};
+
+                IT("with the bilinear filter", {
+                    pntr_image* dst = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+                    pntr_draw_image_rotozoom(dst, src, srcRect, 2, 2, 0.0f, 2.0f, 2.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                    COLOREQUALS(pntr_image_get_color(dst, 2, 2), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 5, 5), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 0, 0), PNTR_GREEN);
+                    COLOREQUALS(pntr_image_get_color(dst, 10, 10), PNTR_GREEN);
+                    pntr_unload_image(dst);
+                });
+
+                IT("with the nearest neighbor filter", {
+                    pntr_image* dst = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+                    pntr_draw_image_rotozoom(dst, src, srcRect, 2, 2, 0.0f, 2.0f, 2.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                    COLOREQUALS(pntr_image_get_color(dst, 2, 2), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 0, 0), PNTR_GREEN);
+                    pntr_unload_image(dst);
+                });
+
+                pntr_unload_image(src);
+            });
+
+            IT("pntr_draw_image_rotozoom() with a 180 degree rotation", {
+                // Source image: blue, with a 2x2 red square in the top left corner.
+                pntr_image* src = pntr_gen_image_color(10, 10, PNTR_BLUE);
+                NEQUALS(src, NULL);
+                pntr_draw_rectangle_fill(src, 0, 0, 2, 2, PNTR_RED);
+
+                pntr_image* dst = pntr_gen_image_color(12, 12, PNTR_GREEN);
+                NEQUALS(dst, NULL);
+                pntr_rectangle srcRect = {0, 0, 10, 10};
+                pntr_draw_image_rotozoom(dst, src, srcRect, 0, 0, 180.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                // After a 180 degree rotation, the red square lands in the bottom right of the drawn area.
+                COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_RED);
+                COLOREQUALS(pntr_image_get_color(dst, 2, 2), PNTR_BLUE);
+                COLOREQUALS(pntr_image_get_color(dst, 11, 11), PNTR_GREEN);
+
+                pntr_unload_image(dst);
+                pntr_unload_image(src);
+            });
+
+            IT("pntr_draw_image_rotozoom() ignores invalid arguments", {
+                pntr_image* src = pntr_gen_image_color(10, 10, PNTR_BLUE);
+                NEQUALS(src, NULL);
+                pntr_image* dst = pntr_gen_image_color(10, 10, PNTR_GREEN);
+                NEQUALS(dst, NULL);
+                pntr_rectangle srcRect = {0, 0, 10, 10};
+
+                // NULL arguments do not crash.
+                pntr_draw_image_rotozoom(NULL, src, srcRect, 0, 0, 45.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                pntr_draw_image_rotozoom(dst, NULL, srcRect, 0, 0, 45.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                // A zero scale draws nothing.
+                pntr_draw_image_rotozoom(dst, src, srcRect, 0, 0, 45.0f, 0.0f, 0.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                COLOREQUALS(pntr_image_get_color(dst, 5, 5), PNTR_GREEN);
+
+                // A negative scale with no rotation draws nothing.
+                pntr_draw_image_rotozoom(dst, src, srcRect, 0, 0, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                COLOREQUALS(pntr_image_get_color(dst, 5, 5), PNTR_GREEN);
+
+                // A negative scale with a rotation does not crash.
+                pntr_draw_image_rotozoom(dst, src, srcRect, 0, 0, 45.0f, -1.0f, -1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                // A source rectangle with no width or height uses the full image.
+                pntr_image* dst2 = pntr_gen_image_color(10, 10, PNTR_GREEN);
+                NEQUALS(dst2, NULL);
+                pntr_rectangle emptyRect = {0, 0, 0, 0};
+                pntr_draw_image_rotozoom(dst2, src, emptyRect, 0, 0, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                COLOREQUALS(pntr_image_get_color(dst2, 0, 0), PNTR_BLUE);
+                COLOREQUALS(pntr_image_get_color(dst2, 9, 9), PNTR_BLUE);
+                pntr_unload_image(dst2);
+
+                pntr_unload_image(dst);
+                pntr_unload_image(src);
+            });
+        });
+
         IT("pntr_gen_image_gradient", {
             pntr_image* image = pntr_gen_image_gradient(500, 500, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_GOLD);
             NEQUALS(image, NULL);
