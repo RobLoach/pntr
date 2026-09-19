@@ -5618,7 +5618,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
                         continue;
                     }
                     float srcX = (float)x * xRatio;
-                    int srcXPixel = srcRect.y + (int)srcX;
+                    int srcXPixel = srcRect.x + (int)srcX;
                     int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcXPixel : (int)srcXPixel + 1;
                     pntr_color pixel = pntr_color_bilinear_interpolate(
                         src->data[srcYPixel * (src->pitch >> 2) + srcXPixel],
@@ -5665,6 +5665,25 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
     }
 }
 
+/**
+ * Draw a rotated and scaled portion of an image onto another image.
+ *
+ * @param dst Pointer to the destination image where the output will be stored.
+ * @param src Pointer to the source image that will be drawn onto the destination image.
+ * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, the full image width or height are used.
+ * @param posX Where to draw the image, at the X coordinate.
+ * @param posY Where to draw the image, at the Y coordinate.
+ * @param rotation The rotation to apply to the image, in degrees.
+ * @param scaleX The scale of which to apply to the width of the image.
+ * @param scaleY The scale of which to apply to the height of the image.
+ * @param originX The X origin of the rotation and scaling, relative from the original source size.
+ * @param originY The Y origin of the rotation and scaling, relative from the original source size.
+ * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
+ * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
+ *
+ * @see pntr_draw_image_rotated()
+ * @see pntr_draw_image_scaled_rec()
+ */
 PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL) {
         return;
@@ -5759,11 +5778,9 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
 
             // Draw the pixel
             if (tint.value != PNTR_WHITE_VALUE) {
-                //pntr_draw_point_unsafe(dst, destX, destY, pntr_color_tint(srcColor, tint));
                 pntr_blend_color(&PNTR_PIXEL(dst, destX, destY), pntr_color_tint(srcColor, tint));
             }
             else {
-                //pntr_draw_point_unsafe(dst, destX, destY, srcColor);
                 pntr_blend_color(&PNTR_PIXEL(dst, destX, destY), srcColor);
             }
         }
