@@ -1572,12 +1572,19 @@ PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
         return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    pntr_image* newImage = pntr_gen_image_color(image->width, image->height, PNTR_BLANK);
+    pntr_image* newImage = pntr_new_image(image->width, image->height);
     if (newImage == NULL) {
         return NULL;
     }
 
-    pntr_draw_image(newImage, image, 0, 0);
+    // Copy the rows rather than blitting them, so the copy is exact. Drawing would blend,
+    // which both drops pixels under PNTR_NO_ALPHABLEND and is lossy for partial alpha.
+    for (int y = 0; y < image->height; y++) {
+        PNTR_MEMCPY(&PNTR_PIXEL(newImage, 0, y),
+            &PNTR_PIXEL(image, 0, y),
+            (size_t)newImage->pitch);
+    }
+
     newImage->clip = image->clip;
 
     return newImage;
@@ -1603,6 +1610,14 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
     }
     #ifndef PNTR_NO_ALPHABLEND
         if (src.rgba.a == 0) {
+            return;
+        }
+
+        // Blending onto a fully transparent destination is just the source. Letting it fall
+        // through to the math below would report an alpha of src.a + 1, since there is no
+        // destination contribution to absorb the excess from the shift.
+        if (dst->rgba.a == 0) {
+            *dst = src;
             return;
         }
 
