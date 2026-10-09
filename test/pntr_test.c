@@ -309,6 +309,159 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_draw_arc_fill()", {
+        // Note: pntr_draw_polygon_fill() never fills the topmost scanline of the
+        // shape, so the filled area starts one row below the top-most vertex.
+        IT("pntr_draw_arc_fill() fills the wedge", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            // A quarter wedge, sweeping clockwise from 0 to 90 degrees.
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 8, PNTR_RED);
+
+            // Clearly inside the wedge.
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 27, 35), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 40, 27), PNTR_RED);
+
+            // Clearly outside the wedge.
+            COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 20, 30), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 45, 45), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 49, 49), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with one segment", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            // One segment is a single arc point plus the center, which is a
+            // degenerate line rather than a fillable shape, so nothing is drawn.
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 1, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 45, 45), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with two segments", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 2, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 35, 30), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 45, 45), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with eight segments", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 45, 45), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with sixty four segments", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 64, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 26, 44), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 45, 45), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with a full sweep", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            // A full sweep leaves a thin seam where the trailing center vertex
+            // cuts back through the center, so stay away from the center row.
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 360.0f, 64, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 25, 15), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 25, 35), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 15, 20), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 35, 30), PNTR_RED);
+
+            COLOREQUALS(pntr_image_get_color(image, 25, 2), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 25, 47), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 1, 1), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 48, 48), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with a zero or negative radius", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            // Matches pntr_draw_arc(): a radius with no size draws the center point.
+            pntr_draw_arc_fill(image, 25, 25, 0.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 26, 25), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 25, 26), PNTR_WHITE);
+
+            pntr_draw_arc_fill(image, 10, 10, -5.0f, 0.0f, 90.0f, 8, PNTR_BLUE);
+            COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_BLUE);
+            COLOREQUALS(pntr_image_get_color(image, 11, 10), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 10, 11), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with zero or negative segments", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 0, PNTR_RED);
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, -4, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with a matching start and end angle", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            // Every arc point lands on the same spot, so there is no area to fill.
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 45.0f, 45.0f, 8, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 39, 39), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_fill() with a NULL destination", {
+            // A NULL destination does not crash, for any of the early exits.
+            pntr_draw_arc_fill(NULL, 25, 25, 20.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            pntr_draw_arc_fill(NULL, 25, 25, 0.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            pntr_draw_arc_fill(NULL, 25, 25, 20.0f, 0.0f, 90.0f, 0, PNTR_RED);
+
+            // Drawing still works afterwards.
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
+            pntr_unload_image(image);
+        });
+    });
+
     IT("pntr_get_file_image_type()", {
         EQUALS(pntr_get_file_image_type("myimage.png"), PNTR_IMAGE_TYPE_PNG);
         EQUALS(pntr_get_file_image_type("my/path/ima.ge.png"), PNTR_IMAGE_TYPE_PNG);
