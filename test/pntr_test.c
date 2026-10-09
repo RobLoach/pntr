@@ -133,6 +133,136 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_color_bilinear_interpolate()", {
+        pntr_color color00 = pntr_new_color(0, 0, 0, 255);
+        pntr_color color01 = pntr_new_color(0, 100, 0, 255);
+        pntr_color color10 = pntr_new_color(100, 0, 0, 255);
+        pntr_color color11 = pntr_new_color(100, 100, 0, 255);
+
+        COLOREQUALS(pntr_color_bilinear_interpolate(color00, color01, color10, color11, 0.0f, 0.0f), color00);
+        COLOREQUALS(pntr_color_bilinear_interpolate(color00, color01, color10, color11, 0.0f, 1.0f), color01);
+        COLOREQUALS(pntr_color_bilinear_interpolate(color00, color01, color10, color11, 1.0f, 0.0f), color10);
+        COLOREQUALS(pntr_color_bilinear_interpolate(color00, color01, color10, color11, 1.0f, 1.0f), color11);
+        COLOREQUALS(pntr_color_bilinear_interpolate(color00, color01, color10, color11, 0.5f, 0.5f), pntr_new_color(50, 50, 0, 255));
+    });
+
+    IT("pntr_image_get_color_bilinear()", {
+        pntr_color topLeft = pntr_new_color(0, 0, 0, 255);
+        pntr_color topRight = pntr_new_color(100, 0, 0, 255);
+        pntr_color bottomLeft = pntr_new_color(0, 100, 0, 255);
+        pntr_color bottomRight = pntr_new_color(100, 100, 0, 255);
+
+        pntr_image* image = pntr_gen_image_color(2, 2, PNTR_BLANK);
+        NEQUALS(image, NULL);
+        pntr_draw_point(image, 0, 0, topLeft);
+        pntr_draw_point(image, 1, 0, topRight);
+        pntr_draw_point(image, 0, 1, bottomLeft);
+        pntr_draw_point(image, 1, 1, bottomRight);
+
+        IT("pntr_image_get_color_bilinear() on a pixel center", {
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 0.0f, 0.0f), topLeft);
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 1.0f, 0.0f), topRight);
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 0.0f, 1.0f), bottomLeft);
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 1.0f, 1.0f), bottomRight);
+        });
+
+        IT("pntr_image_get_color_bilinear() between pixels", {
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 0.5f, 0.0f), pntr_new_color(50, 0, 0, 255));
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 0.0f, 0.5f), pntr_new_color(0, 50, 0, 255));
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 0.5f, 0.5f), pntr_new_color(50, 50, 0, 255));
+        });
+
+        IT("pntr_image_get_color_bilinear() clamps to the edges", {
+            // The last pixel, and anything past it, resolves to the edge pixel.
+            COLOREQUALS(pntr_image_get_color_bilinear(image, (float)(image->width - 1), (float)(image->height - 1)), bottomRight);
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 1.5f, 1.5f), bottomRight);
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 100.0f, 100.0f), bottomRight);
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 100.0f, 0.0f), topRight);
+            COLOREQUALS(pntr_image_get_color_bilinear(image, 0.0f, 100.0f), bottomLeft);
+
+            // Negative coordinates clamp to the first pixel.
+            COLOREQUALS(pntr_image_get_color_bilinear(image, -100.0f, -100.0f), topLeft);
+        });
+
+        IT("pntr_image_get_color_bilinear() on a 1x1 image", {
+            pntr_image* single = pntr_gen_image_color(1, 1, PNTR_RED);
+            NEQUALS(single, NULL);
+            COLOREQUALS(pntr_image_get_color_bilinear(single, 0.0f, 0.0f), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color_bilinear(single, 0.5f, 0.75f), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color_bilinear(single, 50.0f, 50.0f), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color_bilinear(single, -50.0f, -50.0f), PNTR_RED);
+            pntr_unload_image(single);
+        });
+
+        IT("pntr_image_get_color_bilinear() with a NULL image", {
+            COLOREQUALS(pntr_image_get_color_bilinear(NULL, 0.0f, 0.0f), PNTR_BLANK);
+        });
+
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_resize(PNTR_FILTER_BILINEAR) of a solid image stays solid", {
+        pntr_image* image = pntr_gen_image_color(10, 10, PNTR_BLUE);
+        NEQUALS(image, NULL);
+
+        pntr_image* resized = pntr_image_resize(image, 20, 20, PNTR_FILTER_BILINEAR);
+        NEQUALS(resized, NULL);
+        EQUALS(resized->width, 20);
+        EQUALS(resized->height, 20);
+
+        pntr_image* expected = pntr_gen_image_color(20, 20, PNTR_BLUE);
+        NEQUALS(expected, NULL);
+        IMAGEEQUALS(resized, expected);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(resized);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_draw_image_scaled_rec(PNTR_FILTER_BILINEAR) does not sample outside the source rectangle", {
+        // A 2x2 tile sheet, where only the top left tile is red.
+        pntr_image* sheet = pntr_gen_image_color(4, 4, PNTR_RED);
+        NEQUALS(sheet, NULL);
+        pntr_draw_rectangle_fill(sheet, 2, 0, 2, 4, PNTR_BLUE);
+        pntr_draw_rectangle_fill(sheet, 0, 2, 2, 2, PNTR_BLUE);
+
+        pntr_image* dst = pntr_gen_image_color(8, 8, PNTR_BLANK);
+        NEQUALS(dst, NULL);
+        pntr_draw_image_scaled_rec(dst, sheet,
+            PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 2, .height = 2 },
+            0, 0, 4.0f, 4.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+
+        pntr_image* expected = pntr_gen_image_color(8, 8, PNTR_RED);
+        NEQUALS(expected, NULL);
+        IMAGEEQUALS(dst, expected);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(dst);
+        pntr_unload_image(sheet);
+    });
+
+    IT("pntr_image_rotate(PNTR_FILTER_BILINEAR) draws a single pixel source", {
+        pntr_image* image = pntr_gen_image_color(1, 1, PNTR_RED);
+        NEQUALS(image, NULL);
+
+        pntr_image* rotated = pntr_image_rotate(image, 45.0f, PNTR_FILTER_BILINEAR);
+        NEQUALS(rotated, NULL);
+
+        // Count how much of the source actually made it onto the rotated image.
+        int drawn = 0;
+        for (int y = 0; y < rotated->height; y++) {
+            for (int x = 0; x < rotated->width; x++) {
+                if (pntr_image_get_color(rotated, x, y).value == PNTR_RED.value) {
+                    drawn++;
+                }
+            }
+        }
+        GREATER(drawn, 0);
+
+        pntr_unload_image(rotated);
+        pntr_unload_image(image);
+    });
+
     IT("pntr_clear_background(), pntr_draw_rectangle_fill()", {
         pntr_image* image = pntr_new_image(100, 100);
         NEQUALS(image, NULL);

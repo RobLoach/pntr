@@ -195,6 +195,7 @@ void pntr_color_set_g(pntr_color* color, unsigned char g);
 void pntr_color_set_b(pntr_color* color, unsigned char b);
 void pntr_color_set_a(pntr_color* color, unsigned char a);
 pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
+pntr_color pntr_image_get_color_bilinear(pntr_image* image, float x, float y);
 pntr_color pntr_color_tint(pntr_color color, pntr_color tint);
 void pntr_image_color_tint(pntr_image* image, pntr_color color);
 pntr_color pntr_color_fade(pntr_color color, float alpha);
