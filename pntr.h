@@ -1535,7 +1535,7 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->height = height;
     pntr_image_reset_clip(image);
     image->subimage = false;
-    image->data = (pntr_color*)PNTR_MALLOC((size_t)(image->pitch * height));
+    image->data = (pntr_color*)PNTR_MALLOC((size_t)image->pitch * (size_t)height);
     if (image->data == NULL) {
         PNTR_FREE(image);
         return (pntr_image*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
@@ -1805,13 +1805,13 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
     if (!image->subimage) {
         // White
         if (color.value == PNTR_WHITE_VALUE) {
-            PNTR_MEMSET((void*)image->data, 255, (size_t)(image->height * image->pitch));
+            PNTR_MEMSET((void*)image->data, 255, (size_t)image->height * (size_t)image->pitch);
             return;
         }
 
         // Blank
         if (color.rgba.a == 0) {
-            PNTR_MEMSET((void*)image->data, 0, (size_t)(image->height * image->pitch));
+            PNTR_MEMSET((void*)image->data, 0, (size_t)image->height * (size_t)image->pitch);
             return;
         }
     }
@@ -4934,7 +4934,9 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
             break;
     }
 
-    return bitsPerPixel * width * height / bitsPerByte; // Bytes
+    // Divide before multiplying to keep the result from overflowing sooner than it has to.
+    // Every bitsPerPixel above is a whole number of bytes, so this stays exact.
+    return bitsPerPixel / bitsPerByte * width * height; // Bytes
 }
 
 /**
