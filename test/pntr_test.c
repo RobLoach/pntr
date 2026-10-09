@@ -15,6 +15,18 @@
 #define RECTEQUALS PNTR_ASSERT_RECT_EQUALS
 #include "../pntr_assert.h"
 
+/**
+ * The 70 characters that are available on resources/font.png, which is a 588x17
+ * BMFont atlas holding exactly 70 glyphs.
+ */
+#define PNTR_TEST_BMF_CHARACTERS " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/"
+
+/**
+ * The 95 characters that are available on resources/font-tty-8x8.png, which is a
+ * 760x8 atlas holding exactly 95 8x8 glyphs.
+ */
+#define PNTR_TEST_TTY_CHARACTERS "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}"
+
 bool pntr_utf8() {
     #ifdef PNTR_ENABLE_UTF8
         return true;
@@ -500,7 +512,7 @@ MODULE(pntr, {
     });
 
     IT("pntr_load_font_bmf(), pntr_unload_font(), pntr_draw_text()", {
-        pntr_font* font = pntr_load_font_bmf("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+        pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
         NEQUALS(font, NULL);
         GREATER(font->charactersLen, 10);
 
@@ -514,7 +526,7 @@ MODULE(pntr, {
     });
 
     IT("pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()", {
-        pntr_font* font = pntr_load_font_bmf("resources/font.png", " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-+/");
+        pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
         GREATER(pntr_measure_text(font, "Hello World!"), 50);
         pntr_vector size = pntr_measure_text_ex(font, "Hello World!", 0);
         GREATER(size.x, 50);
@@ -533,9 +545,206 @@ MODULE(pntr, {
     });
 
     IT("pntr_load_font_tty()", {
-        pntr_font* font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~");
+        // The atlas is 760x8, which is exactly 95 8x8 glyphs.
+        pntr_font* font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, PNTR_TEST_TTY_CHARACTERS);
         NEQUALS(font, NULL);
-        GREATER(font->charactersLen, 20);
+        EQUALS(font->charactersLen, 95);
+        pntr_rectangle firstGlyph = PNTR_CLITERAL(pntr_rectangle) {0, 0, 8, 8};
+        pntr_rectangle lastGlyph = PNTR_CLITERAL(pntr_rectangle) {94 * 8, 0, 8, 8};
+        RECTEQUALS(font->srcRects[0], firstGlyph);
+        RECTEQUALS(font->srcRects[94], lastGlyph);
+        EQUALS(pntr_measure_text(font, "Hello World!"), 96);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_load_font_bmf_from_memory(), pntr_load_font_bmf_from_image()", {
+        unsigned int bytes;
+        unsigned char* fileData = pntr_load_file("resources/font.png", &bytes);
+        NEQUALS(fileData, NULL);
+
+        // Loading from memory matches loading from the file system.
+        pntr_font* fromFile = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
+        NEQUALS(fromFile, NULL);
+        pntr_font* fromMemory = pntr_load_font_bmf_from_memory(fileData, bytes, PNTR_TEST_BMF_CHARACTERS);
+        NEQUALS(fromMemory, NULL);
+        EQUALS(fromFile->charactersLen, 70);
+        EQUALS(pntr_measure_text(fromFile, "Hello World!"), 83);
+        EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
+        RECTEQUALS(fromMemory->srcRects[0], fromFile->srcRects[0]);
+        RECTEQUALS(fromMemory->glyphRects[fromFile->charactersLen - 1], fromFile->glyphRects[fromFile->charactersLen - 1]);
+
+        // Both fonts measure and draw the same text identically.
+        pntr_vector sizeFromFile = pntr_measure_text_ex(fromFile, "Hello World!", 0);
+        pntr_vector sizeFromMemory = pntr_measure_text_ex(fromMemory, "Hello World!", 0);
+        EQUALS(sizeFromMemory.x, sizeFromFile.x);
+        EQUALS(sizeFromMemory.y, sizeFromFile.y);
+
+        pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+        NEQUALS(expected, NULL);
+        pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+        NEQUALS(actual, NULL);
+        IMAGEEQUALS(actual, expected);
+        pntr_unload_image(actual);
+        pntr_unload_image(expected);
+
+        pntr_unload_font(fromMemory);
+        pntr_unload_font(fromFile);
+
+        // Asking for more characters than the atlas has glyphs is rejected.
+        pntr_font* tooMany = pntr_load_font_bmf_from_memory(fileData, bytes, PNTR_TEST_BMF_CHARACTERS "*=");
+        EQUALS(tooMany, NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // Invalid arguments.
+        EQUALS(pntr_load_font_bmf_from_memory(NULL, bytes, PNTR_TEST_BMF_CHARACTERS), NULL);
+        EQUALS(pntr_load_font_bmf_from_memory(fileData, 0, PNTR_TEST_BMF_CHARACTERS), NULL);
+        EQUALS(pntr_load_font_bmf_from_memory(fileData, bytes, NULL), NULL);
+        EQUALS(pntr_load_font_bmf_from_image(NULL, PNTR_TEST_BMF_CHARACTERS), NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A rejected pntr_load_font_bmf_from_image() leaves the image to the caller.
+        pntr_image* atlas = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
+        NEQUALS(atlas, NULL);
+        EQUALS(pntr_load_font_bmf_from_image(atlas, PNTR_TEST_BMF_CHARACTERS "*="), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_NONE);
+        EQUALS(atlas->width, 588);
+        pntr_unload_image(atlas);
+
+        pntr_unload_file(fileData);
+    });
+
+    IT("pntr_load_font_tty_from_memory(), pntr_load_font_tty_from_image()", {
+        unsigned int bytes;
+        unsigned char* fileData = pntr_load_file("resources/font-tty-8x8.png", &bytes);
+        NEQUALS(fileData, NULL);
+
+        // Loading from memory matches loading from the file system.
+        pntr_font* fromFile = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, PNTR_TEST_TTY_CHARACTERS);
+        NEQUALS(fromFile, NULL);
+        pntr_font* fromMemory = pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, PNTR_TEST_TTY_CHARACTERS);
+        NEQUALS(fromMemory, NULL);
+        EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
+        RECTEQUALS(fromMemory->srcRects[94], fromFile->srcRects[94]);
+
+        pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+        NEQUALS(expected, NULL);
+        pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+        NEQUALS(actual, NULL);
+        IMAGEEQUALS(actual, expected);
+        pntr_unload_image(actual);
+        pntr_unload_image(expected);
+
+        pntr_unload_font(fromMemory);
+        pntr_unload_font(fromFile);
+
+        // A glyph that is wider than the atlas has no grid to index into.
+        EQUALS(pntr_load_font_tty("resources/font-tty-8x8.png", 1000, 8, "ABC"), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // Same for a glyph that is taller than the atlas.
+        EQUALS(pntr_load_font_tty("resources/font-tty-8x8.png", 8, 1000, "ABC"), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 1000, "ABC"), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // Asking for more characters than the atlas has glyphs is rejected.
+        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, PNTR_TEST_TTY_CHARACTERS "~"), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // Invalid arguments.
+        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 0, 8, "ABC"), NULL);
+        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, -8, "ABC"), NULL);
+        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, NULL), NULL);
+        EQUALS(pntr_load_font_tty_from_image(NULL, 8, 8, "ABC"), NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A rejected pntr_load_font_tty_from_image() leaves the image to the caller.
+        pntr_image* atlas = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
+        NEQUALS(atlas, NULL);
+        EQUALS(pntr_load_font_tty_from_image(atlas, 8, 16, "ABC"), NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
+        EQUALS(atlas->height, 8);
+        pntr_unload_image(atlas);
+
+        pntr_unload_file(fileData);
+    });
+
+    IT("pntr_load_font_ttf_from_memory()", {
+        // Data that isn't a font must not produce a font.
+        const char* notAFont = "this is not a ttf";
+        pntr_font* font = pntr_load_font_ttf_from_memory((const unsigned char*)notAFont, 17, 20);
+        EQUALS(font, NULL);
+        NEQUALS(pntr_get_error(), NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // Neither should a truncated font.
+        unsigned int bytes;
+        unsigned char* fileData = pntr_load_file("resources/tuffy.ttf", &bytes);
+        NEQUALS(fileData, NULL);
+        GREATER(bytes, 100);
+
+        EQUALS(pntr_load_font_ttf_from_memory(fileData, 64, 20), NULL);
+        NEQUALS(pntr_get_error(), NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // Invalid arguments.
+        EQUALS(pntr_load_font_ttf_from_memory(NULL, bytes, 20), NULL);
+        EQUALS(pntr_load_font_ttf_from_memory(fileData, 0, 20), NULL);
+        EQUALS(pntr_load_font_ttf_from_memory(fileData, bytes, 0), NULL);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // The real font still loads, and matches the file system loader.
+        pntr_font* fromFile = pntr_load_font_ttf("resources/tuffy.ttf", 20);
+        NEQUALS(fromFile, NULL);
+        pntr_font* fromMemory = pntr_load_font_ttf_from_memory(fileData, bytes, 20);
+        NEQUALS(fromMemory, NULL);
+        EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
+        EQUALS(fromMemory->atlas->width, fromFile->atlas->width);
+        EQUALS(fromMemory->atlas->height, fromFile->atlas->height);
+        IMAGEEQUALS(fromMemory->atlas, fromFile->atlas);
+
+        pntr_vector sizeFromFile = pntr_measure_text_ex(fromFile, "Hello World!", 0);
+        pntr_vector sizeFromMemory = pntr_measure_text_ex(fromMemory, "Hello World!", 0);
+        GREATER(sizeFromFile.x, 10);
+        EQUALS(sizeFromMemory.x, sizeFromFile.x);
+        EQUALS(sizeFromMemory.y, sizeFromFile.y);
+
+        pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_RED, PNTR_BLANK);
+        NEQUALS(expected, NULL);
+        pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_RED, PNTR_BLANK);
+        NEQUALS(actual, NULL);
+        IMAGEEQUALS(actual, expected);
+        pntr_unload_image(actual);
+        pntr_unload_image(expected);
+
+        pntr_unload_font(fromMemory);
+        pntr_unload_font(fromFile);
+        pntr_unload_file(fileData);
+    });
+
+    IT("pntr_draw_text(): unknown characters", {
+        // Characters that aren't in the font are skipped rather than indexed.
+        pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
+        NEQUALS(font, NULL);
+
+        EQUALS(pntr_measure_text(font, "~~~"), 0);
+
+        pntr_image* image = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
+        NEQUALS(image, NULL);
+        pntr_image* expected = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
+        NEQUALS(expected, NULL);
+        pntr_draw_text(image, font, "~~~", 0, 0, PNTR_WHITE);
+        IMAGEEQUALS(image, expected);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(image);
         pntr_unload_font(font);
     });
 

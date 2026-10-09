@@ -3846,7 +3846,12 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
         return NULL;
     }
 
-    return pntr_load_font_bmf_from_image(image, characters);
+    pntr_font* output = pntr_load_font_bmf_from_image(image, characters);
+    if (output == NULL) {
+        pntr_unload_image(image);
+    }
+
+    return output;
 }
 
 /**
@@ -3868,7 +3873,12 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData
         return NULL;
     }
 
-    return pntr_load_font_bmf_from_image(image, characters);
+    pntr_font* output = pntr_load_font_bmf_from_image(image, characters);
+    if (output == NULL) {
+        pntr_unload_image(image);
+    }
+
+    return output;
 }
 
 /**
@@ -3942,12 +3952,19 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     pntr_color seperator = pntr_image_get_color(image, 0, 0);
     pntr_rectangle currentRectangle = PNTR_CLITERAL(pntr_rectangle) {1, 0, 0, image->height};
 
-    // Find out how many characters there are.
-    int numCharacters = 0;
-    for (int i = 0; i < image->width; i++) {
+    // Find out how many glyphs the atlas holds. The separator pixel at the very
+    // left starts the first glyph, so only the separators after it close one off.
+    int availableGlyphs = 0;
+    for (int i = 1; i < image->width; i++) {
         if (pntr_image_get_color(image, i, 0).value == seperator.value) {
-            numCharacters++;
+            availableGlyphs++;
         }
+    }
+
+    // Every requested character needs a glyph in the atlas.
+    int numCharacters = (int)PNTR_STRLEN(characters);
+    if (numCharacters > availableGlyphs) {
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Build the font.
@@ -3959,7 +3976,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     // Set up the data structures.
     // TODO: Allow loading BMFont characters vertically
     int currentCharacter = 0;
-    for (int i = 1; i < image->width; i++) {
+    for (int i = 1; i < image->width && currentCharacter < numCharacters; i++) {
         if (pntr_image_get_color(image, i, 0).value == seperator.value) {
             font->srcRects[currentCharacter] = currentRectangle;
             font->glyphRects[currentCharacter] = PNTR_CLITERAL(pntr_rectangle) {
@@ -4032,9 +4049,23 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
         return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
+    // A single glyph has to fit inside the atlas, otherwise there is no grid to index.
+    if (glyphWidth > image->width || glyphHeight > image->height) {
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+    }
+
+    // The glyph grid that's available on the atlas.
+    int columns = image->width / glyphWidth;
+    int rows = image->height / glyphHeight;
+
     // Find out how many characters there are.
     int numCharacters = (int)PNTR_STRLEN(characters);
     size_t charactersSize = PNTR_STRSIZE(characters);
+
+    // Every requested character needs a glyph on the atlas.
+    if (numCharacters > columns * rows) {
+        return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+    }
 
     // Create the font.
     pntr_font* font = _pntr_new_font(numCharacters, charactersSize, image);
@@ -4046,8 +4077,8 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
     for (int currentCharIndex = 0; currentCharIndex < numCharacters; currentCharIndex++) {
         // Source rectangle.
         font->srcRects[currentCharIndex] = PNTR_CLITERAL(pntr_rectangle) {
-            .x = (currentCharIndex % (image->width / glyphWidth)) * glyphWidth,
-            .y = (currentCharIndex / (image->width / glyphWidth)) * glyphHeight,
+            .x = (currentCharIndex % columns) * glyphWidth,
+            .y = (currentCharIndex / columns) * glyphHeight,
             .width = glyphWidth,
             .height = glyphHeight
         };
@@ -4208,6 +4239,11 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
         #else
         int i = (int)(foundCharacter - font->characters);
         #endif
+
+        // Make sure the glyph actually exists in the font.
+        if (i < 0 || i >= font->charactersLen) {
+            continue;
+        }
 
         // Draw the character, unless it's a space.
         if (codepoint != ' ')  {
@@ -4461,6 +4497,11 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
             int i = (int)(foundCharacter - font->characters);
             #endif
 
+            // Make sure the glyph actually exists in the font.
+            if (i < 0 || i >= font->charactersLen) {
+                continue;
+            }
+
             currentX += font->glyphRects[i].x + font->glyphRects[i].width;
             if (currentX > output.x) {
                 output.x = currentX;
@@ -4650,9 +4691,21 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             #endif
         #endif
 
+        // stb_truetype walks the given data without knowing how large it is, so make
+        // sure it at least starts with a font header, and that the whole table
+        // directory is available, before handing the data over to it.
+        if (dataSize < 16 || stbtt_GetFontOffsetForIndex(fileData, 0) != 0) {
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+        }
+
+        unsigned int numTables = ((unsigned int)fileData[4] << 8) | (unsigned int)fileData[5];
+        if (numTables == 0 || numTables > (dataSize - 12) / 16) {
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+        }
+
         // Create the bitmap data with ample space based on the font size
         int columns = 32;
-        int rows = PNTR_FONT_TTF_GLYPH_NUM / columns;
+        int rows = (PNTR_FONT_TTF_GLYPH_NUM + columns - 1) / columns; // Round up so every glyph has a cell
         int width = fontSize * columns;
         int height = fontSize * rows;
         unsigned char* bitmap = (unsigned char*)PNTR_MALLOC((size_t)width * (size_t)height);
@@ -4662,17 +4715,24 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
 
         // Bake the font into the bitmap
         stbtt_bakedchar characterData[PNTR_FONT_TTF_GLYPH_NUM];
+        PNTR_MEMSET((void*)characterData, 0, sizeof(characterData));
         int result = stbtt_BakeFontBitmap(fileData, 0, (float)fontSize, bitmap, width, height, PNTR_FONT_TTF_GLYPH_START, PNTR_FONT_TTF_GLYPH_NUM, characterData);
 
-        // Check to make sure the font was baked correctly
-        if (result == 0) {
+        // Check to make sure the font was baked correctly. A negative result means
+        // the data wasn't a font, or the atlas ran out of room, and the bitmap and
+        // the glyph data are then left unusable.
+        if (result <= 0) {
             PNTR_FREE(bitmap);
             return (pntr_font*)pntr_set_error(PNTR_ERROR_UNKNOWN);
         }
 
         // Get font metrics for accurate glyph positioning
         stbtt_fontinfo fontInfo;
-        stbtt_InitFont(&fontInfo, fileData, stbtt_GetFontOffsetForIndex(fileData, 0));
+        if (stbtt_InitFont(&fontInfo, fileData, stbtt_GetFontOffsetForIndex(fileData, 0)) == 0) {
+            PNTR_FREE(bitmap);
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_UNKNOWN);
+        }
+
         float scale = stbtt_ScaleForPixelHeight(&fontInfo, (float)fontSize);
         int ascent;
         stbtt_GetFontVMetrics(&fontInfo, &ascent, NULL, NULL);
