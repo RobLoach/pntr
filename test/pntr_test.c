@@ -450,6 +450,31 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_image_copy() with a non-square image", {
+        // A tall image catches an IMAGEEQUALS that bounds its rows by the width.
+        pntr_image* image = pntr_gen_image_color(4, 16, PNTR_RED);
+        pntr_draw_point(image, 1, 12, PNTR_BLUE);
+        COLOREQUALS(pntr_image_get_color(image, 1, 12), PNTR_BLUE);
+
+        pntr_image* copy = pntr_image_copy(image);
+        NEQUALS(copy, NULL);
+        IMAGEEQUALS(image, copy);
+        COLOREQUALS(pntr_image_get_color(copy, 1, 12), PNTR_BLUE);
+
+        pntr_unload_image(copy);
+        pntr_unload_image(image);
+
+        // A wide image covers the other axis.
+        pntr_image* wide = pntr_gen_image_color(16, 4, PNTR_RED);
+        pntr_draw_point(wide, 12, 1, PNTR_BLUE);
+        pntr_image* wideCopy = pntr_image_copy(wide);
+        NEQUALS(wideCopy, NULL);
+        IMAGEEQUALS(wide, wideCopy);
+
+        pntr_unload_image(wideCopy);
+        pntr_unload_image(wide);
+    });
+
     IT("pntr_image_color_replace()", {
         pntr_image* image = pntr_gen_image_color(100, 100, PNTR_BLUE);
         NEQUALS(image, NULL);
