@@ -72,9 +72,11 @@ You can modify how *pntr* functions based on the following defines:
 | `PNTR_PIXELFORMAT_RGBA` | Use the `RGBA` format |
 | `PNTR_PIXELFORMAT_ARGB` | Use the `ARGB` pixel format |
 | `PNTR_ENABLE_DEFAULT_FONT` | Enables the default 8x8 pixel font |
+| `PNTR_ENABLE_JPEG` | Enables JPEG image loading, when the active image backend supports it |
 | `PNTR_ENABLE_MATH` | Enables use of C's standard [`math.h`](https://en.cppreference.com/w/c/numeric/math) linked library, rather than using the built in math functions |
 | `PNTR_ENABLE_TTF` | Enables support for loading [TrueType fonts](https://en.wikipedia.org/wiki/TrueType_fonts) |
 | `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
+| `PNTR_ENABLE_VARGS` | Adds support for functions that require variadic arguments, like `pntr_draw_text_ex()` |
 | `PNTR_LOAD_FILE` | Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`. |
 | `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory via `pntr_load_image_from_memory()`. By default, will use  [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) |
 | `PNTR_SAVE_FILE` | Callback to use when saving a file via `pntr_save_file()`. By default, uses `stdio.h` |
@@ -117,12 +119,15 @@ void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color);
 void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color);
 void pntr_draw_line(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color);
+void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color);
 void pntr_draw_line_thick(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color);
 void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color);
 void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color);
 void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color);
 void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color);
 void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color);
+void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color);
+void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, int thickness, pntr_color color);
 void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
 void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_color color);
 void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color);
@@ -167,9 +172,14 @@ void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle
 void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint);
 void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
 void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
+void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint);
 void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint);
-void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, const char* text, ...);
+void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...);
+void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color);
+void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
 ```
+
+The `_unsafe` functions perform no bounds or clipping checks, so they will write outside the image if given coordinates that are out of range. Only use them when you have already confirmed the coordinates are within the image's clip region.
 
 ### Colors
 
@@ -195,6 +205,8 @@ pntr_color pntr_color_contrast(pntr_color color, float contrast);
 void pntr_image_color_contrast(pntr_image* image, float contrast);
 pntr_color pntr_color_invert(pntr_color color);
 void pntr_image_color_invert(pntr_image* image);
+pntr_color pntr_color_grayscale(pntr_color color);
+void pntr_image_color_grayscale(pntr_image* image);
 void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
 pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src);
 pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY);
@@ -236,6 +248,7 @@ pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold);
 void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, int posX, int posY);
 pntr_rectangle pntr_image_get_clip(pntr_image* image);
 void pntr_image_set_clip(pntr_image* image, int x, int y, int width, int height);
+void pntr_image_set_clip_rec(pntr_image* image, pntr_rectangle clip);
 void pntr_image_reset_clip(pntr_image* image);
 ```
 
