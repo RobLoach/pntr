@@ -3179,6 +3179,11 @@ PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const uns
         return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
+    #ifdef PNTR_NO_LOAD_IMAGE
+        // The disabled PNTR_LOAD_IMAGE_FROM_MEMORY() discards its arguments.
+        (void)type;
+    #endif
+
     return PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize);
 }
 
@@ -4770,6 +4775,14 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
     }
 
     #ifdef PNTR_LOAD_FILE
+        #ifdef PNTR_NO_STDIO
+            // The disabled PNTR_LOAD_FILE() discards its arguments, so zero the read size
+            // here like the stdio paths below do, for callers that check it.
+            if (bytesRead != NULL) {
+                *bytesRead = 0;
+            }
+        #endif
+
         return PNTR_LOAD_FILE(fileName, bytesRead);
     #else
         FILE* file = fopen(fileName, "rb");
@@ -4882,6 +4895,11 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
     }
 
     #ifdef PNTR_SAVE_FILE
+        #ifdef PNTR_NO_STDIO
+            // The disabled PNTR_SAVE_FILE() discards its arguments.
+            (void)bytesToWrite;
+        #endif
+
         return PNTR_SAVE_FILE(fileName, data, bytesToWrite);
     #else
         FILE *file = fopen(fileName, "wb");
@@ -5008,6 +5026,12 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
     if (image == NULL) {
         return (unsigned char*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
+
+    #ifdef PNTR_NO_SAVE_IMAGE
+        // The disabled PNTR_SAVE_IMAGE_TO_MEMORY() discards its arguments.
+        (void)type;
+        (void)dataSize;
+    #endif
 
     return PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize);
 }
