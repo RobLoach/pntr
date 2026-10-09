@@ -3123,6 +3123,20 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     return PNTR_IMAGE_TYPE_UNKNOWN;
 }
 
+// Allow disabling image loading and saving. These are resolved before the backends below,
+// because the backend headers define these macros themselves when they are included.
+#ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
+    #ifdef PNTR_NO_LOAD_IMAGE
+        #define PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize) NULL
+    #endif
+#endif
+
+#ifndef PNTR_SAVE_IMAGE_TO_MEMORY
+    #ifdef PNTR_NO_SAVE_IMAGE
+        #define PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize) NULL
+    #endif
+#endif
+
 // Load stb_image or cute_png.
 #ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
     #ifdef PNTR_STB_IMAGE
@@ -3130,13 +3144,8 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     #elif defined(PNTR_CUTE_PNG)
         #include "extensions/pntr_cute_png.h"
     #else
-        // Allow disabling image loading.
-        #ifdef PNTR_NO_LOAD_IMAGE
-            #define PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize) NULL
-        #else
-            // Default to stb_image.
-            #include "extensions/pntr_stb_image.h"
-        #endif
+        // Default to stb_image.
+        #include "extensions/pntr_stb_image.h"
     #endif
 #endif
 
@@ -3146,13 +3155,8 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
     #elif defined(PNTR_CUTE_PNG)
         #include "extensions/pntr_cute_png.h"
     #else
-        // Allow disabling image saving.
-        #ifdef PNTR_NO_SAVE_IMAGE
-            #define PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize) NULL
-        #else
-            // Default to stb_image_write.
-            #include "extensions/pntr_stb_image_write.h"
-        #endif
+        // Default to stb_image_write.
+        #include "extensions/pntr_stb_image_write.h"
     #endif
 #endif
 
