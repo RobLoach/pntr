@@ -1301,6 +1301,12 @@ extern "C" {
         #ifndef PNTR_ENABLE_MATH
             #ifndef STBTT_sqrt
                 float _pntr_sqrtf(float number) {
+                    // Newton's method below divides by the guess, and a guess of zero makes
+                    // every subsequent guess NaN, which never satisfies the epsilon test.
+                    if (number <= 0.0f) {
+                        return 0.0f;
+                    }
+
                     float guess = number / 2.0f;
                     float epsilon = 1e-6f;
                     while (true) {
