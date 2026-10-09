@@ -1820,9 +1820,10 @@ PNTR_API void pntr_clear_background(pntr_image* image, pntr_color color) {
     // Draw the first line
     pntr_put_horizontal_line_unsafe(image, 0, 0, image->width, color);
 
-    // Copy the line for the rest of the background
+    // Copy the line for the rest of the background. This uses the row width
+    // rather than the pitch, as a subimage shares the pitch of its parent.
     for (int y = 1; y < image->height; y++) {
-        PNTR_MEMCPY(&PNTR_PIXEL(image, 0, y), image->data, (size_t)image->pitch);
+        PNTR_MEMCPY(&PNTR_PIXEL(image, 0, y), image->data, (size_t)image->width * sizeof(pntr_color));
     }
 }
 
