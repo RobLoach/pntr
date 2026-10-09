@@ -989,6 +989,7 @@ extern "C" {
     char* pntr_strcodepoint(const char * str, char* out_codepoint) {
         if (str == NULL) {
             *out_codepoint = 0;
+            return NULL;
         }
 
         *out_codepoint = str[0];
