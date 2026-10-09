@@ -912,6 +912,176 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_clear_background() on a whole image", {
+        pntr_image* image = pntr_new_image(37, 11);
+        NEQUALS(image, NULL);
+
+        // A whole image's pitch matches its row width, which is what allows
+        // pntr_clear_background() to replicate rows by width rather than pitch.
+        EQUALS(image->pitch, image->width * (int)sizeof(pntr_color));
+
+        pntr_clear_background(image, PNTR_RED);
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                COLOREQUALS(pntr_image_get_color(image, x, y), PNTR_RED);
+            }
+        }
+
+        // The white fast path.
+        pntr_clear_background(image, PNTR_WHITE);
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                COLOREQUALS(pntr_image_get_color(image, x, y), PNTR_WHITE);
+            }
+        }
+
+        // The blank fast path.
+        pntr_clear_background(image, PNTR_BLANK);
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                COLOREQUALS(pntr_image_get_color(image, x, y), PNTR_BLANK);
+            }
+        }
+
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_clear_background() on a subimage", {
+        // Give every pixel of the parent a color of its own. A uniformly
+        // colored parent would hide the damage, since copying a full parent
+        // pitch per row wraps onto the next row and would just copy the same
+        // color back over itself.
+        pntr_image* parent = pntr_new_image(100, 100);
+        NEQUALS(parent, NULL);
+        for (int y = 0; y < parent->height; y++) {
+            for (int x = 0; x < parent->width; x++) {
+                pntr_draw_point(parent, x, y, pntr_new_color((unsigned char)x, (unsigned char)y, 128, 255));
+            }
+        }
+
+        pntr_image* subimage = pntr_image_subimage(parent, 20, 30, 50, 10);
+        NEQUALS(subimage, NULL);
+        EQUALS(subimage->width, 50);
+        EQUALS(subimage->height, 10);
+
+        // A subimage shares the pitch of its parent, so the pitch is wider
+        // than the subimage's own rows.
+        EQUALS(subimage->pitch, parent->pitch);
+        EQUALS((int)subimage->subimage, 1);
+
+        pntr_clear_background(subimage, PNTR_RED);
+
+        // Every pixel inside the subimage rectangle takes the new color.
+        for (int y = 0; y < subimage->height; y++) {
+            for (int x = 0; x < subimage->width; x++) {
+                COLOREQUALS(pntr_image_get_color(subimage, x, y), PNTR_RED);
+                COLOREQUALS(pntr_image_get_color(parent, 20 + x, 30 + y), PNTR_RED);
+            }
+        }
+
+        // Every pixel of the parent outside the rectangle is left alone.
+        for (int y = 0; y < parent->height; y++) {
+            for (int x = 0; x < parent->width; x++) {
+                if (x >= 20 && x < 70 && y >= 30 && y < 40) {
+                    continue;
+                }
+                COLOREQUALS(pntr_image_get_color(parent, x, y),
+                    pntr_new_color((unsigned char)x, (unsigned char)y, 128, 255));
+            }
+        }
+
+        // The columns immediately to the left and right of the rectangle.
+        COLOREQUALS(pntr_image_get_color(parent, 19, 30), pntr_new_color(19, 30, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 19, 39), pntr_new_color(19, 39, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 70, 30), pntr_new_color(70, 30, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 70, 39), pntr_new_color(70, 39, 128, 255));
+
+        // The rows immediately above and below the rectangle.
+        COLOREQUALS(pntr_image_get_color(parent, 20, 29), pntr_new_color(20, 29, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 69, 29), pntr_new_color(69, 29, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 20, 40), pntr_new_color(20, 40, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 69, 40), pntr_new_color(69, 40, 128, 255));
+
+        // Copying a parent pitch rather than a subimage width runs off the
+        // right of the rectangle and wraps into the row after it.
+        COLOREQUALS(pntr_image_get_color(parent, 70, 31), pntr_new_color(70, 31, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 99, 31), pntr_new_color(99, 31, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 0, 32), pntr_new_color(0, 32, 128, 255));
+        COLOREQUALS(pntr_image_get_color(parent, 19, 32), pntr_new_color(19, 32, 128, 255));
+
+        pntr_unload_image(subimage);
+        pntr_unload_image(parent);
+    });
+
+    IT("pntr_clear_background() on a subimage at the bottom right corner", {
+        pntr_image* parent = pntr_new_image(100, 100);
+        NEQUALS(parent, NULL);
+        for (int y = 0; y < parent->height; y++) {
+            for (int x = 0; x < parent->width; x++) {
+                pntr_draw_point(parent, x, y, pntr_new_color((unsigned char)x, (unsigned char)y, 128, 255));
+            }
+        }
+
+        // Anchored at the very end of the parent's pixel data, so copying a
+        // full parent pitch for each row would run past the allocation.
+        pntr_image* subimage = pntr_image_subimage(parent, 50, 90, 50, 10);
+        NEQUALS(subimage, NULL);
+        EQUALS(subimage->width, 50);
+        EQUALS(subimage->height, 10);
+
+        pntr_clear_background(subimage, PNTR_RED);
+
+        for (int y = 0; y < parent->height; y++) {
+            for (int x = 0; x < parent->width; x++) {
+                COLOREQUALS(pntr_image_get_color(parent, x, y),
+                    (x >= 50 && y >= 90)
+                        ? PNTR_RED
+                        : pntr_new_color((unsigned char)x, (unsigned char)y, 128, 255));
+            }
+        }
+
+        pntr_unload_image(subimage);
+        pntr_unload_image(parent);
+    });
+
+    IT("pntr_clear_background() on a subimage with white and blank", {
+        pntr_image* parent = pntr_new_image(100, 100);
+        NEQUALS(parent, NULL);
+        for (int y = 0; y < parent->height; y++) {
+            for (int x = 0; x < parent->width; x++) {
+                pntr_draw_point(parent, x, y, pntr_new_color((unsigned char)x, (unsigned char)y, 128, 255));
+            }
+        }
+
+        pntr_image* subimage = pntr_image_subimage(parent, 50, 90, 50, 10);
+        NEQUALS(subimage, NULL);
+
+        // White and blank have whole image memset fast paths that a subimage
+        // must not take, as they would cover the whole of the parent.
+        pntr_clear_background(subimage, PNTR_WHITE);
+        for (int y = 0; y < parent->height; y++) {
+            for (int x = 0; x < parent->width; x++) {
+                COLOREQUALS(pntr_image_get_color(parent, x, y),
+                    (x >= 50 && y >= 90)
+                        ? PNTR_WHITE
+                        : pntr_new_color((unsigned char)x, (unsigned char)y, 128, 255));
+            }
+        }
+
+        pntr_clear_background(subimage, PNTR_BLANK);
+        for (int y = 0; y < parent->height; y++) {
+            for (int x = 0; x < parent->width; x++) {
+                COLOREQUALS(pntr_image_get_color(parent, x, y),
+                    (x >= 50 && y >= 90)
+                        ? PNTR_BLANK
+                        : pntr_new_color((unsigned char)x, (unsigned char)y, 128, 255));
+            }
+        }
+
+        pntr_unload_image(subimage);
+        pntr_unload_image(parent);
+    });
+
     IT("pntr_image_set_clip", {
         pntr_image* image = pntr_gen_image_color(300, 300, PNTR_RED);
         COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_RED);
