@@ -3003,7 +3003,10 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
 
     // Calculate how much distance between each segment
     float stepAngle = (endAngleRad - startAngleRad) / (float)segments;
-    pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)segments + (size_t)1);
+    pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)(segments + 1));
+    if (points == NULL) {
+        return;
+    }
 
     // TODO: pntr_draw_arc_fill(): Is pntr_draw_polygon_fill ample here?
     for (int i = 0; i < segments; i++) {
