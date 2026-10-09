@@ -251,10 +251,13 @@ UNIT_DEF int32_t unit_main(const char *name, unit_case *cases, int32_t count) {
 // Locally persisting buffer
 static inline char* unit__bprintf(const char* fmt, ...)
 {
-    static char buf[128];
+    // The FAIL macros stringify both of the caller's expressions along with the file
+    // name, so the length of a failure message is bounded only by the source that
+    // produced it. Truncate rather than overflow.
+    static char buf[1024];
     va_list args;
     va_start(args, fmt);
-    vsprintf(buf, fmt, args);
+    vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
     return buf;
 }
