@@ -5707,7 +5707,14 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
  */
 float _pntr_normalize_degrees(float degrees) {
     if (degrees < 0) {
-        return 360.0f - PNTR_FMODF(-degrees, 360.0f);
+        float remainder = PNTR_FMODF(-degrees, 360.0f);
+
+        // An exact negative multiple of 360 is a full rotation, which is 0 rather than 360.
+        if (remainder == 0.0f) {
+            return 0.0f;
+        }
+
+        return 360.0f - remainder;
     }
 
     return PNTR_FMODF(degrees, 360.0f);
@@ -5851,18 +5858,13 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
-    // Clean up the source rectangle.
-    if (srcRect.x < 0) {
-        srcRect.x = 0;
-    }
-    if (srcRect.y < 0) {
-        srcRect.y = 0;
-    }
-    if (srcRect.width <= 0 || srcRect.width > src->width) {
-        srcRect.width = src->width - srcRect.x;
-    }
-    if (srcRect.height <= 0 || srcRect.height > src->height) {
-        srcRect.height = src->height - srcRect.y;
+    // Make sure the source rectangle is within the bounds of the source image.
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
+            srcRect.width <= 0 ? src->width : srcRect.width,
+            srcRect.height <= 0 ? src->height : srcRect.height,
+            0, 0,
+            src->width, src->height, &srcRect)) {
+        return;
     }
 
     // Simple rotation by 90 degrees can be fast.
@@ -5891,19 +5893,19 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
                 if (degrees == 90.0f) {
                     pntr_draw_point(dst,
                         dstRect.x + y,
-                        dstRect.y + srcRect.width - x,
+                        dstRect.y + srcRect.width - 1 - x,
                         PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
                     );
                 } else if (degrees == 180.0f) {
                     pntr_draw_point(dst,
-                        dstRect.x + srcRect.width - x,
-                        dstRect.y + srcRect.height - y,
+                        dstRect.x + srcRect.width - 1 - x,
+                        dstRect.y + srcRect.height - 1 - y,
                         PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
                     );
                 }
                 else {
                     pntr_draw_point(dst,
-                        dstRect.x + srcRect.height - y,
+                        dstRect.x + srcRect.height - 1 - y,
                         dstRect.y + x,
                         PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
                     );
