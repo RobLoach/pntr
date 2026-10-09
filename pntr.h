@@ -546,6 +546,7 @@ PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g);
 PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b);
 PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a);
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y);
+PNTR_API pntr_color pntr_image_get_color_bilinear(pntr_image* image, float x, float y);
 PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned int bytesToWrite);
 PNTR_API void* pntr_image_to_pixelformat(pntr_image* image, unsigned int* dataSize, pntr_pixelformat pixelFormat);
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName);
@@ -3092,6 +3093,94 @@ PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
 }
 
 /**
+ * Sample a color from a portion of an image, bilinearly interpolating the four surrounding pixels.
+ *
+ * The given coordinates are relative to the top left of `srcRect`, and are clamped so that only
+ * pixels within `srcRect` are ever read.
+ *
+ * @param image The image to sample from.
+ * @param srcRect The portion of the image to sample from. It is expected to be within the image.
+ * @param x The x coordinate to sample, relative to the source rectangle.
+ * @param y The y coordinate to sample, relative to the source rectangle.
+ *
+ * @return The bilinear interpolated color at the given coordinate.
+ *
+ * @see pntr_image_get_color_bilinear()
+ *
+ * @internal
+ */
+static pntr_color _pntr_image_get_color_bilinear_rec(pntr_image* image, pntr_rectangle srcRect, float x, float y) {
+    if (image == NULL || srcRect.width <= 0 || srcRect.height <= 0) {
+        return PNTR_BLANK;
+    }
+
+    // Clamp the coordinates to the source rectangle.
+    if (x < 0.0f) {
+        x = 0.0f;
+    }
+    if (y < 0.0f) {
+        y = 0.0f;
+    }
+
+    int xPixel = (int)x;
+    int yPixel = (int)y;
+    float xFraction = x - PNTR_FLOORF(x);
+    float yFraction = y - PNTR_FLOORF(y);
+
+    if (xPixel >= srcRect.width - 1) {
+        xPixel = srcRect.width - 1;
+        xFraction = 0.0f;
+    }
+    if (yPixel >= srcRect.height - 1) {
+        yPixel = srcRect.height - 1;
+        yFraction = 0.0f;
+    }
+
+    // The neighbouring pixel is clamped to the last pixel of the source rectangle.
+    int xPixelPlusOne = (xPixel + 1 >= srcRect.width) ? xPixel : xPixel + 1;
+    int yPixelPlusOne = (yPixel + 1 >= srcRect.height) ? yPixel : yPixel + 1;
+
+    xPixel += srcRect.x;
+    yPixel += srcRect.y;
+    xPixelPlusOne += srcRect.x;
+    yPixelPlusOne += srcRect.y;
+
+    return pntr_color_bilinear_interpolate(
+        PNTR_PIXEL(image, xPixel, yPixel),
+        PNTR_PIXEL(image, xPixel, yPixelPlusOne),
+        PNTR_PIXEL(image, xPixelPlusOne, yPixel),
+        PNTR_PIXEL(image, xPixelPlusOne, yPixelPlusOne),
+        xFraction,
+        yFraction
+    );
+}
+
+/**
+ * Get an image's pixel color at the given sub-pixel (x, y) position, bilinearly interpolating the four surrounding pixels.
+ *
+ * Coordinates outside of the image are clamped to its edge pixels, so this will never sample
+ * outside of the image.
+ *
+ * @param image The image to sample from.
+ * @param x The x position to sample from the image.
+ * @param y The y position to sample from the image.
+ *
+ * @return The bilinear interpolated color at the (x, y) position of the image.
+ *
+ * @see pntr_image_get_color()
+ * @see pntr_color_bilinear_interpolate()
+ */
+PNTR_API pntr_color pntr_image_get_color_bilinear(pntr_image* image, float x, float y) {
+    if (image == NULL) {
+        return PNTR_BLANK;
+    }
+
+    return _pntr_image_get_color_bilinear_rec(image,
+        PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = image->width, .height = image->height },
+        x, y);
+}
+
+/**
  * Get the file type of the given image, based on its filename.
  *
  * @param filePath The file path to the image.
@@ -3458,20 +3547,8 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
 
             for (int y = 0; y < newHeight; y++) {
                 float srcY = (float)y * yRatio;
-                int srcYPixel = (int)srcY;
-                int srcYPixelPlusOne = y == newHeight - 1 ? (int)srcY : (int)srcY + 1;
                 for (int x = 0; x < newWidth; x++) {
-                    float srcX = (float)x * xRatio;
-                    int srcXPixel = (int)srcX;
-                    int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcX : (int)srcX + 1;
-                    PNTR_PIXEL(output, x, y) = pntr_color_bilinear_interpolate(
-                        image->data[srcYPixel * (image->pitch >> 2) + srcXPixel],
-                        image->data[srcYPixelPlusOne * (image->pitch >> 2) + srcXPixel],
-                        image->data[srcYPixel * (image->pitch >> 2) + srcXPixelPlusOne],
-                        image->data[srcYPixelPlusOne * (image->pitch >> 2) + srcXPixelPlusOne],
-                        srcX - PNTR_FLOORF(srcX),
-                        srcY - PNTR_FLOORF(srcY)
-                    );
+                    PNTR_PIXEL(output, x, y) = pntr_image_get_color_bilinear(image, (float)x * xRatio, srcY);
                 }
             }
         }
@@ -5461,24 +5538,12 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
                     continue;
                 }
                 float srcY = (float)y * yRatio;
-                int srcYPixel = srcRect.y + (int)srcY;
-                int srcYPixelPlusOne = y == newHeight - 1 ? (int)srcYPixel : (int)srcYPixel + 1;
                 for (int x = 0; x < newWidth; x++) {
                     int xPosition = posX + x - offsetXRatio;
                     if (xPosition < dst->clip.x || xPosition >= dst->clip.x + dst->clip.width) {
                         continue;
                     }
-                    float srcX = (float)x * xRatio;
-                    int srcXPixel = srcRect.x + (int)srcX;
-                    int srcXPixelPlusOne = x == newWidth - 1 ? (int)srcXPixel : (int)srcXPixel + 1;
-                    pntr_color pixel = pntr_color_bilinear_interpolate(
-                        src->data[srcYPixel * (src->pitch >> 2) + srcXPixel],
-                        src->data[srcYPixelPlusOne * (src->pitch >> 2) + srcXPixel],
-                        src->data[srcYPixel * (src->pitch >> 2) + srcXPixelPlusOne],
-                        src->data[srcYPixelPlusOne * (src->pitch >> 2) + srcXPixelPlusOne],
-                        srcX - PNTR_FLOORF(srcX),
-                        srcY - PNTR_FLOORF(srcY)
-                    );
+                    pntr_color pixel = _pntr_image_get_color_bilinear_rec(src, srcRect, (float)x * xRatio, srcY);
                     if (tint.value != PNTR_WHITE_VALUE) {
                         pixel = pntr_color_tint(pixel, tint);
                     }
@@ -5609,18 +5674,7 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
             if (filter == PNTR_FILTER_NEARESTNEIGHBOR) {
                 srcColor = PNTR_PIXEL(src, srcXint, srcYint);
             } else if (filter == PNTR_FILTER_BILINEAR) {
-                // Avoid going outside the source rect.
-                if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
-                    continue;
-                }
-                srcColor = pntr_color_bilinear_interpolate(
-                    PNTR_PIXEL(src, srcXint, srcYint),
-                    PNTR_PIXEL(src, srcXint, srcYint + 1),
-                    PNTR_PIXEL(src, srcXint + 1, srcYint),
-                    PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
-                    srcX - PNTR_FLOORF(srcX),
-                    srcY - PNTR_FLOORF(srcY)
-                );
+                srcColor = _pntr_image_get_color_bilinear_rec(src, srcRect, srcX, srcY);
             }
             else {
                 // Unsupported filter
@@ -5909,22 +5963,10 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
                 );
             }
             else {
-                // For bilinear, don't overscan.
-                if (srcX >= srcRect.width - 1 || srcY >= srcRect.height - 1) {
-                    continue;
-                }
-
                 pntr_draw_point_unsafe(dst,
                     destX,
                     destY,
-                    pntr_color_bilinear_interpolate(
-                        PNTR_PIXEL(src, srcXint, srcYint),
-                        PNTR_PIXEL(src, srcXint, srcYint + 1),
-                        PNTR_PIXEL(src, srcXint + 1, srcYint),
-                        PNTR_PIXEL(src, srcXint + 1, srcYint + 1),
-                        srcX - PNTR_FLOORF(srcX),
-                        srcY - PNTR_FLOORF(srcY)
-                    )
+                    _pntr_image_get_color_bilinear_rec(src, srcRect, srcX, srcY)
                 );
             }
         }
