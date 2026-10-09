@@ -754,6 +754,211 @@ MODULE(pntr, {
             pntr_unload_image(rotated);
         });
 
+        IT("pntr_draw_image_rotated_rec() keeps the source rectangle in bounds", {
+            pntr_image* dst = pntr_gen_image_color(60, 60, PNTR_BLANK);
+            NEQUALS(dst, NULL);
+
+            IT("with a sprite sheet rectangle that runs off the right edge", {
+                // A 16x16 sprite rect at x=10 on a 20x16 sheet only has 10 columns left.
+                pntr_image* sheet = pntr_gen_image_color(20, 16, PNTR_RED);
+                NEQUALS(sheet, NULL);
+                pntr_rectangle sheetRect = {10, 0, 16, 16};
+
+                pntr_draw_image_rotated_rec(dst, sheet, sheetRect, 4, 4, 90.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                COLOREQUALS(pntr_image_get_color(dst, 4, 4), PNTR_RED);
+
+                pntr_draw_image_rotated_rec(dst, sheet, sheetRect, 4, 4, 180.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                pntr_draw_image_rotated_rec(dst, sheet, sheetRect, 4, 4, 270.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                pntr_draw_image_rotated_rec(dst, sheet, sheetRect, 20, 20, 45.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR);
+                pntr_draw_image_rotated_rec(dst, sheet, sheetRect, 20, 20, 45.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                COLOREQUALS(pntr_image_get_color(dst, 25, 25), PNTR_RED);
+
+                pntr_unload_image(sheet);
+            });
+
+            IT("with a source rectangle that is partially outside the source", {
+                pntr_image* src = pntr_gen_image_color(10, 10, PNTR_RED);
+                NEQUALS(src, NULL);
+                pntr_rectangle partial = {5, 5, 10, 10};
+
+                pntr_draw_image_rotated_rec(dst, src, partial, 30, 0, 180.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                pntr_draw_image_rotated_rec(dst, src, partial, 30, 0, 270.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                pntr_draw_image_rotated_rec(dst, src, partial, 30, 20, 45.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR);
+                pntr_draw_image_rotated_rec(dst, src, partial, 30, 20, 45.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+
+                pntr_draw_image_rotated_rec(dst, src, partial, 30, 0, 90.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                COLOREQUALS(pntr_image_get_color(dst, 30, 0), PNTR_RED);
+
+                pntr_unload_image(src);
+            });
+
+            IT("with a source rectangle that is entirely outside the source", {
+                pntr_image* src = pntr_gen_image_color(10, 10, PNTR_RED);
+                NEQUALS(src, NULL);
+                pntr_image* untouched = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                NEQUALS(untouched, NULL);
+                pntr_image* expected = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                NEQUALS(expected, NULL);
+                pntr_rectangle outside = {20, 20, 5, 5};
+
+                pntr_draw_image_rotated_rec(untouched, src, outside, 0, 0, 90.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                pntr_draw_image_rotated_rec(untouched, src, outside, 0, 0, 45.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                IMAGEEQUALS(untouched, expected);
+
+                pntr_unload_image(expected);
+                pntr_unload_image(untouched);
+                pntr_unload_image(src);
+            });
+
+            pntr_unload_image(dst);
+        });
+
+        IT("pntr_image_rotate(image, -360.0f) is a full rotation", {
+            // A negative multiple of 360 normalizes to 0, so the image is unchanged.
+            pntr_image* rotated = pntr_image_rotate(image, -360.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+            NEQUALS(rotated, NULL);
+            EQUALS(rotated->width, image->width);
+            EQUALS(rotated->height, image->height);
+            IMAGEEQUALS(rotated, image);
+            pntr_unload_image(rotated);
+
+            pntr_image* rotatedTwice = pntr_image_rotate(image, -720.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+            NEQUALS(rotatedTwice, NULL);
+            EQUALS(rotatedTwice->width, image->width);
+            EQUALS(rotatedTwice->height, image->height);
+            IMAGEEQUALS(rotatedTwice, image);
+            pntr_unload_image(rotatedTwice);
+        });
+
+        IT("pntr_image_rotate(image, -90.0f) normalizes to 270 degrees", {
+            pntr_image* rotated = pntr_image_rotate(image, -90.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+            NEQUALS(rotated, NULL);
+            EQUALS(rotated->width, image->height);
+            EQUALS(rotated->height, image->width);
+            pntr_unload_image(rotated);
+        });
+
+        IT("pntr_image_rotate() maps the corners of a non-square image", {
+            // A distinct color in every corner, so the exact mapping is verified
+            // rather than just the pixel being non-blank.
+            pntr_image* corners = pntr_gen_image_color(7, 4, PNTR_BLUE);
+            NEQUALS(corners, NULL);
+            pntr_draw_rectangle_fill(corners, 0, 0, 1, 1, PNTR_RED);
+            pntr_draw_rectangle_fill(corners, 6, 0, 1, 1, PNTR_GREEN);
+            pntr_draw_rectangle_fill(corners, 0, 3, 1, 1, PNTR_GOLD);
+            pntr_draw_rectangle_fill(corners, 6, 3, 1, 1, PNTR_WHITE);
+
+            IT("90 degrees puts the source's top right corner at (0, 0)", {
+                pntr_image* rotated = pntr_image_rotate(corners, 90.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                NEQUALS(rotated, NULL);
+                EQUALS(rotated->width, 4);
+                EQUALS(rotated->height, 7);
+                COLOREQUALS(pntr_image_get_color(rotated, 0, 0), PNTR_GREEN);
+                COLOREQUALS(pntr_image_get_color(rotated, 3, 0), PNTR_WHITE);
+                COLOREQUALS(pntr_image_get_color(rotated, 0, 6), PNTR_RED);
+                COLOREQUALS(pntr_image_get_color(rotated, 3, 6), PNTR_GOLD);
+                pntr_unload_image(rotated);
+            });
+
+            IT("180 degrees puts the source's bottom right corner at (0, 0)", {
+                pntr_image* rotated = pntr_image_rotate(corners, 180.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                NEQUALS(rotated, NULL);
+                EQUALS(rotated->width, 7);
+                EQUALS(rotated->height, 4);
+                COLOREQUALS(pntr_image_get_color(rotated, 0, 0), PNTR_WHITE);
+                COLOREQUALS(pntr_image_get_color(rotated, 6, 0), PNTR_GOLD);
+                COLOREQUALS(pntr_image_get_color(rotated, 0, 3), PNTR_GREEN);
+                COLOREQUALS(pntr_image_get_color(rotated, 6, 3), PNTR_RED);
+                pntr_unload_image(rotated);
+            });
+
+            IT("270 degrees puts the source's bottom left corner at (0, 0)", {
+                pntr_image* rotated = pntr_image_rotate(corners, 270.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                NEQUALS(rotated, NULL);
+                EQUALS(rotated->width, 4);
+                EQUALS(rotated->height, 7);
+                COLOREQUALS(pntr_image_get_color(rotated, 0, 0), PNTR_GOLD);
+                COLOREQUALS(pntr_image_get_color(rotated, 3, 0), PNTR_RED);
+                COLOREQUALS(pntr_image_get_color(rotated, 0, 6), PNTR_WHITE);
+                COLOREQUALS(pntr_image_get_color(rotated, 3, 6), PNTR_GREEN);
+                pntr_unload_image(rotated);
+            });
+
+            IT("four 90 degree rotations return the original image", {
+                pntr_image* rotated = pntr_image_copy(corners);
+                NEQUALS(rotated, NULL);
+                for (int i = 0; i < 4; i++) {
+                    pntr_image* next = pntr_image_rotate(rotated, 90.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                    NEQUALS(next, NULL);
+                    pntr_unload_image(rotated);
+                    rotated = next;
+                }
+                IMAGEEQUALS(rotated, corners);
+                pntr_unload_image(rotated);
+            });
+
+            IT("two 180 degree rotations return the original image", {
+                pntr_image* once = pntr_image_rotate(corners, 180.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                NEQUALS(once, NULL);
+                pntr_image* twice = pntr_image_rotate(once, 180.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                NEQUALS(twice, NULL);
+                IMAGEEQUALS(twice, corners);
+                pntr_unload_image(once);
+                pntr_unload_image(twice);
+            });
+
+            IT("four 270 degree rotations return the original image", {
+                pntr_image* rotated = pntr_image_copy(corners);
+                NEQUALS(rotated, NULL);
+                for (int i = 0; i < 4; i++) {
+                    pntr_image* next = pntr_image_rotate(rotated, 270.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                    NEQUALS(next, NULL);
+                    pntr_unload_image(rotated);
+                    rotated = next;
+                }
+                IMAGEEQUALS(rotated, corners);
+                pntr_unload_image(rotated);
+            });
+
+            IT("90 and 270 degrees are inverses of each other", {
+                pntr_image* rotated = pntr_image_rotate(corners, 90.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                NEQUALS(rotated, NULL);
+                pntr_image* back = pntr_image_rotate(rotated, 270.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                NEQUALS(back, NULL);
+                IMAGEEQUALS(back, corners);
+                pntr_unload_image(rotated);
+                pntr_unload_image(back);
+            });
+
+            pntr_unload_image(corners);
+        });
+
+        IT("pntr_image_rotate(image, 90.0f) keeps the source's first column", {
+            // The first column of the source becomes the last row of the result.
+            pntr_image* source = pntr_gen_image_color(7, 4, PNTR_BLUE);
+            NEQUALS(source, NULL);
+            pntr_draw_rectangle_fill(source, 0, 0, 1, 4, PNTR_RED);
+
+            pntr_image* rotated = pntr_image_rotate(source, 90.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+            NEQUALS(rotated, NULL);
+            EQUALS(rotated->width, 4);
+            EQUALS(rotated->height, 7);
+
+            for (int x = 0; x < rotated->width; x++) {
+                COLOREQUALS(pntr_image_get_color(rotated, x, rotated->height - 1), PNTR_RED);
+            }
+
+            // Every pixel of the result is written, so no row is left blank.
+            for (int y = 0; y < rotated->height; y++) {
+                for (int x = 0; x < rotated->width; x++) {
+                    NEQUALS(pntr_image_get_color(rotated, x, y).value, PNTR_BLANK.value);
+                }
+            }
+
+            pntr_unload_image(rotated);
+            pntr_unload_image(source);
+        });
+
         IT("pntr_draw_image_rotozoom()", {
             IT("pntr_draw_image_rotozoom() with no rotation delegates to the scaled drawing path", {
                 // Source image: blue, with a red column from x=6 to x=9.
