@@ -3614,6 +3614,20 @@ PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical)
 }
 
 /**
+ * Applies the given statement to each pixel within the image's clip region, with the pixel available as `pixel`.
+ *
+ * @internal
+ */
+#define _PNTR_IMAGE_COLOR_LOOP(image, statement) \
+    for (int y = (image)->clip.y; y < (image)->clip.y + (image)->clip.height; y++) { \
+        pntr_color* pixel = &PNTR_PIXEL((image), (image)->clip.x, y); \
+        for (int x = 0; x < (image)->clip.width; x++) { \
+            statement; \
+            pixel++; \
+        } \
+    }
+
+/**
  * Replace the given color with another color on an image.
  *
  * @param image The image to process.
@@ -3625,15 +3639,11 @@ PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr
         return;
     }
 
-    for (int y = image->clip.y; y < image->clip.y + image->clip.height; y++) {
-        pntr_color* pixel = &PNTR_PIXEL(image, 0, y);
-        for (int x = image->clip.x; x < image->clip.x + image->clip.width; x++) {
-            if (pixel->value == color.value) {
-                *pixel = replace;
-            }
-            pixel++;
+    _PNTR_IMAGE_COLOR_LOOP(image,
+        if (pixel->value == color.value) {
+            *pixel = replace;
         }
-    }
+    )
 }
 
 /**
@@ -3719,20 +3729,6 @@ PNTR_API pntr_color pntr_color_fade(pntr_color color, float factor) {
 }
 
 /**
- * Applies the given statement to each pixel within the image's clip region, with the pixel available as `pixel`.
- *
- * @internal
- */
-#define _PNTR_IMAGE_COLOR_LOOP(image, statement) \
-    for (int y = (image)->clip.y; y < (image)->clip.y + (image)->clip.height; y++) { \
-        pntr_color* pixel = &PNTR_PIXEL((image), (image)->clip.x, y); \
-        for (int x = 0; x < (image)->clip.width; x++) { \
-            statement; \
-            pixel++; \
-        } \
-    }
-
-/**
  * Fade an image by the given factor.
  *
  * @param image The image to fade.
@@ -3745,11 +3741,7 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float factor) {
         return;
     }
 
-    _PNTR_IMAGE_COLOR_LOOP(image,
-        if (pixel->rgba.a > 0) {
-            *pixel = pntr_color_fade(*pixel, factor);
-        }
-    )
+    _PNTR_IMAGE_COLOR_LOOP(image, *pixel = pntr_color_fade(*pixel, factor))
 }
 
 /**
@@ -5337,6 +5329,10 @@ PNTR_API void pntr_image_alpha_crop(pntr_image* image, float threshold) {
 /**
  * Apply contrast to the given color.
  *
+ * @details The contrast is applied by scaling each channel away from mid-gray. A contrast of
+ * -1.0f collapses every channel to mid-gray, 0.0f returns the color unchanged, and 1.0f
+ * spreads the channels out by a factor of four.
+ *
  * @param color The color to apply constrast to.
  * @param contrast The amount of constrast to apply, from -1.0f to 1.0f.
  *
@@ -5350,39 +5346,32 @@ PNTR_API pntr_color pntr_color_contrast(pntr_color color, float contrast) {
         contrast = 1.0f;
     }
 
-    contrast = (1.0f + contrast) * contrast;
+    contrast = (1.0f + contrast) * (1.0f + contrast);
 
-    float pR = (float)color.rgba.r / 255.0f - 0.5f;
-    pR *= contrast;
-    pR += 0.5f;
-    pR *= 255;
-    if (pR < 0) {
-        pR = 0;
+    // Scale each channel away from mid-gray. Staying in 0-255 space keeps 0.0f an exact
+    // identity, as subtracting and re-adding 127.5f loses no precision.
+    float pR = ((float)color.rgba.r - 127.5f) * contrast + 127.5f;
+    if (pR < 0.0f) {
+        pR = 0.0f;
     }
-    else if (pR > 255) {
-        pR = 255;
-    }
-
-    float pG = (float)color.rgba.g / 255.0f - 0.5f;
-    pG *= contrast;
-    pG += 0.5f;
-    pG *= 255;
-    if (pG < 0) {
-        pG = 0;
-    }
-    else if (pG > 255) {
-        pG = 255;
+    else if (pR > 255.0f) {
+        pR = 255.0f;
     }
 
-    float pB = (float)color.rgba.b / 255.0f - 0.5f;
-    pB *= contrast;
-    pB += 0.5f;
-    pB *= 255;
-    if (pB < 0) {
-        pB = 0;
+    float pG = ((float)color.rgba.g - 127.5f) * contrast + 127.5f;
+    if (pG < 0.0f) {
+        pG = 0.0f;
     }
-    else if (pB > 255) {
-        pB = 255;
+    else if (pG > 255.0f) {
+        pG = 255.0f;
+    }
+
+    float pB = ((float)color.rgba.b - 127.5f) * contrast + 127.5f;
+    if (pB < 0.0f) {
+        pB = 0.0f;
+    }
+    else if (pB > 255.0f) {
+        pB = 255.0f;
     }
 
     return PNTR_NEW_COLOR((unsigned char)pR, (unsigned char)pG, (unsigned char)pB, color.rgba.a);

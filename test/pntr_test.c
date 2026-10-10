@@ -848,6 +848,27 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_image_color_replace() respects the clip region", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_BLUE);
+        NEQUALS(image, NULL);
+
+        // A clip that starts away from column 0 must only affect its own columns.
+        pntr_rectangle expectedClip = PNTR_CLITERAL(pntr_rectangle) {50, 0, 10, 100};
+        pntr_image_set_clip(image, 50, 0, 10, 100);
+        RECTEQUALS(pntr_image_get_clip(image), expectedClip);
+        pntr_image_color_replace(image, PNTR_BLUE, PNTR_RED);
+        pntr_image_reset_clip(image);
+
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                pntr_color expected = (x >= 50 && x < 60) ? PNTR_RED : PNTR_BLUE;
+                COLOREQUALS(pntr_image_get_color(image, x, y), expected);
+            }
+        }
+
+        pntr_unload_image(image);
+    });
+
     IT("pntr_color_invert()", {
         pntr_color color = pntr_new_color(21, 16, 171, 255);
         COLOREQUALS(pntr_color_invert(color), pntr_new_color(234, 239, 84, 255));
@@ -901,6 +922,173 @@ MODULE(pntr, {
         pntr_image_color_fade(image, -0.5f);
         red.rgba.a = 127;
         COLOREQUALS(pntr_image_get_color(image, 10, 10), red);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_color_fade() matches pntr_color_fade()", {
+        // The per-image fade must agree with the per-color fade, including for pixels that
+        // start out fully transparent.
+        pntr_image* image = pntr_gen_image_color(8, 8, PNTR_BLANK);
+        NEQUALS(image, NULL);
+        pntr_image_color_fade(image, 1.0f);
+        COLOREQUALS(pntr_image_get_color(image, 4, 4), pntr_color_fade(PNTR_BLANK, 1.0f));
+        EQUALS(pntr_image_get_color(image, 4, 4).rgba.a, 255);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_color_brightness()", {
+        pntr_color color = pntr_new_color(100, 150, 200, 128);
+
+        // 0.0f is the identity, and the alpha channel is never touched.
+        COLOREQUALS(pntr_color_brightness(color, 0.0f), color);
+
+        // Positive factors move each channel towards white, negative towards black.
+        pntr_color brighter = pntr_color_brightness(color, 0.5f);
+        GREATER(brighter.rgba.r, color.rgba.r);
+        GREATER(brighter.rgba.g, color.rgba.g);
+        GREATER(brighter.rgba.b, color.rgba.b);
+        EQUALS(brighter.rgba.a, color.rgba.a);
+
+        pntr_color darker = pntr_color_brightness(color, -0.5f);
+        LESSER(darker.rgba.r, color.rgba.r);
+        LESSER(darker.rgba.g, color.rgba.g);
+        LESSER(darker.rgba.b, color.rgba.b);
+        EQUALS(darker.rgba.a, color.rgba.a);
+
+        // The endpoints saturate to white and black.
+        COLOREQUALS(pntr_color_brightness(color, 1.0f), pntr_new_color(255, 255, 255, 128));
+        COLOREQUALS(pntr_color_brightness(color, -1.0f), pntr_new_color(0, 0, 0, 128));
+
+        // Out-of-range factors behave as the clamped endpoints.
+        COLOREQUALS(pntr_color_brightness(color, 5.0f), pntr_color_brightness(color, 1.0f));
+        COLOREQUALS(pntr_color_brightness(color, -5.0f), pntr_color_brightness(color, -1.0f));
+    });
+
+    IT("pntr_color_grayscale()", {
+        // Every channel ends up equal, and the alpha is preserved.
+        pntr_color gray = pntr_color_grayscale(pntr_new_color(100, 150, 200, 128));
+        EQUALS(gray.rgba.r, gray.rgba.g);
+        EQUALS(gray.rgba.g, gray.rgba.b);
+        EQUALS(gray.rgba.a, 128);
+
+        // Grays are unchanged, and the extremes stay at the extremes.
+        COLOREQUALS(pntr_color_grayscale(pntr_new_color(60, 60, 60, 255)), pntr_new_color(60, 60, 60, 255));
+        COLOREQUALS(pntr_color_grayscale(PNTR_BLACK), PNTR_BLACK);
+        COLOREQUALS(pntr_color_grayscale(PNTR_WHITE), PNTR_WHITE);
+
+        // Green is weighted the heaviest, then red, then blue.
+        GREATER(pntr_color_grayscale(PNTR_GREEN).rgba.r, pntr_color_grayscale(PNTR_RED).rgba.r);
+        GREATER(pntr_color_grayscale(PNTR_RED).rgba.r, pntr_color_grayscale(PNTR_BLUE).rgba.r);
+    });
+
+    IT("pntr_color_alpha_blend()", {
+        // A fully opaque source replaces the destination outright.
+        COLOREQUALS(pntr_color_alpha_blend(PNTR_BLUE, PNTR_RED), PNTR_RED);
+
+        // Blending onto a fully transparent destination is just the source.
+        COLOREQUALS(pntr_color_alpha_blend(PNTR_BLANK, PNTR_RED), PNTR_RED);
+
+        // A partially transparent source pulls the destination towards it, and raises alpha.
+        pntr_color half = pntr_color_fade(PNTR_RED, -0.5f);
+        EQUALS(half.rgba.a, 127);
+        pntr_color blended = pntr_color_alpha_blend(pntr_color_fade(PNTR_BLUE, -0.5f), half);
+        GREATER(blended.rgba.r, PNTR_BLUE.rgba.r);
+        GREATER(blended.rgba.a, 127);
+        LESSER(blended.rgba.b, PNTR_BLUE.rgba.b);
+    });
+
+    IT("pntr_color_contrast() is the identity at 0.0f", {
+        // The documented range is -1.0f to 1.0f, so 0.0f must leave the color alone. The
+        // old formula multiplied by (contrast * contrast + contrast), which is 0 at 0.0f,
+        // flattening every color to mid-gray.
+        COLOREQUALS(pntr_color_contrast(PNTR_RED, 0.0f), PNTR_RED);
+        COLOREQUALS(pntr_color_contrast(PNTR_WHITE, 0.0f), PNTR_WHITE);
+        COLOREQUALS(pntr_color_contrast(PNTR_BLACK, 0.0f), PNTR_BLACK);
+        COLOREQUALS(pntr_color_contrast(PNTR_BLUE, 0.0f), PNTR_BLUE);
+
+        // Every channel value round-trips, including the low values where computing in
+        // 0.0f-1.0f space used to lose a step to rounding.
+        for (int i = 0; i < 256; i++) {
+            pntr_color color = pntr_new_color((unsigned char)i, (unsigned char)i, (unsigned char)i, 255);
+            COLOREQUALS(pntr_color_contrast(color, 0.0f), color);
+        }
+    });
+
+    IT("pntr_color_contrast()", {
+        pntr_color color = PNTR_RED;
+        EQUALS(color.rgba.r, 230);
+
+        // -1.0f gives a multiplier of 0, collapsing every channel to mid-gray.
+        pntr_color flat = pntr_color_contrast(color, -1.0f);
+        COLOREQUALS(flat, pntr_new_color(127, 127, 127, 255));
+        COLOREQUALS(pntr_color_contrast(PNTR_WHITE, -1.0f), flat);
+        COLOREQUALS(pntr_color_contrast(PNTR_BLACK, -1.0f), flat);
+
+        // Increasing contrast spreads channels away from mid-gray, decreasing pulls them
+        // in. Use a color near mid-gray so that no channel saturates and the ordering is
+        // strict. Red sits above mid-gray and green below it, so they move opposite ways.
+        pntr_color mid = pntr_new_color(140, 110, 130, 255);
+        pntr_color midFlat = pntr_color_contrast(mid, -1.0f);
+        pntr_color less = pntr_color_contrast(mid, -0.5f);
+        pntr_color more = pntr_color_contrast(mid, 0.5f);
+        pntr_color most = pntr_color_contrast(mid, 1.0f);
+
+        // -1.0f < -0.5f < 0.0f < 0.5f < 1.0f pushes red steadily further up.
+        GREATER(less.rgba.r, midFlat.rgba.r);
+        GREATER(mid.rgba.r, less.rgba.r);
+        GREATER(more.rgba.r, mid.rgba.r);
+        GREATER(most.rgba.r, more.rgba.r);
+
+        // ... and green, which starts below mid-gray, steadily further down.
+        LESSER(less.rgba.g, midFlat.rgba.g);
+        LESSER(mid.rgba.g, less.rgba.g);
+        LESSER(more.rgba.g, mid.rgba.g);
+        LESSER(most.rgba.g, more.rgba.g);
+
+        // The alpha channel is never touched.
+        EQUALS(less.rgba.a, 255);
+        EQUALS(more.rgba.a, 255);
+        EQUALS(most.rgba.a, 255);
+        EQUALS(pntr_color_contrast(pntr_new_color(10, 20, 30, 64), 0.5f).rgba.a, 64);
+
+        // Out-of-range values behave as the clamped endpoints.
+        COLOREQUALS(pntr_color_contrast(mid, 5.0f), most);
+        COLOREQUALS(pntr_color_contrast(mid, -5.0f), midFlat);
+    });
+
+    IT("pntr_image_color_contrast()", {
+        pntr_image* image = pntr_gen_image_color(20, 20, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_draw_rectangle_fill(image, 2, 2, 5, 5, PNTR_BLUE);
+
+        // 0.0f must leave the image pixel-identical.
+        pntr_image* expected = pntr_image_copy(image);
+        NEQUALS(expected, NULL);
+        pntr_image_color_contrast(image, 0.0f);
+        IMAGEEQUALS(image, expected);
+        pntr_unload_image(expected);
+
+        // -1.0f collapses the whole clip region to mid-gray.
+        pntr_image_color_contrast(image, -1.0f);
+        COLOREQUALS(pntr_image_get_color(image, 0, 0), pntr_new_color(127, 127, 127, 255));
+        COLOREQUALS(pntr_image_get_color(image, 4, 4), pntr_new_color(127, 127, 127, 255));
+
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_color_contrast() respects the clip region", {
+        pntr_image* image = pntr_gen_image_color(20, 20, PNTR_RED);
+        NEQUALS(image, NULL);
+
+        pntr_image_set_clip(image, 10, 0, 5, 20);
+        pntr_image_color_contrast(image, -1.0f);
+        pntr_image_reset_clip(image);
+
+        COLOREQUALS(pntr_image_get_color(image, 9, 5), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(image, 10, 5), pntr_new_color(127, 127, 127, 255));
+        COLOREQUALS(pntr_image_get_color(image, 14, 5), pntr_new_color(127, 127, 127, 255));
+        COLOREQUALS(pntr_image_get_color(image, 15, 5), PNTR_RED);
+
         pntr_unload_image(image);
     });
 
