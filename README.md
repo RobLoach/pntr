@@ -77,6 +77,7 @@ You can modify how *pntr* functions based on the following defines:
 | `PNTR_ENABLE_TTF` | Enables support for loading [TrueType fonts](https://en.wikipedia.org/wiki/TrueType_fonts) |
 | `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
 | `PNTR_ENABLE_VARGS` | Adds support for functions that require variadic arguments, like `pntr_draw_text_ex()` |
+| `PNTR_ERROR_STORAGE` | The storage class that holds the last error reported by `pntr_set_error()`. Defaults to `static`, which every thread shares. Define it as a thread-local storage class, like `static _Thread_local`, to give each thread an error of its own |
 | `PNTR_LOAD_FILE` | Callback to use when asked to load a file in `pntr_load_file()`. By default, will use `stdio.h`. |
 | `PNTR_LOAD_IMAGE_FROM_MEMORY` | Callback to use when loading an image from memory via `pntr_load_image_from_memory()`. By default, will use  [stb_image](https://github.com/nothings/stb/blob/master/stb_image.h) |
 | `PNTR_SAVE_FILE` | Callback to use when saving a file via `pntr_save_file()`. By default, uses `stdio.h` |

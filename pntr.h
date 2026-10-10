@@ -14,6 +14,7 @@
  * - PNTR_ENABLE_TTF: Enables support for loading TrueType fonts
  * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
+ * - PNTR_ERROR_STORAGE: The storage class holding the last reported error. Defaults to `static`, which every thread shares. Define it as a thread-local storage class, like `static _Thread_local`, to give each thread its own.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
  * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.
@@ -454,7 +455,9 @@ typedef enum pntr_error {
     PNTR_ERROR_NOT_SUPPORTED = -3, /** Not supported */
     PNTR_ERROR_FAILED_TO_OPEN = -4, /** Failed to open */
     PNTR_ERROR_FAILED_TO_WRITE = -5, /** Failed to write */
-    PNTR_ERROR_UNKNOWN = -6 /** Unknown error occurred */
+    PNTR_ERROR_UNKNOWN = -6, /** Unknown error occurred */
+    PNTR_ERROR_FAILED_TO_READ = -7, /** Opened, but failed to read */
+    PNTR_ERROR_INVALID_DATA = -8 /** The data that was given isn't what was expected */
 } pntr_error;
 
 /**
@@ -1468,17 +1471,39 @@ extern "C" {
     #endif
 #endif
 
+#ifndef PNTR_ERROR_STORAGE
+    /**
+     * The storage class that holds pntr's last reported error.
+     *
+     * By default this is a plain `static`, which means the error state is shared by every
+     * thread. Define this as a thread-local storage class to give each thread its own:
+     *
+     * @code
+     * #define PNTR_ERROR_STORAGE static _Thread_local
+     * @endcode
+     *
+     * The spelling of a thread-local depends on the compiler, which is why pntr does not
+     * pick one: `_Thread_local` for C11, `thread_local` for C++11, `__thread` for older
+     * GCC and Clang, and `__declspec(thread)` for MSVC.
+     *
+     * @see pntr_get_error()
+     * @see pntr_set_error()
+     */
+    #define PNTR_ERROR_STORAGE static
+#endif  // PNTR_ERROR_STORAGE
+
 /**
  * The last error that was reported from pntr.
  *
- * This will not work across different threads.
+ * This is shared across every thread, unless `PNTR_ERROR_STORAGE` says otherwise.
  *
  * @see pntr_get_error
  * @see pntr_set_error
+ * @see PNTR_ERROR_STORAGE
  * @internal
  * @private
  */
-static pntr_error _pntr_error;
+PNTR_ERROR_STORAGE pntr_error _pntr_error;
 
 PNTR_API const char* pntr_get_error(void) {
     switch (_pntr_error) {
@@ -1489,6 +1514,8 @@ PNTR_API const char* pntr_get_error(void) {
         case PNTR_ERROR_FAILED_TO_OPEN: return "Failed to open";
         case PNTR_ERROR_FAILED_TO_WRITE: return "Failed to write";
         case PNTR_ERROR_UNKNOWN: return "Unknown error";
+        case PNTR_ERROR_FAILED_TO_READ: return "Failed to read";
+        case PNTR_ERROR_INVALID_DATA: return "Invalid data";
     }
 
     return NULL;
@@ -1705,9 +1732,10 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
         return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
+    // A region that doesn't land on the image has nothing to copy out of it.
     pntr_rectangle dstRect;
     if (!_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &dstRect)) {
-        return NULL;
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* result = pntr_new_image(dstRect.width, dstRect.height);
@@ -1748,7 +1776,7 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
     // Ensure we are referencing an actual portion of the image.
     pntr_rectangle dstRect;
     if (!_pntr_rectangle_intersect(x, y, width, height, 0, 0, image->width, image->height, &dstRect)) {
-        return NULL;
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     // Build the subimage.
@@ -3227,12 +3255,18 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
 #ifndef PNTR_LOAD_IMAGE_FROM_MEMORY
     #ifdef PNTR_NO_LOAD_IMAGE
         #define PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize) NULL
+        // Remembers that the stub above is what is in use, as opposed to a custom
+        // PNTR_LOAD_IMAGE_FROM_MEMORY() that happens to be paired with PNTR_NO_LOAD_IMAGE.
+        #define _PNTR_LOAD_IMAGE_DISABLED
     #endif
 #endif
 
 #ifndef PNTR_SAVE_IMAGE_TO_MEMORY
     #ifdef PNTR_NO_SAVE_IMAGE
         #define PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize) NULL
+        // Remembers that the stub above is what is in use, as opposed to a custom
+        // PNTR_SAVE_IMAGE_TO_MEMORY() that happens to be paired with PNTR_NO_SAVE_IMAGE.
+        #define _PNTR_SAVE_IMAGE_DISABLED
     #endif
 #endif
 
@@ -3278,12 +3312,16 @@ PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const uns
         return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    #ifdef PNTR_NO_LOAD_IMAGE
+    #ifdef _PNTR_LOAD_IMAGE_DISABLED
         // The disabled PNTR_LOAD_IMAGE_FROM_MEMORY() discards its arguments.
         (void)type;
-    #endif
 
-    return PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize);
+        // Image loading was compiled out, which is worth saying rather than handing back a
+        // NULL that looks like the image data was at fault.
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+    #else
+        return PNTR_LOAD_IMAGE_FROM_MEMORY(type, fileData, dataSize);
+    #endif
 }
 
 /**
@@ -3304,7 +3342,22 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
     unsigned int bytesRead = 0;
     const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
     if (fileData == NULL) {
-        return (pntr_image*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        // pntr_load_file() already reported why the file couldn't be loaded, and that is
+        // more specific than anything that could be said from here. Only a custom
+        // PNTR_LOAD_FILE() callback that failed quietly needs an error of its own.
+        if (pntr_get_error_code() == PNTR_ERROR_NONE) {
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        }
+
+        return NULL;
+    }
+
+    // A file that holds no data loads successfully, but it can never hold an image. The
+    // file itself was fine, so this is about its contents rather than its arguments.
+    if (bytesRead == 0) {
+        pntr_unload_file((unsigned char*)fileData);
+
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_DATA);
     }
 
     pntr_image_type type = pntr_get_file_image_type(fileName);
@@ -4537,9 +4590,11 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
  * @return A new image with text on it, using the given font.
  */
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor) {
+    // Text that measures as empty, which includes a missing font or string, has no image
+    // to generate.
     pntr_vector size = pntr_measure_text_ex(font, text, 0);
     if (size.x <= 0 || size.y <= 0) {
-        return NULL;
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     pntr_image* output = pntr_gen_image_color(size.x, size.y, backgroundColor);
@@ -4897,6 +4952,9 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
 #ifndef PNTR_LOAD_FILE
     #ifdef PNTR_NO_STDIO
         #define PNTR_LOAD_FILE(fileName, bytesRead) NULL
+        // Remembers that the stub above is what is in use, as opposed to a custom
+        // PNTR_LOAD_FILE() that happens to be paired with PNTR_NO_STDIO.
+        #define _PNTR_LOAD_FILE_DISABLED
     #else
         #include <stdio.h> // FILE, fopen, fread
     #endif
@@ -4932,15 +4990,19 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
     }
 
     #ifdef PNTR_LOAD_FILE
-        #ifdef PNTR_NO_STDIO
+        #ifdef _PNTR_LOAD_FILE_DISABLED
             // The disabled PNTR_LOAD_FILE() discards its arguments, so zero the read size
             // here like the stdio paths below do, for callers that check it.
             if (bytesRead != NULL) {
                 *bytesRead = 0;
             }
-        #endif
 
-        return PNTR_LOAD_FILE(fileName, bytesRead);
+            // File loading was compiled out, which is worth saying rather than handing
+            // back a NULL that looks like the file was at fault.
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+        #else
+            return PNTR_LOAD_FILE(fileName, bytesRead);
+        #endif
     #else
         // Nothing has been read yet, so every failure below can just return.
         if (bytesRead != NULL) {
@@ -4953,26 +5015,27 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
         }
 
         // Measure the file. A stream that can't seek, like a pipe, fails here instead of
-        // having ftell()'s -1 become an enormous allocation request.
+        // having ftell()'s -1 become an enormous allocation request. The file did open, so
+        // this is reported as a failure to read it rather than a failure to open it.
         if (fseek(file, 0, SEEK_END) != 0) {
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         long fileSize = ftell(file);
         if (fileSize < 0 || fseek(file, 0, SEEK_SET) != 0) {
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         // A directory, which fopen() accepts on some platforms, can report a believable
         // size while every read of it fails. Probe a single byte before committing to an
-        // allocation so that it reports a failure to open rather than a lack of memory.
+        // allocation so that it reports a failure to read rather than a lack of memory.
         // An empty file only raises the end-of-file indicator here, which the seek clears.
         (void)fgetc(file);
         if (ferror(file) != 0 || fseek(file, 0, SEEK_SET) != 0) {
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         // The size is reported back through an unsigned int, so a file too large to count
@@ -4997,7 +5060,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
         if (bytes != size || ferror(file) != 0) {
             PNTR_FREE(data);
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         fclose(file);
@@ -5036,7 +5099,8 @@ PNTR_API const char* pntr_load_file_text(const char *fileName) {
     char* output = (char*)PNTR_MALLOC(bytesRead + 1);
     if (output == NULL) {
         PNTR_FREE(data);
-        return NULL;
+
+        return (const char*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
     }
 
     PNTR_MEMCPY(output, data, bytesRead);
@@ -5059,6 +5123,9 @@ PNTR_API void pntr_unload_file_text(const char* text) {
 #ifndef PNTR_SAVE_FILE
     #ifdef PNTR_NO_STDIO
         #define PNTR_SAVE_FILE(fileName, data, bytesToWrite) NULL
+        // Remembers that the stub above is what is in use, as opposed to a custom
+        // PNTR_SAVE_FILE() that happens to be paired with PNTR_NO_STDIO.
+        #define _PNTR_SAVE_FILE_DISABLED
     #else
         #include <stdio.h> // FILE, fopen, fwrite
     #endif
@@ -5087,12 +5154,18 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
     }
 
     #ifdef PNTR_SAVE_FILE
-        #ifdef PNTR_NO_STDIO
+        #ifdef _PNTR_SAVE_FILE_DISABLED
             // The disabled PNTR_SAVE_FILE() discards its arguments.
             (void)bytesToWrite;
-        #endif
 
-        return PNTR_SAVE_FILE(fileName, data, bytesToWrite);
+            // File saving was compiled out, which is worth saying rather than reporting a
+            // failure that looks like the file system was at fault.
+            pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+
+            return false;
+        #else
+            return PNTR_SAVE_FILE(fileName, data, bytesToWrite);
+        #endif
     #else
         FILE *file = fopen(fileName, "wb");
         if (file == NULL) {
@@ -5223,13 +5296,17 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
         return (unsigned char*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    #ifdef PNTR_NO_SAVE_IMAGE
+    #ifdef _PNTR_SAVE_IMAGE_DISABLED
         // The disabled PNTR_SAVE_IMAGE_TO_MEMORY() discards its arguments.
         (void)type;
         (void)dataSize;
-    #endif
 
-    return PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize);
+        // Image saving was compiled out, which is worth saying rather than handing back a
+        // NULL that looks like the image was at fault.
+        return (unsigned char*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+    #else
+        return PNTR_SAVE_IMAGE_TO_MEMORY(image, type, dataSize);
+    #endif
 }
 
 /**
@@ -5354,6 +5431,8 @@ static void _pntr_image_adopt(pntr_image* image, pntr_image* newImage) {
  */
 PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
+        pntr_set_error(PNTR_ERROR_INVALID_ARGS);
+
         return false;
     }
 
@@ -5901,7 +5980,7 @@ static float _pntr_normalize_degrees(float degrees) {
  */
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_filter filter) {
     if (image == NULL) {
-        return NULL;
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
     degrees = _pntr_normalize_degrees(degrees);
