@@ -1955,23 +1955,25 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
     int changeInY = (endPosY - startPosY);
     int absChangeInY = (changeInY < 0) ? -changeInY : changeInY;
 
-    // Drawing a straight line is fast.
+    // Drawing a straight line is fast. Both endpoints are painted, so the length is one
+    // more than the distance between them, which also makes a line whose endpoints are
+    // the same pixel paint that pixel.
     if (startPosX == endPosX) {
         if (thickness <= 1) {
-            pntr_draw_line_vertical(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY, color);
+            pntr_draw_line_vertical(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY + 1, color);
         }
         else {
-            pntr_draw_line_vertical_thick(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY, thickness, color);
+            pntr_draw_line_vertical_thick(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY + 1, thickness, color);
         }
         return;
     }
 
     if (startPosY == endPosY) {
         if (thickness <= 1) {
-            pntr_draw_line_horizontal(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX, color);
+            pntr_draw_line_horizontal(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX + 1, color);
         }
         else {
-            pntr_draw_line_horizontal_thick(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX, thickness, color);
+            pntr_draw_line_horizontal_thick(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX + 1, thickness, color);
         }
         return;
     }
@@ -2091,11 +2093,11 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
     int absDx = (endPosX > startPosX) ? endPosX - startPosX : startPosX - endPosX;
     int absDy = (endPosY > startPosY) ? endPosY - startPosY : startPosY - endPosY;
     if (absDx == 0) {
-        pntr_draw_line_vertical(dst, startPosX, (startPosY < endPosY) ? startPosY : endPosY, absDy, color);
+        pntr_draw_line_vertical(dst, startPosX, (startPosY < endPosY) ? startPosY : endPosY, absDy + 1, color);
         return;
     }
     else if (absDy == 0) {
-        pntr_draw_line_horizontal(dst, (startPosX < endPosX) ? startPosX : endPosX, startPosY, absDx, color);
+        pntr_draw_line_horizontal(dst, (startPosX < endPosX) ? startPosX : endPosX, startPosY, absDx + 1, color);
         return;
     }
 
@@ -2327,9 +2329,11 @@ PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int pos
         return;
     }
 
+    // The caps sit on the first and last pixel of the line, which is the last pixel the
+    // rectangle covers rather than the one past it.
     pntr_draw_rectangle_fill(dst, posX, posY - thickness / 2, width, thickness, color);
     pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
-    pntr_draw_circle_fill(dst, posX + width, posY, thickness / 2, color);
+    pntr_draw_circle_fill(dst, posX + width - 1, posY, thickness / 2, color);
 }
 
 /**
@@ -2382,9 +2386,11 @@ PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY,
         pntr_draw_line_vertical(dst, posX, posY, height, color);
         return;
     }
+    // The caps sit on the first and last pixel of the line, which is the last pixel the
+    // rectangle covers rather than the one past it.
     pntr_draw_rectangle_fill(dst, posX - thickness / 2, posY, thickness, height, color);
     pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
-    pntr_draw_circle_fill(dst, posX, posY + height, thickness / 2, color);
+    pntr_draw_circle_fill(dst, posX, posY + height - 1, thickness / 2, color);
 }
 
 /**
