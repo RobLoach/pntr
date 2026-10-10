@@ -117,6 +117,152 @@ bool pntr_jpeg() {
     #endif
 }
 
+/**
+ * A blue source image carrying a red marker centered on the given pivot.
+ *
+ * The rotated drawing paths place the source pixel at their offset onto the destination
+ * position they were given, so following this marker is how a test holds a draw to its
+ * pivot without having to know which path, bounding box or filter the angle took.
+ *
+ * The marker is three pixels across so that at least one of its pixels is sure to survive
+ * nearest neighbor sampling, whatever angle the draw lands on.
+ */
+pntr_image* pntr_test_pivot_source(int width, int height, int pivotX, int pivotY) {
+    pntr_image* src = pntr_gen_image_color(width, height, PNTR_BLUE);
+    if (src == NULL) {
+        return NULL;
+    }
+
+    pntr_draw_rectangle_fill(src, pivotX - 1, pivotY - 1, 3, 3, PNTR_RED);
+
+    return src;
+}
+
+/**
+ * How far the marker of pntr_test_pivot_source() landed from the given position.
+ *
+ * Measured in whole pixels, from the average position of the marker, as the larger of the
+ * two axes. A rotation that honours its pivot keeps this within a pixel of zero.
+ *
+ * @return The distance, or the width of the image when none of the marker was drawn.
+ */
+int pntr_test_pivot_offset(pntr_image* image, int posX, int posY) {
+    long sumX = 0;
+    long sumY = 0;
+    long count = 0;
+
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_image_get_color(image, x, y).value == PNTR_RED.value) {
+                sumX += x;
+                sumY += y;
+                count++;
+            }
+        }
+    }
+
+    if (count == 0) {
+        return image->width;
+    }
+
+    int deltaX = (int)(sumX / count) - posX;
+    int deltaY = (int)(sumY / count) - posY;
+    if (deltaX < 0) {
+        deltaX = -deltaX;
+    }
+    if (deltaY < 0) {
+        deltaY = -deltaY;
+    }
+
+    return deltaX > deltaY ? deltaX : deltaY;
+}
+
+/**
+ * The rectangle covering every pixel of the given image that isn't the background color.
+ *
+ * An empty rectangle when nothing but the background is there.
+ */
+pntr_rectangle pntr_test_drawn_bounds(pntr_image* image, pntr_color background) {
+    int minX = image->width;
+    int minY = image->height;
+    int maxX = -1;
+    int maxY = -1;
+
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_image_get_color(image, x, y).value == background.value) {
+                continue;
+            }
+            if (x < minX) {
+                minX = x;
+            }
+            if (y < minY) {
+                minY = y;
+            }
+            if (x > maxX) {
+                maxX = x;
+            }
+            if (y > maxY) {
+                maxY = y;
+            }
+        }
+    }
+
+    if (maxX < 0) {
+        return PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 0 };
+    }
+
+    return PNTR_CLITERAL(pntr_rectangle) { .x = minX, .y = minY, .width = maxX - minX + 1, .height = maxY - minY + 1 };
+}
+
+/**
+ * The largest difference, in pixels, between the edges of two rectangles.
+ */
+int pntr_test_rectangle_distance(pntr_rectangle a, pntr_rectangle b) {
+    int deltas[4];
+    deltas[0] = a.x - b.x;
+    deltas[1] = a.y - b.y;
+    deltas[2] = a.x + a.width - (b.x + b.width);
+    deltas[3] = a.y + a.height - (b.y + b.height);
+
+    int largest = 0;
+    for (int i = 0; i < 4; i++) {
+        int delta = deltas[i] < 0 ? -deltas[i] : deltas[i];
+        if (delta > largest) {
+            largest = delta;
+        }
+    }
+
+    return largest;
+}
+
+/**
+ * Where a rotated draw of the given source lands on a destination, at the given pivot.
+ *
+ * The destination is large enough that nothing is ever clipped away, which is what lets the
+ * returned rectangle be compared from one angle to the next. Sweeping the angle and watching
+ * it is how the tests hold the rotated drawing paths to a continuous position: a pivot that
+ * is rotated along with the image moves the drawn area by at most a pixel between
+ * neighbouring angles, while one that isn't jumps the moment an exact quarter turn hands the
+ * draw to a different path.
+ */
+pntr_rectangle pntr_test_rotated_bounds(pntr_image* src, float degrees, float offsetX, float offsetY) {
+    pntr_rectangle empty = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 0 };
+
+    pntr_image* dst = pntr_gen_image_color(160, 160, PNTR_GREEN);
+    if (dst == NULL) {
+        return empty;
+    }
+
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
+    pntr_draw_image_rotated_rec(dst, src, srcRect, 80, 80, degrees, offsetX, offsetY, PNTR_FILTER_NEARESTNEIGHBOR);
+
+    pntr_rectangle bounds = pntr_test_drawn_bounds(dst, PNTR_GREEN);
+    pntr_unload_image(dst);
+
+    return bounds;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -2418,7 +2564,10 @@ MODULE(pntr, {
                 pntr_image* dst = pntr_gen_image_color(12, 12, PNTR_GREEN);
                 NEQUALS(dst, NULL);
                 pntr_rectangle srcRect = {0, 0, 10, 10};
-                pntr_draw_image_rotozoom(dst, src, srcRect, 0, 0, 180.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                // The origin is a pivot, so the way to fill the top left 10x10 of the
+                // destination is to spin the center of the source onto the center of it.
+                pntr_draw_image_rotozoom(dst, src, srcRect, 5, 5, 180.0f, 1.0f, 1.0f, 4.5f, 4.5f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
 
                 // After a 180 degree rotation, the red square lands in the bottom right of the drawn area.
                 COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_RED);
@@ -2516,6 +2665,150 @@ MODULE(pntr, {
                 pntr_unload_image(dst);
                 pntr_unload_image(src);
             });
+        });
+
+        IT("the rotation offset is a pivot", {
+            // A 40x24 source with its pivot near the left edge and halfway down, which is the
+            // shape of offset that the rotation paths used to disagree about. A centered
+            // pivot is the one case they already agreed on, so it can't tell them apart.
+            pntr_image* pivotSource = pntr_test_pivot_source(40, 24, 2, 12);
+            NEQUALS(pivotSource, NULL);
+            pntr_rectangle pivotRect = {0, 0, 40, 24};
+
+            // 0, 180 and the quarter turns each have a drawing path of their own, and 45, 135
+            // and 359 fall to the general rotation.
+            float pivotAngles[7] = {0.0f, 45.0f, 90.0f, 135.0f, 180.0f, 270.0f, 359.0f};
+
+            IT("pntr_draw_image_rotated_rec() lands its offset on the position", {
+                for (int i = 0; i < 7; i++) {
+                    pntr_image* dst = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+
+                    pntr_draw_image_rotated_rec(dst, pivotSource, pivotRect, 80, 80, pivotAngles[i], 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+
+                    // Rasterizing the marker can land it a pixel out, but no further.
+                    LESSER(pntr_test_pivot_offset(dst, 80, 80), 2);
+
+                    pntr_unload_image(dst);
+                }
+            });
+
+            IT("pntr_draw_image_rotozoom() lands its origin on the position", {
+                for (int i = 0; i < 7; i++) {
+                    pntr_image* dst = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+
+                    pntr_draw_image_rotozoom(dst, pivotSource, pivotRect, 80, 80, pivotAngles[i], 1.0f, 1.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    LESSER(pntr_test_pivot_offset(dst, 80, 80), 2);
+
+                    pntr_unload_image(dst);
+                }
+            });
+
+            IT("pntr_draw_image_rotozoom() lands its origin on the position when scaled", {
+                for (int i = 0; i < 7; i++) {
+                    pntr_image* dst = pntr_gen_image_color(240, 240, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+
+                    // A scale of 2 makes the marker 6x6, so its center can sit a pixel and a
+                    // half away from the pivot it grew out of.
+                    pntr_draw_image_rotozoom(dst, pivotSource, pivotRect, 120, 120, pivotAngles[i], 2.0f, 2.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    LESSER(pntr_test_pivot_offset(dst, 120, 120), 3);
+
+                    pntr_unload_image(dst);
+                }
+            });
+
+            IT("pntr_draw_image_rotated_rec() moves continuously past the quarter turns", {
+                // Each quarter turn has a drawing path of its own, and the general rotation
+                // runs a thousandth of a degree either side of it. Both have to arrive at the
+                // same place, or a sprite jumps as it spins past the exact angle.
+                float corners[5] = {0.0f, 90.0f, 180.0f, 270.0f, 360.0f};
+
+                for (int i = 0; i < 5; i++) {
+                    pntr_rectangle before = pntr_test_rotated_bounds(pivotSource, corners[i] - 0.001f, 2.0f, 12.0f);
+                    pntr_rectangle exact = pntr_test_rotated_bounds(pivotSource, corners[i], 2.0f, 12.0f);
+                    pntr_rectangle after = pntr_test_rotated_bounds(pivotSource, corners[i] + 0.001f, 2.0f, 12.0f);
+
+                    // Something was actually drawn, so an empty rectangle can't pass as still.
+                    GREATER(exact.width, 0);
+                    GREATER(exact.height, 0);
+
+                    LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                    LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                }
+            });
+
+            IT("pntr_draw_image_rotated_rec() and pntr_draw_image_rotozoom() agree", {
+                for (int i = 0; i < 7; i++) {
+                    pntr_image* rotated = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                    NEQUALS(rotated, NULL);
+                    pntr_image* zoomed = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                    NEQUALS(zoomed, NULL);
+
+                    pntr_draw_image_rotated_rec(rotated, pivotSource, pivotRect, 80, 80, pivotAngles[i], 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                    pntr_draw_image_rotozoom(zoomed, pivotSource, pivotRect, 80, 80, pivotAngles[i], 1.0f, 1.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    // At a scale of 1 and the same pivot the two land on the same place. The
+                    // quarter turns still differ by up to a pixel, because only one of the two
+                    // has a shortcut for them and the shortcut rounds the bounding box
+                    // differently than the general rotation does.
+                    pntr_rectangle rotatedBounds = pntr_test_drawn_bounds(rotated, PNTR_GREEN);
+                    pntr_rectangle zoomedBounds = pntr_test_drawn_bounds(zoomed, PNTR_GREEN);
+                    GREATER(rotatedBounds.width, 0);
+                    LESSER(pntr_test_rectangle_distance(rotatedBounds, zoomedBounds), 2);
+
+                    pntr_unload_image(zoomed);
+                    pntr_unload_image(rotated);
+                }
+            });
+
+            IT("pntr_draw_image_rotated_rec() and pntr_draw_image_rotozoom() match away from the quarter turns", {
+                // 45 degrees hands both of them to their general rotation, where a shared
+                // pivot has to produce not just the same placement but the same pixels.
+                pntr_image* rotated = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                NEQUALS(rotated, NULL);
+                pntr_image* zoomed = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                NEQUALS(zoomed, NULL);
+
+                pntr_draw_image_rotated_rec(rotated, pivotSource, pivotRect, 80, 80, 45.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                pntr_draw_image_rotozoom(zoomed, pivotSource, pivotRect, 80, 80, 45.0f, 1.0f, 1.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                IMAGEEQUALS(zoomed, rotated);
+
+                pntr_unload_image(zoomed);
+                pntr_unload_image(rotated);
+            });
+
+            IT("pntr_draw_image_rotated_rec() with a centered offset spins in place", {
+                // The case every convention already agreed on, kept here as a guard: a pivot
+                // at the center of the source keeps the drawn area centered on the position,
+                // whatever the angle.
+                pntr_image* centered = pntr_test_pivot_source(40, 24, 20, 12);
+                NEQUALS(centered, NULL);
+
+                for (int i = 0; i < 7; i++) {
+                    pntr_rectangle bounds = pntr_test_rotated_bounds(centered, pivotAngles[i], 20.0f, 12.0f);
+                    GREATER(bounds.width, 0);
+
+                    int centerX = bounds.x + bounds.width / 2 - 80;
+                    int centerY = bounds.y + bounds.height / 2 - 80;
+                    if (centerX < 0) {
+                        centerX = -centerX;
+                    }
+                    if (centerY < 0) {
+                        centerY = -centerY;
+                    }
+
+                    LESSER(centerX, 2);
+                    LESSER(centerY, 2);
+                }
+
+                pntr_unload_image(centered);
+            });
+
+            pntr_unload_image(pivotSource);
         });
 
         IT("pntr_gen_image_gradient", {
