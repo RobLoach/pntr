@@ -31,7 +31,7 @@ int main() {
 - Draw rectangles, circles, ellipses, triangles, lines, arcs, etc
 - RGBA or ARGB pixel bit order
 - Clipping
-- Load and save images (PNG)
+- Load and save images (PNG, BMP, and JPEG with `PNTR_ENABLE_JPEG`)
 - Draw sprites with scaling and rotation
 - Alpha-blending, alpha masks, invert, brightness, etc
 - Font rendering (TTF, BMF, TTY)
@@ -82,6 +82,7 @@ You can modify how *pntr* functions based on the following defines:
 | `PNTR_SAVE_FILE` | Callback to use when saving a file via `pntr_save_file()`. By default, uses `stdio.h` |
 | `PNTR_SAVE_IMAGE_TO_MEMORY` | Callback to use when saving an image to memory via `pntr_save_image_to_memory()`. By default, will use [stb_image_write](https://github.com/nothings/stb/blob/master/stb_image_write.h) |
 | `PNTR_NO_ALPHABLEND` | Skips alpha blending when drawing pixels |
+| `PNTR_NO_BMP` | Drops BMP image loading, saving about 6.5kb. Saving BMP is unaffected |
 | `PNTR_NO_STDIO` | Will disable the standard file loading/saving calls for `PNTR_LOAD_FILE` and `PNTR_SAVE_FILE` |
 | `PNTR_NO_SAVE_IMAGE` | Disables the default behavior of image saving |
 | `PNTR_NO_LOAD_IMAGE` | Disables the default behavior of image loading |
