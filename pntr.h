@@ -454,7 +454,9 @@ typedef enum pntr_error {
     PNTR_ERROR_NOT_SUPPORTED = -3, /** Not supported */
     PNTR_ERROR_FAILED_TO_OPEN = -4, /** Failed to open */
     PNTR_ERROR_FAILED_TO_WRITE = -5, /** Failed to write */
-    PNTR_ERROR_UNKNOWN = -6 /** Unknown error occurred */
+    PNTR_ERROR_UNKNOWN = -6, /** Unknown error occurred */
+    PNTR_ERROR_FAILED_TO_READ = -7, /** Opened, but failed to read */
+    PNTR_ERROR_INVALID_DATA = -8 /** The data that was given isn't what was expected */
 } pntr_error;
 
 /**
@@ -1511,6 +1513,8 @@ PNTR_API const char* pntr_get_error(void) {
         case PNTR_ERROR_FAILED_TO_OPEN: return "Failed to open";
         case PNTR_ERROR_FAILED_TO_WRITE: return "Failed to write";
         case PNTR_ERROR_UNKNOWN: return "Unknown error";
+        case PNTR_ERROR_FAILED_TO_READ: return "Failed to read";
+        case PNTR_ERROR_INVALID_DATA: return "Invalid data";
     }
 
     return NULL;
@@ -3336,6 +3340,14 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
         return NULL;
     }
 
+    // A file that holds no data loads successfully, but it can never hold an image. The
+    // file itself was fine, so this is about its contents rather than its arguments.
+    if (bytesRead == 0) {
+        pntr_unload_file((unsigned char*)fileData);
+
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_DATA);
+    }
+
     pntr_image_type type = pntr_get_file_image_type(fileName);
     pntr_image* output = pntr_load_image_from_memory(type, fileData, bytesRead);
     pntr_unload_file((unsigned char*)fileData);
@@ -4982,26 +4994,27 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
         }
 
         // Measure the file. A stream that can't seek, like a pipe, fails here instead of
-        // having ftell()'s -1 become an enormous allocation request.
+        // having ftell()'s -1 become an enormous allocation request. The file did open, so
+        // this is reported as a failure to read it rather than a failure to open it.
         if (fseek(file, 0, SEEK_END) != 0) {
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         long fileSize = ftell(file);
         if (fileSize < 0 || fseek(file, 0, SEEK_SET) != 0) {
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         // A directory, which fopen() accepts on some platforms, can report a believable
         // size while every read of it fails. Probe a single byte before committing to an
-        // allocation so that it reports a failure to open rather than a lack of memory.
+        // allocation so that it reports a failure to read rather than a lack of memory.
         // An empty file only raises the end-of-file indicator here, which the seek clears.
         (void)fgetc(file);
         if (ferror(file) != 0 || fseek(file, 0, SEEK_SET) != 0) {
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         // The size is reported back through an unsigned int, so a file too large to count
@@ -5026,7 +5039,7 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
         if (bytes != size || ferror(file) != 0) {
             PNTR_FREE(data);
             fclose(file);
-            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_READ);
         }
 
         fclose(file);

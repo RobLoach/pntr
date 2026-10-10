@@ -108,9 +108,10 @@ pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const uns
         return (pntr_image*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     }
 
+    // Nothing was opened here, so a refusal to decode is about the data itself.
     cp_image_t image = cp_load_png_mem(fileData, (int)dataSize);
     if (image.pix == NULL) {
-        return (pntr_image*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_DATA);
     }
 
     pntr_image* output = pntr_image_from_pixelformat((const void*)image.pix, image.w, image.h, PNTR_PIXELFORMAT_RGBA8888);
