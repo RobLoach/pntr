@@ -92,7 +92,9 @@ unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_
 #endif
 #include PNTR_CUTE_PNG_H
 
-#define PNTR_NO_CUTE_PNG_IMPLEMENTATION
+#ifndef PNTR_NO_CUTE_PNG_IMPLEMENTATION
+    #define PNTR_NO_CUTE_PNG_IMPLEMENTATION
+#endif
 #ifdef CUTE_PNG_IMPLEMENTATION
     #undef CUTE_PNG_IMPLEMENTATION
 #endif
