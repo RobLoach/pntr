@@ -2677,10 +2677,10 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
         int y2 = y * y;
         for (int x = largestX; x >= 0; --x) {
             if (x * x + y2 <= r2) {
-                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
+                // The row reaches both centerX - x and centerX + x, which is what keeps
+                // the fill symmetric and lets it reach the outline on the right.
+                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x * 2 + 1, color);
+                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
                 largestX = x;
                 break;
             }
@@ -2826,10 +2826,10 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
         long y2 = (long)y * y;
         for (int x = largestX; x >= 0; x--) {
             if ((long)x * x * ry2 + y2 * rx2 <= rx2 * ry2) {
-                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
+                // The row reaches both centerX - x and centerX + x, which is what keeps
+                // the fill symmetric and lets it reach the outline on the right.
+                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x * 2 + 1, color);
+                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
                 largestX = x;
                 break;
             }
