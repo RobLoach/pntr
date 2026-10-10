@@ -1960,16 +1960,44 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
 }
 
 /**
- * Plots a single point of a line or outline, either as a pixel, or as a filled circle when thick.
+ * Plots a single point of a line or outline, either as a pixel, or as a round brush when
+ * thick.
+ *
+ * @details The brush is `thickness` pixels across, so every thickness renders
+ * differently, and matches what pntr_draw_line_horizontal_thick() covers for the same
+ * thickness. The brush sits on the given pixel for an odd thickness, and leans up and to
+ * the left of it for an even one, which is the same side that the thick axis-aligned
+ * lines lean towards.
  *
  * @internal
  */
 static void _pntr_draw_thick_point(pntr_image* dst, int x, int y, int thickness, pntr_color color) {
     if (thickness <= 1) {
         pntr_draw_point(dst, x, y, color);
+        return;
     }
-    else {
-        pntr_draw_circle_fill(dst, x, y, thickness / 2, color);
+
+    int low = -(thickness / 2);
+    int high = thickness - 1 + low;
+
+    // Doubling the offsets puts the center of an even brush on a whole number, so the
+    // distance test stays in integers. Comparing against the diameter rather than the
+    // radius is what keeps a brush of 2 a full 2x2 block.
+    int center = low + high;
+    int diameter2 = thickness * thickness;
+
+    for (int offsetY = low; offsetY <= high; offsetY++) {
+        int distanceY = 2 * offsetY - center;
+        int distanceY2 = distanceY * distanceY;
+        for (int offsetX = low; offsetX <= high; offsetX++) {
+            int distanceX = 2 * offsetX - center;
+            if (distanceX * distanceX + distanceY2 <= diameter2) {
+                // The brush is symmetric, so the row reaches just as far past the center
+                // on the right as this first pixel does on the left.
+                pntr_draw_line_horizontal(dst, x + offsetX, y + offsetY, center - 2 * offsetX + 1, color);
+                break;
+            }
+        }
     }
 }
 
@@ -2363,10 +2391,11 @@ PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int pos
     }
 
     // The caps sit on the first and last pixel of the line, which is the last pixel the
-    // rectangle covers rather than the one past it.
+    // rectangle covers rather than the one past it. They use the same brush as a line
+    // that is not axis-aligned, so both run the same thickness.
     pntr_draw_rectangle_fill(dst, posX, posY - thickness / 2, width, thickness, color);
-    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
-    pntr_draw_circle_fill(dst, posX + width - 1, posY, thickness / 2, color);
+    _pntr_draw_thick_point(dst, posX, posY, thickness, color);
+    _pntr_draw_thick_point(dst, posX + width - 1, posY, thickness, color);
 }
 
 /**
@@ -2420,10 +2449,11 @@ PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY,
         return;
     }
     // The caps sit on the first and last pixel of the line, which is the last pixel the
-    // rectangle covers rather than the one past it.
+    // rectangle covers rather than the one past it. They use the same brush as a line
+    // that is not axis-aligned, so both run the same thickness.
     pntr_draw_rectangle_fill(dst, posX - thickness / 2, posY, thickness, height, color);
-    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
-    pntr_draw_circle_fill(dst, posX, posY + height - 1, thickness / 2, color);
+    _pntr_draw_thick_point(dst, posX, posY, thickness, color);
+    _pntr_draw_thick_point(dst, posX, posY + height - 1, thickness, color);
 }
 
 /**
