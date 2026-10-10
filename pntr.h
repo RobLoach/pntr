@@ -1468,17 +1468,39 @@ extern "C" {
     #endif
 #endif
 
+#ifndef PNTR_ERROR_STORAGE
+    /**
+     * The storage class that holds pntr's last reported error.
+     *
+     * By default this is a plain `static`, which means the error state is shared by every
+     * thread. Define this as a thread-local storage class to give each thread its own:
+     *
+     * @code
+     * #define PNTR_ERROR_STORAGE static _Thread_local
+     * @endcode
+     *
+     * The spelling of a thread-local depends on the compiler, which is why pntr does not
+     * pick one: `_Thread_local` for C11, `thread_local` for C++11, `__thread` for older
+     * GCC and Clang, and `__declspec(thread)` for MSVC.
+     *
+     * @see pntr_get_error()
+     * @see pntr_set_error()
+     */
+    #define PNTR_ERROR_STORAGE static
+#endif  // PNTR_ERROR_STORAGE
+
 /**
  * The last error that was reported from pntr.
  *
- * This will not work across different threads.
+ * This is shared across every thread, unless `PNTR_ERROR_STORAGE` says otherwise.
  *
  * @see pntr_get_error
  * @see pntr_set_error
+ * @see PNTR_ERROR_STORAGE
  * @internal
  * @private
  */
-static pntr_error _pntr_error;
+PNTR_ERROR_STORAGE pntr_error _pntr_error;
 
 PNTR_API const char* pntr_get_error(void) {
     switch (_pntr_error) {
