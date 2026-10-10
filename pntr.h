@@ -6387,6 +6387,76 @@ static void _pntr_rotation_pivot_offset(int srcWidth, int srcHeight, int bboxWid
 }
 
 /**
+ * Draws a source rectangle turned by exactly 90, 180 or 270 degrees.
+ *
+ * @details A quarter turn maps whole source pixels onto whole destination pixels, so the
+ * source is stepped through directly instead of being sampled back through a rotation
+ * matrix. That keeps the bounding box exactly the size of the source rectangle, turned,
+ * rather than the ceiling of a floating point sine and cosine that are only nearly zero
+ * and one.
+ *
+ * Both pntr_draw_image_rotated_rec() and pntr_draw_image_rotozoom() hand their quarter
+ * turns here, which is what makes the two land on exactly the same pixels at those angles
+ * instead of within a pixel of each other. The filter does not come into it, because
+ * every sample falls on a pixel center either way.
+ *
+ * @param dst The image to draw onto.
+ * @param src The image to draw from.
+ * @param srcRect The portion of the source to draw, already clamped to the source image.
+ * @param posX Where to place the pivot, at the X coordinate.
+ * @param posY Where to place the pivot, at the Y coordinate.
+ * @param degrees The turn to apply. Must be exactly 90, 180 or 270.
+ * @param offsetX The X pivot of the rotation, in unrotated source pixels, relative from the source rectangle.
+ * @param offsetY The Y pivot of the rotation, in unrotated source pixels, relative from the source rectangle.
+ * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
+ *
+ * @internal
+ */
+static void _pntr_draw_image_quarter_turn(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_color tint) {
+    // Build the destination coordinates of the image.
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
+    if (degrees == 90.0f || degrees == 270.0f) {
+        dstRect.width = srcRect.height;
+        dstRect.height = srcRect.width;
+    }
+
+    // The exact sine and cosine of the quarter turn, so that the pivot of the shortcut is
+    // the same one the general rotation would have arrived at.
+    int offsetXRatio, offsetYRatio;
+    _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, dstRect.width, dstRect.height,
+        degrees == 180.0f ? -1.0f : 0.0f,
+        degrees == 90.0f ? 1.0f : (degrees == 270.0f ? -1.0f : 0.0f),
+        1.0f, 1.0f, offsetX, offsetY,
+        &offsetXRatio, &offsetYRatio);
+
+    dstRect.x -= offsetXRatio;
+    dstRect.y -= offsetYRatio;
+
+    // Exit if it's not even on the screen.
+    if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
+        return;
+    }
+
+    // Draw the source portion on the destination.
+    for (int y = 0; y < srcRect.height; y++) {
+        for (int x = 0; x < srcRect.width; x++) {
+            pntr_color color = PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y);
+            if (tint.value != PNTR_WHITE_VALUE) {
+                color = pntr_color_tint(color, tint);
+            }
+
+            if (degrees == 90.0f) {
+                pntr_draw_point(dst, dstRect.x + y, dstRect.y + srcRect.width - 1 - x, color);
+            } else if (degrees == 180.0f) {
+                pntr_draw_point(dst, dstRect.x + srcRect.width - 1 - x, dstRect.y + srcRect.height - 1 - y, color);
+            } else {
+                pntr_draw_point(dst, dstRect.x + srcRect.height - 1 - y, dstRect.y + x, color);
+            }
+        }
+    }
+}
+
+/**
  * Draw a rotated and scaled portion of an image onto another image.
  *
  * @details The origin is a pivot, given in unrotated and unscaled source pixels. The source
@@ -6394,6 +6464,9 @@ static void _pntr_rotation_pivot_offset(int srcWidth, int srcHeight, int bboxWid
  * every scale, so rotating a sprite about a chosen point is a matter of naming that point
  * once and then only changing the rotation. An origin of half the source width and height
  * spins the image in place around its own center.
+ *
+ * At a scale of 1 this draws exactly what pntr_draw_image_rotated_rec() draws for the same
+ * origin, at every angle, so the two can be swapped for one another freely.
  *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
@@ -6430,6 +6503,16 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
     rotation = _pntr_normalize_degrees(rotation);
     if (rotation == 0.0f) {
         pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter, tint);
+        return;
+    }
+
+    // An unscaled quarter turn maps whole source pixels onto whole destination pixels, so
+    // it takes the same shortcut pntr_draw_image_rotated_rec() does and lands on exactly
+    // the same pixels as it would for the same pivot. A scale other than one has no
+    // unscaled draw to agree with, so it goes through the general rotation below, which
+    // keeps the pivot on the position to within the rounding of a scaled pixel.
+    if (scaleX == 1.0f && scaleY == 1.0f && (rotation == 90.0f || rotation == 180.0f || rotation == 270.0f)) {
+        _pntr_draw_image_quarter_turn(dst, src, srcRect, posX, posY, rotation, originX, originY, tint);
         return;
     }
 
@@ -6679,55 +6762,7 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
 
     // Simple rotation by 90 degrees can be fast.
     if (degrees == 90.0f || degrees == 180.0f || degrees == 270.0f) {
-        // Build the destination coordinates of the image.
-        pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
-        if (degrees == 90.0f || degrees == 270.0f) {
-            dstRect.width = srcRect.height;
-            dstRect.height = srcRect.width;
-        }
-
-        // The exact sine and cosine of the quarter turn, so that the pivot of the shortcut is
-        // the same one the general rotation below would have arrived at.
-        _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, dstRect.width, dstRect.height,
-            degrees == 180.0f ? -1.0f : 0.0f,
-            degrees == 90.0f ? 1.0f : (degrees == 270.0f ? -1.0f : 0.0f),
-            1.0f, 1.0f, offsetX, offsetY,
-            &offsetXRatio, &offsetYRatio);
-
-        dstRect.x -= offsetXRatio;
-        dstRect.y -= offsetYRatio;
-
-        // Exit if it's not even on the screen.
-        if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
-            return;
-        }
-
-        // Draw the source portion on the destination.
-        for (int y = 0; y < srcRect.height; y++) {
-            for (int x = 0; x < srcRect.width; x++) {
-                if (degrees == 90.0f) {
-                    pntr_draw_point(dst,
-                        dstRect.x + y,
-                        dstRect.y + srcRect.width - 1 - x,
-                        PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
-                    );
-                } else if (degrees == 180.0f) {
-                    pntr_draw_point(dst,
-                        dstRect.x + srcRect.width - 1 - x,
-                        dstRect.y + srcRect.height - 1 - y,
-                        PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
-                    );
-                }
-                else {
-                    pntr_draw_point(dst,
-                        dstRect.x + srcRect.height - 1 - y,
-                        dstRect.y + x,
-                        PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
-                    );
-                }
-            }
-        }
-
+        _pntr_draw_image_quarter_turn(dst, src, srcRect, posX, posY, degrees, offsetX, offsetY, PNTR_WHITE);
         return;
     }
 

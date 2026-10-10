@@ -485,6 +485,30 @@ pntr_rectangle pntr_test_rotated_bounds(pntr_image* src, float degrees, float of
     return bounds;
 }
 
+/**
+ * Where a rotozoomed draw of the given source lands on a destination, at the given pivot and scale.
+ *
+ * @details The scaled counterpart to pntr_test_rotated_bounds(), and read the same way.
+ * The destination is big enough for twice the source at any angle, so the rectangle stays
+ * comparable from one angle to the next even when nothing is clipped.
+ */
+pntr_rectangle pntr_test_rotozoom_bounds(pntr_image* src, float degrees, float originX, float originY, float scale) {
+    pntr_rectangle empty = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 0 };
+
+    pntr_image* dst = pntr_gen_image_color(260, 260, PNTR_GREEN);
+    if (dst == NULL) {
+        return empty;
+    }
+
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
+    pntr_draw_image_rotozoom(dst, src, srcRect, 130, 130, degrees, scale, scale, originX, originY, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+    pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_GREEN);
+    pntr_unload_image(dst);
+
+    return bounds;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -3969,26 +3993,56 @@ MODULE(pntr, {
             });
 
             IT("pntr_draw_image_rotated_rec() and pntr_draw_image_rotozoom() agree", {
-                for (int i = 0; i < 7; i++) {
-                    pntr_image* rotated = pntr_gen_image_color(160, 160, PNTR_GREEN);
-                    NEQUALS(rotated, NULL);
-                    pntr_image* zoomed = pntr_gen_image_color(160, 160, PNTR_GREEN);
-                    NEQUALS(zoomed, NULL);
+                pntr_filter filters[2] = {PNTR_FILTER_NEARESTNEIGHBOR, PNTR_FILTER_BILINEAR};
 
-                    pntr_draw_image_rotated_rec(rotated, pivotSource, pivotRect, 80, 80, pivotAngles[i], 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR);
-                    pntr_draw_image_rotozoom(zoomed, pivotSource, pivotRect, 80, 80, pivotAngles[i], 1.0f, 1.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                for (int f = 0; f < 2; f++) {
+                    for (int i = 0; i < 7; i++) {
+                        pntr_image* rotated = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                        NEQUALS(rotated, NULL);
+                        pntr_image* zoomed = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                        NEQUALS(zoomed, NULL);
 
-                    // At a scale of 1 and the same pivot the two land on the same place. The
-                    // quarter turns still differ by up to a pixel, because only one of the two
-                    // has a shortcut for them and the shortcut rounds the bounding box
-                    // differently than the general rotation does.
-                    pntr_rectangle rotatedBounds = pntr_test_painted_bounds(rotated, PNTR_GREEN);
-                    pntr_rectangle zoomedBounds = pntr_test_painted_bounds(zoomed, PNTR_GREEN);
-                    GREATER(rotatedBounds.width, 0);
-                    LESSER(pntr_test_rectangle_distance(rotatedBounds, zoomedBounds), 2);
+                        pntr_draw_image_rotated_rec(rotated, pivotSource, pivotRect, 80, 80, pivotAngles[i], 2.0f, 12.0f, filters[f]);
+                        pntr_draw_image_rotozoom(zoomed, pivotSource, pivotRect, 80, 80, pivotAngles[i], 1.0f, 1.0f, 2.0f, 12.0f, filters[f], PNTR_WHITE);
 
-                    pntr_unload_image(zoomed);
-                    pntr_unload_image(rotated);
+                        // At a scale of 1 and the same pivot the two draw the very same
+                        // pixels, at every angle: the quarter turns take the same shortcut,
+                        // and every other angle shares the general rotation and the pivot
+                        // derived from it.
+                        pntr_rectangle rotatedBounds = pntr_test_painted_bounds(rotated, PNTR_GREEN);
+                        GREATER(rotatedBounds.width, 0);
+                        IMAGEEQUALS(zoomed, rotated);
+
+                        pntr_unload_image(zoomed);
+                        pntr_unload_image(rotated);
+                    }
+                }
+
+                // A scale other than one has no unscaled draw to be identical to, so there
+                // it keeps the looser bound instead: the drawn area still moves by at most a
+                // pixel across a quarter turn, which is what stops a scaled sprite from
+                // jumping as it spins past the exact angle.
+                float corners[5] = {0.0f, 90.0f, 180.0f, 270.0f, 360.0f};
+                for (int i = 0; i < 5; i++) {
+                    pntr_rectangle before = pntr_test_rotozoom_bounds(pivotSource, corners[i] - 0.001f, 2.0f, 12.0f, 2.0f);
+                    pntr_rectangle exact = pntr_test_rotozoom_bounds(pivotSource, corners[i], 2.0f, 12.0f, 2.0f);
+                    pntr_rectangle after = pntr_test_rotozoom_bounds(pivotSource, corners[i] + 0.001f, 2.0f, 12.0f, 2.0f);
+
+                    GREATER(exact.width, 0);
+                    LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                    LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                }
+
+                // And at a scale of one the new shortcut has to be continuous with the
+                // general rotation either side of it, the same way the unscaled path is.
+                for (int i = 0; i < 5; i++) {
+                    pntr_rectangle before = pntr_test_rotozoom_bounds(pivotSource, corners[i] - 0.001f, 2.0f, 12.0f, 1.0f);
+                    pntr_rectangle exact = pntr_test_rotozoom_bounds(pivotSource, corners[i], 2.0f, 12.0f, 1.0f);
+                    pntr_rectangle after = pntr_test_rotozoom_bounds(pivotSource, corners[i] + 0.001f, 2.0f, 12.0f, 1.0f);
+
+                    GREATER(exact.width, 0);
+                    LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                    LESSER(pntr_test_rectangle_distance(exact, after), 2);
                 }
             });
 
