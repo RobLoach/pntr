@@ -296,6 +296,88 @@ pntr_image* pntr_test_canvas(int width, int height) {
 }
 
 /**
+ * How many pixels of one image are painted where the other is not.
+ *
+ * @details Zero means the second image covers everything the first one painted. The two
+ * have to be the same size, which is what lets a test compare an outline against its own
+ * fill pixel for pixel rather than only comparing their bounds.
+ */
+int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
+    if (painted == NULL || cover == NULL || painted->width != cover->width || painted->height != cover->height) {
+        return -1;
+    }
+
+    int uncovered = 0;
+    for (int y = 0; y < painted->height; y++) {
+        for (int x = 0; x < painted->width; x++) {
+            if (pntr_test_painted(painted, x, y) && !pntr_test_painted(cover, x, y)) {
+                uncovered++;
+            }
+        }
+    }
+
+    return uncovered;
+}
+
+/**
+ * How many pixels of an ellipse's outline the matching fill leaves unpainted.
+ *
+ * @details Draws pntr_draw_ellipse() and pntr_draw_ellipse_fill() onto their own canvas
+ * at the same center and radii, and counts the outline pixels the fill misses, so zero
+ * means the fill registers exactly with the outline. Both walk the same midpoint
+ * traversal, so sweeping the radii through this is what keeps them in step.
+ */
+int pntr_test_unfilled_ellipse(int radiusX, int radiusY) {
+    int width = radiusX * 2 + 5;
+    int height = radiusY * 2 + 5;
+
+    pntr_image* outline = pntr_test_canvas(width, height);
+    pntr_image* fill = pntr_test_canvas(width, height);
+    if (outline == NULL || fill == NULL) {
+        pntr_unload_image(outline);
+        pntr_unload_image(fill);
+        return -1;
+    }
+
+    pntr_draw_ellipse(outline, width / 2, height / 2, radiusX, radiusY, PNTR_RED);
+    pntr_draw_ellipse_fill(fill, width / 2, height / 2, radiusX, radiusY, PNTR_RED);
+
+    int uncovered = pntr_test_uncovered(outline, fill);
+
+    pntr_unload_image(outline);
+    pntr_unload_image(fill);
+
+    return uncovered;
+}
+
+/**
+ * How many pixels of a circle's outline the matching fill leaves unpainted.
+ *
+ * @see pntr_test_unfilled_ellipse()
+ */
+int pntr_test_unfilled_circle(int radius) {
+    int size = radius * 2 + 5;
+
+    pntr_image* outline = pntr_test_canvas(size, size);
+    pntr_image* fill = pntr_test_canvas(size, size);
+    if (outline == NULL || fill == NULL) {
+        pntr_unload_image(outline);
+        pntr_unload_image(fill);
+        return -1;
+    }
+
+    pntr_draw_circle(outline, size / 2, size / 2, radius, PNTR_RED);
+    pntr_draw_circle_fill(fill, size / 2, size / 2, radius, PNTR_RED);
+
+    int uncovered = pntr_test_uncovered(outline, fill);
+
+    pntr_unload_image(outline);
+    pntr_unload_image(fill);
+
+    return uncovered;
+}
+
+/**
  * A blue source image carrying a red marker centered on the given pivot.
  *
  * The rotated drawing paths place the source pixel at their offset onto the destination
@@ -1565,16 +1647,19 @@ MODULE(pntr, {
             EQUALS(pntr_test_painted(fill, 20, 32), true);
 
             // And covers every pixel of it.
-            for (int y = 0; y < 40; y++) {
-                for (int x = 0; x < 40; x++) {
-                    if (pntr_test_painted(outline, x, y)) {
-                        EQUALS(pntr_test_painted(fill, x, y), true);
-                    }
-                }
-            }
+            EQUALS(pntr_test_uncovered(outline, fill), 0);
 
             pntr_unload_image(outline);
             pntr_unload_image(fill);
+
+            // At every radius, the same way the ellipse does. The fill walks out from the
+            // same circle equation the outline does, so this already held; asserting it
+            // across a sweep is what stops it from drifting.
+            for (int radius = 1; radius <= 48; radius++) {
+                EQUALS(pntr_test_unfilled_circle(radius), 0);
+            }
+
+            EQUALS(pntr_test_unfilled_circle(120), 0);
         });
 
         IT("pntr_draw_ellipse_fill() reaches pntr_draw_ellipse()", {
@@ -1592,17 +1677,32 @@ MODULE(pntr, {
             RECTEQUALS(outlineBounds, expected);
             RECTEQUALS(fillBounds, expected);
 
-            // The fill reaches the outline on all four sides. The two are not compared
-            // pixel for pixel, because the outline walks the ellipse with the midpoint
-            // algorithm while the fill tests each pixel against the ellipse itself, and
-            // the two disagree by a pixel along the flat runs at the extremes.
+            // The fill reaches the outline on all four sides.
             EQUALS(pntr_test_painted(fill, 5, 20), true);
             EQUALS(pntr_test_painted(fill, 35, 20), true);
             EQUALS(pntr_test_painted(fill, 20, 11), true);
             EQUALS(pntr_test_painted(fill, 20, 29), true);
 
+            // And covers every pixel of it. Both walk the same midpoint traversal, so the
+            // fill never leaves the outline outside it, not even along the flat runs at
+            // the extremes where testing each pixel against the ellipse used to.
+            EQUALS(pntr_test_uncovered(outline, fill), 0);
+
             pntr_unload_image(outline);
             pntr_unload_image(fill);
+
+            // Every size registers the same way: odd and even radii, both orientations,
+            // and the degenerate radius of one that is a single pixel across.
+            for (int radiusX = 1; radiusX <= 24; radiusX++) {
+                for (int radiusY = 1; radiusY <= 24; radiusY++) {
+                    EQUALS(pntr_test_unfilled_ellipse(radiusX, radiusY), 0);
+                }
+            }
+
+            // Far enough out that the two regions of the midpoint walk are both long.
+            EQUALS(pntr_test_unfilled_ellipse(120, 7), 0);
+            EQUALS(pntr_test_unfilled_ellipse(7, 120), 0);
+            EQUALS(pntr_test_unfilled_ellipse(120, 120), 0);
         });
 
         IT("pntr_draw_rectangle() stops short of its width and height", {

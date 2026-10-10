@@ -2844,6 +2844,87 @@ static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY,
 }
 
 /**
+ * Paints the row of a filled ellipse that reaches `widest` pixels either side of the center, along with its mirror.
+ *
+ * @internal
+ */
+static void _pntr_draw_ellipse_span(pntr_image* dst, int centerX, int centerY, int row, int widest, pntr_color color) {
+    // The row reaches both centerX - widest and centerX + widest, which is what keeps the
+    // fill symmetric and lets it reach the outline on the right. On the center row both
+    // halves are the same row, so it is only painted once.
+    pntr_draw_line_horizontal(dst, centerX - widest, centerY + row, widest * 2 + 1, color);
+    if (row != 0) {
+        pntr_draw_line_horizontal(dst, centerX - widest, centerY - row, widest * 2 + 1, color);
+    }
+}
+
+/**
+ * Fills an ellipse by walking its outline and painting a span per row.
+ *
+ * @details Runs the same two-region midpoint traversal as _pntr_draw_ellipse_points(),
+ * in the same order, but instead of plotting each point it remembers how far out the
+ * outline reaches on the row it is on and paints that row in one go once the walk drops
+ * to the next one. Because the span of every row stretches to the furthest outline point
+ * on that row, the fill covers the outline exactly, rather than leaving the pixels where
+ * the outline runs flattest outside it. The two traversals have to stay in step, which is
+ * what the registration tests hold them to.
+ *
+ * @internal
+ */
+static void _pntr_draw_ellipse_spans(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
+    long x = 0, y = radiusY;
+    long dx = 0, dy = 2 * rx2 * y;
+    long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
+
+    // The row being measured, and how far out the outline has reached on it. The walk only
+    // ever steps outwards and downwards, so the last point it visits on a row is also the
+    // furthest, and every row from radiusY down to zero is visited exactly once.
+    long row = y, widest = 0;
+
+    while (dx < dy) {
+        if (y != row) {
+            _pntr_draw_ellipse_span(dst, centerX, centerY, (int)row, (int)widest, color);
+            row = y;
+        }
+        widest = x;
+
+        x++;
+        dx += 2 * ry2;
+        if (p < 0) {
+            p += ry2 + dx;
+        } else {
+            y--;
+            dy -= 2 * rx2;
+            p += ry2 + dx - dy;
+        }
+    }
+
+    p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
+    while (y >= 0) {
+        if (y != row) {
+            _pntr_draw_ellipse_span(dst, centerX, centerY, (int)row, (int)widest, color);
+            row = y;
+        }
+        widest = x;
+
+        y--;
+        dy -= 2 * rx2;
+        if (p > 0) {
+            p += rx2 - dy;
+        } else {
+            x++;
+            dx += 2 * ry2;
+            p += rx2 - dy + dx;
+        }
+    }
+
+    // The center row is still waiting, since there is no next row to flush it.
+    _pntr_draw_ellipse_span(dst, centerX, centerY, (int)row, (int)widest, color);
+}
+
+/**
  * Draws an ellipse on the given image.
  *
  * @details The radii are inclusive, so the ellipse is `radiusX * 2 + 1` pixels wide and
@@ -2871,8 +2952,9 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
 /**
  * Draws a filled ellipse on the given image.
  *
- * @details Covers the same bounds as pntr_draw_ellipse(), so the fill reaches the
- * outline drawn for the same center and radii on all four sides.
+ * @details Covers the same bounds as pntr_draw_ellipse(), and walks the same outline, so
+ * the fill covers every pixel that the outline drawn for the same center and radii
+ * paints.
  *
  * TODO: pntr_draw_ellipse_fill: Add anti-aliased
  *
@@ -2893,26 +2975,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
         return;
     }
 
-    int largestX = radiusX;
-    long rx2 = (long)radiusX * radiusX;
-    long ry2 = (long)radiusY * radiusY;
-
-    for (int y = 0; y <= radiusY; y++) {
-        long y2 = (long)y * y;
-        for (int x = largestX; x >= 0; x--) {
-            if ((long)x * x * ry2 + y2 * rx2 <= rx2 * ry2) {
-                // The row reaches both centerX - x and centerX + x, which is what keeps
-                // the fill symmetric and lets it reach the outline on the right. At the
-                // center both halves are the same row, so it is only painted once.
-                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x * 2 + 1, color);
-                if (y != 0) {
-                    pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
-                }
-                largestX = x;
-                break;
-            }
-        }
-    }
+    _pntr_draw_ellipse_spans(dst, centerX, centerY, radiusX, radiusY, color);
 }
 
 /**
