@@ -54,6 +54,44 @@ bool pntr_utf8() {
     #endif
 }
 
+/**
+ * An alpha value that is unique to the coordinate it came from.
+ *
+ * This is what makes an alpha mask misalignment of even a single pixel
+ * detectable. A uniform mask would report the same alpha no matter how far the
+ * mask was offset by.
+ */
+unsigned char pntr_test_alpha(int x, int y) {
+    return (unsigned char)(((x * 7 + y * 13) % 251) + 1);
+}
+
+/**
+ * Builds an alpha mask where every pixel carries the alpha of pntr_test_alpha().
+ */
+pntr_image* pntr_test_alpha_mask(int width, int height) {
+    pntr_image* mask = pntr_gen_image_color(width, height, PNTR_WHITE);
+    if (mask == NULL) {
+        return NULL;
+    }
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            PNTR_PIXEL(mask, x, y).rgba.a = pntr_test_alpha(x, y);
+        }
+    }
+
+    return mask;
+}
+
+/**
+ * The given color, with its alpha replaced by the given alpha.
+ */
+pntr_color pntr_test_color_alpha(pntr_color color, unsigned char alpha) {
+    pntr_color_set_a(&color, alpha);
+
+    return color;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -1993,6 +2031,169 @@ MODULE(pntr, {
         COLOREQUALS(pntr_image_get_color(image, 50, 50), PNTR_RED);
         COLOREQUALS(pntr_image_get_color(image, 125, 125), PNTR_BLUE);
 
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_alpha_mask()", {
+        pntr_image* image = pntr_gen_image_color(40, 30, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_image* mask = pntr_test_alpha_mask(40, 30);
+        NEQUALS(mask, NULL);
+
+        pntr_image_alpha_mask(image, mask, 0, 0);
+
+        // Every destination pixel keeps its color, and takes the alpha of the
+        // mask pixel that sits directly on top of it.
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                COLOREQUALS(pntr_image_get_color(image, x, y),
+                    pntr_test_color_alpha(PNTR_RED, pntr_test_alpha(x, y)));
+            }
+        }
+
+        // A NULL image or mask is a no-op.
+        pntr_image_alpha_mask(NULL, mask, 0, 0);
+        pntr_image_alpha_mask(image, NULL, 0, 0);
+
+        pntr_unload_image(mask);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_alpha_mask() with a custom clip", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_image* mask = pntr_test_alpha_mask(100, 100);
+        NEQUALS(mask, NULL);
+
+        pntr_image_set_clip(image, 20, 20, 50, 50);
+        pntr_image_alpha_mask(image, mask, 0, 0);
+
+        // The clip only limits what gets written, it must not shift the mask,
+        // so the pixel at the clip origin still takes the mask pixel above it.
+        COLOREQUALS(pntr_image_get_color(image, 20, 20),
+            pntr_test_color_alpha(PNTR_RED, pntr_test_alpha(20, 20)));
+        COLOREQUALS(pntr_image_get_color(image, 69, 69),
+            pntr_test_color_alpha(PNTR_RED, pntr_test_alpha(69, 69)));
+
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                // Everything outside of the clip rectangle is left alone.
+                bool clipped = x >= 20 && x < 70 && y >= 20 && y < 70;
+                COLOREQUALS(pntr_image_get_color(image, x, y),
+                    pntr_test_color_alpha(PNTR_RED, clipped ? pntr_test_alpha(x, y) : 255));
+            }
+        }
+
+        pntr_unload_image(mask);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_alpha_mask() at a negative position", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_image* mask = pntr_test_alpha_mask(10, 10);
+        NEQUALS(mask, NULL);
+
+        pntr_image_alpha_mask(image, mask, -5, 0);
+
+        // The five columns of the mask that do overlap are still applied.
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                bool masked = x < 5 && y < 10;
+                COLOREQUALS(pntr_image_get_color(image, x, y),
+                    pntr_test_color_alpha(PNTR_RED, masked ? pntr_test_alpha(x + 5, y) : 255));
+            }
+        }
+
+        pntr_unload_image(mask);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_alpha_mask() at a negative position on both axes", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_image* mask = pntr_test_alpha_mask(10, 10);
+        NEQUALS(mask, NULL);
+
+        pntr_image_alpha_mask(image, mask, -3, -4);
+
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                bool masked = x < 7 && y < 6;
+                COLOREQUALS(pntr_image_get_color(image, x, y),
+                    pntr_test_color_alpha(PNTR_RED, masked ? pntr_test_alpha(x + 3, y + 4) : 255));
+            }
+        }
+
+        pntr_unload_image(mask);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_alpha_mask() overhanging the right and bottom edges", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_image* mask = pntr_test_alpha_mask(10, 10);
+        NEQUALS(mask, NULL);
+
+        pntr_image_alpha_mask(image, mask, 95, 97);
+
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                bool masked = x >= 95 && y >= 97;
+                COLOREQUALS(pntr_image_get_color(image, x, y),
+                    pntr_test_color_alpha(PNTR_RED, masked ? pntr_test_alpha(x - 95, y - 97) : 255));
+            }
+        }
+
+        pntr_unload_image(mask);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_alpha_mask() fully outside the image is a no-op", {
+        pntr_image* image = pntr_gen_image_color(100, 100, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_image* mask = pntr_test_alpha_mask(10, 10);
+        NEQUALS(mask, NULL);
+
+        pntr_image* expected = pntr_image_copy(image);
+        NEQUALS(expected, NULL);
+
+        pntr_image_alpha_mask(image, mask, 100, 0);
+        pntr_image_alpha_mask(image, mask, 0, 100);
+        pntr_image_alpha_mask(image, mask, -10, 0);
+        pntr_image_alpha_mask(image, mask, 0, -10);
+        pntr_image_alpha_mask(image, mask, -200, -200);
+        pntr_image_alpha_mask(image, mask, 200, 200);
+        IMAGEEQUALS(image, expected);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(mask);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_alpha_mask() leaves transparent pixels alone", {
+        pntr_image* image = pntr_gen_image_color(20, 20, PNTR_RED);
+        NEQUALS(image, NULL);
+        pntr_image* mask = pntr_test_alpha_mask(20, 20);
+        NEQUALS(mask, NULL);
+
+        // Clear the alpha of every other column.
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x += 2) {
+                PNTR_PIXEL(image, x, y).rgba.a = 0;
+            }
+        }
+
+        pntr_image_alpha_mask(image, mask, 0, 0);
+
+        for (int y = 0; y < image->height; y++) {
+            for (int x = 0; x < image->width; x++) {
+                COLOREQUALS(pntr_image_get_color(image, x, y),
+                    pntr_test_color_alpha(PNTR_RED, (x % 2 == 0) ? 0 : pntr_test_alpha(x, y)));
+            }
+        }
+
+        pntr_unload_image(mask);
         pntr_unload_image(image);
     });
 

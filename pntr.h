@@ -5416,21 +5416,25 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
     }
 
     pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { 0, 0, alphaMask->width, alphaMask->height };
-    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { posX, posY, alphaMask->width, alphaMask->height };
 
-    // Update the source coordinates based on the destination
-    if (dstRect.x < 0) {
-        srcRect.x -= dstRect.x;
-        srcRect.width += dstRect.x;
+    // Update the source coordinates based on the destination's clip region.
+    if (posX < image->clip.x) {
+        srcRect.x -= posX - image->clip.x;
+        srcRect.width += posX - image->clip.x;
+        posX = image->clip.x;
     }
-    if (dstRect.y < 0) {
-        srcRect.y -= dstRect.y;
-        srcRect.height += dstRect.y;
+    if (posY < image->clip.y) {
+        srcRect.y -= posY - image->clip.y;
+        srcRect.height += posY - image->clip.y;
+        posY = image->clip.y;
     }
 
-    if (!_pntr_rectangle_intersect(dstRect.x, dstRect.y,
-            PNTR_MIN(dstRect.width, srcRect.width),
-            PNTR_MIN(dstRect.height, srcRect.height),
+    // Confine the destination. Since the position is now at or after the clip
+    // origin, this can only shrink the width and height.
+    pntr_rectangle dstRect;
+    if (!_pntr_rectangle_intersect(posX, posY,
+            srcRect.width,
+            srcRect.height,
             image->clip.x, image->clip.y,
             image->clip.width, image->clip.height, &dstRect)) {
         return;
@@ -5440,7 +5444,7 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
         pntr_color* pixel = &PNTR_PIXEL(image, dstRect.x, dstRect.y + y);
         for (int x = 0; x < dstRect.width; x++) {
             if (pixel->rgba.a > 0) {
-                pixel->rgba.a = PNTR_PIXEL(alphaMask, x, y).rgba.a;
+                pixel->rgba.a = PNTR_PIXEL(alphaMask, srcRect.x + x, srcRect.y + y).rgba.a;
             }
             pixel++;
         }
