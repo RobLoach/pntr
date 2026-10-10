@@ -154,6 +154,29 @@ MODULE(pntr_math, {
 })
 
 MODULE(pntr, {
+    /**
+     * Pins the meaning of unit.h's comparison macros.
+     *
+     * LESSEREQ() and GREATEREQ() are inverted in the upstream unit.h, so each
+     * asserted the opposite of its name. Every line here fails against that
+     * version.
+     *
+     * @see unit.h
+     */
+    IT("unit.h comparison macros", {
+        int one = 1;
+        int two = 2;
+
+        LESSER(one, two);
+        GREATER(two, one);
+
+        // The "or equal" forms have to accept the equal side as well as the unequal one.
+        LESSEREQ(one, two);
+        LESSEREQ(one, one);
+        GREATEREQ(two, one);
+        GREATEREQ(one, one);
+    });
+
     IT("pntr_load_memory(), pntr_unload_memory()", {
         void* memory = pntr_load_memory(100);
         NEQUALS(memory, NULL);

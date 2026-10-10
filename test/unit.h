@@ -182,8 +182,12 @@ License:
 #define NEQUALS(a, b)       if (a == b)        { FAIL(a, b); }
 #define LESSER(a, b)        if (a >= b)        { FAIL(a, b); }
 #define GREATER(a, b)       if (a <=b)         { FAIL(a, b); }
-#define LESSEREQ(a, b)      if (a < b)         { FAIL(a, b); }
-#define GREATEREQ(a, b)     if (a > b)         { FAIL(a, b); }
+/* LOCAL FIX (not upstream): LESSEREQ() and GREATEREQ() had their conditions
+ * swapped, so each asserted the opposite of its name. Keep this when re-vendoring
+ * unit.h from https://github.com/zpl-c/tester . Pinned by the "unit.h comparison
+ * macros" test in pntr_test.c. */
+#define LESSEREQ(a, b)      if (a > b)         { FAIL(a, b); }
+#define GREATEREQ(a, b)     if (a < b)         { FAIL(a, b); }
 #define SKIP()                                 { _lasterr = UNIT_SKIP_MAGIC; break; }
 
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
