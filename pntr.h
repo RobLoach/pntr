@@ -14,6 +14,7 @@
  * - PNTR_ENABLE_TTF: Enables support for loading TrueType fonts
  * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
+ * - PNTR_ERROR_STORAGE: The storage class holding the last reported error. Defaults to `static`, which every thread shares. Define it as a thread-local storage class, like `static _Thread_local`, to give each thread its own.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
  * - PNTR_SAVE_FILE: Callback used to save a file in pntr_save_file(). By default, will use stdio.h.

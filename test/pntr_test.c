@@ -133,6 +133,65 @@ bool pntr_bmp() {
     #endif
 }
 
+/**
+ * Every value of pntr_error, so that each one can be checked for a message of its own.
+ *
+ * PNTR_ERROR_NONE is first, as it's the only one that has no message.
+ */
+const pntr_error pntr_test_errors[] = {
+    PNTR_ERROR_NONE,
+    PNTR_ERROR_INVALID_ARGS,
+    PNTR_ERROR_NO_MEMORY,
+    PNTR_ERROR_NOT_SUPPORTED,
+    PNTR_ERROR_FAILED_TO_OPEN,
+    PNTR_ERROR_FAILED_TO_WRITE,
+    PNTR_ERROR_UNKNOWN,
+    PNTR_ERROR_FAILED_TO_READ,
+    PNTR_ERROR_INVALID_DATA
+};
+
+/**
+ * How many values pntr_test_errors holds.
+ */
+#define PNTR_TEST_ERRORS_LEN ((int)(sizeof(pntr_test_errors) / sizeof(pntr_test_errors[0])))
+
+/**
+ * Whether two strings hold the same characters.
+ *
+ * STREQUALS() can only assert that two strings match, which is the opposite of what the
+ * distinct error messages need.
+ */
+bool pntr_test_string_equals(const char* a, const char* b) {
+    if (a == NULL || b == NULL) {
+        return a == b;
+    }
+
+    while (*a != '\0' && *a == *b) {
+        a++;
+        b++;
+    }
+
+    return *a == *b;
+}
+
+/**
+ * Whether a directory can be handed to `fopen()` on this platform.
+ *
+ * Where it can, loading a directory fails at the read rather than at the open, which is
+ * what makes it report a different error than a file that isn't there at all. Windows
+ * refuses the open outright, so both report a failure to open there.
+ */
+bool pntr_test_directory_opens() {
+    FILE* directory = fopen(".", "rb");
+    if (directory == NULL) {
+        return false;
+    }
+
+    fclose(directory);
+
+    return true;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -210,6 +269,111 @@ MODULE(pntr, {
         pntr_unload_image(image);
         pntr_set_error(PNTR_ERROR_NONE);
         EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+    });
+
+    IT("pntr_set_error(PNTR_ERROR_NONE) clears the error state", {
+        // Any reported error is forgotten, leaving nothing behind to mislead the caller.
+        pntr_set_error(PNTR_ERROR_UNKNOWN);
+        NEQUALS(pntr_get_error(), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_UNKNOWN);
+
+        pntr_set_error(PNTR_ERROR_NONE);
+        EQUALS(pntr_get_error(), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+
+        // Clearing what is already clear changes nothing.
+        pntr_set_error(PNTR_ERROR_NONE);
+        EQUALS(pntr_get_error(), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+    });
+
+    IT("pntr_get_error(): Every error has a message of its own", {
+        const char* messages[PNTR_TEST_ERRORS_LEN];
+
+        for (int i = 0; i < PNTR_TEST_ERRORS_LEN; i++) {
+            pntr_set_error(pntr_test_errors[i]);
+            EQUALS(pntr_get_error_code(), pntr_test_errors[i]);
+            messages[i] = pntr_get_error();
+        }
+
+        // PNTR_ERROR_NONE is the absence of an error, so it's the only one without words.
+        EQUALS(pntr_test_errors[0], PNTR_ERROR_NONE);
+        EQUALS(messages[0], NULL);
+
+        for (int i = 1; i < PNTR_TEST_ERRORS_LEN; i++) {
+            NEQUALS(messages[i], NULL);
+            EQUALS(pntr_test_string_equals(messages[i], ""), false);
+
+            // Two errors that read the same way can't be told apart by what they say.
+            for (int j = 1; j < i; j++) {
+                EQUALS(pntr_test_string_equals(messages[i], messages[j]), false);
+            }
+        }
+
+        pntr_set_error(PNTR_ERROR_NONE);
+        EQUALS(pntr_get_error(), NULL);
+    });
+
+    IT("pntr_load_file(): A missing file and a directory differ", {
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // Nothing can be opened at a name that isn't there.
+        EQUALS(pntr_load_file("FileNotFound.txt", NULL), NULL);
+        pntr_error missing = pntr_get_error_code();
+        EQUALS(missing, PNTR_ERROR_FAILED_TO_OPEN);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A directory can't be loaded either, but for its own reason, and in no case
+        // because there wasn't enough memory for it.
+        EQUALS(pntr_load_file(".", NULL), NULL);
+        pntr_error directory = pntr_get_error_code();
+        NEQUALS(directory, PNTR_ERROR_NONE);
+        NEQUALS(directory, PNTR_ERROR_NO_MEMORY);
+
+        // Where the directory opens, the read is what fails, and the caller can tell the
+        // two apart.
+        if (pntr_test_directory_opens()) {
+            EQUALS(directory, PNTR_ERROR_FAILED_TO_READ);
+            NEQUALS(directory, missing);
+        }
+
+        pntr_set_error(PNTR_ERROR_NONE);
+    });
+
+    IT("pntr_load_image(): Reports the file's error, not its own", {
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A missing image file must surface the same error pntr_load_file() reported,
+        // rather than a blanket failure to open that hides it.
+        EQUALS(pntr_load_image("NotFoundImage.png"), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A directory isn't a missing file, and is never a lack of memory.
+        EQUALS(pntr_load_image("."), NULL);
+        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
+        if (pntr_test_directory_opens()) {
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_READ);
+        }
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A file that loads but holds no bytes is about the data, not the file.
+        const char* emptyName = "tempFileEmptyImage.png";
+        FILE* emptyFile = fopen(emptyName, "wb");
+        NEQUALS(emptyFile, NULL);
+        fclose(emptyFile);
+
+        EQUALS(pntr_load_image(emptyName), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_DATA);
+        pntr_set_error(PNTR_ERROR_NONE);
+        remove(emptyName);
+
+        // So is a file full of bytes that aren't an image.
+        const char* notAnImage = "this is not an image";
+        EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, (const unsigned char*)notAnImage, 20), NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_DATA);
+        pntr_set_error(PNTR_ERROR_NONE);
     });
 
     IT("pntr_color_rgba()", {
