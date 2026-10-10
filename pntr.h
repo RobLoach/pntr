@@ -2456,6 +2456,18 @@ PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width
         return;
     }
 
+    // A rectangle only one pixel tall or wide is a single line. Drawing it as four lines
+    // would paint the same pixels up to four times, which a semi-transparent color
+    // blends once per paint.
+    if (height == 1) {
+        pntr_draw_line_horizontal(dst, posX, posY, width, color);
+        return;
+    }
+    if (width == 1) {
+        pntr_draw_line_vertical(dst, posX, posY, height, color);
+        return;
+    }
+
     pntr_draw_line_horizontal(dst, posX, posY, width, color);
     pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
     pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
@@ -2570,20 +2582,36 @@ PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int wi
 static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
     int largestX = radius;
     int r2 = radius * radius;
+
+    // Only the first eighth of the circle is walked, and the other seven are mirrored
+    // from it. Walking a whole quarter would reach both (x, y) and (y, x), and the eight
+    // points mirrored from one of those are the same eight points as the other, so every
+    // pixel would be painted twice and a semi-transparent color blended twice with it.
     for (int y = 0; y <= radius; ++y) {
         int y2 = y * y;
-        for (int x = largestX; x >= 0; --x) {
-            if (x * x + y2 <= r2) {
-                _pntr_draw_thick_point(dst, centerX + x, centerY + y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX - x, centerY + y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX + x, centerY - y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX - x, centerY - y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX + y, centerY + x, thickness, color);
+        int x = largestX;
+        while (x > 0 && x * x + y2 > r2) {
+            --x;
+        }
+        if (y > x) {
+            break;
+        }
+        largestX = x;
+
+        // Mirroring collapses on the axes and on the diagonal, so the points that would
+        // repeat are skipped rather than painted again.
+        _pntr_draw_thick_point(dst, centerX + x, centerY + y, thickness, color);
+        _pntr_draw_thick_point(dst, centerX - x, centerY + y, thickness, color);
+        if (y != 0) {
+            _pntr_draw_thick_point(dst, centerX + x, centerY - y, thickness, color);
+            _pntr_draw_thick_point(dst, centerX - x, centerY - y, thickness, color);
+        }
+        if (x != y) {
+            _pntr_draw_thick_point(dst, centerX + y, centerY + x, thickness, color);
+            _pntr_draw_thick_point(dst, centerX + y, centerY - x, thickness, color);
+            if (y != 0) {
                 _pntr_draw_thick_point(dst, centerX - y, centerY + x, thickness, color);
-                _pntr_draw_thick_point(dst, centerX + y, centerY - x, thickness, color);
                 _pntr_draw_thick_point(dst, centerX - y, centerY - x, thickness, color);
-                largestX = x;
-                break;
             }
         }
     }
@@ -2675,9 +2703,12 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
         for (int x = largestX; x >= 0; --x) {
             if (x * x + y2 <= r2) {
                 // The row reaches both centerX - x and centerX + x, which is what keeps
-                // the fill symmetric and lets it reach the outline on the right.
+                // the fill symmetric and lets it reach the outline on the right. At the
+                // center both halves are the same row, so it is only painted once.
                 pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x * 2 + 1, color);
-                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
+                if (y != 0) {
+                    pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
+                }
                 largestX = x;
                 break;
             }
@@ -2731,11 +2762,19 @@ static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY,
     long dx = 0, dy = 2 * rx2 * y;
     long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
 
+    // Mirroring collapses on the axes, so the points that would repeat there are skipped
+    // rather than painted again, which a semi-transparent color would blend twice.
     while (dx < dy) {
         _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+        if (x != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
+        }
+        if (y != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
+            if (x != 0) {
+                _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+            }
+        }
         x++;
         dx += 2 * ry2;
         if (p < 0) {
@@ -2750,9 +2789,15 @@ static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY,
     p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
     while (y >= 0) {
         _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+        if (x != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
+        }
+        if (y != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
+            if (x != 0) {
+                _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+            }
+        }
         y--;
         dy -= 2 * rx2;
         if (p > 0) {
@@ -2824,9 +2869,12 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
         for (int x = largestX; x >= 0; x--) {
             if ((long)x * x * ry2 + y2 * rx2 <= rx2 * ry2) {
                 // The row reaches both centerX - x and centerX + x, which is what keeps
-                // the fill symmetric and lets it reach the outline on the right.
+                // the fill symmetric and lets it reach the outline on the right. At the
+                // center both halves are the same row, so it is only painted once.
                 pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x * 2 + 1, color);
-                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
+                if (y != 0) {
+                    pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
+                }
                 largestX = x;
                 break;
             }
