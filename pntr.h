@@ -988,7 +988,7 @@ extern "C" {
      * @see PNTR_ENABLE_UTF8
      * @see utf8codepoint
      */
-    char* pntr_strcodepoint(const char * str, char* out_codepoint) {
+    static char* pntr_strcodepoint(const char * str, char* out_codepoint) {
         if (str == NULL) {
             *out_codepoint = 0;
             return NULL;
@@ -1146,7 +1146,7 @@ extern "C" {
          *
          * @see PNTR_CEILF
          */
-        float _pntr_ceilf(float x) {
+        static float _pntr_ceilf(float x) {
             if (x >= 0.0f) {
                 int i = (int)x;
                 return (x > i) ? (float)i + 1.0f : (float)i;
@@ -1302,7 +1302,7 @@ extern "C" {
 
         #ifndef PNTR_ENABLE_MATH
             #ifndef STBTT_sqrt
-                float _pntr_sqrtf(float number) {
+                static float _pntr_sqrtf(float number) {
                     // Newton's method below divides by the guess, and a guess of zero makes
                     // every subsequent guess NaN, which never satisfies the epsilon test.
                     if (number <= 0.0f) {
@@ -1323,7 +1323,7 @@ extern "C" {
             #endif  // PNTR_SQRTF
 
             #ifndef STBTT_pow
-                float _pntr_pow(float base, float exponent) {
+                static float _pntr_pow(float base, float exponent) {
                     float result = 1.0f;
                     if (exponent >= 0) {
                         for (int i = 0; i < exponent; i++) {
@@ -1340,7 +1340,7 @@ extern "C" {
             #endif
 
             #ifndef STBTT_acos
-                float _pntr_acos(float x) {
+                static float _pntr_acos(float x) {
                     float negate = (float)(x < 0);
                     x = PNTR_FABSF(x);
                     float ret = -0.0187293f;
@@ -1473,7 +1473,7 @@ extern "C" {
  * @internal
  * @private
  */
-pntr_error _pntr_error;
+static pntr_error _pntr_error;
 
 PNTR_API const char* pntr_get_error(void) {
     switch (_pntr_error) {
@@ -1659,7 +1659,7 @@ void pntr_blend_color(pntr_color* dst, pntr_color src) {
  *
  * @internal
  */
-PNTR_API bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destX, int destY, int destWidth, int destHeight, pntr_rectangle *out) {
+static bool _pntr_rectangle_intersect(int x, int y, int width, int height, int destX, int destY, int destWidth, int destHeight, pntr_rectangle *out) {
     if (width <= 0 || height <= 0) {
         return false;
     }
@@ -3893,7 +3893,7 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData
  *
  * @internal
  */
-PNTR_API pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pntr_image* atlas) {
+static pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pntr_image* atlas) {
     if (numCharacters <= 0) {
         return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
@@ -5868,7 +5868,7 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
  *
  * @internal
  */
-float _pntr_normalize_degrees(float degrees) {
+static float _pntr_normalize_degrees(float degrees) {
     if (degrees < 0) {
         float remainder = PNTR_FMODF(-degrees, 360.0f);
 
