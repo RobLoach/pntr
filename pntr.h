@@ -3294,6 +3294,54 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
 }
 
 /**
+ * Clamps a corner radius into the range that a rounded rectangle of the given size can
+ * hold.
+ *
+ * @details The largest radius leaves room for the straight edges between the corners,
+ * which is what keeps two corners on the same side from reaching into each other.
+ *
+ * @internal
+ */
+static int _pntr_rectangle_rounded_radius(int radius, int width, int height) {
+    int smallest = (width < height) ? width : height;
+    int maxRadius = (smallest - 2) / 2;
+
+    if (radius < 0 || maxRadius < 0) {
+        return 0;
+    }
+
+    return (radius > maxRadius) ? maxRadius : radius;
+}
+
+/**
+ * Fills a quarter of a disc, which is what the corners of a filled rounded rectangle are
+ * made of.
+ *
+ * @details `directionX` and `directionY` are each -1 or 1, and pick the quarter to fill.
+ * The quarter covers the pixels from the center of the disc out to
+ * `centerX + radius * directionX` and `centerY + radius * directionY` inclusive, so it
+ * is `radius + 1` pixels across. Filling only a quarter is what keeps the corners of a
+ * rounded rectangle from overlapping each other.
+ *
+ * @internal
+ */
+static void _pntr_draw_quarter_disc_fill(pntr_image* dst, int centerX, int centerY, int radius, int directionX, int directionY, pntr_color color) {
+    int largestX = radius;
+    int r2 = radius * radius;
+
+    for (int y = 0; y <= radius; y++) {
+        int y2 = y * y;
+        for (int x = largestX; x >= 0; x--) {
+            if (x * x + y2 <= r2) {
+                pntr_draw_line_horizontal(dst, (directionX < 0) ? centerX - x : centerX, centerY + directionY * y, x + 1, color);
+                largestX = x;
+                break;
+            }
+        }
+    }
+}
+
+/**
  * Draws the outline of a rectangle with rounded corners.
  *
  * @details Occupies exactly the same pixels as pntr_draw_rectangle() for the same `x`,
@@ -3316,21 +3364,40 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
  * @see pntr_draw_rectangle_rounded_fill()
  */
 PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || width <= 0 || height <= 0) {
+        return;
+    }
+
+    // Two radii that reach past each other would give the straight edge between them a
+    // negative length, and pntr_draw_line_horizontal() normalizes a negative length into
+    // a line that runs backwards out of the corner.
+    topLeftRadius = _pntr_rectangle_rounded_radius(topLeftRadius, width, height);
+    topRightRadius = _pntr_rectangle_rounded_radius(topRightRadius, width, height);
+    bottomLeftRadius = _pntr_rectangle_rounded_radius(bottomLeftRadius, width, height);
+    bottomRightRadius = _pntr_rectangle_rounded_radius(bottomRightRadius, width, height);
+
     if (topLeftRadius == 0 && topRightRadius == 0 && bottomLeftRadius == 0 && bottomRightRadius == 0) {
         pntr_draw_rectangle(dst, x, y, width, height, color);
         return;
     }
 
-    pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
-    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, y + height, width - bottomLeftRadius - bottomRightRadius - 1, color); // Bottom
-    pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
-    pntr_draw_line_vertical(dst, x + width - 1, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
+    // The far edges sit on the last pixel the rectangle covers, the same as they do for
+    // pntr_draw_rectangle().
+    int right = x + width - 1;
+    int bottom = y + height - 1;
 
-    // TODO: pntr_draw_rectangle_rounded(): Do the angles here make sense?
+    pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
+    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, bottom, width - bottomLeftRadius - bottomRightRadius, color); // Bottom
+    pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
+    pntr_draw_line_vertical(dst, right, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
+
+    // Each corner sweeps a quarter turn, clockwise, from the straight edge before it to
+    // the straight edge after it. The sweep is half-open, so it stops one step short of
+    // that second edge, whose own first pixel sits where the sweep would have ended.
     pntr_draw_arc(dst, x + topLeftRadius, y + topLeftRadius, (float)topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
-    pntr_draw_arc(dst, x + width - topRightRadius - 1, y + topRightRadius, (float)topRightRadius, 0.0f, -90.0f, topRightRadius * 2, color); // Top Right
-    pntr_draw_arc(dst, x + bottomLeftRadius, y + height - bottomLeftRadius, (float)bottomLeftRadius, -180.0f, -270.0f, bottomLeftRadius * 2, color); // Bottom Left
-    pntr_draw_arc(dst, x + width - bottomRightRadius - 1, y + height - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+    pntr_draw_arc(dst, right - topRightRadius, y + topRightRadius, (float)topRightRadius, 270.0f, 360.0f, topRightRadius * 2, color); // Top Right
+    pntr_draw_arc(dst, right - bottomRightRadius, bottom - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+    pntr_draw_arc(dst, x + bottomLeftRadius, bottom - bottomLeftRadius, (float)bottomLeftRadius, 90.0f, 180.0f, bottomLeftRadius * 2, color); // Bottom Left
 }
 
 PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color) {
@@ -3366,26 +3433,33 @@ PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, i
  * @see pntr_draw_rectangle_rounded()
  */
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || width <= 0 || height <= 0) {
+        return;
+    }
+
+    cornerRadius = _pntr_rectangle_rounded_radius(cornerRadius, width, height);
     if (cornerRadius == 0) {
         pntr_draw_rectangle_fill(dst, x, y, width, height, color);
         return;
     }
 
-    // Corners
-    // TODO: Replace this with pntr_draw_arc_fill()
-    pntr_draw_circle_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, color); // Top Left
-    pntr_draw_circle_fill(dst, x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, color); // Top Right
-    pntr_draw_circle_fill(dst, x + cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Left
-    pntr_draw_circle_fill(dst, x + width - cornerRadius - 1, y + height - cornerRadius, cornerRadius, color); // Bottom Right
+    // The far edges sit on the last pixel the rectangle covers, the same as they do for
+    // pntr_draw_rectangle_fill().
+    int right = x + width - 1;
+    int bottom = y + height - 1;
 
-    // Edge bars
-    pntr_draw_rectangle_fill(dst, x, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Left bar
-    pntr_draw_rectangle_fill(dst, x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Right bar
-    pntr_draw_rectangle_fill(dst, x + cornerRadius, y, width - cornerRadius * 2, cornerRadius, color); // Top bar
-    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + height - cornerRadius, width - cornerRadius * 2, cornerRadius, color); // Bottom bar
+    // Corners. Each one covers the cornerRadius + 1 columns and rows that run from the
+    // edge of the rectangle in to the center of its own disc.
+    _pntr_draw_quarter_disc_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, -1, -1, color); // Top Left
+    _pntr_draw_quarter_disc_fill(dst, right - cornerRadius, y + cornerRadius, cornerRadius, 1, -1, color); // Top Right
+    _pntr_draw_quarter_disc_fill(dst, x + cornerRadius, bottom - cornerRadius, cornerRadius, -1, 1, color); // Bottom Left
+    _pntr_draw_quarter_disc_fill(dst, right - cornerRadius, bottom - cornerRadius, cornerRadius, 1, 1, color); // Bottom Right
 
-    // Center fill
-    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + cornerRadius, width - cornerRadius * 2, height - cornerRadius * 2, color);
+    // What is left over after the corners, filled without painting over them, so that a
+    // semi-transparent color is blended exactly once everywhere.
+    pntr_draw_rectangle_fill(dst, x + cornerRadius + 1, y, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Top bar
+    pntr_draw_rectangle_fill(dst, x + cornerRadius + 1, bottom - cornerRadius, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Bottom bar
+    pntr_draw_rectangle_fill(dst, x, y + cornerRadius + 1, width, height - cornerRadius * 2 - 2, color); // Center fill
 }
 
 /**
