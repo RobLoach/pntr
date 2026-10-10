@@ -17,6 +17,14 @@
  *
  * Image loading can be completely disabled with `PNTR_NO_LOAD_IMAGE`.
  *
+ * PNG and BMP loading are both enabled by default, matching what pntr is able to save.
+ * The individual formats can be adjusted with:
+ *
+ * - `PNTR_NO_BMP`: Drop BMP loading, saving roughly 6.5 KB of code. BMP images will still
+ *   be saved, but will no longer be loadable.
+ * - `PNTR_ENABLE_JPEG`: Add JPEG loading, costing roughly 21 KB of code. JPEG images are
+ *   always saveable, but are only loadable when this is defined.
+ *
  * @see https://github.com/nothings/stb/blob/master/stb_image.h
  * @see PNTR_STB_IMAGE
  * @see PNTR_LOAD_IMAGE_FROM_MEMORY
@@ -52,7 +60,9 @@ pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const un
         #define STBI_NO_JPEG // JPG support in stb_image.
     #endif
     //#define STBI_NO_PNG
-    #define STBI_NO_BMP
+    #ifdef PNTR_NO_BMP
+        #define STBI_NO_BMP // BMP support in stb_image.
+    #endif
     #define STBI_NO_PSD
     #define STBI_NO_TGA
     #define STBI_NO_GIF

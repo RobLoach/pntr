@@ -106,6 +106,17 @@ const char* pntr_test_unwritable_file() {
     #endif
 }
 
+/**
+ * Whether JPEG images can be loaded back in. Saving them is always available.
+ */
+bool pntr_jpeg() {
+    #if defined(PNTR_ENABLE_JPEG) && !defined(PNTR_NO_LOAD_IMAGE)
+        return true;
+    #else
+        return false;
+    #endif
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -1756,6 +1767,145 @@ MODULE(pntr, {
         COLOREQUALS(pntr_image_get_color(loadedImage, 15, 15), PNTR_GREEN);
         pntr_unload_image(loadedImage);
     });
+
+    IT("pntr_save_image(): .bmp", {
+        pntr_image* saveImage = pntr_gen_image_color(64, 64, PNTR_RED);
+        NEQUALS(saveImage, NULL);
+        pntr_draw_rectangle_fill(saveImage, 8, 8, 16, 16, PNTR_GREEN);
+
+        bool result = pntr_save_image(saveImage, "saveImage.bmp");
+        EQUALS(result, true);
+
+        // A 64x64 RGBA bitmap is a 14 byte file header, a 108 byte V4 info
+        // header, then 32 bits per pixel.
+        unsigned int expectedSize = 14 + 108 + (64 * 64 * 4);
+
+        unsigned int bytesRead = 0;
+        unsigned char* fileData = pntr_load_file("saveImage.bmp", &bytesRead);
+        NEQUALS(fileData, NULL);
+        EQUALS(bytesRead, expectedSize);
+
+        // The "BM" magic, along with the file size and pixel offset that the header declares.
+        EQUALS(fileData[0], 'B');
+        EQUALS(fileData[1], 'M');
+        unsigned int declaredSize = (unsigned int)fileData[2] | ((unsigned int)fileData[3] << 8) |
+            ((unsigned int)fileData[4] << 16) | ((unsigned int)fileData[5] << 24);
+        EQUALS(declaredSize, expectedSize);
+        unsigned int pixelOffset = (unsigned int)fileData[10] | ((unsigned int)fileData[11] << 8) |
+            ((unsigned int)fileData[12] << 16) | ((unsigned int)fileData[13] << 24);
+        EQUALS(pixelOffset, 14 + 108);
+
+        // Saving to memory has to produce the exact same thing as the file.
+        unsigned int memorySize = 0;
+        unsigned char* memoryData = pntr_save_image_to_memory(saveImage, PNTR_IMAGE_TYPE_BMP, &memorySize);
+        NEQUALS(memoryData, NULL);
+        EQUALS(memorySize, bytesRead);
+        EQUALS(memcmp(memoryData, fileData, (size_t)memorySize), 0);
+        pntr_unload_memory(memoryData);
+
+        // The bitmap has to load back in, pixel for pixel.
+        pntr_image* loadedImage = pntr_load_image("saveImage.bmp");
+        NEQUALS(loadedImage, NULL);
+        EQUALS(loadedImage->width, 64);
+        EQUALS(loadedImage->height, 64);
+        COLOREQUALS(pntr_image_get_color(loadedImage, 0, 0), PNTR_RED);
+        COLOREQUALS(pntr_image_get_color(loadedImage, 10, 10), PNTR_GREEN);
+        IMAGEEQUALS(loadedImage, saveImage);
+
+        pntr_unload_image(loadedImage);
+        pntr_unload_file(fileData);
+        pntr_unload_image(saveImage);
+        remove("saveImage.bmp");
+    });
+
+    IT("pntr_save_image_to_memory()", {
+        pntr_image* image = pntr_gen_image_color(64, 64, PNTR_BLUE);
+        NEQUALS(image, NULL);
+        pntr_draw_rectangle_fill(image, 4, 4, 10, 10, PNTR_WHITE);
+
+        // PNG is the default, and must still work the same as it always has.
+        unsigned int pngSize = 0;
+        unsigned char* png = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_PNG, &pngSize);
+        NEQUALS(png, NULL);
+        GREATER(pngSize, 8);
+        EQUALS(png[0], 0x89);
+        EQUALS(png[1], 'P');
+        EQUALS(png[2], 'N');
+        EQUALS(png[3], 'G');
+
+        pntr_image* loadedPng = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, png, pngSize);
+        NEQUALS(loadedPng, NULL);
+        IMAGEEQUALS(loadedPng, image);
+        pntr_unload_image(loadedPng);
+        pntr_unload_memory(png);
+
+        // An unknown type falls back to PNG.
+        unsigned int unknownSize = 0;
+        unsigned char* unknown = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_UNKNOWN, &unknownSize);
+        NEQUALS(unknown, NULL);
+        EQUALS(unknownSize, pngSize);
+        pntr_unload_memory(unknown);
+
+        // An unsupported type reports an error rather than handing back a buffer.
+        unsigned int badSize = 100;
+        unsigned char* bad = pntr_save_image_to_memory(image, (pntr_image_type)100, &badSize);
+        EQUALS(bad, NULL);
+        EQUALS(badSize, 0);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A NULL image is invalid.
+        unsigned char* nothing = pntr_save_image_to_memory(NULL, PNTR_IMAGE_TYPE_PNG, NULL);
+        EQUALS(nothing, NULL);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        pntr_unload_image(image);
+    });
+
+    if (pntr_jpeg()) {
+        IT("pntr_save_image(): .jpg", {
+            pntr_image* image = pntr_gen_image_color(64, 64, PNTR_BLUE);
+            NEQUALS(image, NULL);
+            pntr_draw_rectangle_fill(image, 4, 4, 10, 10, PNTR_WHITE);
+
+            // JPEG is lossy, so only the markers and a plausible size are checked.
+            unsigned int jpgSize = 0;
+            unsigned char* jpg = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_JPG, &jpgSize);
+            NEQUALS(jpg, NULL);
+            GREATER(jpgSize, 600);
+            EQUALS(jpg[0], 0xFF);
+            EQUALS(jpg[1], 0xD8);
+            EQUALS(jpg[jpgSize - 2], 0xFF);
+            EQUALS(jpg[jpgSize - 1], 0xD9);
+
+            // Saving a JPEG file has to match what was saved to memory.
+            bool result = pntr_save_image(image, "saveImage.jpg");
+            EQUALS(result, true);
+
+            unsigned int bytesRead = 0;
+            unsigned char* fileData = pntr_load_file("saveImage.jpg", &bytesRead);
+            NEQUALS(fileData, NULL);
+            EQUALS(bytesRead, jpgSize);
+            EQUALS(memcmp(fileData, jpg, (size_t)jpgSize), 0);
+            pntr_unload_file(fileData);
+
+            pntr_image* loadedJpg = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_JPG, jpg, jpgSize);
+            NEQUALS(loadedJpg, NULL);
+            EQUALS(loadedJpg->width, 64);
+            EQUALS(loadedJpg->height, 64);
+            pntr_unload_image(loadedJpg);
+
+            pntr_unload_memory(jpg);
+            pntr_unload_image(image);
+            remove("saveImage.jpg");
+        });
+    }
+    else {
+        IT("pntr_save_image(): .jpg: PNTR_ENABLE_JPEG not enabled", {
+            // Nothing
+        });
+    }
 
     IT("pntr_get_pixel_data_size()", {
         EQUALS(pntr_get_pixel_data_size(1, 1, PNTR_PIXELFORMAT_RGBA8888), 4);
