@@ -2084,6 +2084,16 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
 /**
  * Draws a line on the given image.
  *
+ * @details Both endpoints are painted, so a line from `x = 0` to `x = 10` covers 11
+ * pixels, and a line whose two endpoints are the same pixel paints that one pixel.
+ *
+ * @param dst The image to draw the line onto.
+ * @param startPosX The X coordinate of the first endpoint.
+ * @param startPosY The Y coordinate of the first endpoint.
+ * @param endPosX The X coordinate of the second endpoint.
+ * @param endPosY The Y coordinate of the second endpoint.
+ * @param color The color of the line.
+ *
  * @see pntr_draw_line_aa()
  * @see pntr_draw_line_horizontal()
  * @see pntr_draw_line_vertical()
@@ -2094,6 +2104,15 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
 
 /**
  * Draws an anti-aliased line using Xiaolin Wu's algorithm.
+ *
+ * @details Both endpoints are painted, matching pntr_draw_line().
+ *
+ * @param dst The image to draw the line onto.
+ * @param startPosX The X coordinate of the first endpoint.
+ * @param startPosY The Y coordinate of the first endpoint.
+ * @param endPosX The X coordinate of the second endpoint.
+ * @param endPosY The Y coordinate of the second endpoint.
+ * @param color The color of the line.
  *
  * @see pntr_draw_line()
  */
@@ -2189,7 +2208,21 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
 }
 
 /**
- * Draws a line on the given image, with thickness
+ * Draws a line on the given image, with thickness.
+ *
+ * @details The line runs between the same two inclusive endpoints as pntr_draw_line(),
+ * and is drawn with a round brush of the given thickness, so the thickness is the
+ * number of pixels the line covers across its width.
+ *
+ * @param dst The image to draw the line onto.
+ * @param startPosX The X coordinate of the first endpoint.
+ * @param startPosY The Y coordinate of the first endpoint.
+ * @param endPosX The X coordinate of the second endpoint.
+ * @param endPosY The Y coordinate of the second endpoint.
+ * @param thickness How many pixels wide the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line()
  */
 PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color) {
     if (thickness < 1) {
@@ -2203,6 +2236,21 @@ PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY
     _pntr_draw_line_core(dst, startPosX, startPosY, endPosX, endPosY, thickness, color);
 }
 
+/**
+ * Draws a cubic bezier curve on the given image.
+ *
+ * @details The curve is drawn as a chain of lines, so it covers both of its endpoints.
+ *
+ * @param dst The image to draw the curve onto.
+ * @param point1 The point the curve starts at.
+ * @param point2 The first control point.
+ * @param point3 The second control point.
+ * @param point4 The point the curve ends at.
+ * @param segments How many line segments to build the curve from.
+ * @param color The color of the curve.
+ *
+ * @see pntr_draw_line_curve_thick()
+ */
 PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color) {
     pntr_draw_line_curve_thick(dst, point1, point2, point3, point4, segments, 1, color);
 }
@@ -2229,6 +2277,20 @@ PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pn
     }
 }
 
+/**
+ * Draws a connected series of lines through the given points.
+ *
+ * @details Every point is painted, including the first and the last. Unlike
+ * pntr_draw_polygon(), the last point is not joined back to the first.
+ *
+ * @param dst The image to draw the lines onto.
+ * @param points The points to connect.
+ * @param numPoints How many points there are.
+ * @param color The color of the lines.
+ *
+ * @see pntr_draw_polygon()
+ * @see pntr_draw_polyline_thick()
+ */
 PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     pntr_draw_polyline_thick(dst, points, numPoints, 1, color);
 }
@@ -2250,6 +2312,9 @@ PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int
 
 /**
  * Draw a horizontal line at the given x, y coordinates.
+ *
+ * @details The width is a count of pixels rather than a second coordinate, so the line
+ * covers `posX` through `posX + width - 1`.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -2302,6 +2367,9 @@ PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int pos
 
 /**
  * Draw a vertical line at the given x, y coordinates.
+ *
+ * @details The height is a count of pixels rather than a second coordinate, so the line
+ * covers `posY` through `posY + height - 1`.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -2366,6 +2434,10 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_
 /**
  * Draw a rectangle on the given image.
  *
+ * @details The width and height are a count of pixels rather than a second coordinate,
+ * so the rectangle covers columns `posX` through `posX + width - 1` and rows `posY`
+ * through `posY + height - 1`.
+ *
  * @param dst The destination image.
  * @param posX The X position.
  * @param posY The Y position.
@@ -2399,6 +2471,9 @@ PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect
 
 /**
  * Draws a filled rectangle on the given image.
+ *
+ * @details Covers the same pixels as pntr_draw_rectangle(), so the width and height are
+ * a count of pixels rather than a second coordinate.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -2517,7 +2592,10 @@ static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, 
  * This uses the Midpoint Circle Algorithm:
  *   https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
  *
- * TODO: pntr_draw_circle: Add anti-aliased, and thickness.
+ * @details The radius is inclusive, so the outline reaches `centerX - radius` and
+ * `centerX + radius`, making the circle `radius * 2 + 1` pixels across.
+ *
+ * TODO: pntr_draw_circle: Add anti-aliased.
  *
  * @param dst The image to draw the circle onto.
  * @param centerX The center of the circle at the X coordinate.
@@ -2555,6 +2633,9 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
 
 /**
  * Draws a filled circle on the given image.
+ *
+ * @details Covers the same bounds as pntr_draw_circle(), so the fill reaches the outline
+ * drawn for the same center and radius on all four sides.
  *
  * TODO: pntr_draw_circle_fill: Add anti-aliased.
  *
@@ -2684,6 +2765,9 @@ static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY,
 /**
  * Draws an ellipse on the given image.
  *
+ * @details The radii are inclusive, so the ellipse is `radiusX * 2 + 1` pixels wide and
+ * `radiusY * 2 + 1` pixels tall.
+ *
  * @param dst The image to draw the ellipse onto.
  * @param centerX The center of the ellipse at the X coordinate.
  * @param centerY The center of the ellipse at the Y coordinate.
@@ -2705,6 +2789,9 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
 
 /**
  * Draws a filled ellipse on the given image.
+ *
+ * @details Covers the same bounds as pntr_draw_ellipse(), so the fill reaches the
+ * outline drawn for the same center and radii on all four sides.
  *
  * TODO: pntr_draw_ellipse_fill: Add anti-aliased
  *
@@ -2803,6 +2890,8 @@ PNTR_API void pntr_draw_triangle_thick_vec(pntr_image *dst, pntr_vector point1, 
 /**
  * Draw a triangle on an image.
  *
+ * @details Every one of the three points is painted, along with the lines between them.
+ *
  * @param dst The image of which to draw the triangle.
  * @param x1 The x coordinate of the first point.
  * @param y1 The y coordinate of the first point.
@@ -2839,6 +2928,9 @@ PNTR_API void pntr_draw_triangle_thick(pntr_image* dst, int x1, int y1, int x2, 
 /**
  * Draw a filled triangle on an image.
  *
+ * @details Covers the full bounding box of the three points, so the fill reaches the
+ * outline drawn by pntr_draw_triangle() for the same points.
+ *
  * @param dst The image of which to draw the triangle.
  * @param x1 The x coordinate of the first point.
  * @param y1 The y coordinate of the first point.
@@ -2865,6 +2957,19 @@ PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_
     pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, thickness, color);
 }
 
+/**
+ * Draws the outline of a polygon through the given points.
+ *
+ * @details Every point is painted, and the last point is joined back to the first.
+ *
+ * @param dst The image to draw the polygon onto.
+ * @param points The corners of the polygon.
+ * @param numPoints How many corners there are.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_polygon_fill()
+ * @see pntr_draw_polyline()
+ */
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     pntr_draw_polygon_thick(dst, points, numPoints, 1, color);
 }
@@ -2887,6 +2992,19 @@ PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int 
    }
 }
 
+/**
+ * Fills the polygon described by the given points.
+ *
+ * @details Covers the full bounding box of the points, so the fill reaches the outline
+ * drawn by pntr_draw_polygon() for the same points on all four sides.
+ *
+ * @param dst The image to fill the polygon onto.
+ * @param points The corners of the polygon.
+ * @param numPoints How many corners there are.
+ * @param color The fill color.
+ *
+ * @see pntr_draw_polygon()
+ */
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     if (dst == NULL || points == NULL || numPoints <= 0 || color.rgba.a == 0) {
         return;
@@ -2971,6 +3089,30 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
     pntr_draw_polygon_fill(dst, points, 3, color);
 }
 
+/**
+ * Draws an arc as a series of points along a circle.
+ *
+ * @details Angles are in degrees, measured from the positive X axis, and turn towards
+ * the positive Y axis. Since Y grows downwards, that means they turn clockwise on
+ * screen: 0 is to the right of the center, 90 is below it, and 180 is to its left.
+ *
+ * The sweep is half-open. `segments` points are sampled, starting at `startAngle` and
+ * stepping by `(endAngle - startAngle) / segments`, so `endAngle` itself is the end of
+ * the sweep rather than the last point sampled. That is what lets a full `0` to `360`
+ * sweep close without painting the same point at both ends.
+ *
+ * @param dst The image to draw the arc onto.
+ * @param centerX The center of the arc's circle at the X coordinate.
+ * @param centerY The center of the arc's circle at the Y coordinate.
+ * @param radius The radius of the arc's circle.
+ * @param startAngle The angle, in degrees, that the sweep starts at.
+ * @param endAngle The angle, in degrees, that the sweep ends at.
+ * @param segments How many points to sample along the sweep.
+ * @param color The color of the arc.
+ *
+ * @see pntr_draw_arc_thick()
+ * @see pntr_draw_arc_fill()
+ */
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
@@ -2990,7 +3132,7 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     for (int i = 0; i < segments; i++) {
         endAngleRad = startAngleRad + (float)i * stepAngle;
         pntr_draw_point(dst,
-            centerX + (int)(radius * PNTR_COSF(endAngleRad)), // TODO: arc angle: Is the - correct here?
+            centerX + (int)(radius * PNTR_COSF(endAngleRad)),
             centerY + (int)(radius * PNTR_SINF(endAngleRad)),
             color);
     }
@@ -3025,6 +3167,26 @@ PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, flo
     }
 }
 
+/**
+ * Fills the wedge between the center of an arc and the arc itself.
+ *
+ * @details Uses the same angles and the same half-open sweep as pntr_draw_arc(). The
+ * wedge is filled as the polygon through the sampled arc points plus the center, so a
+ * sweep with few segments is visibly straight-edged, and one that sweeps a full circle
+ * leaves a seam along the edge that runs back to the center.
+ *
+ * @param dst The image to fill the wedge onto.
+ * @param centerX The center of the arc's circle at the X coordinate.
+ * @param centerY The center of the arc's circle at the Y coordinate.
+ * @param radius The radius of the arc's circle.
+ * @param startAngle The angle, in degrees, that the sweep starts at.
+ * @param endAngle The angle, in degrees, that the sweep ends at.
+ * @param segments How many points to sample along the sweep.
+ * @param color The fill color.
+ *
+ * @see pntr_draw_arc()
+ * @see pntr_draw_polygon_fill()
+ */
 PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
@@ -3043,7 +3205,6 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
         return;
     }
 
-    // TODO: pntr_draw_arc_fill(): Is pntr_draw_polygon_fill ample here?
     for (int i = 0; i < segments; i++) {
         endAngleRad = startAngleRad + (float)i * stepAngle;
         points[i].x = centerX + (int)(radius * PNTR_COSF(endAngleRad));
@@ -3057,6 +3218,28 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
     pntr_unload_memory((void*)points);
 }
 
+/**
+ * Draws the outline of a rectangle with rounded corners.
+ *
+ * @details Occupies exactly the same pixels as pntr_draw_rectangle() for the same `x`,
+ * `y`, `width` and `height`, so the width and height are a count of pixels rather than a
+ * second coordinate. Each corner radius is clamped so that it can never reach past the
+ * middle of the rectangle.
+ *
+ * @param dst The image to draw the rectangle onto.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param topLeftRadius The corner radius of the top left corner.
+ * @param topRightRadius The corner radius of the top right corner.
+ * @param bottomLeftRadius The corner radius of the bottom left corner.
+ * @param bottomRightRadius The corner radius of the bottom right corner.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle()
+ * @see pntr_draw_rectangle_rounded_fill()
+ */
 PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color) {
     if (topLeftRadius == 0 && topRightRadius == 0 && bottomLeftRadius == 0 && bottomRightRadius == 0) {
         pntr_draw_rectangle(dst, x, y, width, height, color);
@@ -3090,6 +3273,23 @@ PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, i
     }
 }
 
+/**
+ * Fills a rectangle with rounded corners.
+ *
+ * @details Covers the same bounds as pntr_draw_rectangle_rounded(), so the fill reaches
+ * the outline drawn for the same rectangle and radius on all four sides. The corner
+ * radius is clamped so that it can never reach past the middle of the rectangle.
+ *
+ * @param dst The image to fill the rectangle onto.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param cornerRadius The corner radius used for all four corners.
+ * @param color The fill color.
+ *
+ * @see pntr_draw_rectangle_rounded()
+ */
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
     if (cornerRadius == 0) {
         pntr_draw_rectangle_fill(dst, x, y, width, height, color);
