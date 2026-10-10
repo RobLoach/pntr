@@ -6185,9 +6185,11 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * @param posY Where to draw the scaled image, at the Y coordinate.
  * @param scaleX The scale of which to apply to the width of the image.
  * @param scaleY The scale of which to apply to the height of the image.
- * @param offsetX How much to offset the X drawing of the image, relative from its original source size.
- * @param offsetY How much to offset the Y drawing of the image, relative from its original source size.
+ * @param offsetX How much to offset the X drawing of the image, in unscaled source pixels. The left edge of the source pixel there lands on posX.
+ * @param offsetY How much to offset the Y drawing of the image, in unscaled source pixels. The top edge of the source pixel there lands on posY.
  * @param filter Filter to be applied during the rotation.
+ *
+ * @see pntr_draw_image_scaled_rec()
  */
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL) {
@@ -6202,6 +6204,38 @@ PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX,
         filter, tint);
 }
 
+/**
+ * Draw a scaled portion of an image.
+ *
+ * @details The offset is an edge rather than a pivot: the left and top edges of the source
+ * pixel it names are what land on the position, which is what makes an offset of zero draw
+ * the source rectangle starting at the position at any scale. The rotated draws name the
+ * center of that pixel instead, because a pivot has to stay on the same point of the
+ * artwork as the scale changes, so pntr_draw_image_rotozoom() adds the half source pixel
+ * that turns one convention into the other before handing an unrotated draw here.
+ *
+ * The offset is scaled by the drawn size rather than by the scale, so it can never name a
+ * pixel outside the box a truncated scale actually left to draw, and it is floored rather
+ * than truncated so that it steps the same way on either side of zero. Both of those match
+ * _pntr_rotation_pivot_offset(), which is what keeps pntr_draw_image_rotozoom() from
+ * jumping as its rotation passes through zero.
+ *
+ * @param dst Pointer to the destination image where the output will be stored.
+ * @param src Pointer to the source image that will be drawn onto the destination image.
+ * @param srcRect The portion of the source image to draw.
+ * @param posX Where to draw the scaled image, at the X coordinate.
+ * @param posY Where to draw the scaled image, at the Y coordinate.
+ * @param scaleX The scale of which to apply to the width of the image.
+ * @param scaleY The scale of which to apply to the height of the image.
+ * @param offsetX How much to offset the X drawing of the image, in unscaled source pixels, relative from the source rectangle.
+ * @param offsetY How much to offset the Y drawing of the image, in unscaled source pixels, relative from the source rectangle.
+ * @param filter Filter to be applied while scaling. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
+ * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
+ *
+ * @see pntr_draw_image_scaled()
+ * @see pntr_draw_image_dest_rec()
+ * @see pntr_draw_image_rotozoom()
+ */
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
         return;
@@ -6220,8 +6254,12 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
         return;
     }
 
-    int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
-    int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
+    // Floored, not truncated, so that an offset to the left of the source rectangle steps
+    // the same way as one to the right of it. This is the rounding
+    // _pntr_rotation_pivot_offset() uses, and the two agreeing is what makes
+    // pntr_draw_image_rotozoom() continuous as its rotation passes through zero.
+    int offsetXRatio = (int)PNTR_FLOORF(offsetX / (float)srcRect.width * (float)newWidth);
+    int offsetYRatio = (int)PNTR_FLOORF(offsetY / (float)srcRect.height * (float)newHeight);
 
     switch (filter) {
         case PNTR_FILTER_BILINEAR: {
@@ -6502,7 +6540,13 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
 
     rotation = _pntr_normalize_degrees(rotation);
     if (rotation == 0.0f) {
-        pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter, tint);
+        // An unrotated draw is a scaled draw, which offsets from the edge of the pixel it
+        // names rather than pivoting around its center. Half a source pixel is the whole
+        // difference between the two conventions, and adding it here is what stops the
+        // draw from stepping as the rotation passes through zero: the general rotation
+        // below finds its pivot with _pntr_rotation_pivot_offset(), which carries that
+        // same half pixel at every other angle.
+        pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX + 0.5f, originY + 0.5f, filter, tint);
         return;
     }
 
