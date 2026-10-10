@@ -203,15 +203,17 @@ bool pntr_test_directory_opens() {
 /**
  * The exact bounds of everything that has been painted onto the given image.
  *
- * @details Returns the smallest rectangle that holds every pixel which is not
- * PNTR_TEST_BACKGROUND, so asserting it against a rectangle states where a primitive
- * starts and where it stops, in both directions, in a single assertion. An image that
- * has nothing painted on it reports a rectangle of no size at the origin.
+ * @details Returns the smallest rectangle that holds every pixel which is not the given
+ * background color, so asserting it against a rectangle states where a primitive starts
+ * and where it stops, in both directions, in a single assertion. An image that has
+ * nothing painted on it reports a rectangle of no size at the origin.
  *
  * This is what pins down the bounds convention: a primitive given endpoints covers them
- * both, and one given an extent stops one short of it.
+ * both, and one given an extent stops one short of it. Canvases from
+ * pntr_test_canvas() pass PNTR_TEST_BACKGROUND; the rotated draws land on their own
+ * background, so they pass that instead.
  */
-pntr_rectangle pntr_test_painted_bounds(pntr_image* image) {
+pntr_rectangle pntr_test_painted_bounds(pntr_image* image, pntr_color background) {
     pntr_rectangle bounds = PNTR_CLITERAL(pntr_rectangle) {0, 0, 0, 0};
     if (image == NULL) {
         return bounds;
@@ -224,7 +226,7 @@ pntr_rectangle pntr_test_painted_bounds(pntr_image* image) {
 
     for (int y = 0; y < image->height; y++) {
         for (int x = 0; x < image->width; x++) {
-            if (pntr_image_get_color(image, x, y).value == PNTR_TEST_BACKGROUND.value) {
+            if (pntr_image_get_color(image, x, y).value == background.value) {
                 continue;
             }
 
@@ -256,7 +258,7 @@ pntr_rectangle pntr_test_painted_bounds(pntr_image* image) {
 }
 
 /**
- * How many pixels of the given image have been painted on.
+ * How many pixels of the given PNTR_TEST_BACKGROUND canvas have been painted on.
  *
  * @see pntr_test_painted_bounds()
  */
@@ -278,7 +280,7 @@ int pntr_test_painted_count(pntr_image* image) {
 }
 
 /**
- * Whether the given pixel has been painted on.
+ * Whether the given pixel of a PNTR_TEST_BACKGROUND canvas has been painted on.
  *
  * @see pntr_test_painted_bounds()
  */
@@ -354,44 +356,6 @@ int pntr_test_pivot_offset(pntr_image* image, int posX, int posY) {
 }
 
 /**
- * The rectangle covering every pixel of the given image that isn't the background color.
- *
- * An empty rectangle when nothing but the background is there.
- */
-pntr_rectangle pntr_test_drawn_bounds(pntr_image* image, pntr_color background) {
-    int minX = image->width;
-    int minY = image->height;
-    int maxX = -1;
-    int maxY = -1;
-
-    for (int y = 0; y < image->height; y++) {
-        for (int x = 0; x < image->width; x++) {
-            if (pntr_image_get_color(image, x, y).value == background.value) {
-                continue;
-            }
-            if (x < minX) {
-                minX = x;
-            }
-            if (y < minY) {
-                minY = y;
-            }
-            if (x > maxX) {
-                maxX = x;
-            }
-            if (y > maxY) {
-                maxY = y;
-            }
-        }
-    }
-
-    if (maxX < 0) {
-        return PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 0 };
-    }
-
-    return PNTR_CLITERAL(pntr_rectangle) { .x = minX, .y = minY, .width = maxX - minX + 1, .height = maxY - minY + 1 };
-}
-
-/**
  * The largest difference, in pixels, between the edges of two rectangles.
  */
 int pntr_test_rectangle_distance(pntr_rectangle a, pntr_rectangle b) {
@@ -433,7 +397,7 @@ pntr_rectangle pntr_test_rotated_bounds(pntr_image* src, float degrees, float of
     pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
     pntr_draw_image_rotated_rec(dst, src, srcRect, 80, 80, degrees, offsetX, offsetY, PNTR_FILTER_NEARESTNEIGHBOR);
 
-    pntr_rectangle bounds = pntr_test_drawn_bounds(dst, PNTR_GREEN);
+    pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_GREEN);
     pntr_unload_image(dst);
 
     return bounds;
@@ -1257,7 +1221,7 @@ MODULE(pntr, {
                 NEQUALS(image, NULL);
 
                 pntr_draw_line(image, 5, 20, 15, 20, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 20, 11, 1};
                 RECTEQUALS(bounds, expected);
 
@@ -1277,7 +1241,7 @@ MODULE(pntr, {
 
                 // Reversing the endpoints paints the very same pixels.
                 pntr_draw_line(image, 15, 20, 5, 20, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 20, 11, 1};
                 RECTEQUALS(bounds, expected);
                 EQUALS(pntr_test_painted_count(image), 11);
@@ -1290,7 +1254,7 @@ MODULE(pntr, {
                 NEQUALS(image, NULL);
 
                 pntr_draw_line(image, 20, 5, 20, 15, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {20, 5, 1, 11};
                 RECTEQUALS(bounds, expected);
 
@@ -1308,7 +1272,7 @@ MODULE(pntr, {
                 NEQUALS(image, NULL);
 
                 pntr_draw_line(image, 20, 15, 20, 5, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {20, 5, 1, 11};
                 RECTEQUALS(bounds, expected);
                 EQUALS(pntr_test_painted_count(image), 11);
@@ -1321,7 +1285,7 @@ MODULE(pntr, {
                 NEQUALS(image, NULL);
 
                 pntr_draw_line(image, 5, 5, 15, 15, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 11, 11};
                 RECTEQUALS(bounds, expected);
 
@@ -1339,7 +1303,7 @@ MODULE(pntr, {
                 NEQUALS(image, NULL);
 
                 pntr_draw_line(image, 5, 10, 25, 14, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 10, 21, 5};
                 RECTEQUALS(bounds, expected);
 
@@ -1352,7 +1316,7 @@ MODULE(pntr, {
 
                 // A line of no length still covers the one pixel it is given.
                 pntr_draw_line(image, 20, 20, 20, 20, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {20, 20, 1, 1};
                 RECTEQUALS(bounds, expected);
                 EQUALS(pntr_test_painted_count(image), 1);
@@ -1366,13 +1330,13 @@ MODULE(pntr, {
 
                 // The axis-aligned cases of the anti-aliased line run the same lengths.
                 pntr_draw_line_aa(image, 5, 20, 15, 20, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 20, 11, 1};
                 RECTEQUALS(bounds, expected);
 
                 pntr_clear_background(image, PNTR_TEST_BACKGROUND);
                 pntr_draw_line_aa(image, 20, 5, 20, 15, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expectedVertical = PNTR_CLITERAL(pntr_rectangle) {20, 5, 1, 11};
                 RECTEQUALS(bounds, expectedVertical);
 
@@ -1389,7 +1353,7 @@ MODULE(pntr, {
                 points[2] = PNTR_CLITERAL(pntr_vector) {25, 25};
                 pntr_draw_polyline(image, points, 3, PNTR_RED);
 
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
                 RECTEQUALS(bounds, expected);
 
@@ -1432,7 +1396,7 @@ MODULE(pntr, {
             points[3] = PNTR_CLITERAL(pntr_vector) {5, 25};
             pntr_draw_polygon(image, points, 4, PNTR_RED);
 
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
             RECTEQUALS(bounds, expected);
 
@@ -1468,7 +1432,7 @@ MODULE(pntr, {
             points[3] = PNTR_CLITERAL(pntr_vector) {5, 25};
             pntr_draw_polygon_fill(image, points, 4, PNTR_RED);
 
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
             RECTEQUALS(bounds, expected);
 
@@ -1494,8 +1458,8 @@ MODULE(pntr, {
             pntr_draw_polygon_fill(fill, points, 5, PNTR_RED);
 
             // The fill occupies the same bounds as the outline it belongs to.
-            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline);
-            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill);
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
             RECTEQUALS(fillBounds, outlineBounds);
 
             // And reaches every corner, rather than stopping one short of them. The rest
@@ -1544,7 +1508,7 @@ MODULE(pntr, {
 
             pntr_draw_triangle_fill(image, 15, 5, 5, 25, 25, 25, PNTR_RED);
 
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
             RECTEQUALS(bounds, expected);
 
@@ -1570,8 +1534,8 @@ MODULE(pntr, {
             pntr_draw_triangle(outline, 15, 5, 5, 25, 32, 20, PNTR_RED);
             pntr_draw_triangle_fill(fill, 15, 5, 5, 25, 32, 20, PNTR_RED);
 
-            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline);
-            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill);
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
             RECTEQUALS(fillBounds, outlineBounds);
 
             pntr_unload_image(outline);
@@ -1589,8 +1553,8 @@ MODULE(pntr, {
 
             // A radius covers its far pixel, so both are 12 * 2 + 1 across.
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {8, 8, 25, 25};
-            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline);
-            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill);
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
             RECTEQUALS(outlineBounds, expected);
             RECTEQUALS(fillBounds, expected);
 
@@ -1623,8 +1587,8 @@ MODULE(pntr, {
             pntr_draw_ellipse_fill(fill, 20, 20, 15, 9, PNTR_RED);
 
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 11, 31, 19};
-            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline);
-            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill);
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
             RECTEQUALS(outlineBounds, expected);
             RECTEQUALS(fillBounds, expected);
 
@@ -1647,7 +1611,7 @@ MODULE(pntr, {
 
             pntr_draw_rectangle(image, 5, 5, 20, 12, PNTR_RED);
 
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 20, 12};
             RECTEQUALS(bounds, expected);
 
@@ -1671,8 +1635,8 @@ MODULE(pntr, {
             pntr_draw_rectangle_rounded(rounded, 5, 5, 24, 16, 4, 4, 4, 4, PNTR_RED);
 
             // Rounding the corners does not change which pixels the rectangle occupies.
-            pntr_rectangle plainBounds = pntr_test_painted_bounds(plain);
-            pntr_rectangle roundedBounds = pntr_test_painted_bounds(rounded);
+            pntr_rectangle plainBounds = pntr_test_painted_bounds(plain, PNTR_TEST_BACKGROUND);
+            pntr_rectangle roundedBounds = pntr_test_painted_bounds(rounded, PNTR_TEST_BACKGROUND);
             RECTEQUALS(roundedBounds, plainBounds);
 
             // The corners themselves are the part that is cut away.
@@ -1702,8 +1666,8 @@ MODULE(pntr, {
             pntr_draw_rectangle_rounded_fill(rounded, 5, 5, 24, 16, 4, PNTR_RED);
             pntr_draw_rectangle_rounded(outline, 5, 5, 24, 16, 4, 4, 4, 4, PNTR_RED);
 
-            pntr_rectangle plainBounds = pntr_test_painted_bounds(plain);
-            pntr_rectangle roundedBounds = pntr_test_painted_bounds(rounded);
+            pntr_rectangle plainBounds = pntr_test_painted_bounds(plain, PNTR_TEST_BACKGROUND);
+            pntr_rectangle roundedBounds = pntr_test_painted_bounds(rounded, PNTR_TEST_BACKGROUND);
             RECTEQUALS(roundedBounds, plainBounds);
 
             // The rightmost column and the bottom row are filled, not left behind.
@@ -1737,8 +1701,8 @@ MODULE(pntr, {
             pntr_draw_rectangle_rounded_fill(fill, 5, 5, 20, 20, 18, PNTR_RED);
 
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 20, 20};
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
-            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
             RECTEQUALS(bounds, expected);
             RECTEQUALS(fillBounds, expected);
 
@@ -1767,7 +1731,7 @@ MODULE(pntr, {
             for (int thickness = 1; thickness <= 4; thickness++) {
                 pntr_image* image = pntr_test_canvas(60, 60);
                 pntr_draw_line_thick(image, 10, 30, 40, 30, thickness, PNTR_RED);
-                pntr_rectangle bounds = pntr_test_painted_bounds(image);
+                pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 axisAligned[thickness] = pntr_test_painted_count(image);
                 lineHeight[thickness] = bounds.height;
                 lineLeft[thickness] = bounds.x;
@@ -1782,7 +1746,7 @@ MODULE(pntr, {
                 // A line of no length is the brush on its own.
                 image = pntr_test_canvas(60, 60);
                 pntr_draw_line_thick(image, 30, 30, 30, 30, thickness, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 brushWidth[thickness] = bounds.width;
                 brushHeight[thickness] = bounds.height;
                 pntr_unload_image(image);
@@ -1791,7 +1755,7 @@ MODULE(pntr, {
                 // axis-aligned path.
                 image = pntr_test_canvas(60, 60);
                 pntr_draw_line_thick(image, 30, 30, 31, 31, thickness, PNTR_RED);
-                bounds = pntr_test_painted_bounds(image);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
                 stepLeft[thickness] = bounds.x;
                 stepWidth[thickness] = bounds.width;
                 pntr_unload_image(image);
@@ -1976,7 +1940,7 @@ MODULE(pntr, {
             pntr_image* image = pntr_test_canvas(10, 10);
             NEQUALS(image, NULL);
 
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
             pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {0, 0, 0, 0};
             RECTEQUALS(bounds, expected);
             EQUALS(pntr_test_painted_count(image), 0);
@@ -2153,7 +2117,7 @@ MODULE(pntr, {
             // right of the center, which is what makes the angles clockwise on screen.
             pntr_draw_arc(image, 30, 30, 20.0f, 0.0f, 90.0f, 64, PNTR_RED);
 
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
             LESSER(bounds.x, 31);
             GREATER(bounds.x, 28);
             LESSER(bounds.y, 31);
@@ -2173,7 +2137,7 @@ MODULE(pntr, {
             pntr_draw_arc(image, 30, 30, 10.0f, 0.0f, 360.0f, 4, PNTR_RED);
             EQUALS(pntr_test_painted_count(image), 4);
 
-            pntr_rectangle bounds = pntr_test_painted_bounds(image);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
 
             // The built in trigonometry is an approximation, so the radius can land a
             // pixel short of 10 in either direction.
@@ -3918,8 +3882,8 @@ MODULE(pntr, {
                     // quarter turns still differ by up to a pixel, because only one of the two
                     // has a shortcut for them and the shortcut rounds the bounding box
                     // differently than the general rotation does.
-                    pntr_rectangle rotatedBounds = pntr_test_drawn_bounds(rotated, PNTR_GREEN);
-                    pntr_rectangle zoomedBounds = pntr_test_drawn_bounds(zoomed, PNTR_GREEN);
+                    pntr_rectangle rotatedBounds = pntr_test_painted_bounds(rotated, PNTR_GREEN);
+                    pntr_rectangle zoomedBounds = pntr_test_painted_bounds(zoomed, PNTR_GREEN);
                     GREATER(rotatedBounds.width, 0);
                     LESSER(pntr_test_rectangle_distance(rotatedBounds, zoomedBounds), 2);
 
