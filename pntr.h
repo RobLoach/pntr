@@ -3304,7 +3304,14 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
     unsigned int bytesRead = 0;
     const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
     if (fileData == NULL) {
-        return (pntr_image*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        // pntr_load_file() already reported why the file couldn't be loaded, and that is
+        // more specific than anything that could be said from here. Only a custom
+        // PNTR_LOAD_FILE() callback that failed quietly needs an error of its own.
+        if (pntr_get_error_code() == PNTR_ERROR_NONE) {
+            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        }
+
+        return NULL;
     }
 
     pntr_image_type type = pntr_get_file_image_type(fileName);
