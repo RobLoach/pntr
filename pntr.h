@@ -527,6 +527,7 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
+PNTR_API void pntr_draw_image_dest_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, pntr_rectangle dstRect, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_color tint);
 PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* text, int textLength, int posX, int posY, pntr_color tint);
@@ -5638,6 +5639,13 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
 
     int newWidth = (int)((float)srcRect.width * scaleX);
     int newHeight = (int)((float)srcRect.height * scaleY);
+
+    // A scale small enough to truncate away the whole image leaves nothing to draw, and
+    // the nearest neighbor ratios below would divide by zero.
+    if (newWidth <= 0 || newHeight <= 0) {
+        return;
+    }
+
     int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
     int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
 
@@ -5693,6 +5701,51 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
         }
         break;
     }
+}
+
+/**
+ * Draw a portion of an image, stretched to fill a destination rectangle.
+ *
+ * @details The source rectangle is scaled independently on each axis so that it covers
+ * the destination rectangle exactly, which makes this the straightforward way to blit a
+ * tile or a sprite sheet frame into an arbitrary area. The source rectangle is first
+ * clamped to the bounds of the source image, and whatever remains of it is what gets
+ * stretched. Anything that falls outside of the destination image, or outside of its
+ * clip rectangle, is skipped.
+ *
+ * @param dst Pointer to the destination image where the output will be stored.
+ * @param src Pointer to the source image that will be drawn onto the destination image.
+ * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, nothing is drawn.
+ * @param dstRect Where to draw the source rectangle on the destination image, and the size to stretch it to. When the width or height are less than or equal to 0, nothing is drawn.
+ * @param filter Filter to be applied while scaling. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
+ * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
+ *
+ * @see pntr_draw_image_scaled_rec()
+ * @see pntr_draw_image_rec()
+ * @see pntr_draw_image_rotozoom()
+ */
+PNTR_API void pntr_draw_image_dest_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, pntr_rectangle dstRect, pntr_filter filter, pntr_color tint) {
+    if (dst == NULL || src == NULL ||
+            srcRect.width <= 0 || srcRect.height <= 0 ||
+            dstRect.width <= 0 || dstRect.height <= 0) {
+        return;
+    }
+
+    // The scale is relative to the source rectangle, so clamp it to the source image first.
+    if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height,
+            0, 0, src->width, src->height, &srcRect)) {
+        return;
+    }
+
+    // pntr_draw_image_scaled_rec() truncates srcRect multiplied by the scale to find the
+    // size to draw. Biasing the scale by half a destination pixel turns that truncation
+    // into a round, so the result can't land a pixel short of the destination rectangle.
+    pntr_draw_image_scaled_rec(dst, src, srcRect,
+        dstRect.x, dstRect.y,
+        ((float)dstRect.width + 0.5f) / (float)srcRect.width,
+        ((float)dstRect.height + 0.5f) / (float)srcRect.height,
+        0.0f, 0.0f,
+        filter, tint);
 }
 
 /**

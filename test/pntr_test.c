@@ -324,6 +324,397 @@ MODULE(pntr, {
         pntr_unload_image(sheet);
     });
 
+    IT("pntr_draw_image_scaled_rec() with a scale that truncates the image away", {
+        pntr_image* src = pntr_gen_image_color(8, 8, PNTR_RED);
+        NEQUALS(src, NULL);
+        pntr_image* dst = pntr_gen_image_color(16, 16, PNTR_BLUE);
+        NEQUALS(dst, NULL);
+        pntr_image* expected = pntr_gen_image_color(16, 16, PNTR_BLUE);
+        NEQUALS(expected, NULL);
+
+        // 8 * 0.1f truncates down to a 0x0 draw, which used to divide by zero while
+        // working out the nearest neighbor ratios.
+        pntr_draw_image_scaled(dst, src, 0, 0, 0.1f, 0.1f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+        IMAGEEQUALS(dst, expected);
+
+        pntr_draw_image_scaled(dst, src, 0, 0, 0.1f, 0.1f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+        IMAGEEQUALS(dst, expected);
+
+        pntr_draw_image_scaled_rec(dst, src,
+            PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 8, .height = 8 },
+            0, 0, 0.01f, 0.01f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+        IMAGEEQUALS(dst, expected);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(dst);
+        pntr_unload_image(src);
+    });
+
+    IT("pntr_draw_image_dest_rec()", {
+        IT("pntr_draw_image_dest_rec() with a 1:1 destination rectangle copies the source region", {
+            // An 8x8 source where every pixel carries a unique color.
+            pntr_image* src = pntr_gen_image_color(8, 8, PNTR_BLANK);
+            NEQUALS(src, NULL);
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    pntr_draw_point(src, x, y, pntr_new_color(
+                        (unsigned char)(x * 32 + 7),
+                        (unsigned char)(y * 32 + 3),
+                        (unsigned char)(x * y + 1),
+                        255));
+                }
+            }
+
+            // The source rectangle has x != y, and width != height, to catch mixing them up.
+            pntr_rectangle srcRect = {2, 1, 4, 3};
+            pntr_rectangle dstRect = {0, 0, 4, 3};
+
+            // The same region, drawn by the plain 1:1 blit.
+            pntr_image* expected = pntr_gen_image_color(4, 3, PNTR_BLANK);
+            NEQUALS(expected, NULL);
+            pntr_draw_image_rec(expected, src, srcRect, 0, 0);
+
+            IT("with the nearest neighbor filter", {
+                pntr_image* dst = pntr_gen_image_color(4, 3, PNTR_BLANK);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+                pntr_unload_image(dst);
+            });
+
+            IT("with the bilinear filter", {
+                pntr_image* dst = pntr_gen_image_color(4, 3, PNTR_BLANK);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+                pntr_unload_image(dst);
+            });
+
+            pntr_unload_image(expected);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() upscales to the destination rectangle", {
+            // A 4x4 source split into four 2x2 quadrants.
+            pntr_image* src = pntr_gen_image_color(4, 4, PNTR_RED);
+            NEQUALS(src, NULL);
+            pntr_draw_rectangle_fill(src, 2, 0, 2, 2, PNTR_BLUE);
+            pntr_draw_rectangle_fill(src, 0, 2, 2, 2, PNTR_GREEN);
+            pntr_draw_rectangle_fill(src, 2, 2, 2, 2, PNTR_YELLOW);
+
+            pntr_rectangle srcRect = {0, 0, 4, 4};
+
+            // Drawn at an offset, so each source pixel becomes a 2x2 block from (3, 5) to (10, 12).
+            pntr_rectangle dstRect = {3, 5, 8, 8};
+
+            pntr_image* expected = pntr_gen_image_color(16, 16, PNTR_MAGENTA);
+            NEQUALS(expected, NULL);
+            pntr_draw_rectangle_fill(expected, 3, 5, 4, 4, PNTR_RED);
+            pntr_draw_rectangle_fill(expected, 7, 5, 4, 4, PNTR_BLUE);
+            pntr_draw_rectangle_fill(expected, 3, 9, 4, 4, PNTR_GREEN);
+            pntr_draw_rectangle_fill(expected, 7, 9, 4, 4, PNTR_YELLOW);
+
+            IT("with the nearest neighbor filter", {
+                pntr_image* dst = pntr_gen_image_color(16, 16, PNTR_MAGENTA);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                // Nothing outside of the destination rectangle was touched.
+                IMAGEEQUALS(dst, expected);
+                pntr_unload_image(dst);
+            });
+
+            IT("with the bilinear filter", {
+                pntr_image* dst = pntr_gen_image_color(16, 16, PNTR_MAGENTA);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+
+                // The bilinear filter blends the middle, but the corners of the
+                // destination rectangle still land on the corners of the source.
+                COLOREQUALS(pntr_image_get_color(dst, 3, 5), PNTR_RED);
+                COLOREQUALS(pntr_image_get_color(dst, 10, 5), PNTR_BLUE);
+                COLOREQUALS(pntr_image_get_color(dst, 3, 12), PNTR_GREEN);
+                COLOREQUALS(pntr_image_get_color(dst, 10, 12), PNTR_YELLOW);
+
+                // Everything just outside of the destination rectangle is untouched.
+                COLOREQUALS(pntr_image_get_color(dst, 2, 5), PNTR_MAGENTA);
+                COLOREQUALS(pntr_image_get_color(dst, 11, 5), PNTR_MAGENTA);
+                COLOREQUALS(pntr_image_get_color(dst, 3, 4), PNTR_MAGENTA);
+                COLOREQUALS(pntr_image_get_color(dst, 3, 13), PNTR_MAGENTA);
+                pntr_unload_image(dst);
+            });
+
+            pntr_unload_image(expected);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() downscales to the destination rectangle", {
+            // An 8x8 source, red on the left half and blue on the right half.
+            pntr_image* src = pntr_gen_image_color(8, 8, PNTR_RED);
+            NEQUALS(src, NULL);
+            pntr_draw_rectangle_fill(src, 4, 0, 4, 8, PNTR_BLUE);
+
+            pntr_rectangle srcRect = {0, 0, 8, 8};
+            pntr_rectangle dstRect = {0, 0, 2, 2};
+
+            pntr_image* expected = pntr_gen_image_color(4, 4, PNTR_MAGENTA);
+            NEQUALS(expected, NULL);
+            pntr_draw_rectangle_fill(expected, 0, 0, 1, 2, PNTR_RED);
+            pntr_draw_rectangle_fill(expected, 1, 0, 1, 2, PNTR_BLUE);
+
+            IT("with the nearest neighbor filter", {
+                pntr_image* dst = pntr_gen_image_color(4, 4, PNTR_MAGENTA);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+                pntr_unload_image(dst);
+            });
+
+            IT("with the bilinear filter", {
+                pntr_image* dst = pntr_gen_image_color(4, 4, PNTR_MAGENTA);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+                pntr_unload_image(dst);
+            });
+
+            IT("down to a single pixel", {
+                pntr_image* dst = pntr_gen_image_color(4, 4, PNTR_MAGENTA);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect,
+                    PNTR_CLITERAL(pntr_rectangle) { .x = 1, .y = 2, .width = 1, .height = 1 },
+                    PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                pntr_image* single = pntr_gen_image_color(4, 4, PNTR_MAGENTA);
+                NEQUALS(single, NULL);
+                pntr_draw_point(single, 1, 2, PNTR_RED);
+                IMAGEEQUALS(dst, single);
+
+                pntr_unload_image(single);
+                pntr_unload_image(dst);
+            });
+
+            pntr_unload_image(expected);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() scales each axis independently", {
+            // A 2x2 source, with a different color in every pixel.
+            pntr_image* src = pntr_gen_image_color(2, 2, PNTR_RED);
+            NEQUALS(src, NULL);
+            pntr_draw_point(src, 1, 0, PNTR_BLUE);
+            pntr_draw_point(src, 0, 1, PNTR_GREEN);
+            pntr_draw_point(src, 1, 1, PNTR_YELLOW);
+
+            // 3x along the x axis, 1x along the y axis.
+            pntr_rectangle srcRect = {0, 0, 2, 2};
+            pntr_rectangle dstRect = {0, 0, 6, 2};
+
+            pntr_image* expected = pntr_gen_image_color(8, 4, PNTR_MAGENTA);
+            NEQUALS(expected, NULL);
+            pntr_draw_rectangle_fill(expected, 0, 0, 3, 1, PNTR_RED);
+            pntr_draw_rectangle_fill(expected, 3, 0, 3, 1, PNTR_BLUE);
+            pntr_draw_rectangle_fill(expected, 0, 1, 3, 1, PNTR_GREEN);
+            pntr_draw_rectangle_fill(expected, 3, 1, 3, 1, PNTR_YELLOW);
+
+            pntr_image* dst = pntr_gen_image_color(8, 4, PNTR_MAGENTA);
+            NEQUALS(dst, NULL);
+            pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            IMAGEEQUALS(dst, expected);
+
+            pntr_unload_image(dst);
+            pntr_unload_image(expected);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() does not bleed in neighbouring tiles", {
+            // A 6x6 sheet of 2x2 tiles, where only the middle tile is red.
+            pntr_image* sheet = pntr_gen_image_color(6, 6, PNTR_BLUE);
+            NEQUALS(sheet, NULL);
+            pntr_draw_rectangle_fill(sheet, 2, 2, 2, 2, PNTR_RED);
+
+            pntr_rectangle srcRect = {2, 2, 2, 2};
+            pntr_rectangle dstRect = {0, 0, 8, 8};
+
+            pntr_image* expected = pntr_gen_image_color(8, 8, PNTR_RED);
+            NEQUALS(expected, NULL);
+
+            IT("with the nearest neighbor filter", {
+                pntr_image* dst = pntr_gen_image_color(8, 8, PNTR_BLANK);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, sheet, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+                pntr_unload_image(dst);
+            });
+
+            IT("with the bilinear filter", {
+                pntr_image* dst = pntr_gen_image_color(8, 8, PNTR_BLANK);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, sheet, srcRect, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+                pntr_unload_image(dst);
+            });
+
+            pntr_unload_image(expected);
+            pntr_unload_image(sheet);
+        });
+
+        IT("pntr_draw_image_dest_rec() applies the tint", {
+            pntr_image* src = pntr_gen_image_color(2, 2, PNTR_WHITE);
+            NEQUALS(src, NULL);
+
+            pntr_rectangle srcRect = {0, 0, 2, 2};
+            pntr_rectangle dstRect = {0, 0, 4, 4};
+            pntr_color tint = pntr_new_color(255, 0, 0, 255);
+
+            pntr_image* untinted = pntr_gen_image_color(4, 4, PNTR_WHITE);
+            NEQUALS(untinted, NULL);
+            pntr_image* tinted = pntr_gen_image_color(4, 4, tint);
+            NEQUALS(tinted, NULL);
+
+            IT("with the nearest neighbor filter", {
+                pntr_image* dst = pntr_gen_image_color(4, 4, PNTR_BLANK);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                IMAGEEQUALS(dst, untinted);
+
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, tint);
+                IMAGEEQUALS(dst, tinted);
+                pntr_unload_image(dst);
+            });
+
+            IT("with the bilinear filter", {
+                pntr_image* dst = pntr_gen_image_color(4, 4, PNTR_BLANK);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                IMAGEEQUALS(dst, untinted);
+
+                pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_BILINEAR, tint);
+                IMAGEEQUALS(dst, tinted);
+                pntr_unload_image(dst);
+            });
+
+            pntr_unload_image(tinted);
+            pntr_unload_image(untinted);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() clips the destination rectangle", {
+            pntr_image* src = pntr_gen_image_color(4, 4, PNTR_RED);
+            NEQUALS(src, NULL);
+            pntr_rectangle srcRect = {0, 0, 4, 4};
+
+            IT("partially outside of the destination image", {
+                pntr_image* dst = pntr_gen_image_color(8, 8, PNTR_BLUE);
+                NEQUALS(dst, NULL);
+
+                // The top left half of the destination rectangle is off of the image.
+                pntr_draw_image_dest_rec(dst, src, srcRect,
+                    PNTR_CLITERAL(pntr_rectangle) { .x = -2, .y = -2, .width = 4, .height = 4 },
+                    PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                pntr_image* expected = pntr_gen_image_color(8, 8, PNTR_BLUE);
+                NEQUALS(expected, NULL);
+                pntr_draw_rectangle_fill(expected, 0, 0, 2, 2, PNTR_RED);
+                IMAGEEQUALS(dst, expected);
+
+                // The bottom right half of the destination rectangle is off of the image.
+                pntr_draw_image_dest_rec(dst, src, srcRect,
+                    PNTR_CLITERAL(pntr_rectangle) { .x = 6, .y = 6, .width = 4, .height = 4 },
+                    PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                pntr_draw_rectangle_fill(expected, 6, 6, 2, 2, PNTR_RED);
+                IMAGEEQUALS(dst, expected);
+
+                pntr_unload_image(expected);
+                pntr_unload_image(dst);
+            });
+
+            IT("entirely outside of the destination image", {
+                pntr_image* dst = pntr_gen_image_color(8, 8, PNTR_BLUE);
+                NEQUALS(dst, NULL);
+                pntr_image* expected = pntr_gen_image_color(8, 8, PNTR_BLUE);
+                NEQUALS(expected, NULL);
+
+                pntr_draw_image_dest_rec(dst, src, srcRect,
+                    PNTR_CLITERAL(pntr_rectangle) { .x = -10, .y = -10, .width = 4, .height = 4 },
+                    PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+
+                pntr_draw_image_dest_rec(dst, src, srcRect,
+                    PNTR_CLITERAL(pntr_rectangle) { .x = 20, .y = 20, .width = 4, .height = 4 },
+                    PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                IMAGEEQUALS(dst, expected);
+
+                pntr_unload_image(expected);
+                pntr_unload_image(dst);
+            });
+
+            IT("against the clip rectangle of the destination", {
+                pntr_image* dst = pntr_gen_image_color(8, 8, PNTR_BLUE);
+                NEQUALS(dst, NULL);
+                pntr_image_set_clip(dst, 2, 2, 4, 4);
+                pntr_rectangle clip = {2, 2, 4, 4};
+                RECTEQUALS(pntr_image_get_clip(dst), clip);
+
+                pntr_draw_image_dest_rec(dst, src, srcRect,
+                    PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 8, .height = 8 },
+                    PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                pntr_image_reset_clip(dst);
+
+                pntr_image* expected = pntr_gen_image_color(8, 8, PNTR_BLUE);
+                NEQUALS(expected, NULL);
+                pntr_draw_rectangle_fill(expected, 2, 2, 4, 4, PNTR_RED);
+                IMAGEEQUALS(dst, expected);
+
+                pntr_unload_image(expected);
+                pntr_unload_image(dst);
+            });
+
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() ignores invalid arguments", {
+            pntr_image* src = pntr_gen_image_color(4, 4, PNTR_RED);
+            NEQUALS(src, NULL);
+            pntr_image* dst = pntr_gen_image_color(8, 8, PNTR_BLUE);
+            NEQUALS(dst, NULL);
+            pntr_image* expected = pntr_gen_image_color(8, 8, PNTR_BLUE);
+            NEQUALS(expected, NULL);
+
+            pntr_rectangle srcRect = {0, 0, 4, 4};
+            pntr_rectangle dstRect = {0, 0, 8, 8};
+
+            // NULL images do not crash, and draw nothing.
+            pntr_draw_image_dest_rec(NULL, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, NULL, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(NULL, NULL, srcRect, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+            IMAGEEQUALS(dst, expected);
+
+            // A destination rectangle without a size draws nothing.
+            pntr_draw_image_dest_rec(dst, src, srcRect, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 8 }, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, src, srcRect, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 8, .height = 0 }, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, src, srcRect, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = -8, .height = 8 }, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, src, srcRect, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 8, .height = -8 }, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+            IMAGEEQUALS(dst, expected);
+
+            // A source rectangle without a size draws nothing.
+            pntr_draw_image_dest_rec(dst, src, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 4 }, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, src, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 4, .height = 0 }, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, src, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = -4, .height = 4 }, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, src, PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 4, .height = -4 }, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+            IMAGEEQUALS(dst, expected);
+
+            // A source rectangle that is entirely off of the source image draws nothing.
+            pntr_draw_image_dest_rec(dst, src, PNTR_CLITERAL(pntr_rectangle) { .x = 10, .y = 10, .width = 4, .height = 4 }, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+            pntr_draw_image_dest_rec(dst, src, PNTR_CLITERAL(pntr_rectangle) { .x = -8, .y = -8, .width = 4, .height = 4 }, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+            IMAGEEQUALS(dst, expected);
+
+            pntr_unload_image(expected);
+            pntr_unload_image(dst);
+            pntr_unload_image(src);
+        });
+    });
+
     IT("pntr_image_rotate(PNTR_FILTER_BILINEAR) draws a single pixel source", {
         pntr_image* image = pntr_gen_image_color(1, 1, PNTR_RED);
         NEQUALS(image, NULL);
