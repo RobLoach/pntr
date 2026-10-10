@@ -6284,18 +6284,64 @@ static float _pntr_normalize_degrees(float degrees) {
 }
 
 /**
+ * Finds where the pivot of a rotated draw ends up inside the bounding box it fills.
+ *
+ * Every rotated draw places the source pixel at the origin onto the requested destination
+ * position, at any angle and any scale. Subtracting this offset from that position is what
+ * lines the bounding box up so the pivot lands where it was asked to.
+ *
+ * The drawing loops walk the bounding box and map each of its pixels back onto the source
+ * with the forward rotation matrix, so the pivot travels the other way, through the inverse
+ * of that same matrix. Deriving the offset from the matrix the loops already use is what
+ * keeps the 90, 180 and 270 degree shortcuts in agreement with the general rotation: the
+ * pivot can't disagree with a rotation it was transformed by.
+ *
+ * @param srcWidth The width of the portion of the source that is being drawn.
+ * @param srcHeight The height of the portion of the source that is being drawn.
+ * @param bboxWidth The width of the bounding box that the rotated draw fills.
+ * @param bboxHeight The height of the bounding box that the rotated draw fills.
+ * @param cosTheta The cosine of the rotation.
+ * @param sinTheta The sine of the rotation.
+ * @param scaleX The scale that is applied to the width of the source.
+ * @param scaleY The scale that is applied to the height of the source.
+ * @param originX The X pivot, in unrotated and unscaled source pixels.
+ * @param originY The Y pivot, in unrotated and unscaled source pixels.
+ * @param offsetX Where to store the X offset of the pivot within the bounding box.
+ * @param offsetY Where to store the Y offset of the pivot within the bounding box.
+ *
+ * @internal
+ */
+static void _pntr_rotation_pivot_offset(int srcWidth, int srcHeight, int bboxWidth, int bboxHeight, float cosTheta, float sinTheta, float scaleX, float scaleY, float originX, float originY, int* offsetX, int* offsetY) {
+    // The center of the pivot pixel, measured out from the center of the scaled source.
+    // Rotation happens around that center, which is why the pivot is relative to it.
+    float pivotX = (originX + 0.5f) * scaleX - (float)srcWidth * scaleX / 2.0f;
+    float pivotY = (originY + 0.5f) * scaleY - (float)srcHeight * scaleY / 2.0f;
+
+    // The bounding box center is the integer division the drawing loops use, so that the
+    // offset describes the pixel the loops actually sample the pivot from.
+    *offsetX = (int)PNTR_FLOORF((float)(bboxWidth / 2) + pivotX * cosTheta + pivotY * sinTheta);
+    *offsetY = (int)PNTR_FLOORF((float)(bboxHeight / 2) - pivotX * sinTheta + pivotY * cosTheta);
+}
+
+/**
  * Draw a rotated and scaled portion of an image onto another image.
+ *
+ * @details The origin is a pivot, given in unrotated and unscaled source pixels. The source
+ * pixel at the origin is placed on the destination at (posX, posY) for every rotation and
+ * every scale, so rotating a sprite about a chosen point is a matter of naming that point
+ * once and then only changing the rotation. An origin of half the source width and height
+ * spins the image in place around its own center.
  *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
  * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, the full image width or height are used.
- * @param posX Where to draw the image, at the X coordinate.
- * @param posY Where to draw the image, at the Y coordinate.
+ * @param posX Where to place the origin of the image, at the X coordinate.
+ * @param posY Where to place the origin of the image, at the Y coordinate.
  * @param rotation The rotation to apply to the image, in degrees.
  * @param scaleX The scale of which to apply to the width of the image.
  * @param scaleY The scale of which to apply to the height of the image.
- * @param originX The X origin of the rotation and scaling, relative from the original source size.
- * @param originY The Y origin of the rotation and scaling, relative from the original source size.
+ * @param originX The X pivot of the rotation and scaling, in unrotated and unscaled source pixels, relative from the source rectangle. The source pixel there lands on posX.
+ * @param originY The Y pivot of the rotation and scaling, in unrotated and unscaled source pixels, relative from the source rectangle. The source pixel there lands on posY.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
  * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
  *
@@ -6334,8 +6380,10 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
     int newWidth = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * cosTheta) + PNTR_FABSF(scaledHeight * sinTheta));
     int newHeight = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * sinTheta) + PNTR_FABSF(scaledHeight * cosTheta));
 
-    int offsetXRatio = (int)(originX / (float)srcRect.width * (float)newWidth);
-    int offsetYRatio = (int)(originY / (float)srcRect.height * (float)newHeight);
+    int offsetXRatio, offsetYRatio;
+    _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, newWidth, newHeight,
+        cosTheta, sinTheta, scaleX, scaleY, originX, originY,
+        &offsetXRatio, &offsetYRatio);
 
     if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width ||
         posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
@@ -6416,6 +6464,12 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
         return pntr_image_copy(image);
     }
 
+    // The output is sized to hold the whole rotation, so the pivot of the draw is the center
+    // of the source spun onto the center of the output. Any other pivot would carry part of
+    // the image off of the edge of an image that was made to fit all of it.
+    float originX = ((float)image->width - 1.0f) / 2.0f;
+    float originY = ((float)image->height - 1.0f) / 2.0f;
+
     if (degrees == 90.0f || degrees == 180.0f || degrees == 270.0f) {
         pntr_image* output;
         if (degrees == 180.0f) {
@@ -6428,7 +6482,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
             return NULL;
         }
 
-        pntr_draw_image_rotated(output, image, 0, 0, degrees, 0.0f, 0.0f, filter);
+        pntr_draw_image_rotated(output, image, output->width / 2, output->height / 2, degrees, originX, originY, filter);
 
         return output;
     }
@@ -6445,7 +6499,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
         return NULL;
     }
 
-    pntr_draw_image_rotated(rotatedImage, image, 0, 0, degrees, 0.0f, 0.0f, filter);
+    pntr_draw_image_rotated(rotatedImage, image, newWidth / 2, newHeight / 2, degrees, originX, originY, filter);
 
     return rotatedImage;
 }
@@ -6479,13 +6533,19 @@ PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_col
 /**
  * Draw a rotated image onto another image.
  *
+ * @details The offset is a pivot, given in unrotated source pixels. The source pixel at the
+ * offset is placed on the destination at (posX, posY) for every angle of rotation, so
+ * spinning a sprite about a chosen point is a matter of naming that point once and then only
+ * changing the rotation. An offset of half the source width and height spins the image in
+ * place around its own center.
+ *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
- * @param posX Where to draw the rotated image, at the X coordinate.
- * @param posY Where to draw the rotated image, at the Y coordinate.
+ * @param posX Where to place the offset of the rotated image, at the X coordinate.
+ * @param posY Where to place the offset of the rotated image, at the Y coordinate.
  * @param degrees The degrees of rotation.
- * @param offsetX Offset in the X direction after rotation.
- * @param offsetY Offset in the Y direction after rotation.
+ * @param offsetX The X pivot of the rotation, in unrotated source pixels. The source pixel there lands on posX.
+ * @param offsetY The Y pivot of the rotation, in unrotated source pixels. The source pixel there lands on posY.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
  *
  * @see pntr_draw_image_rec_rotated()
@@ -6507,14 +6567,20 @@ PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX
 /**
  * Draw a rotated portion of an image onto another image.
  *
+ * @details The offset is a pivot, given in unrotated source pixels, relative from the source
+ * rectangle. The source pixel at the offset is placed on the destination at (posX, posY) for
+ * every angle of rotation, so spinning a sprite about a chosen point is a matter of naming
+ * that point once and then only changing the rotation. An offset of half the source
+ * rectangle's width and height spins the image in place around its own center.
+ *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
- * @param srcRect The portion of the source image to draw.
- * @param posX Where to draw the rotated image, at the X coordinate.
- * @param posY Where to draw the rotated image, at the Y coordinate.
+ * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, the full image width or height are used.
+ * @param posX Where to place the offset of the rotated image, at the X coordinate.
+ * @param posY Where to place the offset of the rotated image, at the Y coordinate.
  * @param degrees The degrees of rotation.
- * @param offsetX Offset in the X direction after rotation.
- * @param offsetY Offset in the Y direction after rotation.
+ * @param offsetX The X pivot of the rotation, in unrotated source pixels, relative from the source rectangle. The source pixel there lands on posX.
+ * @param offsetY The Y pivot of the rotation, in unrotated source pixels, relative from the source rectangle. The source pixel there lands on posY.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
  *
  * @see pntr_draw_image_rotated()
@@ -6526,18 +6592,25 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
 
     degrees = _pntr_normalize_degrees(degrees);
 
-    // Draw the image normally if not rotated.
-    if (degrees == 0.0f) {
-        pntr_draw_image_rec(dst, src, srcRect, posX - (int)offsetX, posY - (int)offsetY);
-        return;
-    }
-
-    // Make sure the source rectangle is within the bounds of the source image.
+    // Make sure the source rectangle is within the bounds of the source image. The pivot is
+    // relative from the source rectangle, so its size has to be known before the offset is.
     if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
             srcRect.width <= 0 ? src->width : srcRect.width,
             srcRect.height <= 0 ? src->height : srcRect.height,
             0, 0,
             src->width, src->height, &srcRect)) {
+        return;
+    }
+
+    int offsetXRatio, offsetYRatio;
+
+    // Draw the image normally if not rotated.
+    if (degrees == 0.0f) {
+        _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, srcRect.width, srcRect.height,
+            1.0f, 0.0f, 1.0f, 1.0f, offsetX, offsetY,
+            &offsetXRatio, &offsetYRatio);
+
+        pntr_draw_image_rec(dst, src, srcRect, posX - offsetXRatio, posY - offsetYRatio);
         return;
     }
 
@@ -6548,13 +6621,18 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         if (degrees == 90.0f || degrees == 270.0f) {
             dstRect.width = srcRect.height;
             dstRect.height = srcRect.width;
-            dstRect.x -= (int)offsetY;
-            dstRect.y -= (int)offsetX;
         }
-        else {
-            dstRect.x -= (int)offsetX;
-            dstRect.y -= (int)offsetY;
-        }
+
+        // The exact sine and cosine of the quarter turn, so that the pivot of the shortcut is
+        // the same one the general rotation below would have arrived at.
+        _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, dstRect.width, dstRect.height,
+            degrees == 180.0f ? -1.0f : 0.0f,
+            degrees == 90.0f ? 1.0f : (degrees == 270.0f ? -1.0f : 0.0f),
+            1.0f, 1.0f, offsetX, offsetY,
+            &offsetXRatio, &offsetYRatio);
+
+        dstRect.x -= offsetXRatio;
+        dstRect.y -= offsetYRatio;
 
         // Exit if it's not even on the screen.
         if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
@@ -6597,8 +6675,9 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.height * sinTheta));
     int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.height * cosTheta));
 
-    int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
-    int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
+    _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, newWidth, newHeight,
+        cosTheta, sinTheta, 1.0f, 1.0f, offsetX, offsetY,
+        &offsetXRatio, &offsetYRatio);
 
     // Make sure we're actually drawing on the screen.
     if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width || posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
