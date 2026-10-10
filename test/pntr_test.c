@@ -998,8 +998,8 @@ MODULE(pntr, {
     });
 
     IT("pntr_draw_arc_fill()", {
-        // Note: pntr_draw_polygon_fill() never fills the topmost scanline of the
-        // shape, so the filled area starts one row below the top-most vertex.
+        // Note: pntr_draw_polygon_fill() covers the whole bounding box of the points it
+        // is given, so the wedge includes the rows of its topmost and bottommost points.
         IT("pntr_draw_arc_fill() fills the wedge", {
             pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
             NEQUALS(image, NULL);
@@ -1126,11 +1126,17 @@ MODULE(pntr, {
             pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
             NEQUALS(image, NULL);
 
-            // Every arc point lands on the same spot, so there is no area to fill.
+            // Every arc point lands on the same spot, so the wedge collapses onto the
+            // line between that spot and the center. A fill covers the bounding box of
+            // the points it is given, which for a collapsed shape is that line.
             pntr_draw_arc_fill(image, 25, 25, 20.0f, 45.0f, 45.0f, 8, PNTR_RED);
-            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_WHITE);
-            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_WHITE);
-            COLOREQUALS(pntr_image_get_color(image, 39, 39), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 39, 39), PNTR_RED);
+
+            // Still nothing on either side of that line.
+            COLOREQUALS(pntr_image_get_color(image, 25, 39), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 39, 25), PNTR_WHITE);
 
             pntr_unload_image(image);
         });

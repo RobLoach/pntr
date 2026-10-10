@@ -3019,11 +3019,7 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
     int i = 0;
     // Big numbers to find the max/min values
     int left = points[0].x, top = points[0].y, bottom = points[0].y, right = points[0].x;
-    int nodes, pixelX, pixelY, j, swap;
-    int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints);
-    if (nodeX == NULL) {
-        return;
-    }
+    int nodes, spans, pixelY, pass, j, swap, spanLeft, spanRight;
 
     // Get polygon dimensions
     for (i = 0; i < numPoints; i++) {
@@ -3036,41 +3032,114 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
         if (bottom < points[i].y)
             bottom = points[i].y;
     }
-    bottom++;
-    right++;
+
+    // A row gathers at most one crossing per edge, and the crossings are gathered twice,
+    // so the node list needs one value per point and the span list needs two. A
+    // horizontal edge contributes a span instead of a crossing, which the same two spans
+    // per point already covers.
+    int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints * 5U);
+    if (nodeX == NULL) {
+        return;
+    }
+    int* spanStart = nodeX + numPoints;
+    int* spanEnd = spanStart + numPoints * 2;
 
     // Polygon scanline algorithm released under public-domain by Darel Rex Finley, 2007.
-    // Loop through the rows of the image.
-    for (pixelY = top; pixelY < bottom; pixelY ++) {
-        nodes = 0; /*  Build a list of nodes. */
+    // Loop through the rows of the polygon, including the row of its lowest point.
+    for (pixelY = top; pixelY <= bottom; pixelY++) {
+        spans = 0;
+
+        // A horizontal edge lies along the row rather than crossing it, so it never
+        // appears as a crossing and the pixels it covers are added directly. This is
+        // what paints the parts of a flat top, or of a flat local minimum, that reach
+        // further out than the crossings of the edges on either side of it.
         j = numPoints - 1;
         for (i = 0; i < numPoints; i++) {
-            if (((points[i].y < pixelY) && (points[j].y >= pixelY)) ||
-                ((points[j].y < pixelY) && (points[i].y >= pixelY))) {
-                nodeX[nodes++]= (int)((float)points[i].x
-                     + ((float)pixelY - (float)points[i].y) / ((float)points[j].y - (float)points[i].y)
-                     * ((float)points[j].x - (float)points[i].x));
-            } j = i;
+            if (points[i].y == pixelY && points[j].y == pixelY) {
+                spanStart[spans] = (points[i].x < points[j].x) ? points[i].x : points[j].x;
+                spanEnd[spans] = (points[i].x < points[j].x) ? points[j].x : points[i].x;
+                spans++;
+            }
+            j = i;
         }
 
-        // Sort the nodes, via a simple “Bubble” sort.
+        // The crossing test has to be half-open, otherwise the two edges that meet at a
+        // vertex both report a crossing on that vertex's row and the parity of the node
+        // list is lost. A single half-open test can only ever reach one end of the
+        // polygon, so each row is sampled from both sides: the first pass takes the
+        // edges running below the row, which reaches the row of the topmost point, and
+        // the second takes the edges running above it, which reaches the row of the
+        // bottommost point.
+        for (pass = 0; pass < 2; pass++) {
+            nodes = 0; /*  Build a list of nodes. */
+            j = numPoints - 1;
+            for (i = 0; i < numPoints; i++) {
+                bool crosses = (pass == 0)
+                    ? (((points[i].y <= pixelY) && (points[j].y > pixelY)) || ((points[j].y <= pixelY) && (points[i].y > pixelY)))
+                    : (((points[i].y < pixelY) && (points[j].y >= pixelY)) || ((points[j].y < pixelY) && (points[i].y >= pixelY)));
+                if (crosses) {
+                    nodeX[nodes++]= (int)((float)points[i].x
+                         + ((float)pixelY - (float)points[i].y) / ((float)points[j].y - (float)points[i].y)
+                         * ((float)points[j].x - (float)points[i].x));
+                }
+                j = i;
+            }
+
+            // Sort the nodes, via a simple “Bubble” sort.
+            i = 0;
+            while (i < nodes - 1) {
+                if (nodeX[i] > nodeX[i+1]) {
+                    swap = nodeX[i];
+                    nodeX[i] = nodeX[i+1];
+                    nodeX[i+1] = swap;
+                    if (i) i--;
+                } else i++;
+            }
+
+            // Every pair of nodes is a span, inclusive of the pixel it ends on.
+            for (i = 0; i + 1 < nodes; i += 2) {
+                spanStart[spans] = nodeX[i];
+                spanEnd[spans] = nodeX[i + 1];
+                spans++;
+            }
+        }
+
+        // Sort the spans by where they start, so that the ones that overlap sit next to
+        // each other. Also a “Bubble” sort.
         i = 0;
-        while (i < nodes - 1) {
-            if (nodeX[i] > nodeX[i+1]) {
-                swap = nodeX[i];
-                nodeX[i] = nodeX[i+1];
-                nodeX[i+1] = swap;
+        while (i < spans - 1) {
+            if (spanStart[i] > spanStart[i+1]) {
+                swap = spanStart[i];
+                spanStart[i] = spanStart[i+1];
+                spanStart[i+1] = swap;
+                swap = spanEnd[i];
+                spanEnd[i] = spanEnd[i+1];
+                spanEnd[i+1] = swap;
                 if (i) i--;
             } else i++;
         }
-        // Fill the pixels between node pairs.
-        for (i = 0; i < nodes; i += 2) {
-            if (nodeX[i+0] >= right) break;
-            if (nodeX[i+1] > left) {
-                if (nodeX[i+0] < left) nodeX[i+0] = left ;
-                if (nodeX[i+1] > right) nodeX[i+1] = right;
-                for (pixelX = nodeX[i]; pixelX < nodeX[i + 1]; pixelX++)
-                    pntr_draw_point(dst, pixelX, pixelY, color);
+
+        // Merge the spans that touch before painting them, as the two passes usually
+        // find the same part of the row twice, and a semi-transparent color would blend
+        // every pixel they share more than once.
+        for (i = 0; i < spans; i++) {
+            spanLeft = spanStart[i];
+            spanRight = spanEnd[i];
+            while (i + 1 < spans && spanStart[i + 1] <= spanRight + 1) {
+                if (spanEnd[i + 1] > spanRight) {
+                    spanRight = spanEnd[i + 1];
+                }
+                i++;
+            }
+
+            if (spanLeft < left) {
+                spanLeft = left;
+            }
+            if (spanRight > right) {
+                spanRight = right;
+            }
+            if (spanRight >= spanLeft) {
+                pntr_draw_line_horizontal(dst, spanLeft, pixelY, spanRight - spanLeft + 1, color);
             }
         }
     }
