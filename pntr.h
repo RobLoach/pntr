@@ -2632,9 +2632,13 @@ static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, 
         largestX = x;
 
         // Mirroring collapses on the axes and on the diagonal, so the points that would
-        // repeat are skipped rather than painted again.
+        // repeat are skipped rather than painted again. The walk stops as soon as y
+        // passes x, so x only ever reaches zero on the center row of a radius of zero,
+        // which is the one time the horizontal mirror folds onto itself.
         _pntr_draw_thick_point(dst, centerX + x, centerY + y, thickness, color);
-        _pntr_draw_thick_point(dst, centerX - x, centerY + y, thickness, color);
+        if (x != 0) {
+            _pntr_draw_thick_point(dst, centerX - x, centerY + y, thickness, color);
+        }
         if (y != 0) {
             _pntr_draw_thick_point(dst, centerX + x, centerY - y, thickness, color);
             _pntr_draw_thick_point(dst, centerX - x, centerY - y, thickness, color);
@@ -2657,7 +2661,9 @@ static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, 
  *   https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
  *
  * @details The radius is inclusive, so the outline reaches `centerX - radius` and
- * `centerX + radius`, making the circle `radius * 2 + 1` pixels across.
+ * `centerX + radius`, making the circle `radius * 2 + 1` pixels across. A radius of one
+ * is therefore three pixels across, and a radius of zero is the center point on its own,
+ * the same as it is for pntr_draw_arc().
  *
  * TODO: pntr_draw_circle: Add anti-aliased.
  *
@@ -2674,17 +2680,8 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
         return;
     }
 
-    if (radius == 0) {
-        return;
-    }
-
     if (radius < 0) {
         radius = -radius;
-    }
-
-    if (radius == 1) {
-        pntr_draw_point(dst, centerX, centerY, color);
-        return;
     }
 
     // Check that the circle is in the bounds.
@@ -2699,7 +2696,8 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
  * Draws a filled circle on the given image.
  *
  * @details Covers the same bounds as pntr_draw_circle(), so the fill reaches the outline
- * drawn for the same center and radius on all four sides.
+ * drawn for the same center and radius on all four sides. A radius of one is a three
+ * pixel wide plus, and a radius of zero is the center point on its own.
  *
  * TODO: pntr_draw_circle_fill: Add anti-aliased.
  *
@@ -2712,20 +2710,11 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
  * @see pntr_draw_circle()
  */
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
-    if (radius == 0) {
-        return;
-    }
-
     if (radius < 0) {
         radius = -radius;
     }
 
-    if (radius == 1) {
-        pntr_draw_point(dst, centerX, centerY, color);
-        return;
-    }
-
-    if (dst == NULL || color.rgba.a == 0 || radius == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
+    if (dst == NULL || color.rgba.a == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -2789,6 +2778,29 @@ PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, 
  * @internal
  */
 static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, int thickness, pntr_color color) {
+    // A radius of zero on one axis collapses the ellipse onto a straight line through
+    // its center, which the two region walk cannot trace: it only steps outwards and
+    // downwards, so a shape one row tall never widens past the center, and one column
+    // wide it widens past the edge. Those two lines are plotted directly instead.
+    if (radiusY == 0) {
+        for (int offsetX = 0; offsetX <= radiusX; offsetX++) {
+            _pntr_draw_thick_point(dst, centerX + offsetX, centerY, thickness, color);
+            if (offsetX != 0) {
+                _pntr_draw_thick_point(dst, centerX - offsetX, centerY, thickness, color);
+            }
+        }
+        return;
+    }
+    if (radiusX == 0) {
+        for (int offsetY = 0; offsetY <= radiusY; offsetY++) {
+            _pntr_draw_thick_point(dst, centerX, centerY + offsetY, thickness, color);
+            if (offsetY != 0) {
+                _pntr_draw_thick_point(dst, centerX, centerY - offsetY, thickness, color);
+            }
+        }
+        return;
+    }
+
     long rx2 = (long)radiusX * radiusX;
     long ry2 = (long)radiusY * radiusY;
     long x = 0, y = radiusY;
@@ -2872,6 +2884,19 @@ static void _pntr_draw_ellipse_span(pntr_image* dst, int centerX, int centerY, i
  * @internal
  */
 static void _pntr_draw_ellipse_spans(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    // The two lines that _pntr_draw_ellipse_points() has to plot directly are spans here,
+    // for the same reason. A line is its own fill, so the two still register exactly.
+    if (radiusY == 0) {
+        _pntr_draw_ellipse_span(dst, centerX, centerY, 0, radiusX, color);
+        return;
+    }
+    if (radiusX == 0) {
+        for (int row = 0; row <= radiusY; row++) {
+            _pntr_draw_ellipse_span(dst, centerX, centerY, row, 0, color);
+        }
+        return;
+    }
+
     long rx2 = (long)radiusX * radiusX;
     long ry2 = (long)radiusY * radiusY;
     long x = 0, y = radiusY;
@@ -2928,7 +2953,9 @@ static void _pntr_draw_ellipse_spans(pntr_image* dst, int centerX, int centerY, 
  * Draws an ellipse on the given image.
  *
  * @details The radii are inclusive, so the ellipse is `radiusX * 2 + 1` pixels wide and
- * `radiusY * 2 + 1` pixels tall.
+ * `radiusY * 2 + 1` pixels tall. A radius of zero on one axis therefore collapses the
+ * ellipse to a straight line through the center, and a radius of zero on both is the
+ * center point on its own, which is what pntr_draw_circle() draws for the same radius.
  *
  * @param dst The image to draw the ellipse onto.
  * @param centerX The center of the ellipse at the X coordinate.
@@ -2940,7 +2967,7 @@ static void _pntr_draw_ellipse_spans(pntr_image* dst, int centerX, int centerY, 
  * @see pntr_draw_ellipse_fill()
  */
 PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
+    if (dst == NULL || color.rgba.a == 0) {
         return;
     }
     if (radiusX < 0) radiusX = -radiusX;
@@ -2971,7 +2998,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
     if (radiusX < 0) radiusX = -radiusX;
     if (radiusY < 0) radiusY = -radiusY;
 
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
+    if (dst == NULL || color.rgba.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -2998,7 +3025,7 @@ PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY,
         pntr_draw_ellipse(dst, centerX, centerY, radiusX, radiusY, color);
         return;
     }
-    if (dst == NULL || radiusX == 0 || radiusY == 0 || color.rgba.a == 0) {
+    if (dst == NULL || color.rgba.a == 0) {
         return;
     }
     if (radiusX < 0) radiusX = -radiusX;
