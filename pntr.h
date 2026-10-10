@@ -1404,7 +1404,12 @@ extern "C" {
     #endif  // defined(__GNUC__) || defined(__clang__)
 
     #include "external/stb_truetype.h"
-    #define PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+
+    // The implementation has now been emitted, so nothing else should emit it again.
+    // Guarded, because the user is allowed to have defined this themselves.
+    #ifndef PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+        #define PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
+    #endif  // PNTR_NO_STB_TRUETYPE_IMPLEMENTATION
 
     #if defined(__GNUC__) || defined(__clang__)
         #pragma GCC diagnostic pop

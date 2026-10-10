@@ -1250,12 +1250,23 @@ STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x,
 static const unsigned char stbiw__jpg_ZigZag[] = { 0,1,5,6,14,15,27,28,2,4,7,13,16,26,29,42,3,8,12,17,25,30,41,43,9,11,18,
       24,31,40,44,53,10,19,23,32,39,45,52,54,20,22,33,38,46,51,55,60,21,34,37,47,50,56,59,61,35,36,48,49,57,58,62,63 };
 
+/* LOCAL FIX (not upstream): bitBuf was a signed int, so the `bitBuf <<= 8` below
+ * shifted bits into and past the sign bit, which is undefined behaviour. UBSan
+ * reported "left shift of 16044032 by 8 places cannot be represented in type
+ * 'int'" on every JPEG encode. Holding the accumulator in an unsigned int makes
+ * the shift well defined without changing the encoded output: only bits 0..23 are
+ * ever read back out (via `(bitBuf >> 16) & 255`), and the masked store below
+ * discards the shifted-out remainder that used to overflow.
+ *
+ * Upstream: https://github.com/nothings/stb/blob/master/stb_image_write.h
+ * Keep this when re-vendoring stb_image_write.h. */
 static void stbiw__jpg_writeBits(stbi__write_context *s, int *bitBufP, int *bitCntP, const unsigned short *bs) {
-   int bitBuf = *bitBufP, bitCnt = *bitCntP;
+   unsigned int bitBuf = (unsigned int)*bitBufP;
+   int bitCnt = *bitCntP;
    bitCnt += bs[1];
-   bitBuf |= bs[0] << (24 - bitCnt);
+   bitBuf |= (unsigned int)bs[0] << (24 - bitCnt);
    while(bitCnt >= 8) {
-      unsigned char c = (bitBuf >> 16) & 255;
+      unsigned char c = (unsigned char)((bitBuf >> 16) & 255);
       stbiw__putc(s, c);
       if(c == 255) {
          stbiw__putc(s, 0);
@@ -1263,7 +1274,7 @@ static void stbiw__jpg_writeBits(stbi__write_context *s, int *bitBufP, int *bitC
       bitBuf <<= 8;
       bitCnt -= 8;
    }
-   *bitBufP = bitBuf;
+   *bitBufP = (int)(bitBuf & 0xFFFFFFu);
    *bitCntP = bitCnt;
 }
 
