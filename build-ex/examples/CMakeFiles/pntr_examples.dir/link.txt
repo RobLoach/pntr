@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/pntr_examples.dir/pntr_examples.c.o -o pntr_examples 
