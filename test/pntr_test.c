@@ -2429,6 +2429,59 @@ MODULE(pntr, {
                 pntr_unload_image(src);
             });
 
+            IT("pntr_draw_image_rotozoom() with a negative full rotation is unrotated", {
+                // Source image: blue, with a red column from x=6 to x=9, so that a flip shows.
+                pntr_image* src = pntr_gen_image_color(10, 10, PNTR_BLUE);
+                NEQUALS(src, NULL);
+                pntr_draw_rectangle_fill(src, 6, 0, 4, 10, PNTR_RED);
+                pntr_rectangle srcRect = {0, 0, 10, 10};
+
+                // An exact negative multiple of 360 is a full rotation, which is 0 rather
+                // than 360, so it has to take the same unrotated path that 0 degrees does
+                // instead of running the general rotation on a no-op angle.
+                IT("with the nearest neighbor filter", {
+                    pntr_image* expected = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(expected, NULL);
+                    pntr_draw_image_rotozoom(expected, src, srcRect, 4, 4, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    pntr_image* once = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(once, NULL);
+                    pntr_draw_image_rotozoom(once, src, srcRect, 4, 4, -360.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                    IMAGEEQUALS(once, expected);
+                    pntr_unload_image(once);
+
+                    pntr_image* twice = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(twice, NULL);
+                    pntr_draw_image_rotozoom(twice, src, srcRect, 4, 4, -720.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                    IMAGEEQUALS(twice, expected);
+                    pntr_unload_image(twice);
+
+                    pntr_unload_image(expected);
+                });
+
+                IT("with the bilinear filter", {
+                    pntr_image* expected = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(expected, NULL);
+                    pntr_draw_image_rotozoom(expected, src, srcRect, 4, 4, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+
+                    pntr_image* once = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(once, NULL);
+                    pntr_draw_image_rotozoom(once, src, srcRect, 4, 4, -360.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                    IMAGEEQUALS(once, expected);
+                    pntr_unload_image(once);
+
+                    pntr_image* twice = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(twice, NULL);
+                    pntr_draw_image_rotozoom(twice, src, srcRect, 4, 4, -720.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                    IMAGEEQUALS(twice, expected);
+                    pntr_unload_image(twice);
+
+                    pntr_unload_image(expected);
+                });
+
+                pntr_unload_image(src);
+            });
+
             IT("pntr_draw_image_rotozoom() ignores invalid arguments", {
                 pntr_image* src = pntr_gen_image_color(10, 10, PNTR_BLUE);
                 NEQUALS(src, NULL);

@@ -5749,6 +5749,30 @@ PNTR_API void pntr_draw_image_dest_rec(pntr_image* dst, pntr_image* src, pntr_re
 }
 
 /**
+ * Normalizes a degree of rotation between 0 and 360 degrees.
+ *
+ * @param degrees The angle to normalize.
+ *
+ * @return The new degrees represented between 0 and 360.
+ *
+ * @internal
+ */
+static float _pntr_normalize_degrees(float degrees) {
+    if (degrees < 0) {
+        float remainder = PNTR_FMODF(-degrees, 360.0f);
+
+        // An exact negative multiple of 360 is a full rotation, which is 0 rather than 360.
+        if (remainder == 0.0f) {
+            return 0.0f;
+        }
+
+        return 360.0f - remainder;
+    }
+
+    return PNTR_FMODF(degrees, 360.0f);
+}
+
+/**
  * Draw a rotated and scaled portion of an image onto another image.
  *
  * @param dst Pointer to the destination image where the output will be stored.
@@ -5783,7 +5807,7 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
         return;
     }
 
-    rotation = (rotation < 0) ? 360.0f - PNTR_FMODF(-rotation, 360.0f) : PNTR_FMODF(rotation, 360.0f);
+    rotation = _pntr_normalize_degrees(rotation);
     if (rotation == 0.0f) {
         pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter, tint);
         return;
@@ -5857,30 +5881,6 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
             }
         }
     }
-}
-
-/**
- * Normalizes a degree of rotation between 0 and 360 degrees.
- *
- * @param degrees The angle to normalize.
- *
- * @return The new degrees represented between 0 and 360.
- *
- * @internal
- */
-static float _pntr_normalize_degrees(float degrees) {
-    if (degrees < 0) {
-        float remainder = PNTR_FMODF(-degrees, 360.0f);
-
-        // An exact negative multiple of 360 is a full rotation, which is 0 rather than 360.
-        if (remainder == 0.0f) {
-            return 0.0f;
-        }
-
-        return 360.0f - remainder;
-    }
-
-    return PNTR_FMODF(degrees, 360.0f);
 }
 
 /**
