@@ -92,6 +92,20 @@ pntr_color pntr_test_color_alpha(pntr_color color, unsigned char alpha) {
     return color;
 }
 
+/**
+ * The name of a file that accepts any write but never has room to store it, or NULL
+ * when the platform doesn't provide one.
+ *
+ * Used to exercise a genuine write failure, as opposed to a failure to open.
+ */
+const char* pntr_test_unwritable_file() {
+    #ifdef __linux__
+        return "/dev/full";
+    #else
+        return NULL;
+    #endif
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -1158,7 +1172,14 @@ MODULE(pntr, {
         pntr_unload_file(fileData);
 
         // Try to load a file that doesn't exist.
-        unsigned char* fileNotFound = pntr_load_file("FileNotFound.txt", NULL);
+        bytesRead = 1234;
+        unsigned char* fileNotFound = pntr_load_file("FileNotFound.txt", &bytesRead);
+        EQUALS(fileNotFound, NULL);
+        EQUALS(bytesRead, 0);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
+
+        // Reporting the size back is optional.
+        fileNotFound = pntr_load_file("FileNotFound.txt", NULL);
         EQUALS(fileNotFound, NULL);
 
         // Expect an error to result.
@@ -1167,10 +1188,53 @@ MODULE(pntr, {
         pntr_set_error(PNTR_ERROR_NONE);
     });
 
+    IT("pntr_load_file(): Empty file", {
+        // A file that exists but holds no data loads successfully.
+        const char* fileName = "tempFileEmpty.txt";
+        FILE* emptyFile = fopen(fileName, "wb");
+        NEQUALS(emptyFile, NULL);
+        fclose(emptyFile);
+
+        unsigned int bytesRead = 1234;
+        unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
+        NEQUALS(fileData, NULL);
+        EQUALS(bytesRead, 0);
+        EQUALS(pntr_get_error(), NULL);
+        pntr_unload_file(fileData);
+
+        remove(fileName);
+    });
+
+    IT("pntr_load_file(): Directory", {
+        // A directory can't be loaded, but it isn't a lack of memory either.
+        unsigned int bytesRead = 1234;
+        unsigned char* fileData = pntr_load_file(".", &bytesRead);
+        EQUALS(fileData, NULL);
+        EQUALS(bytesRead, 0);
+        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
+        pntr_set_error(PNTR_ERROR_NONE);
+    });
+
     IT("pntr_load_file_text()", {
         const char* text = pntr_load_file_text("resources/text.txt");
         STRCEQUALS(text, "Hello, World!", 13);
         pntr_unload_file_text(text);
+    });
+
+    IT("pntr_load_file_text(): Empty file", {
+        // Unlike pntr_load_file(), the text is always null terminated.
+        const char* fileName = "tempFileEmptyText.txt";
+        FILE* emptyFile = fopen(fileName, "wb");
+        NEQUALS(emptyFile, NULL);
+        fclose(emptyFile);
+
+        const char* text = pntr_load_file_text(fileName);
+        NEQUALS(text, NULL);
+        STREQUALS(text, "");
+        pntr_unload_file_text(text);
+
+        remove(fileName);
     });
 
     IT("pntr_load_font_ttf()", {
@@ -1204,6 +1268,83 @@ MODULE(pntr, {
         GREATER(bytes, 5);
         STRCEQUALS((const char*)fileDataResult, "Hello", 5);
         pntr_unload_file(fileDataResult);
+
+        remove(fileName);
+    });
+
+    IT("pntr_save_file(): No data", {
+        // Saving nothing still creates and truncates the file, which is a success.
+        const char* fileName = "tempFileNoData.txt";
+        const char* fileData = "Hello World!";
+
+        bool result = pntr_save_file(fileName, (unsigned char*)fileData, 12);
+        EQUALS(result, true);
+
+        result = pntr_save_file(fileName, (unsigned char*)fileData, 0);
+        EQUALS(result, true);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+
+        // The file still exists, and is now empty.
+        unsigned int bytes = 1234;
+        unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
+        NEQUALS(fileDataResult, NULL);
+        EQUALS(bytes, 0);
+        pntr_unload_file(fileDataResult);
+
+        remove(fileName);
+    });
+
+    IT("pntr_save_file(): Failures", {
+        const char* fileData = "Hello World!";
+
+        // A file in a directory that doesn't exist can't be opened.
+        bool result = pntr_save_file("MissingDirectory/tempFile.txt", (unsigned char*)fileData, 12);
+        EQUALS(result, false);
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
+        pntr_set_error(PNTR_ERROR_NONE);
+
+        // A file that opens, but that can't hold what is written to it, reports the
+        // write as the thing that failed.
+        const char* unwritableFile = pntr_test_unwritable_file();
+        if (unwritableFile != NULL) {
+            FILE* exists = fopen(unwritableFile, "wb");
+            if (exists != NULL) {
+                fclose(exists);
+
+                result = pntr_save_file(unwritableFile, (unsigned char*)fileData, 12);
+                EQUALS(result, false);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_WRITE);
+                pntr_set_error(PNTR_ERROR_NONE);
+            }
+        }
+    });
+
+    IT("pntr_save_file(), pntr_load_file(): Round trip", {
+        const char* fileName = "tempFileRoundTrip.bin";
+        unsigned char fileData[4096];
+        for (int i = 0; i < 4096; i++) {
+            fileData[i] = (unsigned char)(i % 256);
+        }
+
+        unsigned int sizes[3];
+        sizes[0] = 0;
+        sizes[1] = 1;
+        sizes[2] = 4096;
+
+        for (int i = 0; i < 3; i++) {
+            bool result = pntr_save_file(fileName, fileData, sizes[i]);
+            EQUALS(result, true);
+
+            unsigned int bytes = 1234;
+            unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
+            NEQUALS(fileDataResult, NULL);
+            EQUALS(bytes, sizes[i]);
+            EQUALS(memcmp(fileDataResult, fileData, sizes[i]), 0);
+            pntr_unload_file(fileDataResult);
+        }
+
+        EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+        remove(fileName);
     });
 
     IT("pntr_save_image()", {

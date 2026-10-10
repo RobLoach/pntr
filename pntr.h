@@ -3294,7 +3294,8 @@ PNTR_API pntr_image* pntr_load_image(const char* fileName) {
         return (pntr_image*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
     }
 
-    unsigned int bytesRead;
+    // Initialized in case a custom PNTR_LOAD_FILE() callback neglects to report a size.
+    unsigned int bytesRead = 0;
     const unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
     if (fileData == NULL) {
         return (pntr_image*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
@@ -4639,7 +4640,8 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     #ifndef PNTR_ENABLE_TTF
         return (pntr_font*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
     #else
-        unsigned int bytesRead;
+        // Initialized in case a custom PNTR_LOAD_FILE() callback neglects to report a size.
+        unsigned int bytesRead = 0;
         unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
         if (fileData == NULL) {
             return NULL;
@@ -4899,14 +4901,23 @@ PNTR_API void pntr_image_color_brightness(pntr_image* image, float factor) {
  *
  * This data must be cleared with pntr_unload_file() when finished.
  *
- * You can define your own callback for this by defining PNTR_LOAD_FILE.
+ * The returned data holds the raw bytes of the file and is **not** null terminated.
+ * Use pntr_load_file_text() when a string is needed instead.
+ *
+ * A file that holds no data loads successfully: the returned pointer is not NULL, and
+ * `bytesRead` is set to 0.
+ *
+ * You can define your own callback for this by defining PNTR_LOAD_FILE. A custom
+ * callback must always write to `bytesRead` when it isn't NULL, as callers such as
+ * pntr_load_file_text() and pntr_load_image() rely on the reported size.
  *
  * @param fileName The name of the file to load.
  * @param bytesRead Where to stick the amount of bytes that were read. Use NULL if you don't need the file size.
  *
- * @return A pointer to the file data in memory.
+ * @return A pointer to the file data in memory, or NULL on failure.
  *
  * @see pntr_unload_file()
+ * @see pntr_load_file_text()
  * @see PNTR_LOAD_FILE
  */
 PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytesRead) {
@@ -4925,40 +4936,68 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
 
         return PNTR_LOAD_FILE(fileName, bytesRead);
     #else
+        // Nothing has been read yet, so every failure below can just return.
+        if (bytesRead != NULL) {
+            *bytesRead = 0;
+        }
+
         FILE* file = fopen(fileName, "rb");
         if (file == NULL) {
-            if (bytesRead != NULL) {
-                *bytesRead = 0;
-            }
             return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
-        fseek(file, 0, SEEK_END);
-        size_t size = (size_t)ftell(file);
-        fseek(file, 0, SEEK_SET);
-
-        if (size <= 0) {
+        // Measure the file. A stream that can't seek, like a pipe, fails here instead of
+        // having ftell()'s -1 become an enormous allocation request.
+        if (fseek(file, 0, SEEK_END) != 0) {
             fclose(file);
-            if (bytesRead != NULL) {
-                *bytesRead = 0;
-            }
             return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
         }
 
-        unsigned char* data = (unsigned char*)PNTR_MALLOC(size * sizeof(unsigned char));
+        long fileSize = ftell(file);
+        if (fileSize < 0 || fseek(file, 0, SEEK_SET) != 0) {
+            fclose(file);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        }
+
+        // A directory, which fopen() accepts on some platforms, can report a believable
+        // size while every read of it fails. Probe a single byte before committing to an
+        // allocation so that it reports a failure to open rather than a lack of memory.
+        // An empty file only raises the end-of-file indicator here, which the seek clears.
+        (void)fgetc(file);
+        if (ferror(file) != 0 || fseek(file, 0, SEEK_SET) != 0) {
+            fclose(file);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        }
+
+        // The size is reported back through an unsigned int, so a file too large to count
+        // in one can't be loaded without silently wrapping its size.
+        size_t size = (size_t)fileSize;
+        if ((size_t)(unsigned int)size != size) {
+            fclose(file);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_NOT_SUPPORTED);
+        }
+
+        // PNTR_MALLOC(0) is implementation-defined and is allowed to return NULL, so ask
+        // for at least one byte to keep an empty file's result reliably non-NULL.
+        unsigned char* data = (unsigned char*)PNTR_MALLOC((size > 0 ? size : 1) * sizeof(unsigned char));
         if (data == NULL) {
             fclose(file);
-            if (bytesRead != NULL) {
-                *bytesRead = 0;
-            }
             return (unsigned char*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
         }
 
-        // Read the file
-        unsigned int bytes = (unsigned int)fread(data, sizeof(unsigned char), size, file);
+        // A file that shrank since it was measured, or that stopped part way through,
+        // would leave the tail of the buffer uninitialized, so a short read is a failure.
+        size_t bytes = fread(data, sizeof(unsigned char), size, file);
+        if (bytes != size || ferror(file) != 0) {
+            PNTR_FREE(data);
+            fclose(file);
+            return (unsigned char*)pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        }
+
         fclose(file);
+
         if (bytesRead != NULL) {
-            *bytesRead = bytes;
+            *bytesRead = (unsigned int)bytes;
         }
 
         return data;
@@ -4968,6 +5007,9 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
 /**
  * Load text from a file. Must be cleared with pntr_unload_file().
  *
+ * Unlike pntr_load_file(), which returns the raw bytes of the file, the data returned
+ * here is always null terminated. An empty file results in an empty string.
+ *
  * @param fileName The file to load.
  *
  * @see pntr_load_file()
@@ -4976,7 +5018,8 @@ PNTR_API unsigned char* pntr_load_file(const char* fileName, unsigned int* bytes
  * @return A null-terminated string with the contents of the file.
  */
 PNTR_API const char* pntr_load_file_text(const char *fileName) {
-    unsigned int bytesRead;
+    // Initialized in case a custom PNTR_LOAD_FILE() callback neglects to report a size.
+    unsigned int bytesRead = 0;
     unsigned char* data = pntr_load_file(fileName, &bytesRead);
 
     if (data == NULL) {
@@ -5018,6 +5061,9 @@ PNTR_API void pntr_unload_file_text(const char* text) {
 /**
  * Saves a file to the file system.
  *
+ * The file is created when it doesn't exist, and truncated when it does. Saving zero
+ * bytes is therefore a successful way of emptying a file.
+ *
  * You can define your own callback for this by defining `PNTR_SAVE_FILE`.
  *
  * @param fileName The name of the file to save.
@@ -5048,21 +5094,25 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
             return false;
         }
 
-        size_t count = fwrite(data, sizeof(unsigned char), bytesToWrite, file);
+        // Opening the file already created or truncated it, so there is nothing left to
+        // do when there is nothing to write.
+        if (bytesToWrite > 0) {
+            size_t count = fwrite(data, sizeof(unsigned char), (size_t)bytesToWrite, file);
+            if (count != (size_t)bytesToWrite) {
+                fclose(file);
+                pntr_set_error(PNTR_ERROR_FAILED_TO_WRITE);
+                return false;
+            }
+        }
 
-        if (count <= 0) {
-            fclose(file);
-            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
+        // Buffered data only reaches the file system when the stream closes cleanly, so a
+        // full write isn't proof that the file was saved.
+        if (fclose(file) != 0) {
+            pntr_set_error(PNTR_ERROR_FAILED_TO_WRITE);
             return false;
         }
 
-        if (count != (size_t)bytesToWrite) {
-            fclose(file);
-            pntr_set_error(PNTR_ERROR_FAILED_TO_OPEN);
-            return false;
-        }
-
-        return fclose(file) == 0;
+        return true;
     #endif
 }
 
