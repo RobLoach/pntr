@@ -27,6 +27,25 @@
  */
 #define PNTR_TEST_TTY_CHARACTERS "\x7f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}"
 
+/**
+ * The color that the pixel format tests push through every conversion, chosen so that
+ * all four of its channels are different.
+ */
+#define PNTR_TEST_PIXEL_COLOR pntr_new_color(18, 52, 86, 120)
+
+/**
+ * The bytes of PNTR_TEST_PIXEL_COLOR as pntr_color holds them in memory.
+ *
+ * Unlike a pixel format, pntr_color's own byte order follows the build's
+ * PNTR_PIXELFORMAT, which is why storing the struct is never a valid shortcut for
+ * pntr_set_pixel_color().
+ */
+#if defined(PNTR_PIXELFORMAT_ARGB)
+    #define PNTR_TEST_PIXEL_COLOR_BYTES { 86, 52, 18, 120 } /* blue, green, red, alpha */
+#else
+    #define PNTR_TEST_PIXEL_COLOR_BYTES { 18, 52, 86, 120 } /* red, green, blue, alpha */
+#endif
+
 bool pntr_utf8() {
     #ifdef PNTR_ENABLE_UTF8
         return true;
@@ -1173,6 +1192,133 @@ MODULE(pntr, {
         EQUALS(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888), 24);
         EQUALS(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888), 24);
         EQUALS(pntr_get_pixel_data_size(4, 4, PNTR_PIXELFORMAT_GRAYSCALE), 16);
+    });
+
+    IT("pntr_set_pixel_color(), pntr_get_pixel_color()", {
+        // These colors are built through pntr_new_color() so that the test says nothing
+        // about how pntr_color is laid out in memory, which depends on the build's
+        // PNTR_PIXELFORMAT.
+        pntr_color colors[5];
+        colors[0] = pntr_new_color(255, 0, 0, 255);
+        colors[1] = pntr_new_color(0, 255, 0, 255);
+        colors[2] = pntr_new_color(10, 20, 30, 40);
+        colors[3] = PNTR_TEST_PIXEL_COLOR;
+        colors[4] = pntr_new_color(0, 0, 0, 0);
+
+        for (int i = 0; i < 5; i++) {
+            unsigned char pixel[4];
+
+            // RGBA8888 has to round trip exactly, in every build.
+            PNTR_MEMSET(pixel, 0, sizeof(pixel));
+            pntr_set_pixel_color(pixel, PNTR_PIXELFORMAT_RGBA8888, colors[i]);
+            COLOREQUALS(pntr_get_pixel_color(pixel, PNTR_PIXELFORMAT_RGBA8888), colors[i]);
+
+            // ARGB8888 has to round trip exactly too. It used to lose the channel order
+            // in a PNTR_PIXELFORMAT_ARGB build, where opaque red came back as
+            // transparent cyan.
+            PNTR_MEMSET(pixel, 0, sizeof(pixel));
+            pntr_set_pixel_color(pixel, PNTR_PIXELFORMAT_ARGB8888, colors[i]);
+            COLOREQUALS(pntr_get_pixel_color(pixel, PNTR_PIXELFORMAT_ARGB8888), colors[i]);
+        }
+
+        // Grayscale is one byte per pixel, so it only keeps the luminance. The setter
+        // writes that luminance and the getter reports white with the luminance as its
+        // alpha, which makes white the one color that round trips exactly.
+        unsigned char gray = 0;
+        pntr_set_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE, pntr_new_color(255, 255, 255, 255));
+        EQUALS((int)gray, 255);
+        COLOREQUALS(pntr_get_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE), pntr_new_color(255, 255, 255, 255));
+
+        pntr_set_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE, pntr_new_color(255, 0, 0, 255));
+        EQUALS((int)gray, 76);
+        COLOREQUALS(pntr_get_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE), pntr_new_color(255, 255, 255, 76));
+
+        pntr_set_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE, pntr_new_color(0, 255, 0, 255));
+        EQUALS((int)gray, 149);
+        COLOREQUALS(pntr_get_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE), pntr_new_color(255, 255, 255, 149));
+
+        pntr_set_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE, pntr_new_color(0, 0, 255, 255));
+        EQUALS((int)gray, 29);
+        COLOREQUALS(pntr_get_pixel_color(&gray, PNTR_PIXELFORMAT_GRAYSCALE), pntr_new_color(255, 255, 255, 29));
+    });
+
+    IT("pntr_set_pixel_color() byte layout", {
+        // A pixel format names the order of the bytes on the wire, so the bytes that
+        // pntr_set_pixel_color() writes are the same in every build, on every host.
+        pntr_color color = PNTR_TEST_PIXEL_COLOR;
+        unsigned char pixel[4];
+
+        PNTR_MEMSET(pixel, 0, sizeof(pixel));
+        pntr_set_pixel_color(pixel, PNTR_PIXELFORMAT_RGBA8888, color);
+        EQUALS((int)pixel[0], 18);  // red
+        EQUALS((int)pixel[1], 52);  // green
+        EQUALS((int)pixel[2], 86);  // blue
+        EQUALS((int)pixel[3], 120); // alpha
+
+        PNTR_MEMSET(pixel, 0, sizeof(pixel));
+        pntr_set_pixel_color(pixel, PNTR_PIXELFORMAT_ARGB8888, color);
+        EQUALS((int)pixel[0], 120); // alpha
+        EQUALS((int)pixel[1], 18);  // red
+        EQUALS((int)pixel[2], 52);  // green
+        EQUALS((int)pixel[3], 86);  // blue
+
+        // pntr_color's own bytes, on the other hand, are ordered by the build's
+        // PNTR_PIXELFORMAT. Storing the struct is therefore never a valid shortcut for
+        // pntr_set_pixel_color(): it only lines up with RGBA8888 in a
+        // PNTR_PIXELFORMAT_RGBA build, and lines up with nothing at all otherwise.
+        unsigned char raw[4];
+        unsigned char expected[4] = PNTR_TEST_PIXEL_COLOR_BYTES;
+        PNTR_MEMCPY(raw, &color, sizeof(raw));
+        EQUALS((int)raw[0], (int)expected[0]);
+        EQUALS((int)raw[1], (int)expected[1]);
+        EQUALS((int)raw[2], (int)expected[2]);
+        EQUALS((int)raw[3], (int)expected[3]);
+    });
+
+    IT("pntr_image_to_pixelformat(), pntr_image_from_pixelformat()", {
+        pntr_image* image = pntr_gen_image_color(4, 3, pntr_new_color(200, 100, 50, 255));
+        NEQUALS(image, NULL);
+
+        // Write the pixels directly so that they are exactly these colors, including a
+        // partially transparent one and a fully transparent one.
+        PNTR_PIXEL(image, 0, 0) = pntr_new_color(255, 0, 0, 255);
+        PNTR_PIXEL(image, 1, 1) = pntr_new_color(0, 255, 0, 128);
+        PNTR_PIXEL(image, 3, 2) = pntr_new_color(1, 2, 3, 0);
+
+        pntr_pixelformat formats[2];
+        formats[0] = PNTR_PIXELFORMAT_RGBA8888;
+        formats[1] = PNTR_PIXELFORMAT_ARGB8888;
+
+        for (int i = 0; i < 2; i++) {
+            unsigned int dataSize = 0;
+            void* data = pntr_image_to_pixelformat(image, &dataSize, formats[i]);
+            NEQUALS(data, NULL);
+            EQUALS((int)dataSize, 4 * 3 * 4);
+
+            pntr_image* result = pntr_image_from_pixelformat(data, image->width, image->height, formats[i]);
+            IMAGEEQUALS(result, image);
+
+            pntr_unload_image(result);
+            pntr_unload_memory(data);
+        }
+
+        // Grayscale only carries the luminance, so it comes back as white with the
+        // luminance as the alpha. A white image is the one that survives it untouched.
+        pntr_image* white = pntr_gen_image_color(4, 3, pntr_new_color(255, 255, 255, 255));
+        NEQUALS(white, NULL);
+
+        unsigned int graySize = 0;
+        void* grayData = pntr_image_to_pixelformat(white, &graySize, PNTR_PIXELFORMAT_GRAYSCALE);
+        NEQUALS(grayData, NULL);
+        EQUALS((int)graySize, 4 * 3);
+
+        pntr_image* grayResult = pntr_image_from_pixelformat(grayData, white->width, white->height, PNTR_PIXELFORMAT_GRAYSCALE);
+        IMAGEEQUALS(grayResult, white);
+
+        pntr_unload_image(grayResult);
+        pntr_unload_memory(grayData);
+        pntr_unload_image(white);
+        pntr_unload_image(image);
     });
 
     IT("pntr_image_alpha_border(), pntr_image_alpha_crop()", {

@@ -3750,19 +3750,26 @@ PNTR_API void pntr_image_color_fade(pntr_image* image, float factor) {
  * @param dstPtr A pointer to the pixel in memory.
  * @param dstPixelFormat The desired destination pixel format.
  * @param color The color to apply.
+ *
+ * @note The bytes are written positionally so that the result is independent of both the
+ * host's endianness and the build's `PNTR_PIXELFORMAT`. This is the exact inverse of
+ * pntr_get_pixel_color(), which reads the bytes positionally too.
+ *
+ * @see pntr_get_pixel_color()
  */
 PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat, pntr_color color) {
-    if (PNTR_PIXELFORMAT == dstPixelFormat) {
-        *((pntr_color*)dstPtr) = color;
-        return;
-    }
-
     switch (dstPixelFormat) {
         case PNTR_PIXELFORMAT_RGBA8888:
-            *((uint32_t*)(dstPtr)) = ((uint32_t)color.rgba.a << 24) | ((uint32_t)color.rgba.b << 16) | ((uint32_t)color.rgba.g << 8) | (uint32_t)color.rgba.r;
+            ((unsigned char *)dstPtr)[0] = color.rgba.r;
+            ((unsigned char *)dstPtr)[1] = color.rgba.g;
+            ((unsigned char *)dstPtr)[2] = color.rgba.b;
+            ((unsigned char *)dstPtr)[3] = color.rgba.a;
         break;
         case PNTR_PIXELFORMAT_ARGB8888:
-            *((uint32_t*)(dstPtr)) = ((uint32_t)color.rgba.b << 24) | ((uint32_t)color.rgba.g << 16) | ((uint32_t)color.rgba.r << 8) | (uint32_t)color.rgba.a;
+            ((unsigned char *)dstPtr)[0] = color.rgba.a;
+            ((unsigned char *)dstPtr)[1] = color.rgba.r;
+            ((unsigned char *)dstPtr)[2] = color.rgba.g;
+            ((unsigned char *)dstPtr)[3] = color.rgba.b;
         break;
         case PNTR_PIXELFORMAT_GRAYSCALE: {
             float r = (float)color.rgba.r / 255.0f;
