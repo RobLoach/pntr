@@ -1867,7 +1867,25 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
 }
 
 /**
- * Draws a line on the destination image, ignoring clipping and bounds.
+ * Draws a horizontal line on the destination image, ignoring clipping and bounds.
+ *
+ * @details No check of any kind is performed: the image is not tested for NULL, the
+ * coordinates are not clipped, and the color is written straight over the destination
+ * without being alpha blended. Passing anything that is not already known to lie inside
+ * the image's clip region writes outside of the image's pixel data.
+ *
+ * The width is a count of pixels rather than a second coordinate, so the line covers
+ * `posX` through `posX + width - 1`. A width of zero or less paints nothing.
+ *
+ * @param dst The destination image. Must not be NULL.
+ * @param posX The X position of the first pixel of the line.
+ * @param posY The Y position of the line.
+ * @param width How many pixels long the line should be.
+ * @param color The color of the line. Written without blending, so its alpha is kept
+ * rather than applied.
+ *
+ * @see pntr_draw_line_horizontal()
+ * @see pntr_draw_point_unsafe()
  */
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
     pntr_color *row = &PNTR_PIXEL(dst, posX, posY);
@@ -2098,12 +2116,36 @@ PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_draw_point_unsafe(dst, x, y, color);
 }
 
+/**
+ * Draws a single pixel on the given image, using a vector for the position.
+ *
+ * @param dst The image to draw the point onto.
+ * @param point The position of the point. A NULL pointer paints nothing.
+ * @param color The color of the point, alpha blended into the destination.
+ *
+ * @see pntr_draw_point()
+ */
 PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) {
     if (point != NULL) {
         pntr_draw_point(dst, point->x, point->y, color);
     }
 }
 
+/**
+ * Draws a number of single pixels on the given image.
+ *
+ * @details Each point is tested against the destination's clip region on its own, so the
+ * points that land outside of it are skipped rather than stopping the rest from being
+ * drawn. A NULL image or point array, a fully transparent color, or a count of zero or
+ * less, paints nothing and reports no error.
+ *
+ * @param dst The image to draw the points onto.
+ * @param points The positions of the points.
+ * @param pointsCount How many points there are in the array.
+ * @param color The color of the points, alpha blended into the destination.
+ *
+ * @see pntr_draw_point()
+ */
 PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0 || points == NULL || pointsCount <= 0) {
         return;
@@ -2442,6 +2484,25 @@ PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vec
     pntr_draw_line_curve_thick(dst, point1, point2, point3, point4, segments, 1, color);
 }
 
+/**
+ * Draws a cubic bezier curve on the given image, with thickness.
+ *
+ * @details The curve is drawn as a chain of `segments` thick lines, so it covers both of
+ * its endpoints, and a curve whose four points are the same pixel paints that one pixel.
+ * A count of zero or fewer segments paints nothing.
+ *
+ * @param dst The image to draw the curve onto.
+ * @param point1 The point the curve starts at.
+ * @param point2 The first control point.
+ * @param point3 The second control point.
+ * @param point4 The point the curve ends at.
+ * @param segments How many line segments to build the curve from.
+ * @param thickness How many pixels wide the curve should be.
+ * @param color The color of the curve.
+ *
+ * @see pntr_draw_line_curve()
+ * @see pntr_draw_line_thick()
+ */
 PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, int thickness, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0 || segments <= 0) {
         return;
@@ -2482,6 +2543,23 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
     pntr_draw_polyline_thick(dst, points, numPoints, 1, color);
 }
 
+/**
+ * Draws a connected series of lines through the given points, with thickness.
+ *
+ * @details Every point is painted, including the first and the last. Unlike
+ * pntr_draw_polygon_thick(), the last point is not joined back to the first.
+ *
+ * A single point is drawn as a single pixel, so the thickness is not applied to it.
+ *
+ * @param dst The image to draw the lines onto.
+ * @param points The points to connect.
+ * @param numPoints How many points there are.
+ * @param thickness How many pixels wide the lines should be.
+ * @param color The color of the lines.
+ *
+ * @see pntr_draw_polyline()
+ * @see pntr_draw_polygon_thick()
+ */
 PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
     if (color.rgba.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
         return;
@@ -2538,6 +2616,30 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
     }
 }
 
+/**
+ * Draw a horizontal line at the given x, y coordinates, with thickness.
+ *
+ * @details The width is a count of pixels rather than a second coordinate, so the line
+ * covers `posX` through `posX + width - 1`, the same as pntr_draw_line_horizontal(). The
+ * thickness is the number of pixels the line covers across its height, and is drawn with
+ * the same round brush as a line that is not axis-aligned, so the two run the same
+ * thickness. The brush is centered on `posY` for an odd thickness, and leans upwards of
+ * it for an even one.
+ *
+ * A thickness of zero paints nothing. A negative thickness paints only the two end
+ * pixels of the line, as single pixels, rather than nothing, which is unlike
+ * pntr_draw_line_thick(), where any thickness below one paints nothing.
+ *
+ * @param dst The destination image.
+ * @param posX The X position of the first pixel of the line.
+ * @param posY The Y position of the line.
+ * @param width How long the line should be.
+ * @param thickness How many pixels tall the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line_horizontal()
+ * @see pntr_draw_line_thick()
+ */
 PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color) {
     if (thickness == 0) {
         return;
@@ -2597,6 +2699,30 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
     }
 }
 
+/**
+ * Draw a vertical line at the given x, y coordinates, with thickness.
+ *
+ * @details The height is a count of pixels rather than a second coordinate, so the line
+ * covers `posY` through `posY + height - 1`, the same as pntr_draw_line_vertical(). The
+ * thickness is the number of pixels the line covers across its width, and is drawn with
+ * the same round brush as a line that is not axis-aligned, so the two run the same
+ * thickness. The brush is centered on `posX` for an odd thickness, and leans to the left
+ * of it for an even one.
+ *
+ * A thickness of zero paints nothing. A negative thickness paints only the two end
+ * pixels of the line, as single pixels, rather than nothing, which is unlike
+ * pntr_draw_line_thick(), where any thickness below one paints nothing.
+ *
+ * @param dst The destination image.
+ * @param posX The X position of the line.
+ * @param posY The Y position of the first pixel of the line.
+ * @param height How tall the line should be.
+ * @param thickness How many pixels wide the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line_vertical()
+ * @see pntr_draw_line_thick()
+ */
 PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color) {
     if (thickness == 0) {
         return;
@@ -3280,10 +3406,40 @@ PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, i
     );
 }
 
+/**
+ * Draws a line on the given image, using vectors for the endpoints.
+ *
+ * @details Both endpoints are painted, so a line from `x = 0` to `x = 10` covers 11
+ * pixels, and a line whose two endpoints are the same pixel paints that one pixel.
+ *
+ * @param dst The image to draw the line onto.
+ * @param start The first endpoint of the line.
+ * @param end The second endpoint of the line.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line()
+ * @see pntr_draw_line_thick_vec()
+ */
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
     pntr_draw_line(dst, start.x, start.y, end.x, end.y, color);
 }
 
+/**
+ * Draws a line on the given image, with thickness, using vectors for the endpoints.
+ *
+ * @details The line runs between the same two inclusive endpoints as
+ * pntr_draw_line_vec(), and is drawn with a round brush of the given thickness. A
+ * thickness below one paints nothing.
+ *
+ * @param dst The image to draw the line onto.
+ * @param start The first endpoint of the line.
+ * @param end The second endpoint of the line.
+ * @param thickness How many pixels wide the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line_thick()
+ * @see pntr_draw_line_vec()
+ */
 PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color) {
     pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, thickness, color);
 }
@@ -3305,6 +3461,24 @@ PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoi
     pntr_draw_polygon_thick(dst, points, numPoints, 1, color);
 }
 
+/**
+ * Draws the outline of a polygon through the given points, with thickness.
+ *
+ * @details Every point is painted, and the last point is joined back to the first.
+ *
+ * A single point is drawn as the degenerate line from that point back to itself, so it
+ * does take the thickness, unlike pntr_draw_polyline_thick().
+ *
+ * @param dst The image to draw the polygon onto.
+ * @param points The corners of the polygon.
+ * @param numPoints How many corners there are.
+ * @param thickness How many pixels wide the outline should be.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_polygon()
+ * @see pntr_draw_polygon_fill()
+ * @see pntr_draw_polyline_thick()
+ */
 PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0 || numPoints <= 0 || points == NULL) {
         return;
