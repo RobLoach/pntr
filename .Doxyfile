@@ -827,7 +827,7 @@ WARN_IF_DOC_ERROR      = YES
 # EXTRACT_ALL is set to YES then this flag will automatically be disabled.
 # The default value is: NO.
 
-WARN_NO_PARAMDOC       = NO
+WARN_NO_PARAMDOC       = YES
 
 # If the WARN_AS_ERROR tag is set to YES then doxygen will immediately stop when
 # a warning is encountered. If the WARN_AS_ERROR tag is set to FAIL_ON_WARNINGS
@@ -836,7 +836,16 @@ WARN_NO_PARAMDOC       = NO
 # Possible values are: NO, YES and FAIL_ON_WARNINGS.
 # The default value is: NO.
 
-WARN_AS_ERROR          = NO
+# FAIL_ON_WARNINGS rather than YES: the whole documentation is still generated, and every
+# warning is still printed, but `doxygen .Doxyfile` exits non-zero if there was even one.
+# YES would stop at the first warning, which hides the rest of them.
+#
+# This is what keeps the public API documented. Every PNTR_API function has a comment with
+# an @param for each of its parameters and an @return where it returns something, and
+# WARN_IF_UNDOCUMENTED and WARN_NO_PARAMDOC above turn any gap in that back into a
+# non-zero exit rather than a message nothing reads.
+
+WARN_AS_ERROR          = FAIL_ON_WARNINGS
 
 # The WARN_FORMAT tag determines the format of the warning messages that doxygen
 # can produce. The string should contain the $file, $line, and $text tags, which
