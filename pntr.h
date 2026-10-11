@@ -3107,12 +3107,21 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
 /**
  * Draws a circle from the given center, with the given radius & line-thickness.
  *
+ * @details The radius is inclusive and is measured to the center of the outline, the same
+ * as it is for pntr_draw_circle(), so the thickness grows both inwards and outwards of
+ * that circle and the shape reaches further than `radius` on every side. A negative
+ * radius is treated as its absolute value, and a radius of zero paints the brush on the
+ * center point alone. A thickness below one paints nothing.
+ *
  * @param dst The image to draw the circle onto.
  * @param centerX The center of the circle at the X coordinate.
  * @param centerY The center of the circle at the Y coordinate.
  * @param radius The radius of the circle.
+ * @param thickness How many pixels wide the outline should be.
  * @param color The desired color of the circle.
  *
+ * @see pntr_draw_circle()
+ * @see pntr_draw_circle_fill()
  */
 PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
     if (thickness < 1) {
@@ -3795,6 +3804,38 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     }
 }
 
+/**
+ * Draws an arc as a chain of thick line segments along a circle.
+ *
+ * @details Uses the same angles and the same half-open sweep as pntr_draw_arc(): angles
+ * are in degrees, measured from the positive X axis, turning clockwise on screen, and
+ * `segments` points are sampled starting at `startAngle` and stepping by
+ * `(endAngle - startAngle) / segments`, so `endAngle` itself is never sampled.
+ *
+ * Unlike pntr_draw_arc(), which paints those sampled points, this joins them with lines,
+ * which has two consequences worth knowing. The chain of lines runs between the first and
+ * the last sampled point only, so a full `0` to `360` sweep leaves a gap rather than
+ * closing: use pntr_draw_circle_thick() for a closed circle. And a sweep of a single
+ * segment has no second point to draw a line to, so `segments` of 1 paints nothing at
+ * all, where pntr_draw_arc() paints one point.
+ *
+ * A radius of zero or less paints the center as a single point, ignoring the thickness.
+ * A count of zero or fewer segments paints nothing.
+ *
+ * @param dst The image to draw the arc onto.
+ * @param centerX The center of the arc's circle at the X coordinate.
+ * @param centerY The center of the arc's circle at the Y coordinate.
+ * @param radius The radius of the arc's circle.
+ * @param startAngle The angle, in degrees, that the sweep starts at.
+ * @param endAngle The angle, in degrees, that the sweep ends at.
+ * @param segments How many points to sample along the sweep.
+ * @param thickness How many pixels wide the arc should be.
+ * @param color The color of the arc.
+ *
+ * @see pntr_draw_arc()
+ * @see pntr_draw_arc_fill()
+ * @see pntr_draw_circle_thick()
+ */
 PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
