@@ -33,6 +33,24 @@
 
 /**
  * Load an image using stb_image.
+ *
+ * @details This becomes `PNTR_LOAD_IMAGE_FROM_MEMORY`, and so the implementation of
+ * pntr_load_image_from_memory(), when `PNTR_STB_IMAGE` is defined, which is also the
+ * default when no other backend is chosen. stb_image sniffs the format out of the data
+ * itself, so `type` is ignored entirely: the data decides, and a mismatched or unknown
+ * `type` makes no difference. Data that stb_image will not decode, including a format
+ * this build was not compiled with, is reported as `PNTR_ERROR_INVALID_DATA`.
+ *
+ * @param type The type of image to load. Ignored; stb_image decides from the data.
+ * @param fileData The data of the file to be loaded.
+ * @param dataSize The size of the file data.
+ *
+ * @return A newly loaded image, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
+ *
+ * @see pntr_load_image_from_memory()
+ * @see PNTR_STB_IMAGE
+ * @see PNTR_ENABLE_JPEG
  */
 pntr_image* pntr_stb_image_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize);
 
