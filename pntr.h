@@ -2790,12 +2790,46 @@ PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width
     pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
 }
 
+/**
+ * Draw a rectangle on the given image, with thickness.
+ *
+ * @details Occupies exactly the same pixels as pntr_draw_rectangle() for the same `posX`,
+ * `posY`, `width` and `height`, so the width and height are a count of pixels rather than
+ * a second coordinate, and the thickness grows inwards from that outline rather than
+ * outwards from it. A thickness large enough to reach the middle fills the rectangle, and
+ * one larger still is harmlessly clamped by that, since the inner rings have nothing left
+ * to draw.
+ *
+ * A thickness of zero or less paints nothing.
+ *
+ * @param dst The destination image.
+ * @param posX The X position of the rectangle.
+ * @param posY The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param thickness How many pixels thick the outline should be, measured inwards.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle()
+ * @see pntr_draw_rectangle_thick_rec()
+ */
 PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
     for (int i = 0; i < thickness; i++) {
         pntr_draw_rectangle(dst, posX + i, posY + i, width - i * 2, height - i * 2, color);
     }
 }
 
+/**
+ * Draw a rectangle on the given image, with thickness, using a rectangle as input data.
+ *
+ * @param dst The destination image.
+ * @param rect The rectangle of which to draw. Its width and height are a count of pixels
+ * rather than a second coordinate.
+ * @param thickness How many pixels thick the outline should be, measured inwards.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle_thick()
+ */
 PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color) {
     pntr_draw_rectangle_thick(dst, rect.x, rect.y, rect.width, rect.height, thickness, color);
 }
@@ -2856,6 +2890,34 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
     }
 }
 
+/**
+ * Draws a rectangle filled with a gradient between four corner colors, using a rectangle
+ * as input data.
+ *
+ * @details Covers the same pixels as pntr_draw_rectangle_fill(), so the width and height
+ * are a count of pixels rather than a second coordinate. Each pixel is alpha blended into
+ * the destination, so a corner color that is not fully opaque lets the destination show
+ * through.
+ *
+ * The gradient is sampled across the extent rather than between the corner pixels, so
+ * only `topLeft` is reached exactly: the fraction used on a row of `width` pixels runs
+ * from `0` up to `(width - 1) / width`, never to `1`. A gradient four pixels wide ends
+ * three quarters of the way towards `topRight`, not at it. Widen the rectangle, or draw
+ * the far row and column separately, when the far corner colors have to appear exactly.
+ *
+ * A rectangle with a width or height of zero or less paints nothing.
+ *
+ * @param dst The destination image.
+ * @param rect The rectangle to fill.
+ * @param topLeft The color at the top left of the rectangle.
+ * @param topRight The color approached towards the top right of the rectangle.
+ * @param bottomLeft The color approached towards the bottom left of the rectangle.
+ * @param bottomRight The color approached towards the bottom right of the rectangle.
+ *
+ * @see pntr_draw_rectangle_gradient()
+ * @see pntr_gen_image_gradient()
+ * @see pntr_color_bilinear_interpolate()
+ */
 PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
     if (dst == NULL) {
         return;
@@ -2886,6 +2948,27 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
     }
 }
 
+/**
+ * Draws a rectangle filled with a gradient between four corner colors.
+ *
+ * @details Covers the same pixels as pntr_draw_rectangle_fill(), so the width and height
+ * are a count of pixels rather than a second coordinate. Only `topLeft` is reached
+ * exactly, as the gradient is sampled across the extent rather than between the corner
+ * pixels; see pntr_draw_rectangle_gradient_rec() for the detail.
+ *
+ * @param dst The destination image.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param topLeft The color at the top left of the rectangle.
+ * @param topRight The color approached towards the top right of the rectangle.
+ * @param bottomLeft The color approached towards the bottom left of the rectangle.
+ * @param bottomRight The color approached towards the bottom right of the rectangle.
+ *
+ * @see pntr_draw_rectangle_gradient_rec()
+ * @see pntr_gen_image_gradient()
+ */
 PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
     pntr_draw_rectangle_gradient_rec(dst, PNTR_CLITERAL(pntr_rectangle) {x, y, width, height}, topLeft, topRight, bottomLeft, bottomRight);
 }
@@ -3899,6 +3982,33 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
     pntr_draw_arc(dst, x + bottomLeftRadius, bottom - bottomLeftRadius, (float)bottomLeftRadius, 90.0f, 180.0f, bottomLeftRadius * 2, color); // Bottom Left
 }
 
+/**
+ * Draws the outline of a rectangle with rounded corners, with thickness.
+ *
+ * @details Occupies exactly the same pixels as pntr_draw_rectangle_rounded() for the same
+ * `x`, `y`, `width` and `height`, so the width and height are a count of pixels rather
+ * than a second coordinate, and the thickness grows inwards from that outline rather than
+ * outwards from it. Each ring is drawn one pixel further in with each corner radius one
+ * pixel smaller, which is what keeps the rounding from squaring off as it goes, and each
+ * radius is clamped per ring so that it can never reach past the middle of that ring.
+ *
+ * A thickness below one paints nothing.
+ *
+ * @param dst The image to draw the rectangle onto.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param topLeftRadius The corner radius of the top left corner.
+ * @param topRightRadius The corner radius of the top right corner.
+ * @param bottomLeftRadius The corner radius of the bottom left corner.
+ * @param bottomRightRadius The corner radius of the bottom right corner.
+ * @param thickness How many pixels thick the outline should be, measured inwards.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle_rounded()
+ * @see pntr_draw_rectangle_rounded_fill()
+ */
 PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color) {
     if (thickness < 1) {
         return;
