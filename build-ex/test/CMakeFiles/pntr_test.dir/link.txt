@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/pntr_test.dir/pntr_test.c.o -o pntr_test 
