@@ -1960,16 +1960,44 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
 }
 
 /**
- * Plots a single point of a line or outline, either as a pixel, or as a filled circle when thick.
+ * Plots a single point of a line or outline, either as a pixel, or as a round brush when
+ * thick.
+ *
+ * @details The brush is `thickness` pixels across, so every thickness renders
+ * differently, and matches what pntr_draw_line_horizontal_thick() covers for the same
+ * thickness. The brush sits on the given pixel for an odd thickness, and leans up and to
+ * the left of it for an even one, which is the same side that the thick axis-aligned
+ * lines lean towards.
  *
  * @internal
  */
 static void _pntr_draw_thick_point(pntr_image* dst, int x, int y, int thickness, pntr_color color) {
     if (thickness <= 1) {
         pntr_draw_point(dst, x, y, color);
+        return;
     }
-    else {
-        pntr_draw_circle_fill(dst, x, y, thickness / 2, color);
+
+    int low = -(thickness / 2);
+    int high = thickness - 1 + low;
+
+    // Doubling the offsets puts the center of an even brush on a whole number, so the
+    // distance test stays in integers. Comparing against the diameter rather than the
+    // radius is what keeps a brush of 2 a full 2x2 block.
+    int center = low + high;
+    int diameter2 = thickness * thickness;
+
+    for (int offsetY = low; offsetY <= high; offsetY++) {
+        int distanceY = 2 * offsetY - center;
+        int distanceY2 = distanceY * distanceY;
+        for (int offsetX = low; offsetX <= high; offsetX++) {
+            int distanceX = 2 * offsetX - center;
+            if (distanceX * distanceX + distanceY2 <= diameter2) {
+                // The brush is symmetric, so the row reaches just as far past the center
+                // on the right as this first pixel does on the left.
+                pntr_draw_line_horizontal(dst, x + offsetX, y + offsetY, center - 2 * offsetX + 1, color);
+                break;
+            }
+        }
     }
 }
 
@@ -1988,23 +2016,25 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
     int changeInY = (endPosY - startPosY);
     int absChangeInY = (changeInY < 0) ? -changeInY : changeInY;
 
-    // Drawing a straight line is fast.
+    // Drawing a straight line is fast. Both endpoints are painted, so the length is one
+    // more than the distance between them, which also makes a line whose endpoints are
+    // the same pixel paint that pixel.
     if (startPosX == endPosX) {
         if (thickness <= 1) {
-            pntr_draw_line_vertical(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY, color);
+            pntr_draw_line_vertical(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY + 1, color);
         }
         else {
-            pntr_draw_line_vertical_thick(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY, thickness, color);
+            pntr_draw_line_vertical_thick(dst, startPosX, (startPosY > endPosY) ? endPosY : startPosY, absChangeInY + 1, thickness, color);
         }
         return;
     }
 
     if (startPosY == endPosY) {
         if (thickness <= 1) {
-            pntr_draw_line_horizontal(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX, color);
+            pntr_draw_line_horizontal(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX + 1, color);
         }
         else {
-            pntr_draw_line_horizontal_thick(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX, thickness, color);
+            pntr_draw_line_horizontal_thick(dst, (startPosX > endPosX) ? endPosX : startPosX, startPosY, absChangeInX + 1, thickness, color);
         }
         return;
     }
@@ -2084,6 +2114,16 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
 /**
  * Draws a line on the given image.
  *
+ * @details Both endpoints are painted, so a line from `x = 0` to `x = 10` covers 11
+ * pixels, and a line whose two endpoints are the same pixel paints that one pixel.
+ *
+ * @param dst The image to draw the line onto.
+ * @param startPosX The X coordinate of the first endpoint.
+ * @param startPosY The Y coordinate of the first endpoint.
+ * @param endPosX The X coordinate of the second endpoint.
+ * @param endPosY The Y coordinate of the second endpoint.
+ * @param color The color of the line.
+ *
  * @see pntr_draw_line_aa()
  * @see pntr_draw_line_horizontal()
  * @see pntr_draw_line_vertical()
@@ -2095,6 +2135,15 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
 /**
  * Draws an anti-aliased line using Xiaolin Wu's algorithm.
  *
+ * @details Both endpoints are painted, matching pntr_draw_line().
+ *
+ * @param dst The image to draw the line onto.
+ * @param startPosX The X coordinate of the first endpoint.
+ * @param startPosY The Y coordinate of the first endpoint.
+ * @param endPosX The X coordinate of the second endpoint.
+ * @param endPosY The Y coordinate of the second endpoint.
+ * @param color The color of the line.
+ *
  * @see pntr_draw_line()
  */
 PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
@@ -2105,11 +2154,11 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
     int absDx = (endPosX > startPosX) ? endPosX - startPosX : startPosX - endPosX;
     int absDy = (endPosY > startPosY) ? endPosY - startPosY : startPosY - endPosY;
     if (absDx == 0) {
-        pntr_draw_line_vertical(dst, startPosX, (startPosY < endPosY) ? startPosY : endPosY, absDy, color);
+        pntr_draw_line_vertical(dst, startPosX, (startPosY < endPosY) ? startPosY : endPosY, absDy + 1, color);
         return;
     }
     else if (absDy == 0) {
-        pntr_draw_line_horizontal(dst, (startPosX < endPosX) ? startPosX : endPosX, startPosY, absDx, color);
+        pntr_draw_line_horizontal(dst, (startPosX < endPosX) ? startPosX : endPosX, startPosY, absDx + 1, color);
         return;
     }
 
@@ -2189,7 +2238,21 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
 }
 
 /**
- * Draws a line on the given image, with thickness
+ * Draws a line on the given image, with thickness.
+ *
+ * @details The line runs between the same two inclusive endpoints as pntr_draw_line(),
+ * and is drawn with a round brush of the given thickness, so the thickness is the
+ * number of pixels the line covers across its width.
+ *
+ * @param dst The image to draw the line onto.
+ * @param startPosX The X coordinate of the first endpoint.
+ * @param startPosY The Y coordinate of the first endpoint.
+ * @param endPosX The X coordinate of the second endpoint.
+ * @param endPosY The Y coordinate of the second endpoint.
+ * @param thickness How many pixels wide the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line()
  */
 PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color) {
     if (thickness < 1) {
@@ -2203,6 +2266,21 @@ PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY
     _pntr_draw_line_core(dst, startPosX, startPosY, endPosX, endPosY, thickness, color);
 }
 
+/**
+ * Draws a cubic bezier curve on the given image.
+ *
+ * @details The curve is drawn as a chain of lines, so it covers both of its endpoints.
+ *
+ * @param dst The image to draw the curve onto.
+ * @param point1 The point the curve starts at.
+ * @param point2 The first control point.
+ * @param point3 The second control point.
+ * @param point4 The point the curve ends at.
+ * @param segments How many line segments to build the curve from.
+ * @param color The color of the curve.
+ *
+ * @see pntr_draw_line_curve_thick()
+ */
 PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, pntr_color color) {
     pntr_draw_line_curve_thick(dst, point1, point2, point3, point4, segments, 1, color);
 }
@@ -2229,6 +2307,20 @@ PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pn
     }
 }
 
+/**
+ * Draws a connected series of lines through the given points.
+ *
+ * @details Every point is painted, including the first and the last. Unlike
+ * pntr_draw_polygon(), the last point is not joined back to the first.
+ *
+ * @param dst The image to draw the lines onto.
+ * @param points The points to connect.
+ * @param numPoints How many points there are.
+ * @param color The color of the lines.
+ *
+ * @see pntr_draw_polygon()
+ * @see pntr_draw_polyline_thick()
+ */
 PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     pntr_draw_polyline_thick(dst, points, numPoints, 1, color);
 }
@@ -2250,6 +2342,9 @@ PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int
 
 /**
  * Draw a horizontal line at the given x, y coordinates.
+ *
+ * @details The width is a count of pixels rather than a second coordinate, so the line
+ * covers `posX` through `posX + width - 1`.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -2295,13 +2390,19 @@ PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int pos
         return;
     }
 
+    // The caps sit on the first and last pixel of the line, which is the last pixel the
+    // rectangle covers rather than the one past it. They use the same brush as a line
+    // that is not axis-aligned, so both run the same thickness.
     pntr_draw_rectangle_fill(dst, posX, posY - thickness / 2, width, thickness, color);
-    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
-    pntr_draw_circle_fill(dst, posX + width, posY, thickness / 2, color);
+    _pntr_draw_thick_point(dst, posX, posY, thickness, color);
+    _pntr_draw_thick_point(dst, posX + width - 1, posY, thickness, color);
 }
 
 /**
  * Draw a vertical line at the given x, y coordinates.
+ *
+ * @details The height is a count of pixels rather than a second coordinate, so the line
+ * covers `posY` through `posY + height - 1`.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -2347,9 +2448,12 @@ PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY,
         pntr_draw_line_vertical(dst, posX, posY, height, color);
         return;
     }
+    // The caps sit on the first and last pixel of the line, which is the last pixel the
+    // rectangle covers rather than the one past it. They use the same brush as a line
+    // that is not axis-aligned, so both run the same thickness.
     pntr_draw_rectangle_fill(dst, posX - thickness / 2, posY, thickness, height, color);
-    pntr_draw_circle_fill(dst, posX, posY, thickness / 2, color);
-    pntr_draw_circle_fill(dst, posX, posY + height, thickness / 2, color);
+    _pntr_draw_thick_point(dst, posX, posY, thickness, color);
+    _pntr_draw_thick_point(dst, posX, posY + height - 1, thickness, color);
 }
 
 /**
@@ -2366,6 +2470,10 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_
 /**
  * Draw a rectangle on the given image.
  *
+ * @details The width and height are a count of pixels rather than a second coordinate,
+ * so the rectangle covers columns `posX` through `posX + width - 1` and rows `posY`
+ * through `posY + height - 1`.
+ *
  * @param dst The destination image.
  * @param posX The X position.
  * @param posY The Y position.
@@ -2378,6 +2486,18 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_
  */
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
     if (color.rgba.a == 0 || dst == NULL || width <= 0 || height <= 0) {
+        return;
+    }
+
+    // A rectangle only one pixel tall or wide is a single line. Drawing it as four lines
+    // would paint the same pixels up to four times, which a semi-transparent color
+    // blends once per paint.
+    if (height == 1) {
+        pntr_draw_line_horizontal(dst, posX, posY, width, color);
+        return;
+    }
+    if (width == 1) {
+        pntr_draw_line_vertical(dst, posX, posY, height, color);
         return;
     }
 
@@ -2399,6 +2519,9 @@ PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect
 
 /**
  * Draws a filled rectangle on the given image.
+ *
+ * @details Covers the same pixels as pntr_draw_rectangle(), so the width and height are
+ * a count of pixels rather than a second coordinate.
  *
  * @param dst The destination image.
  * @param posX The X position.
@@ -2492,20 +2615,36 @@ PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int wi
 static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
     int largestX = radius;
     int r2 = radius * radius;
+
+    // Only the first eighth of the circle is walked, and the other seven are mirrored
+    // from it. Walking a whole quarter would reach both (x, y) and (y, x), and the eight
+    // points mirrored from one of those are the same eight points as the other, so every
+    // pixel would be painted twice and a semi-transparent color blended twice with it.
     for (int y = 0; y <= radius; ++y) {
         int y2 = y * y;
-        for (int x = largestX; x >= 0; --x) {
-            if (x * x + y2 <= r2) {
-                _pntr_draw_thick_point(dst, centerX + x, centerY + y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX - x, centerY + y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX + x, centerY - y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX - x, centerY - y, thickness, color);
-                _pntr_draw_thick_point(dst, centerX + y, centerY + x, thickness, color);
+        int x = largestX;
+        while (x > 0 && x * x + y2 > r2) {
+            --x;
+        }
+        if (y > x) {
+            break;
+        }
+        largestX = x;
+
+        // Mirroring collapses on the axes and on the diagonal, so the points that would
+        // repeat are skipped rather than painted again.
+        _pntr_draw_thick_point(dst, centerX + x, centerY + y, thickness, color);
+        _pntr_draw_thick_point(dst, centerX - x, centerY + y, thickness, color);
+        if (y != 0) {
+            _pntr_draw_thick_point(dst, centerX + x, centerY - y, thickness, color);
+            _pntr_draw_thick_point(dst, centerX - x, centerY - y, thickness, color);
+        }
+        if (x != y) {
+            _pntr_draw_thick_point(dst, centerX + y, centerY + x, thickness, color);
+            _pntr_draw_thick_point(dst, centerX + y, centerY - x, thickness, color);
+            if (y != 0) {
                 _pntr_draw_thick_point(dst, centerX - y, centerY + x, thickness, color);
-                _pntr_draw_thick_point(dst, centerX + y, centerY - x, thickness, color);
                 _pntr_draw_thick_point(dst, centerX - y, centerY - x, thickness, color);
-                largestX = x;
-                break;
             }
         }
     }
@@ -2517,7 +2656,10 @@ static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, 
  * This uses the Midpoint Circle Algorithm:
  *   https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
  *
- * TODO: pntr_draw_circle: Add anti-aliased, and thickness.
+ * @details The radius is inclusive, so the outline reaches `centerX - radius` and
+ * `centerX + radius`, making the circle `radius * 2 + 1` pixels across.
+ *
+ * TODO: pntr_draw_circle: Add anti-aliased.
  *
  * @param dst The image to draw the circle onto.
  * @param centerX The center of the circle at the X coordinate.
@@ -2556,6 +2698,9 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
 /**
  * Draws a filled circle on the given image.
  *
+ * @details Covers the same bounds as pntr_draw_circle(), so the fill reaches the outline
+ * drawn for the same center and radius on all four sides.
+ *
  * TODO: pntr_draw_circle_fill: Add anti-aliased.
  *
  * @param dst The image to draw the filled circle onto.
@@ -2590,10 +2735,13 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
         int y2 = y * y;
         for (int x = largestX; x >= 0; --x) {
             if (x * x + y2 <= r2) {
-                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
+                // The row reaches both centerX - x and centerX + x, which is what keeps
+                // the fill symmetric and lets it reach the outline on the right. At the
+                // center both halves are the same row, so it is only painted once.
+                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x * 2 + 1, color);
+                if (y != 0) {
+                    pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x * 2 + 1, color);
+                }
                 largestX = x;
                 break;
             }
@@ -2647,11 +2795,19 @@ static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY,
     long dx = 0, dy = 2 * rx2 * y;
     long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
 
+    // Mirroring collapses on the axes, so the points that would repeat there are skipped
+    // rather than painted again, which a semi-transparent color would blend twice.
     while (dx < dy) {
         _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+        if (x != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
+        }
+        if (y != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
+            if (x != 0) {
+                _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+            }
+        }
         x++;
         dx += 2 * ry2;
         if (p < 0) {
@@ -2666,9 +2822,15 @@ static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY,
     p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
     while (y >= 0) {
         _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
-        _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+        if (x != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY + y), thickness, color);
+        }
+        if (y != 0) {
+            _pntr_draw_thick_point(dst, (int)(centerX + x), (int)(centerY - y), thickness, color);
+            if (x != 0) {
+                _pntr_draw_thick_point(dst, (int)(centerX - x), (int)(centerY - y), thickness, color);
+            }
+        }
         y--;
         dy -= 2 * rx2;
         if (p > 0) {
@@ -2682,7 +2844,91 @@ static void _pntr_draw_ellipse_points(pntr_image* dst, int centerX, int centerY,
 }
 
 /**
+ * Paints the row of a filled ellipse that reaches `widest` pixels either side of the center, along with its mirror.
+ *
+ * @internal
+ */
+static void _pntr_draw_ellipse_span(pntr_image* dst, int centerX, int centerY, int row, int widest, pntr_color color) {
+    // The row reaches both centerX - widest and centerX + widest, which is what keeps the
+    // fill symmetric and lets it reach the outline on the right. On the center row both
+    // halves are the same row, so it is only painted once.
+    pntr_draw_line_horizontal(dst, centerX - widest, centerY + row, widest * 2 + 1, color);
+    if (row != 0) {
+        pntr_draw_line_horizontal(dst, centerX - widest, centerY - row, widest * 2 + 1, color);
+    }
+}
+
+/**
+ * Fills an ellipse by walking its outline and painting a span per row.
+ *
+ * @details Runs the same two-region midpoint traversal as _pntr_draw_ellipse_points(),
+ * in the same order, but instead of plotting each point it remembers how far out the
+ * outline reaches on the row it is on and paints that row in one go once the walk drops
+ * to the next one. Because the span of every row stretches to the furthest outline point
+ * on that row, the fill covers the outline exactly, rather than leaving the pixels where
+ * the outline runs flattest outside it. The two traversals have to stay in step, which is
+ * what the registration tests hold them to.
+ *
+ * @internal
+ */
+static void _pntr_draw_ellipse_spans(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    long rx2 = (long)radiusX * radiusX;
+    long ry2 = (long)radiusY * radiusY;
+    long x = 0, y = radiusY;
+    long dx = 0, dy = 2 * rx2 * y;
+    long p = (long)((float)ry2 - (float)(rx2 * radiusY) + 0.25f * (float)rx2);
+
+    // The row being measured, and how far out the outline has reached on it. The walk only
+    // ever steps outwards and downwards, so the last point it visits on a row is also the
+    // furthest, and every row from radiusY down to zero is visited exactly once.
+    long row = y, widest = 0;
+
+    while (dx < dy) {
+        if (y != row) {
+            _pntr_draw_ellipse_span(dst, centerX, centerY, (int)row, (int)widest, color);
+            row = y;
+        }
+        widest = x;
+
+        x++;
+        dx += 2 * ry2;
+        if (p < 0) {
+            p += ry2 + dx;
+        } else {
+            y--;
+            dy -= 2 * rx2;
+            p += ry2 + dx - dy;
+        }
+    }
+
+    p = (long)((float)ry2 * ((float)x + 0.5f) * ((float)x + 0.5f) + (float)rx2 * (float)(y - 1) * (float)(y - 1) - (float)(rx2 * ry2));
+    while (y >= 0) {
+        if (y != row) {
+            _pntr_draw_ellipse_span(dst, centerX, centerY, (int)row, (int)widest, color);
+            row = y;
+        }
+        widest = x;
+
+        y--;
+        dy -= 2 * rx2;
+        if (p > 0) {
+            p += rx2 - dy;
+        } else {
+            x++;
+            dx += 2 * ry2;
+            p += rx2 - dy + dx;
+        }
+    }
+
+    // The center row is still waiting, since there is no next row to flush it.
+    _pntr_draw_ellipse_span(dst, centerX, centerY, (int)row, (int)widest, color);
+}
+
+/**
  * Draws an ellipse on the given image.
+ *
+ * @details The radii are inclusive, so the ellipse is `radiusX * 2 + 1` pixels wide and
+ * `radiusY * 2 + 1` pixels tall.
  *
  * @param dst The image to draw the ellipse onto.
  * @param centerX The center of the ellipse at the X coordinate.
@@ -2706,6 +2952,10 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
 /**
  * Draws a filled ellipse on the given image.
  *
+ * @details Covers the same bounds as pntr_draw_ellipse(), and walks the same outline, so
+ * the fill covers every pixel that the outline drawn for the same center and radii
+ * paints.
+ *
  * TODO: pntr_draw_ellipse_fill: Add anti-aliased
  *
  * @param dst The image to draw the filled ellipse onto.
@@ -2725,23 +2975,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
         return;
     }
 
-    int largestX = radiusX;
-    long rx2 = (long)radiusX * radiusX;
-    long ry2 = (long)radiusY * radiusY;
-
-    for (int y = 0; y <= radiusY; y++) {
-        long y2 = (long)y * y;
-        for (int x = largestX; x >= 0; x--) {
-            if ((long)x * x * ry2 + y2 * rx2 <= rx2 * ry2) {
-                pntr_draw_line_horizontal(dst, centerX - x, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX - x, centerY - y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY + y, x, color);
-                pntr_draw_line_horizontal(dst, centerX, centerY - y, x, color);
-                largestX = x;
-                break;
-            }
-        }
-    }
+    _pntr_draw_ellipse_spans(dst, centerX, centerY, radiusX, radiusY, color);
 }
 
 /**
@@ -2803,6 +3037,8 @@ PNTR_API void pntr_draw_triangle_thick_vec(pntr_image *dst, pntr_vector point1, 
 /**
  * Draw a triangle on an image.
  *
+ * @details Every one of the three points is painted, along with the lines between them.
+ *
  * @param dst The image of which to draw the triangle.
  * @param x1 The x coordinate of the first point.
  * @param y1 The y coordinate of the first point.
@@ -2839,6 +3075,9 @@ PNTR_API void pntr_draw_triangle_thick(pntr_image* dst, int x1, int y1, int x2, 
 /**
  * Draw a filled triangle on an image.
  *
+ * @details Covers the full bounding box of the three points, so the fill reaches the
+ * outline drawn by pntr_draw_triangle() for the same points.
+ *
  * @param dst The image of which to draw the triangle.
  * @param x1 The x coordinate of the first point.
  * @param y1 The y coordinate of the first point.
@@ -2865,6 +3104,19 @@ PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_
     pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, thickness, color);
 }
 
+/**
+ * Draws the outline of a polygon through the given points.
+ *
+ * @details Every point is painted, and the last point is joined back to the first.
+ *
+ * @param dst The image to draw the polygon onto.
+ * @param points The corners of the polygon.
+ * @param numPoints How many corners there are.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_polygon_fill()
+ * @see pntr_draw_polyline()
+ */
 PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     pntr_draw_polygon_thick(dst, points, numPoints, 1, color);
 }
@@ -2887,6 +3139,19 @@ PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int 
    }
 }
 
+/**
+ * Fills the polygon described by the given points.
+ *
+ * @details Covers the full bounding box of the points, so the fill reaches the outline
+ * drawn by pntr_draw_polygon() for the same points on all four sides.
+ *
+ * @param dst The image to fill the polygon onto.
+ * @param points The corners of the polygon.
+ * @param numPoints How many corners there are.
+ * @param color The fill color.
+ *
+ * @see pntr_draw_polygon()
+ */
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
     if (dst == NULL || points == NULL || numPoints <= 0 || color.rgba.a == 0) {
         return;
@@ -2895,11 +3160,7 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
     int i = 0;
     // Big numbers to find the max/min values
     int left = points[0].x, top = points[0].y, bottom = points[0].y, right = points[0].x;
-    int nodes, pixelX, pixelY, j, swap;
-    int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints);
-    if (nodeX == NULL) {
-        return;
-    }
+    int nodes, spans, pixelY, pass, j, swap, spanLeft, spanRight;
 
     // Get polygon dimensions
     for (i = 0; i < numPoints; i++) {
@@ -2912,41 +3173,114 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
         if (bottom < points[i].y)
             bottom = points[i].y;
     }
-    bottom++;
-    right++;
+
+    // A row gathers at most one crossing per edge, and the crossings are gathered twice,
+    // so the node list needs one value per point and the span list needs two. A
+    // horizontal edge contributes a span instead of a crossing, which the same two spans
+    // per point already covers.
+    int* nodeX = (int*)PNTR_MALLOC(sizeof(int) * (size_t)numPoints * 5U);
+    if (nodeX == NULL) {
+        return;
+    }
+    int* spanStart = nodeX + numPoints;
+    int* spanEnd = spanStart + numPoints * 2;
 
     // Polygon scanline algorithm released under public-domain by Darel Rex Finley, 2007.
-    // Loop through the rows of the image.
-    for (pixelY = top; pixelY < bottom; pixelY ++) {
-        nodes = 0; /*  Build a list of nodes. */
+    // Loop through the rows of the polygon, including the row of its lowest point.
+    for (pixelY = top; pixelY <= bottom; pixelY++) {
+        spans = 0;
+
+        // A horizontal edge lies along the row rather than crossing it, so it never
+        // appears as a crossing and the pixels it covers are added directly. This is
+        // what paints the parts of a flat top, or of a flat local minimum, that reach
+        // further out than the crossings of the edges on either side of it.
         j = numPoints - 1;
         for (i = 0; i < numPoints; i++) {
-            if (((points[i].y < pixelY) && (points[j].y >= pixelY)) ||
-                ((points[j].y < pixelY) && (points[i].y >= pixelY))) {
-                nodeX[nodes++]= (int)((float)points[i].x
-                     + ((float)pixelY - (float)points[i].y) / ((float)points[j].y - (float)points[i].y)
-                     * ((float)points[j].x - (float)points[i].x));
-            } j = i;
+            if (points[i].y == pixelY && points[j].y == pixelY) {
+                spanStart[spans] = (points[i].x < points[j].x) ? points[i].x : points[j].x;
+                spanEnd[spans] = (points[i].x < points[j].x) ? points[j].x : points[i].x;
+                spans++;
+            }
+            j = i;
         }
 
-        // Sort the nodes, via a simple “Bubble” sort.
+        // The crossing test has to be half-open, otherwise the two edges that meet at a
+        // vertex both report a crossing on that vertex's row and the parity of the node
+        // list is lost. A single half-open test can only ever reach one end of the
+        // polygon, so each row is sampled from both sides: the first pass takes the
+        // edges running below the row, which reaches the row of the topmost point, and
+        // the second takes the edges running above it, which reaches the row of the
+        // bottommost point.
+        for (pass = 0; pass < 2; pass++) {
+            nodes = 0; /*  Build a list of nodes. */
+            j = numPoints - 1;
+            for (i = 0; i < numPoints; i++) {
+                bool crosses = (pass == 0)
+                    ? (((points[i].y <= pixelY) && (points[j].y > pixelY)) || ((points[j].y <= pixelY) && (points[i].y > pixelY)))
+                    : (((points[i].y < pixelY) && (points[j].y >= pixelY)) || ((points[j].y < pixelY) && (points[i].y >= pixelY)));
+                if (crosses) {
+                    nodeX[nodes++]= (int)((float)points[i].x
+                         + ((float)pixelY - (float)points[i].y) / ((float)points[j].y - (float)points[i].y)
+                         * ((float)points[j].x - (float)points[i].x));
+                }
+                j = i;
+            }
+
+            // Sort the nodes, via a simple “Bubble” sort.
+            i = 0;
+            while (i < nodes - 1) {
+                if (nodeX[i] > nodeX[i+1]) {
+                    swap = nodeX[i];
+                    nodeX[i] = nodeX[i+1];
+                    nodeX[i+1] = swap;
+                    if (i) i--;
+                } else i++;
+            }
+
+            // Every pair of nodes is a span, inclusive of the pixel it ends on.
+            for (i = 0; i + 1 < nodes; i += 2) {
+                spanStart[spans] = nodeX[i];
+                spanEnd[spans] = nodeX[i + 1];
+                spans++;
+            }
+        }
+
+        // Sort the spans by where they start, so that the ones that overlap sit next to
+        // each other. Also a “Bubble” sort.
         i = 0;
-        while (i < nodes - 1) {
-            if (nodeX[i] > nodeX[i+1]) {
-                swap = nodeX[i];
-                nodeX[i] = nodeX[i+1];
-                nodeX[i+1] = swap;
+        while (i < spans - 1) {
+            if (spanStart[i] > spanStart[i+1]) {
+                swap = spanStart[i];
+                spanStart[i] = spanStart[i+1];
+                spanStart[i+1] = swap;
+                swap = spanEnd[i];
+                spanEnd[i] = spanEnd[i+1];
+                spanEnd[i+1] = swap;
                 if (i) i--;
             } else i++;
         }
-        // Fill the pixels between node pairs.
-        for (i = 0; i < nodes; i += 2) {
-            if (nodeX[i+0] >= right) break;
-            if (nodeX[i+1] > left) {
-                if (nodeX[i+0] < left) nodeX[i+0] = left ;
-                if (nodeX[i+1] > right) nodeX[i+1] = right;
-                for (pixelX = nodeX[i]; pixelX < nodeX[i + 1]; pixelX++)
-                    pntr_draw_point(dst, pixelX, pixelY, color);
+
+        // Merge the spans that touch before painting them, as the two passes usually
+        // find the same part of the row twice, and a semi-transparent color would blend
+        // every pixel they share more than once.
+        for (i = 0; i < spans; i++) {
+            spanLeft = spanStart[i];
+            spanRight = spanEnd[i];
+            while (i + 1 < spans && spanStart[i + 1] <= spanRight + 1) {
+                if (spanEnd[i + 1] > spanRight) {
+                    spanRight = spanEnd[i + 1];
+                }
+                i++;
+            }
+
+            if (spanLeft < left) {
+                spanLeft = left;
+            }
+            if (spanRight > right) {
+                spanRight = right;
+            }
+            if (spanRight >= spanLeft) {
+                pntr_draw_line_horizontal(dst, spanLeft, pixelY, spanRight - spanLeft + 1, color);
             }
         }
     }
@@ -2971,6 +3305,30 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
     pntr_draw_polygon_fill(dst, points, 3, color);
 }
 
+/**
+ * Draws an arc as a series of points along a circle.
+ *
+ * @details Angles are in degrees, measured from the positive X axis, and turn towards
+ * the positive Y axis. Since Y grows downwards, that means they turn clockwise on
+ * screen: 0 is to the right of the center, 90 is below it, and 180 is to its left.
+ *
+ * The sweep is half-open. `segments` points are sampled, starting at `startAngle` and
+ * stepping by `(endAngle - startAngle) / segments`, so `endAngle` itself is the end of
+ * the sweep rather than the last point sampled. That is what lets a full `0` to `360`
+ * sweep close without painting the same point at both ends.
+ *
+ * @param dst The image to draw the arc onto.
+ * @param centerX The center of the arc's circle at the X coordinate.
+ * @param centerY The center of the arc's circle at the Y coordinate.
+ * @param radius The radius of the arc's circle.
+ * @param startAngle The angle, in degrees, that the sweep starts at.
+ * @param endAngle The angle, in degrees, that the sweep ends at.
+ * @param segments How many points to sample along the sweep.
+ * @param color The color of the arc.
+ *
+ * @see pntr_draw_arc_thick()
+ * @see pntr_draw_arc_fill()
+ */
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
@@ -2990,7 +3348,7 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     for (int i = 0; i < segments; i++) {
         endAngleRad = startAngleRad + (float)i * stepAngle;
         pntr_draw_point(dst,
-            centerX + (int)(radius * PNTR_COSF(endAngleRad)), // TODO: arc angle: Is the - correct here?
+            centerX + (int)(radius * PNTR_COSF(endAngleRad)),
             centerY + (int)(radius * PNTR_SINF(endAngleRad)),
             color);
     }
@@ -3025,6 +3383,26 @@ PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, flo
     }
 }
 
+/**
+ * Fills the wedge between the center of an arc and the arc itself.
+ *
+ * @details Uses the same angles and the same half-open sweep as pntr_draw_arc(). The
+ * wedge is filled as the polygon through the sampled arc points plus the center, so a
+ * sweep with few segments is visibly straight-edged, and one that sweeps a full circle
+ * leaves a seam along the edge that runs back to the center.
+ *
+ * @param dst The image to fill the wedge onto.
+ * @param centerX The center of the arc's circle at the X coordinate.
+ * @param centerY The center of the arc's circle at the Y coordinate.
+ * @param radius The radius of the arc's circle.
+ * @param startAngle The angle, in degrees, that the sweep starts at.
+ * @param endAngle The angle, in degrees, that the sweep ends at.
+ * @param segments How many points to sample along the sweep.
+ * @param color The fill color.
+ *
+ * @see pntr_draw_arc()
+ * @see pntr_draw_polygon_fill()
+ */
 PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
@@ -3043,7 +3421,6 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
         return;
     }
 
-    // TODO: pntr_draw_arc_fill(): Is pntr_draw_polygon_fill ample here?
     for (int i = 0; i < segments; i++) {
         endAngleRad = startAngleRad + (float)i * stepAngle;
         points[i].x = centerX + (int)(radius * PNTR_COSF(endAngleRad));
@@ -3057,22 +3434,111 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
     pntr_unload_memory((void*)points);
 }
 
+/**
+ * Clamps a corner radius into the range that a rounded rectangle of the given size can
+ * hold.
+ *
+ * @details The largest radius leaves room for the straight edges between the corners,
+ * which is what keeps two corners on the same side from reaching into each other.
+ *
+ * @internal
+ */
+static int _pntr_rectangle_rounded_radius(int radius, int width, int height) {
+    int smallest = (width < height) ? width : height;
+    int maxRadius = (smallest - 2) / 2;
+
+    if (radius < 0 || maxRadius < 0) {
+        return 0;
+    }
+
+    return (radius > maxRadius) ? maxRadius : radius;
+}
+
+/**
+ * Fills a quarter of a disc, which is what the corners of a filled rounded rectangle are
+ * made of.
+ *
+ * @details `directionX` and `directionY` are each -1 or 1, and pick the quarter to fill.
+ * The quarter covers the pixels from the center of the disc out to
+ * `centerX + radius * directionX` and `centerY + radius * directionY` inclusive, so it
+ * is `radius + 1` pixels across. Filling only a quarter is what keeps the corners of a
+ * rounded rectangle from overlapping each other.
+ *
+ * @internal
+ */
+static void _pntr_draw_quarter_disc_fill(pntr_image* dst, int centerX, int centerY, int radius, int directionX, int directionY, pntr_color color) {
+    int largestX = radius;
+    int r2 = radius * radius;
+
+    for (int y = 0; y <= radius; y++) {
+        int y2 = y * y;
+        for (int x = largestX; x >= 0; x--) {
+            if (x * x + y2 <= r2) {
+                pntr_draw_line_horizontal(dst, (directionX < 0) ? centerX - x : centerX, centerY + directionY * y, x + 1, color);
+                largestX = x;
+                break;
+            }
+        }
+    }
+}
+
+/**
+ * Draws the outline of a rectangle with rounded corners.
+ *
+ * @details Occupies exactly the same pixels as pntr_draw_rectangle() for the same `x`,
+ * `y`, `width` and `height`, so the width and height are a count of pixels rather than a
+ * second coordinate. Each corner radius is clamped so that it can never reach past the
+ * middle of the rectangle.
+ *
+ * @param dst The image to draw the rectangle onto.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param topLeftRadius The corner radius of the top left corner.
+ * @param topRightRadius The corner radius of the top right corner.
+ * @param bottomLeftRadius The corner radius of the bottom left corner.
+ * @param bottomRightRadius The corner radius of the bottom right corner.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle()
+ * @see pntr_draw_rectangle_rounded_fill()
+ */
 PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || width <= 0 || height <= 0) {
+        return;
+    }
+
+    // Two radii that reach past each other would give the straight edge between them a
+    // negative length, and pntr_draw_line_horizontal() normalizes a negative length into
+    // a line that runs backwards out of the corner.
+    topLeftRadius = _pntr_rectangle_rounded_radius(topLeftRadius, width, height);
+    topRightRadius = _pntr_rectangle_rounded_radius(topRightRadius, width, height);
+    bottomLeftRadius = _pntr_rectangle_rounded_radius(bottomLeftRadius, width, height);
+    bottomRightRadius = _pntr_rectangle_rounded_radius(bottomRightRadius, width, height);
+
     if (topLeftRadius == 0 && topRightRadius == 0 && bottomLeftRadius == 0 && bottomRightRadius == 0) {
         pntr_draw_rectangle(dst, x, y, width, height, color);
         return;
     }
 
-    pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
-    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, y + height, width - bottomLeftRadius - bottomRightRadius - 1, color); // Bottom
-    pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
-    pntr_draw_line_vertical(dst, x + width - 1, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
+    // The far edges sit on the last pixel the rectangle covers, the same as they do for
+    // pntr_draw_rectangle().
+    int right = x + width - 1;
+    int bottom = y + height - 1;
 
-    // TODO: pntr_draw_rectangle_rounded(): Do the angles here make sense?
+    pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
+    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, bottom, width - bottomLeftRadius - bottomRightRadius, color); // Bottom
+    pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
+    pntr_draw_line_vertical(dst, right, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
+
+    // Each corner sweeps a quarter turn, clockwise, from the straight edge before it to
+    // the straight edge after it. The sweep is half-open, so it stops one step short of
+    // that second edge, whose own first pixel sits where the sweep would have ended.
     pntr_draw_arc(dst, x + topLeftRadius, y + topLeftRadius, (float)topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
-    pntr_draw_arc(dst, x + width - topRightRadius - 1, y + topRightRadius, (float)topRightRadius, 0.0f, -90.0f, topRightRadius * 2, color); // Top Right
-    pntr_draw_arc(dst, x + bottomLeftRadius, y + height - bottomLeftRadius, (float)bottomLeftRadius, -180.0f, -270.0f, bottomLeftRadius * 2, color); // Bottom Left
-    pntr_draw_arc(dst, x + width - bottomRightRadius - 1, y + height - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+    pntr_draw_arc(dst, right - topRightRadius, y + topRightRadius, (float)topRightRadius, 270.0f, 360.0f, topRightRadius * 2, color); // Top Right
+    pntr_draw_arc(dst, right - bottomRightRadius, bottom - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
+    pntr_draw_arc(dst, x + bottomLeftRadius, bottom - bottomLeftRadius, (float)bottomLeftRadius, 90.0f, 180.0f, bottomLeftRadius * 2, color); // Bottom Left
 }
 
 PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color) {
@@ -3090,27 +3556,51 @@ PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, i
     }
 }
 
+/**
+ * Fills a rectangle with rounded corners.
+ *
+ * @details Covers the same bounds as pntr_draw_rectangle_rounded(), so the fill reaches
+ * the outline drawn for the same rectangle and radius on all four sides. The corner
+ * radius is clamped so that it can never reach past the middle of the rectangle.
+ *
+ * @param dst The image to fill the rectangle onto.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param cornerRadius The corner radius used for all four corners.
+ * @param color The fill color.
+ *
+ * @see pntr_draw_rectangle_rounded()
+ */
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
+    if (dst == NULL || color.rgba.a == 0 || width <= 0 || height <= 0) {
+        return;
+    }
+
+    cornerRadius = _pntr_rectangle_rounded_radius(cornerRadius, width, height);
     if (cornerRadius == 0) {
         pntr_draw_rectangle_fill(dst, x, y, width, height, color);
         return;
     }
 
-    // Corners
-    // TODO: Replace this with pntr_draw_arc_fill()
-    pntr_draw_circle_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, color); // Top Left
-    pntr_draw_circle_fill(dst, x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, color); // Top Right
-    pntr_draw_circle_fill(dst, x + cornerRadius, y + height - cornerRadius, cornerRadius, color); // Bottom Left
-    pntr_draw_circle_fill(dst, x + width - cornerRadius - 1, y + height - cornerRadius, cornerRadius, color); // Bottom Right
+    // The far edges sit on the last pixel the rectangle covers, the same as they do for
+    // pntr_draw_rectangle_fill().
+    int right = x + width - 1;
+    int bottom = y + height - 1;
 
-    // Edge bars
-    pntr_draw_rectangle_fill(dst, x, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Left bar
-    pntr_draw_rectangle_fill(dst, x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, height - cornerRadius * 2, color); // Right bar
-    pntr_draw_rectangle_fill(dst, x + cornerRadius, y, width - cornerRadius * 2, cornerRadius, color); // Top bar
-    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + height - cornerRadius, width - cornerRadius * 2, cornerRadius, color); // Bottom bar
+    // Corners. Each one covers the cornerRadius + 1 columns and rows that run from the
+    // edge of the rectangle in to the center of its own disc.
+    _pntr_draw_quarter_disc_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, -1, -1, color); // Top Left
+    _pntr_draw_quarter_disc_fill(dst, right - cornerRadius, y + cornerRadius, cornerRadius, 1, -1, color); // Top Right
+    _pntr_draw_quarter_disc_fill(dst, x + cornerRadius, bottom - cornerRadius, cornerRadius, -1, 1, color); // Bottom Left
+    _pntr_draw_quarter_disc_fill(dst, right - cornerRadius, bottom - cornerRadius, cornerRadius, 1, 1, color); // Bottom Right
 
-    // Center fill
-    pntr_draw_rectangle_fill(dst, x + cornerRadius, y + cornerRadius, width - cornerRadius * 2, height - cornerRadius * 2, color);
+    // What is left over after the corners, filled without painting over them, so that a
+    // semi-transparent color is blended exactly once everywhere.
+    pntr_draw_rectangle_fill(dst, x + cornerRadius + 1, y, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Top bar
+    pntr_draw_rectangle_fill(dst, x + cornerRadius + 1, bottom - cornerRadius, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Bottom bar
+    pntr_draw_rectangle_fill(dst, x, y + cornerRadius + 1, width, height - cornerRadius * 2 - 2, color); // Center fill
 }
 
 /**
@@ -5833,18 +6323,161 @@ PNTR_API void pntr_draw_image_dest_rec(pntr_image* dst, pntr_image* src, pntr_re
 }
 
 /**
+ * Normalizes a degree of rotation between 0 and 360 degrees.
+ *
+ * @param degrees The angle to normalize.
+ *
+ * @return The new degrees represented between 0 and 360.
+ *
+ * @internal
+ */
+static float _pntr_normalize_degrees(float degrees) {
+    if (degrees < 0) {
+        float remainder = PNTR_FMODF(-degrees, 360.0f);
+
+        // An exact negative multiple of 360 is a full rotation, which is 0 rather than 360.
+        if (remainder == 0.0f) {
+            return 0.0f;
+        }
+
+        return 360.0f - remainder;
+    }
+
+    return PNTR_FMODF(degrees, 360.0f);
+}
+
+/**
+ * Finds where the pivot of a rotated draw ends up inside the bounding box it fills.
+ *
+ * Every rotated draw places the source pixel at the origin onto the requested destination
+ * position, at any angle and any scale. Subtracting this offset from that position is what
+ * lines the bounding box up so the pivot lands where it was asked to.
+ *
+ * The drawing loops walk the bounding box and map each of its pixels back onto the source
+ * with the forward rotation matrix, so the pivot travels the other way, through the inverse
+ * of that same matrix. Deriving the offset from the matrix the loops already use is what
+ * keeps the 90, 180 and 270 degree shortcuts in agreement with the general rotation: the
+ * pivot can't disagree with a rotation it was transformed by.
+ *
+ * @param srcWidth The width of the portion of the source that is being drawn.
+ * @param srcHeight The height of the portion of the source that is being drawn.
+ * @param bboxWidth The width of the bounding box that the rotated draw fills.
+ * @param bboxHeight The height of the bounding box that the rotated draw fills.
+ * @param cosTheta The cosine of the rotation.
+ * @param sinTheta The sine of the rotation.
+ * @param scaleX The scale that is applied to the width of the source.
+ * @param scaleY The scale that is applied to the height of the source.
+ * @param originX The X pivot, in unrotated and unscaled source pixels.
+ * @param originY The Y pivot, in unrotated and unscaled source pixels.
+ * @param offsetX Where to store the X offset of the pivot within the bounding box.
+ * @param offsetY Where to store the Y offset of the pivot within the bounding box.
+ *
+ * @internal
+ */
+static void _pntr_rotation_pivot_offset(int srcWidth, int srcHeight, int bboxWidth, int bboxHeight, float cosTheta, float sinTheta, float scaleX, float scaleY, float originX, float originY, int* offsetX, int* offsetY) {
+    // The center of the pivot pixel, measured out from the center of the scaled source.
+    // Rotation happens around that center, which is why the pivot is relative to it.
+    float pivotX = (originX + 0.5f) * scaleX - (float)srcWidth * scaleX / 2.0f;
+    float pivotY = (originY + 0.5f) * scaleY - (float)srcHeight * scaleY / 2.0f;
+
+    // The bounding box center is the integer division the drawing loops use, so that the
+    // offset describes the pixel the loops actually sample the pivot from.
+    *offsetX = (int)PNTR_FLOORF((float)(bboxWidth / 2) + pivotX * cosTheta + pivotY * sinTheta);
+    *offsetY = (int)PNTR_FLOORF((float)(bboxHeight / 2) - pivotX * sinTheta + pivotY * cosTheta);
+}
+
+/**
+ * Draws a source rectangle turned by exactly 90, 180 or 270 degrees.
+ *
+ * @details A quarter turn maps whole source pixels onto whole destination pixels, so the
+ * source is stepped through directly instead of being sampled back through a rotation
+ * matrix. That keeps the bounding box exactly the size of the source rectangle, turned,
+ * rather than the ceiling of a floating point sine and cosine that are only nearly zero
+ * and one.
+ *
+ * Both pntr_draw_image_rotated_rec() and pntr_draw_image_rotozoom() hand their quarter
+ * turns here, which is what makes the two land on exactly the same pixels at those angles
+ * instead of within a pixel of each other. The filter does not come into it, because
+ * every sample falls on a pixel center either way.
+ *
+ * @param dst The image to draw onto.
+ * @param src The image to draw from.
+ * @param srcRect The portion of the source to draw, already clamped to the source image.
+ * @param posX Where to place the pivot, at the X coordinate.
+ * @param posY Where to place the pivot, at the Y coordinate.
+ * @param degrees The turn to apply. Must be exactly 90, 180 or 270.
+ * @param offsetX The X pivot of the rotation, in unrotated source pixels, relative from the source rectangle.
+ * @param offsetY The Y pivot of the rotation, in unrotated source pixels, relative from the source rectangle.
+ * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
+ *
+ * @internal
+ */
+static void _pntr_draw_image_quarter_turn(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_color tint) {
+    // Build the destination coordinates of the image.
+    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
+    if (degrees == 90.0f || degrees == 270.0f) {
+        dstRect.width = srcRect.height;
+        dstRect.height = srcRect.width;
+    }
+
+    // The exact sine and cosine of the quarter turn, so that the pivot of the shortcut is
+    // the same one the general rotation would have arrived at.
+    int offsetXRatio, offsetYRatio;
+    _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, dstRect.width, dstRect.height,
+        degrees == 180.0f ? -1.0f : 0.0f,
+        degrees == 90.0f ? 1.0f : (degrees == 270.0f ? -1.0f : 0.0f),
+        1.0f, 1.0f, offsetX, offsetY,
+        &offsetXRatio, &offsetYRatio);
+
+    dstRect.x -= offsetXRatio;
+    dstRect.y -= offsetYRatio;
+
+    // Exit if it's not even on the screen.
+    if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
+        return;
+    }
+
+    // Draw the source portion on the destination.
+    for (int y = 0; y < srcRect.height; y++) {
+        for (int x = 0; x < srcRect.width; x++) {
+            pntr_color color = PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y);
+            if (tint.value != PNTR_WHITE_VALUE) {
+                color = pntr_color_tint(color, tint);
+            }
+
+            if (degrees == 90.0f) {
+                pntr_draw_point(dst, dstRect.x + y, dstRect.y + srcRect.width - 1 - x, color);
+            } else if (degrees == 180.0f) {
+                pntr_draw_point(dst, dstRect.x + srcRect.width - 1 - x, dstRect.y + srcRect.height - 1 - y, color);
+            } else {
+                pntr_draw_point(dst, dstRect.x + srcRect.height - 1 - y, dstRect.y + x, color);
+            }
+        }
+    }
+}
+
+/**
  * Draw a rotated and scaled portion of an image onto another image.
+ *
+ * @details The origin is a pivot, given in unrotated and unscaled source pixels. The source
+ * pixel at the origin is placed on the destination at (posX, posY) for every rotation and
+ * every scale, so rotating a sprite about a chosen point is a matter of naming that point
+ * once and then only changing the rotation. An origin of half the source width and height
+ * spins the image in place around its own center.
+ *
+ * At a scale of 1 this draws exactly what pntr_draw_image_rotated_rec() draws for the same
+ * origin, at every angle, so the two can be swapped for one another freely.
  *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
  * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, the full image width or height are used.
- * @param posX Where to draw the image, at the X coordinate.
- * @param posY Where to draw the image, at the Y coordinate.
+ * @param posX Where to place the origin of the image, at the X coordinate.
+ * @param posY Where to place the origin of the image, at the Y coordinate.
  * @param rotation The rotation to apply to the image, in degrees.
  * @param scaleX The scale of which to apply to the width of the image.
  * @param scaleY The scale of which to apply to the height of the image.
- * @param originX The X origin of the rotation and scaling, relative from the original source size.
- * @param originY The Y origin of the rotation and scaling, relative from the original source size.
+ * @param originX The X pivot of the rotation and scaling, in unrotated and unscaled source pixels, relative from the source rectangle. The source pixel there lands on posX.
+ * @param originY The Y pivot of the rotation and scaling, in unrotated and unscaled source pixels, relative from the source rectangle. The source pixel there lands on posY.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
  * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
  *
@@ -5867,9 +6500,19 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
         return;
     }
 
-    rotation = (rotation < 0) ? 360.0f - PNTR_FMODF(-rotation, 360.0f) : PNTR_FMODF(rotation, 360.0f);
+    rotation = _pntr_normalize_degrees(rotation);
     if (rotation == 0.0f) {
         pntr_draw_image_scaled_rec(dst, src, srcRect, posX, posY, scaleX, scaleY, originX, originY, filter, tint);
+        return;
+    }
+
+    // An unscaled quarter turn maps whole source pixels onto whole destination pixels, so
+    // it takes the same shortcut pntr_draw_image_rotated_rec() does and lands on exactly
+    // the same pixels as it would for the same pivot. A scale other than one has no
+    // unscaled draw to agree with, so it goes through the general rotation below, which
+    // keeps the pivot on the position to within the rounding of a scaled pixel.
+    if (scaleX == 1.0f && scaleY == 1.0f && (rotation == 90.0f || rotation == 180.0f || rotation == 270.0f)) {
+        _pntr_draw_image_quarter_turn(dst, src, srcRect, posX, posY, rotation, originX, originY, tint);
         return;
     }
 
@@ -5883,8 +6526,10 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
     int newWidth = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * cosTheta) + PNTR_FABSF(scaledHeight * sinTheta));
     int newHeight = (int)PNTR_CEILF(PNTR_FABSF(scaledWidth * sinTheta) + PNTR_FABSF(scaledHeight * cosTheta));
 
-    int offsetXRatio = (int)(originX / (float)srcRect.width * (float)newWidth);
-    int offsetYRatio = (int)(originY / (float)srcRect.height * (float)newHeight);
+    int offsetXRatio, offsetYRatio;
+    _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, newWidth, newHeight,
+        cosTheta, sinTheta, scaleX, scaleY, originX, originY,
+        &offsetXRatio, &offsetYRatio);
 
     if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width ||
         posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {
@@ -5944,30 +6589,6 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
 }
 
 /**
- * Normalizes a degree of rotation between 0 and 360 degrees.
- *
- * @param degrees The angle to normalize.
- *
- * @return The new degrees represented between 0 and 360.
- *
- * @internal
- */
-static float _pntr_normalize_degrees(float degrees) {
-    if (degrees < 0) {
-        float remainder = PNTR_FMODF(-degrees, 360.0f);
-
-        // An exact negative multiple of 360 is a full rotation, which is 0 rather than 360.
-        if (remainder == 0.0f) {
-            return 0.0f;
-        }
-
-        return 360.0f - remainder;
-    }
-
-    return PNTR_FMODF(degrees, 360.0f);
-}
-
-/**
  * Creates a new image based off the given image, that's rotated by the given degrees.
  *
  * @param image The image to rotate.
@@ -5989,6 +6610,12 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
         return pntr_image_copy(image);
     }
 
+    // The output is sized to hold the whole rotation, so the pivot of the draw is the center
+    // of the source spun onto the center of the output. Any other pivot would carry part of
+    // the image off of the edge of an image that was made to fit all of it.
+    float originX = ((float)image->width - 1.0f) / 2.0f;
+    float originY = ((float)image->height - 1.0f) / 2.0f;
+
     if (degrees == 90.0f || degrees == 180.0f || degrees == 270.0f) {
         pntr_image* output;
         if (degrees == 180.0f) {
@@ -6001,7 +6628,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
             return NULL;
         }
 
-        pntr_draw_image_rotated(output, image, 0, 0, degrees, 0.0f, 0.0f, filter);
+        pntr_draw_image_rotated(output, image, output->width / 2, output->height / 2, degrees, originX, originY, filter);
 
         return output;
     }
@@ -6018,7 +6645,7 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
         return NULL;
     }
 
-    pntr_draw_image_rotated(rotatedImage, image, 0, 0, degrees, 0.0f, 0.0f, filter);
+    pntr_draw_image_rotated(rotatedImage, image, newWidth / 2, newHeight / 2, degrees, originX, originY, filter);
 
     return rotatedImage;
 }
@@ -6052,13 +6679,19 @@ PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_col
 /**
  * Draw a rotated image onto another image.
  *
+ * @details The offset is a pivot, given in unrotated source pixels. The source pixel at the
+ * offset is placed on the destination at (posX, posY) for every angle of rotation, so
+ * spinning a sprite about a chosen point is a matter of naming that point once and then only
+ * changing the rotation. An offset of half the source width and height spins the image in
+ * place around its own center.
+ *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
- * @param posX Where to draw the rotated image, at the X coordinate.
- * @param posY Where to draw the rotated image, at the Y coordinate.
+ * @param posX Where to place the offset of the rotated image, at the X coordinate.
+ * @param posY Where to place the offset of the rotated image, at the Y coordinate.
  * @param degrees The degrees of rotation.
- * @param offsetX Offset in the X direction after rotation.
- * @param offsetY Offset in the Y direction after rotation.
+ * @param offsetX The X pivot of the rotation, in unrotated source pixels. The source pixel there lands on posX.
+ * @param offsetY The Y pivot of the rotation, in unrotated source pixels. The source pixel there lands on posY.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
  *
  * @see pntr_draw_image_rec_rotated()
@@ -6080,14 +6713,20 @@ PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX
 /**
  * Draw a rotated portion of an image onto another image.
  *
+ * @details The offset is a pivot, given in unrotated source pixels, relative from the source
+ * rectangle. The source pixel at the offset is placed on the destination at (posX, posY) for
+ * every angle of rotation, so spinning a sprite about a chosen point is a matter of naming
+ * that point once and then only changing the rotation. An offset of half the source
+ * rectangle's width and height spins the image in place around its own center.
+ *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
- * @param srcRect The portion of the source image to draw.
- * @param posX Where to draw the rotated image, at the X coordinate.
- * @param posY Where to draw the rotated image, at the Y coordinate.
+ * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, the full image width or height are used.
+ * @param posX Where to place the offset of the rotated image, at the X coordinate.
+ * @param posY Where to place the offset of the rotated image, at the Y coordinate.
  * @param degrees The degrees of rotation.
- * @param offsetX Offset in the X direction after rotation.
- * @param offsetY Offset in the Y direction after rotation.
+ * @param offsetX The X pivot of the rotation, in unrotated source pixels, relative from the source rectangle. The source pixel there lands on posX.
+ * @param offsetY The Y pivot of the rotation, in unrotated source pixels, relative from the source rectangle. The source pixel there lands on posY.
  * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
  *
  * @see pntr_draw_image_rotated()
@@ -6099,13 +6738,8 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
 
     degrees = _pntr_normalize_degrees(degrees);
 
-    // Draw the image normally if not rotated.
-    if (degrees == 0.0f) {
-        pntr_draw_image_rec(dst, src, srcRect, posX - (int)offsetX, posY - (int)offsetY);
-        return;
-    }
-
-    // Make sure the source rectangle is within the bounds of the source image.
+    // Make sure the source rectangle is within the bounds of the source image. The pivot is
+    // relative from the source rectangle, so its size has to be known before the offset is.
     if (!_pntr_rectangle_intersect(srcRect.x, srcRect.y,
             srcRect.width <= 0 ? src->width : srcRect.width,
             srcRect.height <= 0 ? src->height : srcRect.height,
@@ -6114,52 +6748,21 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
         return;
     }
 
+    int offsetXRatio, offsetYRatio;
+
+    // Draw the image normally if not rotated.
+    if (degrees == 0.0f) {
+        _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, srcRect.width, srcRect.height,
+            1.0f, 0.0f, 1.0f, 1.0f, offsetX, offsetY,
+            &offsetXRatio, &offsetYRatio);
+
+        pntr_draw_image_rec(dst, src, srcRect, posX - offsetXRatio, posY - offsetYRatio);
+        return;
+    }
+
     // Simple rotation by 90 degrees can be fast.
     if (degrees == 90.0f || degrees == 180.0f || degrees == 270.0f) {
-        // Build the destination coordinates of the image.
-        pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = posX, .y = posY, .width = srcRect.width, .height = srcRect.height };
-        if (degrees == 90.0f || degrees == 270.0f) {
-            dstRect.width = srcRect.height;
-            dstRect.height = srcRect.width;
-            dstRect.x -= (int)offsetY;
-            dstRect.y -= (int)offsetX;
-        }
-        else {
-            dstRect.x -= (int)offsetX;
-            dstRect.y -= (int)offsetY;
-        }
-
-        // Exit if it's not even on the screen.
-        if (dstRect.x + dstRect.width < dst->clip.x || dstRect.y + dstRect.height < dst->clip.y || dstRect.x >= dst->clip.x + dst->clip.width || dstRect.y >= dst->clip.y + dst->clip.height) {
-            return;
-        }
-
-        // Draw the source portion on the destination.
-        for (int y = 0; y < srcRect.height; y++) {
-            for (int x = 0; x < srcRect.width; x++) {
-                if (degrees == 90.0f) {
-                    pntr_draw_point(dst,
-                        dstRect.x + y,
-                        dstRect.y + srcRect.width - 1 - x,
-                        PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
-                    );
-                } else if (degrees == 180.0f) {
-                    pntr_draw_point(dst,
-                        dstRect.x + srcRect.width - 1 - x,
-                        dstRect.y + srcRect.height - 1 - y,
-                        PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
-                    );
-                }
-                else {
-                    pntr_draw_point(dst,
-                        dstRect.x + srcRect.height - 1 - y,
-                        dstRect.y + x,
-                        PNTR_PIXEL(src, srcRect.x + x, srcRect.y + y)
-                    );
-                }
-            }
-        }
-
+        _pntr_draw_image_quarter_turn(dst, src, srcRect, posX, posY, degrees, offsetX, offsetY, PNTR_WHITE);
         return;
     }
 
@@ -6170,8 +6773,9 @@ PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr
     int newWidth = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * cosTheta) + PNTR_FABSF((float)srcRect.height * sinTheta));
     int newHeight = (int)PNTR_CEILF(PNTR_FABSF((float)srcRect.width * sinTheta) + PNTR_FABSF((float)srcRect.height * cosTheta));
 
-    int offsetXRatio = (int)(offsetX / (float)srcRect.width * (float)newWidth);
-    int offsetYRatio = (int)(offsetY / (float)srcRect.height * (float)newHeight);
+    _pntr_rotation_pivot_offset(srcRect.width, srcRect.height, newWidth, newHeight,
+        cosTheta, sinTheta, 1.0f, 1.0f, offsetX, offsetY,
+        &offsetXRatio, &offsetYRatio);
 
     // Make sure we're actually drawing on the screen.
     if (posX - offsetXRatio + newWidth < dst->clip.x || posX - offsetXRatio >= dst->clip.x + dst->clip.width || posY - offsetYRatio + newHeight < dst->clip.y || posY - offsetYRatio >= dst->clip.y + dst->clip.height) {

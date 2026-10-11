@@ -26,9 +26,11 @@ void pntr_examples_image() {
     // Draw the resized image
     pntr_draw_image_flipped(canvas, image, 240, 30, true, false, true);
 
-    // Draw a rotated and scaled image
+    // Draw a rotated and scaled image. The origin is a pivot, in unrotated and unscaled
+    // source pixels, and the source pixel there is placed on the position given, so naming
+    // the center of the image spins and scales it around the point it is drawn at.
     pntr_rectangle fullRect = { 0, 0, 0, 0 };
-    pntr_draw_image_rotozoom(canvas, image, fullRect, 225, 140, 45.0f, 0.5f, 0.5f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_GREEN);
+    pntr_draw_image_rotozoom(canvas, image, fullRect, 270, 185, 45.0f, 0.5f, 0.5f, image->width / 2.0f, image->height / 2.0f, PNTR_FILTER_BILINEAR, PNTR_GREEN);
 
     pntr_save_image(canvas, "pntr_examples_image.png");
 

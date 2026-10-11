@@ -192,6 +192,323 @@ bool pntr_test_directory_opens() {
     return true;
 }
 
+/**
+ * The color that the drawing bounds tests use as their background.
+ *
+ * Anything that is not this color counts as painted, which is what lets a test state the
+ * exact bounds a primitive is expected to cover.
+ */
+#define PNTR_TEST_BACKGROUND PNTR_WHITE
+
+/**
+ * The exact bounds of everything that has been painted onto the given image.
+ *
+ * @details Returns the smallest rectangle that holds every pixel which is not the given
+ * background color, so asserting it against a rectangle states where a primitive starts
+ * and where it stops, in both directions, in a single assertion. An image that has
+ * nothing painted on it reports a rectangle of no size at the origin.
+ *
+ * This is what pins down the bounds convention: a primitive given endpoints covers them
+ * both, and one given an extent stops one short of it. Canvases from
+ * pntr_test_canvas() pass PNTR_TEST_BACKGROUND; the rotated draws land on their own
+ * background, so they pass that instead.
+ */
+pntr_rectangle pntr_test_painted_bounds(pntr_image* image, pntr_color background) {
+    pntr_rectangle bounds = PNTR_CLITERAL(pntr_rectangle) {0, 0, 0, 0};
+    if (image == NULL) {
+        return bounds;
+    }
+
+    int left = image->width;
+    int top = image->height;
+    int right = -1;
+    int bottom = -1;
+
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_image_get_color(image, x, y).value == background.value) {
+                continue;
+            }
+
+            if (x < left) {
+                left = x;
+            }
+            if (x > right) {
+                right = x;
+            }
+            if (y < top) {
+                top = y;
+            }
+            if (y > bottom) {
+                bottom = y;
+            }
+        }
+    }
+
+    if (right < left || bottom < top) {
+        return bounds;
+    }
+
+    bounds.x = left;
+    bounds.y = top;
+    bounds.width = right - left + 1;
+    bounds.height = bottom - top + 1;
+
+    return bounds;
+}
+
+/**
+ * How many pixels of the given PNTR_TEST_BACKGROUND canvas have been painted on.
+ *
+ * @see pntr_test_painted_bounds()
+ */
+int pntr_test_painted_count(pntr_image* image) {
+    if (image == NULL) {
+        return 0;
+    }
+
+    int count = 0;
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_image_get_color(image, x, y).value != PNTR_TEST_BACKGROUND.value) {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
+/**
+ * Whether the given pixel of a PNTR_TEST_BACKGROUND canvas has been painted on.
+ *
+ * @see pntr_test_painted_bounds()
+ */
+bool pntr_test_painted(pntr_image* image, int x, int y) {
+    return pntr_image_get_color(image, x, y).value != PNTR_TEST_BACKGROUND.value;
+}
+
+/**
+ * A fresh background-colored image for the drawing bounds tests to paint onto.
+ */
+pntr_image* pntr_test_canvas(int width, int height) {
+    return pntr_gen_image_color(width, height, PNTR_TEST_BACKGROUND);
+}
+
+/**
+ * How many pixels of one image are painted where the other is not.
+ *
+ * @details Zero means the second image covers everything the first one painted. The two
+ * have to be the same size, which is what lets a test compare an outline against its own
+ * fill pixel for pixel rather than only comparing their bounds.
+ */
+int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
+    if (painted == NULL || cover == NULL || painted->width != cover->width || painted->height != cover->height) {
+        return -1;
+    }
+
+    int uncovered = 0;
+    for (int y = 0; y < painted->height; y++) {
+        for (int x = 0; x < painted->width; x++) {
+            if (pntr_test_painted(painted, x, y) && !pntr_test_painted(cover, x, y)) {
+                uncovered++;
+            }
+        }
+    }
+
+    return uncovered;
+}
+
+/**
+ * How many pixels of an ellipse's outline the matching fill leaves unpainted.
+ *
+ * @details Draws pntr_draw_ellipse() and pntr_draw_ellipse_fill() onto their own canvas
+ * at the same center and radii, and counts the outline pixels the fill misses, so zero
+ * means the fill registers exactly with the outline. Both walk the same midpoint
+ * traversal, so sweeping the radii through this is what keeps them in step.
+ */
+int pntr_test_unfilled_ellipse(int radiusX, int radiusY) {
+    int width = radiusX * 2 + 5;
+    int height = radiusY * 2 + 5;
+
+    pntr_image* outline = pntr_test_canvas(width, height);
+    pntr_image* fill = pntr_test_canvas(width, height);
+    if (outline == NULL || fill == NULL) {
+        pntr_unload_image(outline);
+        pntr_unload_image(fill);
+        return -1;
+    }
+
+    pntr_draw_ellipse(outline, width / 2, height / 2, radiusX, radiusY, PNTR_RED);
+    pntr_draw_ellipse_fill(fill, width / 2, height / 2, radiusX, radiusY, PNTR_RED);
+
+    int uncovered = pntr_test_uncovered(outline, fill);
+
+    pntr_unload_image(outline);
+    pntr_unload_image(fill);
+
+    return uncovered;
+}
+
+/**
+ * How many pixels of a circle's outline the matching fill leaves unpainted.
+ *
+ * @see pntr_test_unfilled_ellipse()
+ */
+int pntr_test_unfilled_circle(int radius) {
+    int size = radius * 2 + 5;
+
+    pntr_image* outline = pntr_test_canvas(size, size);
+    pntr_image* fill = pntr_test_canvas(size, size);
+    if (outline == NULL || fill == NULL) {
+        pntr_unload_image(outline);
+        pntr_unload_image(fill);
+        return -1;
+    }
+
+    pntr_draw_circle(outline, size / 2, size / 2, radius, PNTR_RED);
+    pntr_draw_circle_fill(fill, size / 2, size / 2, radius, PNTR_RED);
+
+    int uncovered = pntr_test_uncovered(outline, fill);
+
+    pntr_unload_image(outline);
+    pntr_unload_image(fill);
+
+    return uncovered;
+}
+
+/**
+ * A blue source image carrying a red marker centered on the given pivot.
+ *
+ * The rotated drawing paths place the source pixel at their offset onto the destination
+ * position they were given, so following this marker is how a test holds a draw to its
+ * pivot without having to know which path, bounding box or filter the angle took.
+ *
+ * The marker is three pixels across so that at least one of its pixels is sure to survive
+ * nearest neighbor sampling, whatever angle the draw lands on.
+ */
+pntr_image* pntr_test_pivot_source(int width, int height, int pivotX, int pivotY) {
+    pntr_image* src = pntr_gen_image_color(width, height, PNTR_BLUE);
+    if (src == NULL) {
+        return NULL;
+    }
+
+    pntr_draw_rectangle_fill(src, pivotX - 1, pivotY - 1, 3, 3, PNTR_RED);
+
+    return src;
+}
+
+/**
+ * How far the marker of pntr_test_pivot_source() landed from the given position.
+ *
+ * Measured in whole pixels, from the average position of the marker, as the larger of the
+ * two axes. A rotation that honours its pivot keeps this within a pixel of zero.
+ *
+ * @return The distance, or the width of the image when none of the marker was drawn.
+ */
+int pntr_test_pivot_offset(pntr_image* image, int posX, int posY) {
+    long sumX = 0;
+    long sumY = 0;
+    long count = 0;
+
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_image_get_color(image, x, y).value == PNTR_RED.value) {
+                sumX += x;
+                sumY += y;
+                count++;
+            }
+        }
+    }
+
+    if (count == 0) {
+        return image->width;
+    }
+
+    int deltaX = (int)(sumX / count) - posX;
+    int deltaY = (int)(sumY / count) - posY;
+    if (deltaX < 0) {
+        deltaX = -deltaX;
+    }
+    if (deltaY < 0) {
+        deltaY = -deltaY;
+    }
+
+    return deltaX > deltaY ? deltaX : deltaY;
+}
+
+/**
+ * The largest difference, in pixels, between the edges of two rectangles.
+ */
+int pntr_test_rectangle_distance(pntr_rectangle a, pntr_rectangle b) {
+    int deltas[4];
+    deltas[0] = a.x - b.x;
+    deltas[1] = a.y - b.y;
+    deltas[2] = a.x + a.width - (b.x + b.width);
+    deltas[3] = a.y + a.height - (b.y + b.height);
+
+    int largest = 0;
+    for (int i = 0; i < 4; i++) {
+        int delta = deltas[i] < 0 ? -deltas[i] : deltas[i];
+        if (delta > largest) {
+            largest = delta;
+        }
+    }
+
+    return largest;
+}
+
+/**
+ * Where a rotated draw of the given source lands on a destination, at the given pivot.
+ *
+ * The destination is large enough that nothing is ever clipped away, which is what lets the
+ * returned rectangle be compared from one angle to the next. Sweeping the angle and watching
+ * it is how the tests hold the rotated drawing paths to a continuous position: a pivot that
+ * is rotated along with the image moves the drawn area by at most a pixel between
+ * neighbouring angles, while one that isn't jumps the moment an exact quarter turn hands the
+ * draw to a different path.
+ */
+pntr_rectangle pntr_test_rotated_bounds(pntr_image* src, float degrees, float offsetX, float offsetY) {
+    pntr_rectangle empty = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 0 };
+
+    pntr_image* dst = pntr_gen_image_color(160, 160, PNTR_GREEN);
+    if (dst == NULL) {
+        return empty;
+    }
+
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
+    pntr_draw_image_rotated_rec(dst, src, srcRect, 80, 80, degrees, offsetX, offsetY, PNTR_FILTER_NEARESTNEIGHBOR);
+
+    pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_GREEN);
+    pntr_unload_image(dst);
+
+    return bounds;
+}
+
+/**
+ * Where a rotozoomed draw of the given source lands on a destination, at the given pivot and scale.
+ *
+ * @details The scaled counterpart to pntr_test_rotated_bounds(), and read the same way.
+ * The destination is big enough for twice the source at any angle, so the rectangle stays
+ * comparable from one angle to the next even when nothing is clipped.
+ */
+pntr_rectangle pntr_test_rotozoom_bounds(pntr_image* src, float degrees, float originX, float originY, float scale) {
+    pntr_rectangle empty = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = 0, .height = 0 };
+
+    pntr_image* dst = pntr_gen_image_color(260, 260, PNTR_GREEN);
+    if (dst == NULL) {
+        return empty;
+    }
+
+    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height };
+    pntr_draw_image_rotozoom(dst, src, srcRect, 130, 130, degrees, scale, scale, originX, originY, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+    pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_GREEN);
+    pntr_unload_image(dst);
+
+    return bounds;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -997,9 +1314,768 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("primitive bounds", {
+        // Every test here asserts the exact rectangle that a primitive paints, which is
+        // what states the bounds convention: a primitive given endpoints covers both of
+        // them, and one given a width and a height stops one pixel short of them.
+
+        IT("pntr_draw_line() covers both endpoints", {
+            pntr_rectangle bounds;
+
+            IT("pntr_draw_line() horizontally", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_line(image, 5, 20, 15, 20, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 20, 11, 1};
+                RECTEQUALS(bounds, expected);
+
+                // Both endpoints, and nothing past either of them.
+                EQUALS(pntr_test_painted(image, 5, 20), true);
+                EQUALS(pntr_test_painted(image, 15, 20), true);
+                EQUALS(pntr_test_painted(image, 4, 20), false);
+                EQUALS(pntr_test_painted(image, 16, 20), false);
+                EQUALS(pntr_test_painted_count(image), 11);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line() horizontally, from right to left", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                // Reversing the endpoints paints the very same pixels.
+                pntr_draw_line(image, 15, 20, 5, 20, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 20, 11, 1};
+                RECTEQUALS(bounds, expected);
+                EQUALS(pntr_test_painted_count(image), 11);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line() vertically", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_line(image, 20, 5, 20, 15, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {20, 5, 1, 11};
+                RECTEQUALS(bounds, expected);
+
+                EQUALS(pntr_test_painted(image, 20, 5), true);
+                EQUALS(pntr_test_painted(image, 20, 15), true);
+                EQUALS(pntr_test_painted(image, 20, 4), false);
+                EQUALS(pntr_test_painted(image, 20, 16), false);
+                EQUALS(pntr_test_painted_count(image), 11);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line() vertically, from bottom to top", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_line(image, 20, 15, 20, 5, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {20, 5, 1, 11};
+                RECTEQUALS(bounds, expected);
+                EQUALS(pntr_test_painted_count(image), 11);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line() diagonally", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_line(image, 5, 5, 15, 15, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 11, 11};
+                RECTEQUALS(bounds, expected);
+
+                EQUALS(pntr_test_painted(image, 5, 5), true);
+                EQUALS(pntr_test_painted(image, 15, 15), true);
+                EQUALS(pntr_test_painted(image, 4, 4), false);
+                EQUALS(pntr_test_painted(image, 16, 16), false);
+                EQUALS(pntr_test_painted_count(image), 11);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line() on a shallow diagonal", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_line(image, 5, 10, 25, 14, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 10, 21, 5};
+                RECTEQUALS(bounds, expected);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line() with both endpoints on the same pixel", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                // A line of no length still covers the one pixel it is given.
+                pntr_draw_line(image, 20, 20, 20, 20, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {20, 20, 1, 1};
+                RECTEQUALS(bounds, expected);
+                EQUALS(pntr_test_painted_count(image), 1);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line_aa() covers both endpoints", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                // The axis-aligned cases of the anti-aliased line run the same lengths.
+                pntr_draw_line_aa(image, 5, 20, 15, 20, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 20, 11, 1};
+                RECTEQUALS(bounds, expected);
+
+                pntr_clear_background(image, PNTR_TEST_BACKGROUND);
+                pntr_draw_line_aa(image, 20, 5, 20, 15, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expectedVertical = PNTR_CLITERAL(pntr_rectangle) {20, 5, 1, 11};
+                RECTEQUALS(bounds, expectedVertical);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_polyline() covers its first and last point", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_vector points[3];
+                points[0] = PNTR_CLITERAL(pntr_vector) {5, 5};
+                points[1] = PNTR_CLITERAL(pntr_vector) {25, 5};
+                points[2] = PNTR_CLITERAL(pntr_vector) {25, 25};
+                pntr_draw_polyline(image, points, 3, PNTR_RED);
+
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
+                RECTEQUALS(bounds, expected);
+
+                // The corner where the two lines meet, and both loose ends.
+                EQUALS(pntr_test_painted(image, 5, 5), true);
+                EQUALS(pntr_test_painted(image, 25, 5), true);
+                EQUALS(pntr_test_painted(image, 25, 25), true);
+
+                // The polyline is not closed, so the fourth corner stays clear.
+                EQUALS(pntr_test_painted(image, 5, 25), false);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_line_curve() covers its first and last point", {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_vector start = PNTR_CLITERAL(pntr_vector) {5, 30};
+                pntr_vector control1 = PNTR_CLITERAL(pntr_vector) {5, 5};
+                pntr_vector control2 = PNTR_CLITERAL(pntr_vector) {30, 5};
+                pntr_vector end = PNTR_CLITERAL(pntr_vector) {30, 30};
+                pntr_draw_line_curve(image, start, control1, control2, end, 24, PNTR_RED);
+
+                EQUALS(pntr_test_painted(image, 5, 30), true);
+                EQUALS(pntr_test_painted(image, 30, 30), true);
+
+                pntr_unload_image(image);
+            });
+        });
+
+        IT("pntr_draw_polygon() closes its corners", {
+            pntr_image* image = pntr_test_canvas(40, 40);
+            NEQUALS(image, NULL);
+
+            pntr_vector points[4];
+            points[0] = PNTR_CLITERAL(pntr_vector) {5, 5};
+            points[1] = PNTR_CLITERAL(pntr_vector) {25, 5};
+            points[2] = PNTR_CLITERAL(pntr_vector) {25, 25};
+            points[3] = PNTR_CLITERAL(pntr_vector) {5, 25};
+            pntr_draw_polygon(image, points, 4, PNTR_RED);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
+            RECTEQUALS(bounds, expected);
+
+            // All four corners of an axis-aligned square, with no hole in any of them.
+            EQUALS(pntr_test_painted(image, 5, 5), true);
+            EQUALS(pntr_test_painted(image, 25, 5), true);
+            EQUALS(pntr_test_painted(image, 25, 25), true);
+            EQUALS(pntr_test_painted(image, 5, 25), true);
+
+            // And no hole anywhere along the four edges either.
+            for (int i = 5; i <= 25; i++) {
+                EQUALS(pntr_test_painted(image, i, 5), true);
+                EQUALS(pntr_test_painted(image, i, 25), true);
+                EQUALS(pntr_test_painted(image, 5, i), true);
+                EQUALS(pntr_test_painted(image, 25, i), true);
+            }
+
+            // The outline is hollow.
+            EQUALS(pntr_test_painted(image, 15, 15), false);
+            EQUALS(pntr_test_painted_count(image), 21 * 4 - 4);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_polygon_fill() covers the bounds of its points", {
+            pntr_image* image = pntr_test_canvas(40, 40);
+            NEQUALS(image, NULL);
+
+            pntr_vector points[4];
+            points[0] = PNTR_CLITERAL(pntr_vector) {5, 5};
+            points[1] = PNTR_CLITERAL(pntr_vector) {25, 5};
+            points[2] = PNTR_CLITERAL(pntr_vector) {25, 25};
+            points[3] = PNTR_CLITERAL(pntr_vector) {5, 25};
+            pntr_draw_polygon_fill(image, points, 4, PNTR_RED);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
+            RECTEQUALS(bounds, expected);
+
+            // A square's fill is solid, so it covers every pixel of its own bounds.
+            EQUALS(pntr_test_painted_count(image), 21 * 21);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_polygon_fill() reaches pntr_draw_polygon()", {
+            pntr_image* outline = pntr_test_canvas(40, 40);
+            pntr_image* fill = pntr_test_canvas(40, 40);
+            NEQUALS(outline, NULL);
+            NEQUALS(fill, NULL);
+
+            pntr_vector points[5];
+            points[0] = PNTR_CLITERAL(pntr_vector) {20, 4};
+            points[1] = PNTR_CLITERAL(pntr_vector) {34, 18};
+            points[2] = PNTR_CLITERAL(pntr_vector) {26, 34};
+            points[3] = PNTR_CLITERAL(pntr_vector) {12, 32};
+            points[4] = PNTR_CLITERAL(pntr_vector) {4, 14};
+            pntr_draw_polygon(outline, points, 5, PNTR_RED);
+            pntr_draw_polygon_fill(fill, points, 5, PNTR_RED);
+
+            // The fill occupies the same bounds as the outline it belongs to.
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(fillBounds, outlineBounds);
+
+            // And reaches every corner, rather than stopping one short of them. The rest
+            // of the outline is not compared pixel for pixel, because a line stepped
+            // along a shallow edge rounds out as far as half a pixel past the edge
+            // itself, which puts it outside the shape the fill covers.
+            for (int i = 0; i < 5; i++) {
+                EQUALS(pntr_test_painted(fill, points[i].x, points[i].y), true);
+            }
+
+            pntr_unload_image(outline);
+            pntr_unload_image(fill);
+        });
+
+        IT("pntr_draw_polygon_fill() covers pntr_draw_polygon() of a square", {
+            pntr_image* outline = pntr_test_canvas(40, 40);
+            pntr_image* fill = pntr_test_canvas(40, 40);
+            NEQUALS(outline, NULL);
+            NEQUALS(fill, NULL);
+
+            pntr_vector points[4];
+            points[0] = PNTR_CLITERAL(pntr_vector) {5, 5};
+            points[1] = PNTR_CLITERAL(pntr_vector) {25, 5};
+            points[2] = PNTR_CLITERAL(pntr_vector) {25, 25};
+            points[3] = PNTR_CLITERAL(pntr_vector) {5, 25};
+            pntr_draw_polygon(outline, points, 4, PNTR_RED);
+            pntr_draw_polygon_fill(fill, points, 4, PNTR_RED);
+
+            // An axis-aligned square has no shallow edges to round out, so here the fill
+            // does cover every single pixel of the outline.
+            for (int y = 0; y < 40; y++) {
+                for (int x = 0; x < 40; x++) {
+                    if (pntr_test_painted(outline, x, y)) {
+                        EQUALS(pntr_test_painted(fill, x, y), true);
+                    }
+                }
+            }
+
+            pntr_unload_image(outline);
+            pntr_unload_image(fill);
+        });
+
+        IT("pntr_draw_triangle_fill() covers the bounds of its points", {
+            pntr_image* image = pntr_test_canvas(40, 40);
+            NEQUALS(image, NULL);
+
+            pntr_draw_triangle_fill(image, 15, 5, 5, 25, 25, 25, PNTR_RED);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
+            RECTEQUALS(bounds, expected);
+
+            // The apex row and the base row are both filled.
+            EQUALS(pntr_test_painted(image, 15, 5), true);
+            EQUALS(pntr_test_painted(image, 5, 25), true);
+            EQUALS(pntr_test_painted(image, 25, 25), true);
+            EQUALS(pntr_test_painted(image, 15, 25), true);
+
+            // Outside the triangle, in the corners its edges cut off.
+            EQUALS(pntr_test_painted(image, 5, 5), false);
+            EQUALS(pntr_test_painted(image, 25, 5), false);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_triangle_fill() reaches pntr_draw_triangle()", {
+            pntr_image* outline = pntr_test_canvas(40, 40);
+            pntr_image* fill = pntr_test_canvas(40, 40);
+            NEQUALS(outline, NULL);
+            NEQUALS(fill, NULL);
+
+            pntr_draw_triangle(outline, 15, 5, 5, 25, 32, 20, PNTR_RED);
+            pntr_draw_triangle_fill(fill, 15, 5, 5, 25, 32, 20, PNTR_RED);
+
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(fillBounds, outlineBounds);
+
+            pntr_unload_image(outline);
+            pntr_unload_image(fill);
+        });
+
+        IT("pntr_draw_circle_fill() reaches pntr_draw_circle()", {
+            pntr_image* outline = pntr_test_canvas(40, 40);
+            pntr_image* fill = pntr_test_canvas(40, 40);
+            NEQUALS(outline, NULL);
+            NEQUALS(fill, NULL);
+
+            pntr_draw_circle(outline, 20, 20, 12, PNTR_RED);
+            pntr_draw_circle_fill(fill, 20, 20, 12, PNTR_RED);
+
+            // A radius covers its far pixel, so both are 12 * 2 + 1 across.
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {8, 8, 25, 25};
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(outlineBounds, expected);
+            RECTEQUALS(fillBounds, expected);
+
+            // The fill reaches the outline on all four sides.
+            EQUALS(pntr_test_painted(fill, 8, 20), true);
+            EQUALS(pntr_test_painted(fill, 32, 20), true);
+            EQUALS(pntr_test_painted(fill, 20, 8), true);
+            EQUALS(pntr_test_painted(fill, 20, 32), true);
+
+            // And covers every pixel of it.
+            EQUALS(pntr_test_uncovered(outline, fill), 0);
+
+            pntr_unload_image(outline);
+            pntr_unload_image(fill);
+
+            // At every radius, the same way the ellipse does. The fill walks out from the
+            // same circle equation the outline does, so this already held; asserting it
+            // across a sweep is what stops it from drifting.
+            for (int radius = 1; radius <= 48; radius++) {
+                EQUALS(pntr_test_unfilled_circle(radius), 0);
+            }
+
+            EQUALS(pntr_test_unfilled_circle(120), 0);
+        });
+
+        IT("pntr_draw_ellipse_fill() reaches pntr_draw_ellipse()", {
+            pntr_image* outline = pntr_test_canvas(40, 40);
+            pntr_image* fill = pntr_test_canvas(40, 40);
+            NEQUALS(outline, NULL);
+            NEQUALS(fill, NULL);
+
+            pntr_draw_ellipse(outline, 20, 20, 15, 9, PNTR_RED);
+            pntr_draw_ellipse_fill(fill, 20, 20, 15, 9, PNTR_RED);
+
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 11, 31, 19};
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(outlineBounds, expected);
+            RECTEQUALS(fillBounds, expected);
+
+            // The fill reaches the outline on all four sides.
+            EQUALS(pntr_test_painted(fill, 5, 20), true);
+            EQUALS(pntr_test_painted(fill, 35, 20), true);
+            EQUALS(pntr_test_painted(fill, 20, 11), true);
+            EQUALS(pntr_test_painted(fill, 20, 29), true);
+
+            // And covers every pixel of it. Both walk the same midpoint traversal, so the
+            // fill never leaves the outline outside it, not even along the flat runs at
+            // the extremes where testing each pixel against the ellipse used to.
+            EQUALS(pntr_test_uncovered(outline, fill), 0);
+
+            pntr_unload_image(outline);
+            pntr_unload_image(fill);
+
+            // Every size registers the same way: odd and even radii, both orientations,
+            // and the degenerate radius of one that is a single pixel across.
+            for (int radiusX = 1; radiusX <= 24; radiusX++) {
+                for (int radiusY = 1; radiusY <= 24; radiusY++) {
+                    EQUALS(pntr_test_unfilled_ellipse(radiusX, radiusY), 0);
+                }
+            }
+
+            // Far enough out that the two regions of the midpoint walk are both long.
+            EQUALS(pntr_test_unfilled_ellipse(120, 7), 0);
+            EQUALS(pntr_test_unfilled_ellipse(7, 120), 0);
+            EQUALS(pntr_test_unfilled_ellipse(120, 120), 0);
+        });
+
+        IT("pntr_draw_rectangle() stops short of its width and height", {
+            pntr_image* image = pntr_test_canvas(40, 40);
+            NEQUALS(image, NULL);
+
+            pntr_draw_rectangle(image, 5, 5, 20, 12, PNTR_RED);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 20, 12};
+            RECTEQUALS(bounds, expected);
+
+            EQUALS(pntr_test_painted(image, 24, 16), true);
+            EQUALS(pntr_test_painted(image, 25, 16), false);
+            EQUALS(pntr_test_painted(image, 24, 17), false);
+
+            // Four edges of a hollow rectangle, with each corner counted once.
+            EQUALS(pntr_test_painted_count(image), 20 * 2 + 12 * 2 - 4);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_rectangle_rounded() matches pntr_draw_rectangle()", {
+            pntr_image* plain = pntr_test_canvas(40, 40);
+            pntr_image* rounded = pntr_test_canvas(40, 40);
+            NEQUALS(plain, NULL);
+            NEQUALS(rounded, NULL);
+
+            pntr_draw_rectangle(plain, 5, 5, 24, 16, PNTR_RED);
+            pntr_draw_rectangle_rounded(rounded, 5, 5, 24, 16, 4, 4, 4, 4, PNTR_RED);
+
+            // Rounding the corners does not change which pixels the rectangle occupies.
+            pntr_rectangle plainBounds = pntr_test_painted_bounds(plain, PNTR_TEST_BACKGROUND);
+            pntr_rectangle roundedBounds = pntr_test_painted_bounds(rounded, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(roundedBounds, plainBounds);
+
+            // The corners themselves are the part that is cut away.
+            EQUALS(pntr_test_painted(plain, 5, 5), true);
+            EQUALS(pntr_test_painted(rounded, 5, 5), false);
+            EQUALS(pntr_test_painted(rounded, 28, 20), false);
+
+            // The middle of each edge is still on the edge of the rectangle.
+            EQUALS(pntr_test_painted(rounded, 17, 5), true);
+            EQUALS(pntr_test_painted(rounded, 17, 20), true);
+            EQUALS(pntr_test_painted(rounded, 5, 13), true);
+            EQUALS(pntr_test_painted(rounded, 28, 13), true);
+
+            pntr_unload_image(plain);
+            pntr_unload_image(rounded);
+        });
+
+        IT("pntr_draw_rectangle_rounded_fill() matches pntr_draw_rectangle_fill()", {
+            pntr_image* plain = pntr_test_canvas(40, 40);
+            pntr_image* rounded = pntr_test_canvas(40, 40);
+            pntr_image* outline = pntr_test_canvas(40, 40);
+            NEQUALS(plain, NULL);
+            NEQUALS(rounded, NULL);
+            NEQUALS(outline, NULL);
+
+            pntr_draw_rectangle_fill(plain, 5, 5, 24, 16, PNTR_RED);
+            pntr_draw_rectangle_rounded_fill(rounded, 5, 5, 24, 16, 4, PNTR_RED);
+            pntr_draw_rectangle_rounded(outline, 5, 5, 24, 16, 4, 4, 4, 4, PNTR_RED);
+
+            pntr_rectangle plainBounds = pntr_test_painted_bounds(plain, PNTR_TEST_BACKGROUND);
+            pntr_rectangle roundedBounds = pntr_test_painted_bounds(rounded, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(roundedBounds, plainBounds);
+
+            // The rightmost column and the bottom row are filled, not left behind.
+            EQUALS(pntr_test_painted(rounded, 28, 13), true);
+            EQUALS(pntr_test_painted(rounded, 17, 20), true);
+
+            // The fill reaches every pixel of the outline of the same rectangle.
+            for (int y = 0; y < 40; y++) {
+                for (int x = 0; x < 40; x++) {
+                    if (pntr_test_painted(outline, x, y)) {
+                        EQUALS(pntr_test_painted(rounded, x, y), true);
+                    }
+                }
+            }
+
+            pntr_unload_image(plain);
+            pntr_unload_image(rounded);
+            pntr_unload_image(outline);
+        });
+
+        IT("pntr_draw_rectangle_rounded() clamps an over-large radius", {
+            pntr_image* image = pntr_test_canvas(40, 40);
+            pntr_image* fill = pntr_test_canvas(40, 40);
+            NEQUALS(image, NULL);
+            NEQUALS(fill, NULL);
+
+            // A radius of 18 on a 20x20 rectangle cannot fit. It used to give the
+            // straight edges a negative length, which drew them backwards through the
+            // middle of the shape.
+            pntr_draw_rectangle_rounded(image, 5, 5, 20, 20, 18, 18, 18, 18, PNTR_RED);
+            pntr_draw_rectangle_rounded_fill(fill, 5, 5, 20, 20, 18, PNTR_RED);
+
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 20, 20};
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(bounds, expected);
+            RECTEQUALS(fillBounds, expected);
+
+            // The outline is still hollow, so nothing ran back through the middle.
+            EQUALS(pntr_test_painted(image, 15, 15), false);
+
+            // And the corners are still cut away.
+            EQUALS(pntr_test_painted(image, 5, 5), false);
+            EQUALS(pntr_test_painted(fill, 5, 5), false);
+
+            pntr_unload_image(image);
+            pntr_unload_image(fill);
+        });
+
+        IT("pntr_draw_line_thick() grows with its thickness", {
+            int axisAligned[5] = {0};
+            int diagonal[5] = {0};
+            int brushWidth[5] = {0};
+            int brushHeight[5] = {0};
+            int lineHeight[5] = {0};
+            int lineLeft[5] = {0};
+            int lineWidth[5] = {0};
+            int stepLeft[5] = {0};
+            int stepWidth[5] = {0};
+
+            for (int thickness = 1; thickness <= 4; thickness++) {
+                pntr_image* image = pntr_test_canvas(60, 60);
+                pntr_draw_line_thick(image, 10, 30, 40, 30, thickness, PNTR_RED);
+                pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                axisAligned[thickness] = pntr_test_painted_count(image);
+                lineHeight[thickness] = bounds.height;
+                lineLeft[thickness] = bounds.x;
+                lineWidth[thickness] = bounds.width;
+                pntr_unload_image(image);
+
+                image = pntr_test_canvas(60, 60);
+                pntr_draw_line_thick(image, 10, 10, 40, 40, thickness, PNTR_RED);
+                diagonal[thickness] = pntr_test_painted_count(image);
+                pntr_unload_image(image);
+
+                // A line of no length is the brush on its own.
+                image = pntr_test_canvas(60, 60);
+                pntr_draw_line_thick(image, 30, 30, 30, 30, thickness, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                brushWidth[thickness] = bounds.width;
+                brushHeight[thickness] = bounds.height;
+                pntr_unload_image(image);
+
+                // One step along a diagonal, which uses the brush rather than the
+                // axis-aligned path.
+                image = pntr_test_canvas(60, 60);
+                pntr_draw_line_thick(image, 30, 30, 31, 31, thickness, PNTR_RED);
+                bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                stepLeft[thickness] = bounds.x;
+                stepWidth[thickness] = bounds.width;
+                pntr_unload_image(image);
+            }
+
+            for (int thickness = 1; thickness <= 4; thickness++) {
+                // The brush is exactly as many pixels across as the thickness asks for,
+                // which is what makes 2 and 3 render differently from 1.
+                EQUALS(brushWidth[thickness], thickness);
+                EQUALS(brushHeight[thickness], thickness);
+
+                // An axis-aligned line is exactly that many pixels thick too.
+                EQUALS(lineHeight[thickness], thickness);
+
+                // And the brush reaches the same distance past the endpoints whether the
+                // line is axis-aligned or not, so both run the same thickness.
+                EQUALS(lineLeft[thickness], 10 - thickness / 2);
+                EQUALS(stepLeft[thickness], 30 - thickness / 2);
+                EQUALS(lineWidth[thickness], 30 + thickness);
+                EQUALS(stepWidth[thickness], thickness + 1);
+            }
+
+            // Every extra pixel of thickness paints more than the one before it, on both
+            // an axis-aligned line and a diagonal one.
+            for (int thickness = 2; thickness <= 4; thickness++) {
+                GREATER(axisAligned[thickness], axisAligned[thickness - 1]);
+                GREATER(diagonal[thickness], diagonal[thickness - 1]);
+            }
+        });
+
+        IT("a semi-transparent primitive blends each pixel once", {
+            // Blending onto a transparent pixel leaves the color as it is, so an alpha
+            // that is still 128 is a pixel that was painted exactly once. A pixel that
+            // was painted twice reports 192 instead.
+            pntr_color semi = pntr_new_color(230, 41, 55, 128);
+
+            IT("pntr_draw_rectangle() one pixel tall", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                pntr_draw_rectangle(image, 5, 5, 20, 1, semi);
+                for (int x = 5; x < 25; x++) {
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, x, 5)), 128);
+                }
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_rectangle() one pixel wide", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                pntr_draw_rectangle(image, 5, 5, 1, 20, semi);
+                for (int y = 5; y < 25; y++) {
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, y)), 128);
+                }
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_rectangle() with a hollow middle", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                // The corners are where the horizontal and vertical edges used to meet.
+                pntr_draw_rectangle(image, 5, 5, 20, 12, semi);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, 5)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 24, 5)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, 16)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 24, 16)), 128);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_circle_fill()", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                pntr_draw_circle_fill(image, 20, 20, 12, semi);
+                for (int y = 0; y < 40; y++) {
+                    for (int x = 0; x < 40; x++) {
+                        unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
+                        if (alpha != 0) {
+                            EQUALS((int)alpha, 128);
+                        }
+                    }
+                }
+
+                // Including the center row, which both halves of the fill run along.
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 20)), 128);
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_ellipse_fill()", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                pntr_draw_ellipse_fill(image, 20, 20, 15, 9, semi);
+                for (int y = 0; y < 40; y++) {
+                    for (int x = 0; x < 40; x++) {
+                        unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
+                        if (alpha != 0) {
+                            EQUALS((int)alpha, 128);
+                        }
+                    }
+                }
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_circle()", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                // The outline mirrors one eighth of the circle into the other seven, and
+                // the cardinal and diagonal points are where that mirroring folds over
+                // onto itself.
+                pntr_draw_circle(image, 20, 20, 12, semi);
+                for (int y = 0; y < 40; y++) {
+                    for (int x = 0; x < 40; x++) {
+                        unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
+                        if (alpha != 0) {
+                            EQUALS((int)alpha, 128);
+                        }
+                    }
+                }
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_polygon_fill()", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                pntr_vector points[4];
+                points[0] = PNTR_CLITERAL(pntr_vector) {20, 5};
+                points[1] = PNTR_CLITERAL(pntr_vector) {34, 20};
+                points[2] = PNTR_CLITERAL(pntr_vector) {20, 34};
+                points[3] = PNTR_CLITERAL(pntr_vector) {6, 20};
+                pntr_draw_polygon_fill(image, points, 4, semi);
+
+                for (int y = 0; y < 40; y++) {
+                    for (int x = 0; x < 40; x++) {
+                        unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
+                        if (alpha != 0) {
+                            EQUALS((int)alpha, 128);
+                        }
+                    }
+                }
+
+                pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_rectangle_rounded_fill()", {
+                pntr_image* image = pntr_new_image(40, 40);
+                NEQUALS(image, NULL);
+                pntr_clear_background(image, PNTR_BLANK);
+
+                pntr_draw_rectangle_rounded_fill(image, 5, 5, 24, 16, 4, semi);
+                for (int y = 0; y < 40; y++) {
+                    for (int x = 0; x < 40; x++) {
+                        unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
+                        if (alpha != 0) {
+                            EQUALS((int)alpha, 128);
+                        }
+                    }
+                }
+
+                pntr_unload_image(image);
+            });
+        });
+
+        IT("pntr_test_painted_bounds() reports nothing for an empty image", {
+            pntr_image* image = pntr_test_canvas(10, 10);
+            NEQUALS(image, NULL);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {0, 0, 0, 0};
+            RECTEQUALS(bounds, expected);
+            EQUALS(pntr_test_painted_count(image), 0);
+
+            pntr_unload_image(image);
+        });
+    });
+
     IT("pntr_draw_arc_fill()", {
-        // Note: pntr_draw_polygon_fill() never fills the topmost scanline of the
-        // shape, so the filled area starts one row below the top-most vertex.
+        // Note: pntr_draw_polygon_fill() covers the whole bounding box of the points it
+        // is given, so the wedge includes the rows of its topmost and bottommost points.
         IT("pntr_draw_arc_fill() fills the wedge", {
             pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
             NEQUALS(image, NULL);
@@ -1126,11 +2202,17 @@ MODULE(pntr, {
             pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
             NEQUALS(image, NULL);
 
-            // Every arc point lands on the same spot, so there is no area to fill.
+            // Every arc point lands on the same spot, so the wedge collapses onto the
+            // line between that spot and the center. A fill covers the bounding box of
+            // the points it is given, which for a collapsed shape is that line.
             pntr_draw_arc_fill(image, 25, 25, 20.0f, 45.0f, 45.0f, 8, PNTR_RED);
-            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_WHITE);
-            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_WHITE);
-            COLOREQUALS(pntr_image_get_color(image, 39, 39), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 39, 39), PNTR_RED);
+
+            // Still nothing on either side of that line.
+            COLOREQUALS(pntr_image_get_color(image, 25, 39), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 39, 25), PNTR_WHITE);
 
             pntr_unload_image(image);
         });
@@ -1147,6 +2229,96 @@ MODULE(pntr, {
             pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 8, PNTR_RED);
             COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
             pntr_unload_image(image);
+        });
+    });
+
+    IT("pntr_draw_arc()", {
+        IT("pntr_draw_arc() turns clockwise from the positive X axis", {
+            pntr_image* image = pntr_test_canvas(60, 60);
+            NEQUALS(image, NULL);
+
+            // A quarter sweep from 0 to 90 degrees stays in the quarter below and to the
+            // right of the center, which is what makes the angles clockwise on screen.
+            pntr_draw_arc(image, 30, 30, 20.0f, 0.0f, 90.0f, 64, PNTR_RED);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            LESSER(bounds.x, 31);
+            GREATER(bounds.x, 28);
+            LESSER(bounds.y, 31);
+            GREATER(bounds.y, 28);
+            GREATER(bounds.width, 15);
+            GREATER(bounds.height, 15);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc() sweeps a half-open range of angles", {
+            pntr_image* image = pntr_test_canvas(60, 60);
+            NEQUALS(image, NULL);
+
+            // Four points over a full turn land on the four cardinal directions, with
+            // the one at 360 degrees left out because it is the one at 0 degrees.
+            pntr_draw_arc(image, 30, 30, 10.0f, 0.0f, 360.0f, 4, PNTR_RED);
+            EQUALS(pntr_test_painted_count(image), 4);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+
+            // The built in trigonometry is an approximation, so the radius can land a
+            // pixel short of 10 in either direction.
+            GREATER(bounds.width, 18);
+            LESSER(bounds.width, 22);
+            GREATER(bounds.height, 18);
+            LESSER(bounds.height, 22);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc() with a zero or negative radius", {
+            pntr_image* image = pntr_test_canvas(60, 60);
+            NEQUALS(image, NULL);
+
+            // Matches pntr_draw_arc_fill(): a radius with no size draws the center.
+            pntr_draw_arc(image, 30, 30, 0.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            EQUALS(pntr_test_painted_count(image), 1);
+            EQUALS(pntr_test_painted(image, 30, 30), true);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc() with zero or negative segments", {
+            pntr_image* image = pntr_test_canvas(60, 60);
+            NEQUALS(image, NULL);
+
+            pntr_draw_arc(image, 30, 30, 20.0f, 0.0f, 90.0f, 0, PNTR_RED);
+            pntr_draw_arc(image, 30, 30, 20.0f, 0.0f, 90.0f, -8, PNTR_RED);
+            EQUALS(pntr_test_painted_count(image), 0);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_thick() grows with its thickness", {
+            int thin = 0;
+            int thick = 0;
+
+            pntr_image* image = pntr_test_canvas(60, 60);
+            NEQUALS(image, NULL);
+            pntr_draw_arc_thick(image, 30, 30, 20.0f, 0.0f, 90.0f, 16, 2, PNTR_RED);
+            thin = pntr_test_painted_count(image);
+            pntr_clear_background(image, PNTR_TEST_BACKGROUND);
+            pntr_draw_arc_thick(image, 30, 30, 20.0f, 0.0f, 90.0f, 16, 4, PNTR_RED);
+            thick = pntr_test_painted_count(image);
+
+            GREATER(thin, 0);
+            GREATER(thick, thin);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc() with a NULL destination", {
+            pntr_draw_arc(NULL, 30, 30, 20.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            pntr_draw_arc(NULL, 30, 30, 0.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            pntr_draw_arc_thick(NULL, 30, 30, 20.0f, 0.0f, 90.0f, 8, 3, PNTR_RED);
+            pntr_draw_arc_thick(NULL, 30, 30, 0.0f, 0.0f, 90.0f, 8, 3, PNTR_RED);
         });
     });
 
@@ -2643,7 +3815,10 @@ MODULE(pntr, {
                 pntr_image* dst = pntr_gen_image_color(12, 12, PNTR_GREEN);
                 NEQUALS(dst, NULL);
                 pntr_rectangle srcRect = {0, 0, 10, 10};
-                pntr_draw_image_rotozoom(dst, src, srcRect, 0, 0, 180.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                // The origin is a pivot, so the way to fill the top left 10x10 of the
+                // destination is to spin the center of the source onto the center of it.
+                pntr_draw_image_rotozoom(dst, src, srcRect, 5, 5, 180.0f, 1.0f, 1.0f, 4.5f, 4.5f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
 
                 // After a 180 degree rotation, the red square lands in the bottom right of the drawn area.
                 COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_RED);
@@ -2651,6 +3826,59 @@ MODULE(pntr, {
                 COLOREQUALS(pntr_image_get_color(dst, 11, 11), PNTR_GREEN);
 
                 pntr_unload_image(dst);
+                pntr_unload_image(src);
+            });
+
+            IT("pntr_draw_image_rotozoom() with a negative full rotation is unrotated", {
+                // Source image: blue, with a red column from x=6 to x=9, so that a flip shows.
+                pntr_image* src = pntr_gen_image_color(10, 10, PNTR_BLUE);
+                NEQUALS(src, NULL);
+                pntr_draw_rectangle_fill(src, 6, 0, 4, 10, PNTR_RED);
+                pntr_rectangle srcRect = {0, 0, 10, 10};
+
+                // An exact negative multiple of 360 is a full rotation, which is 0 rather
+                // than 360, so it has to take the same unrotated path that 0 degrees does
+                // instead of running the general rotation on a no-op angle.
+                IT("with the nearest neighbor filter", {
+                    pntr_image* expected = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(expected, NULL);
+                    pntr_draw_image_rotozoom(expected, src, srcRect, 4, 4, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    pntr_image* once = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(once, NULL);
+                    pntr_draw_image_rotozoom(once, src, srcRect, 4, 4, -360.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                    IMAGEEQUALS(once, expected);
+                    pntr_unload_image(once);
+
+                    pntr_image* twice = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(twice, NULL);
+                    pntr_draw_image_rotozoom(twice, src, srcRect, 4, 4, -720.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                    IMAGEEQUALS(twice, expected);
+                    pntr_unload_image(twice);
+
+                    pntr_unload_image(expected);
+                });
+
+                IT("with the bilinear filter", {
+                    pntr_image* expected = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(expected, NULL);
+                    pntr_draw_image_rotozoom(expected, src, srcRect, 4, 4, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+
+                    pntr_image* once = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(once, NULL);
+                    pntr_draw_image_rotozoom(once, src, srcRect, 4, 4, -360.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                    IMAGEEQUALS(once, expected);
+                    pntr_unload_image(once);
+
+                    pntr_image* twice = pntr_gen_image_color(20, 20, PNTR_GREEN);
+                    NEQUALS(twice, NULL);
+                    pntr_draw_image_rotozoom(twice, src, srcRect, 4, 4, -720.0f, 1.0f, 1.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+                    IMAGEEQUALS(twice, expected);
+                    pntr_unload_image(twice);
+
+                    pntr_unload_image(expected);
+                });
+
                 pntr_unload_image(src);
             });
 
@@ -2688,6 +3916,180 @@ MODULE(pntr, {
                 pntr_unload_image(dst);
                 pntr_unload_image(src);
             });
+        });
+
+        IT("the rotation offset is a pivot", {
+            // A 40x24 source with its pivot near the left edge and halfway down, which is the
+            // shape of offset that the rotation paths used to disagree about. A centered
+            // pivot is the one case they already agreed on, so it can't tell them apart.
+            pntr_image* pivotSource = pntr_test_pivot_source(40, 24, 2, 12);
+            NEQUALS(pivotSource, NULL);
+            pntr_rectangle pivotRect = {0, 0, 40, 24};
+
+            // 0, 180 and the quarter turns each have a drawing path of their own, and 45, 135
+            // and 359 fall to the general rotation.
+            float pivotAngles[7] = {0.0f, 45.0f, 90.0f, 135.0f, 180.0f, 270.0f, 359.0f};
+
+            IT("pntr_draw_image_rotated_rec() lands its offset on the position", {
+                for (int i = 0; i < 7; i++) {
+                    pntr_image* dst = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+
+                    pntr_draw_image_rotated_rec(dst, pivotSource, pivotRect, 80, 80, pivotAngles[i], 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+
+                    // Rasterizing the marker can land it a pixel out, but no further.
+                    LESSER(pntr_test_pivot_offset(dst, 80, 80), 2);
+
+                    pntr_unload_image(dst);
+                }
+            });
+
+            IT("pntr_draw_image_rotozoom() lands its origin on the position", {
+                for (int i = 0; i < 7; i++) {
+                    pntr_image* dst = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+
+                    pntr_draw_image_rotozoom(dst, pivotSource, pivotRect, 80, 80, pivotAngles[i], 1.0f, 1.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    LESSER(pntr_test_pivot_offset(dst, 80, 80), 2);
+
+                    pntr_unload_image(dst);
+                }
+            });
+
+            IT("pntr_draw_image_rotozoom() lands its origin on the position when scaled", {
+                for (int i = 0; i < 7; i++) {
+                    pntr_image* dst = pntr_gen_image_color(240, 240, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+
+                    // A scale of 2 makes the marker 6x6, so its center can sit a pixel and a
+                    // half away from the pivot it grew out of.
+                    pntr_draw_image_rotozoom(dst, pivotSource, pivotRect, 120, 120, pivotAngles[i], 2.0f, 2.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    LESSER(pntr_test_pivot_offset(dst, 120, 120), 3);
+
+                    pntr_unload_image(dst);
+                }
+            });
+
+            IT("pntr_draw_image_rotated_rec() moves continuously past the quarter turns", {
+                // Each quarter turn has a drawing path of its own, and the general rotation
+                // runs a thousandth of a degree either side of it. Both have to arrive at the
+                // same place, or a sprite jumps as it spins past the exact angle.
+                float corners[5] = {0.0f, 90.0f, 180.0f, 270.0f, 360.0f};
+
+                for (int i = 0; i < 5; i++) {
+                    pntr_rectangle before = pntr_test_rotated_bounds(pivotSource, corners[i] - 0.001f, 2.0f, 12.0f);
+                    pntr_rectangle exact = pntr_test_rotated_bounds(pivotSource, corners[i], 2.0f, 12.0f);
+                    pntr_rectangle after = pntr_test_rotated_bounds(pivotSource, corners[i] + 0.001f, 2.0f, 12.0f);
+
+                    // Something was actually drawn, so an empty rectangle can't pass as still.
+                    GREATER(exact.width, 0);
+                    GREATER(exact.height, 0);
+
+                    LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                    LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                }
+            });
+
+            IT("pntr_draw_image_rotated_rec() and pntr_draw_image_rotozoom() agree", {
+                pntr_filter filters[2] = {PNTR_FILTER_NEARESTNEIGHBOR, PNTR_FILTER_BILINEAR};
+
+                for (int f = 0; f < 2; f++) {
+                    for (int i = 0; i < 7; i++) {
+                        pntr_image* rotated = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                        NEQUALS(rotated, NULL);
+                        pntr_image* zoomed = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                        NEQUALS(zoomed, NULL);
+
+                        pntr_draw_image_rotated_rec(rotated, pivotSource, pivotRect, 80, 80, pivotAngles[i], 2.0f, 12.0f, filters[f]);
+                        pntr_draw_image_rotozoom(zoomed, pivotSource, pivotRect, 80, 80, pivotAngles[i], 1.0f, 1.0f, 2.0f, 12.0f, filters[f], PNTR_WHITE);
+
+                        // At a scale of 1 and the same pivot the two draw the very same
+                        // pixels, at every angle: the quarter turns take the same shortcut,
+                        // and every other angle shares the general rotation and the pivot
+                        // derived from it.
+                        pntr_rectangle rotatedBounds = pntr_test_painted_bounds(rotated, PNTR_GREEN);
+                        GREATER(rotatedBounds.width, 0);
+                        IMAGEEQUALS(zoomed, rotated);
+
+                        pntr_unload_image(zoomed);
+                        pntr_unload_image(rotated);
+                    }
+                }
+
+                // A scale other than one has no unscaled draw to be identical to, so there
+                // it keeps the looser bound instead: the drawn area still moves by at most a
+                // pixel across a quarter turn, which is what stops a scaled sprite from
+                // jumping as it spins past the exact angle.
+                float corners[5] = {0.0f, 90.0f, 180.0f, 270.0f, 360.0f};
+                for (int i = 0; i < 5; i++) {
+                    pntr_rectangle before = pntr_test_rotozoom_bounds(pivotSource, corners[i] - 0.001f, 2.0f, 12.0f, 2.0f);
+                    pntr_rectangle exact = pntr_test_rotozoom_bounds(pivotSource, corners[i], 2.0f, 12.0f, 2.0f);
+                    pntr_rectangle after = pntr_test_rotozoom_bounds(pivotSource, corners[i] + 0.001f, 2.0f, 12.0f, 2.0f);
+
+                    GREATER(exact.width, 0);
+                    LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                    LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                }
+
+                // And at a scale of one the new shortcut has to be continuous with the
+                // general rotation either side of it, the same way the unscaled path is.
+                for (int i = 0; i < 5; i++) {
+                    pntr_rectangle before = pntr_test_rotozoom_bounds(pivotSource, corners[i] - 0.001f, 2.0f, 12.0f, 1.0f);
+                    pntr_rectangle exact = pntr_test_rotozoom_bounds(pivotSource, corners[i], 2.0f, 12.0f, 1.0f);
+                    pntr_rectangle after = pntr_test_rotozoom_bounds(pivotSource, corners[i] + 0.001f, 2.0f, 12.0f, 1.0f);
+
+                    GREATER(exact.width, 0);
+                    LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                    LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                }
+            });
+
+            IT("pntr_draw_image_rotated_rec() and pntr_draw_image_rotozoom() match away from the quarter turns", {
+                // 45 degrees hands both of them to their general rotation, where a shared
+                // pivot has to produce not just the same placement but the same pixels.
+                pntr_image* rotated = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                NEQUALS(rotated, NULL);
+                pntr_image* zoomed = pntr_gen_image_color(160, 160, PNTR_GREEN);
+                NEQUALS(zoomed, NULL);
+
+                pntr_draw_image_rotated_rec(rotated, pivotSource, pivotRect, 80, 80, 45.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+                pntr_draw_image_rotozoom(zoomed, pivotSource, pivotRect, 80, 80, 45.0f, 1.0f, 1.0f, 2.0f, 12.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+                IMAGEEQUALS(zoomed, rotated);
+
+                pntr_unload_image(zoomed);
+                pntr_unload_image(rotated);
+            });
+
+            IT("pntr_draw_image_rotated_rec() with a centered offset spins in place", {
+                // The case every convention already agreed on, kept here as a guard: a pivot
+                // at the center of the source keeps the drawn area centered on the position,
+                // whatever the angle.
+                pntr_image* centered = pntr_test_pivot_source(40, 24, 20, 12);
+                NEQUALS(centered, NULL);
+
+                for (int i = 0; i < 7; i++) {
+                    pntr_rectangle bounds = pntr_test_rotated_bounds(centered, pivotAngles[i], 20.0f, 12.0f);
+                    GREATER(bounds.width, 0);
+
+                    int centerX = bounds.x + bounds.width / 2 - 80;
+                    int centerY = bounds.y + bounds.height / 2 - 80;
+                    if (centerX < 0) {
+                        centerX = -centerX;
+                    }
+                    if (centerY < 0) {
+                        centerY = -centerY;
+                    }
+
+                    LESSER(centerX, 2);
+                    LESSER(centerY, 2);
+                }
+
+                pntr_unload_image(centered);
+            });
+
+            pntr_unload_image(pivotSource);
         });
 
         IT("pntr_gen_image_gradient", {
