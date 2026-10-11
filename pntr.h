@@ -1634,11 +1634,17 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
 /**
  * Generate a new image with the given color.
  *
+ * @details The new image must be unloaded with pntr_unload_image().
+ *
  * @param width The width of the new image.
  * @param height The height of the given image.
  * @param color The desired color that will fill the new image.
  *
- * @return A pointer to the new image in memory.
+ * @return A pointer to the new image in memory, or NULL on failure, with the reason
+ * retrievable through pntr_get_error().
+ *
+ * @see pntr_new_image()
+ * @see pntr_unload_image()
  */
 PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
     pntr_image* image = pntr_new_image(width, height);
@@ -1810,13 +1816,19 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
  *
  * This is useful to have images reference a sprite in a tileset. Sub-images still need to be cleared with pntr_unload_image().
  *
+ * @details No pixel data is copied, so drawing onto the subimage changes the parent
+ * image, and the subimage must not outlive the parent whose data it points into.
+ * Unloading a subimage releases only the container, not the shared pixels. The requested
+ * region is clamped to the parent image, so the result can be smaller than was asked for.
+ *
  * @param image The original image to reference for the new portion of the image.
  * @param x The X coorindate of the subimage.
  * @param y The Y coordinate of the subimage.
  * @param width The width of the subimage.
  * @param height The height of the subimage.
  *
- * @return The pntr_image referencing the section of the given image.
+ * @return The pntr_image referencing the section of the given image, or NULL on failure,
+ * with the reason retrievable through pntr_get_error().
  *
  * @see pntr_image_from_image()
  * @see pntr_unload_image()
@@ -6464,13 +6476,23 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
 /**
  * Saves an image to the file system.
  *
+ * @details The format is chosen from the file name's extension with
+ * pntr_get_file_image_type(). An extension that is not recognized gives
+ * `PNTR_IMAGE_TYPE_UNKNOWN`, which the bundled backends write as a PNG, so a file saved
+ * under an unexpected name still holds valid image data.
+ *
+ * The image is encoded into memory first and then written in one go, so a failure to
+ * encode leaves no file behind, while a failure to write may leave a truncated one.
+ *
  * @param image The image to save to the file system.
  * @param fileName The name of the file to save.
  *
- * @return True when the file was saved successfully, false otherwise.
+ * @return True when the file was saved successfully, false otherwise. Use
+ * pntr_get_error() for why.
  *
  * @see pntr_save_image_to_memory()
  * @see pntr_save_file()
+ * @see pntr_get_file_image_type()
  */
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
     pntr_image_type type = pntr_get_file_image_type(fileName);
@@ -6500,10 +6522,22 @@ PNTR_API void pntr_unload_file(unsigned char* fileData) {
 /**
  * Calculates a rectangle representing the available alpha border.
  *
+ * @details Finds the smallest rectangle that holds every pixel whose alpha is strictly
+ * greater than the threshold. The whole image is scanned, ignoring its clip region, and
+ * the rectangle is inclusive of the furthest such pixel, so its width and height are a
+ * count of pixels and can be handed straight to pntr_image_crop().
+ *
+ * A fully transparent image, or a NULL one, gives a rectangle of all zeroes rather than
+ * reporting an error, so an empty result and a failure cannot be told apart.
+ *
  * @param image The image to calculate the alpha border on.
  * @param threshold A threshold factor from 0.0f to 1.0f to consider alpha.
  *
- * @return The rectangle representing the alpha border of the image.
+ * @return The rectangle representing the alpha border of the image, or a rectangle of all
+ * zeroes when nothing in the image passes the threshold.
+ *
+ * @see pntr_image_alpha_crop()
+ * @see pntr_image_crop()
  */
 PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
     if (image == NULL) {
@@ -6573,13 +6607,29 @@ static void _pntr_image_adopt(pntr_image* image, pntr_image* newImage) {
 /**
  * Crops an image by the given coordinates.
  *
+ * @details The image is changed in place: its pixel data is replaced by the cropped data,
+ * and its clip region is reset to the new bounds. The crop rectangle is clamped to the
+ * image first, so asking for more than the image holds crops to whatever part of the
+ * rectangle overlaps it. The width and height are a count of pixels rather than a second
+ * coordinate.
+ *
+ * A crop that lands entirely outside of the image, or one with a width or height of zero
+ * or less, leaves the image untouched, reports `PNTR_ERROR_INVALID_ARGS` and returns
+ * false.
+ *
+ * Cropping a subimage replaces it with pixel data of its own, so it no longer references
+ * its parent.
+ *
  * @param image The image to crop.
  * @param x The x coordinate to crop from.
  * @param y The y coordinate to crop from.
  * @param width The width of the desired crop.
  * @param height The height of the desired crop.
  *
+ * @return True when the image was cropped, false otherwise. Use pntr_get_error() for why.
+ *
  * @see pntr_image_from_image()
+ * @see pntr_image_alpha_crop()
  */
 PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
@@ -6741,6 +6791,16 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
 /**
  * Resize the canvas of the given image.
  *
+ * @details The image keeps its pixels at their original size; only the canvas around them
+ * changes. The new canvas is filled with `fill`, and the old image is then drawn onto it
+ * with its top left corner at (offsetX, offsetY), so the offset here is a plain position
+ * rather than one of the pivots that the rotated and scaled draws take. Anything that
+ * falls outside the new canvas is lost.
+ *
+ * The image is changed in place. An image whose clip was the whole image gets a clip of
+ * the whole new canvas; any other clip is moved by the offset and trimmed to the new
+ * canvas.
+ *
  * @param image The image you would like to resize.
  * @param newWidth The desired width of the new canvas.
  * @param newHeight The desired height of the new canvas.
@@ -6748,7 +6808,11 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
  * @param offsetY How to offset the image once its canvas is resized. Use 0 if you like to keep the original image at the top.
  * @param fill The color to use for the background of the new image.
  *
- * @return True or false depending on if the image was resized correctly.
+ * @return True or false depending on if the image was resized correctly. Use
+ * pntr_get_error() for why.
+ *
+ * @see pntr_image_resize()
+ * @see pntr_image_crop()
  */
 PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
     if (image == NULL) {
