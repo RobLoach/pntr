@@ -4115,11 +4115,20 @@ PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, in
 /**
  * Get image pixel color at (x, y) position.
  *
+ * @details Reads anywhere inside the image, ignoring its clip region, since the clip only
+ * restricts what may be changed. A coordinate outside of the image, or a NULL image,
+ * gives `PNTR_BLANK` rather than reporting an error, so a transparent black pixel and an
+ * out of range read cannot be told apart from the result alone.
+ *
  * @param image The image to get the color from.
  * @param x The x position of the pixel.
  * @param y The y position of the pixel.
  *
- * @return The color at (x, y) position from the image.
+ * @return The color at (x, y) position from the image, or `PNTR_BLANK` when the
+ * coordinate is outside of the image.
+ *
+ * @see pntr_image_get_color_bilinear()
+ * @see pntr_draw_point()
  */
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     if (image == NULL || x < 0 || y < 0 || x >= image->width || y >= image->height) {
@@ -4420,13 +4429,21 @@ PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
 /**
  * Draw a source image within a destination image.
  *
+ * @details The source rectangle is clamped to the source image, and the result is drawn
+ * with its top left corner at (posX, posY). Pixels are alpha blended into the
+ * destination, and anything outside the destination's clip region is skipped.
+ *
  * @param dst The destination image.
  * @param src The source image.
- * @param srcRect The source rectangle of what to draw from the source image.
+ * @param srcRect The source rectangle of what to draw from the source image. When the
+ * width or height are less than or equal to 0, the full image width or height are used,
+ * so a zeroed rectangle draws the whole image. pntr_draw_image_scaled_rec() and
+ * pntr_draw_image_dest_rec() instead read that as an empty region and draw nothing.
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
  *
  * @see pntr_draw_image()
+ * @see pntr_draw_image_tint_rec()
  */
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     pntr_draw_image_tint_rec(dst, src, srcRect, posX, posY, PNTR_WHITE);
@@ -4435,14 +4452,26 @@ PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectang
 /**
  * Draw a source image within a destination image, with tint.
  *
+ * @details This is the blit that most of the other unrotated, unscaled image draws and
+ * the text rendering go through. The source rectangle is clamped to the source image, the
+ * result is drawn with its top left corner at (posX, posY), and the part of it that falls
+ * outside the destination's clip region is trimmed away rather than wrapped. Pixels are
+ * alpha blended into the destination.
+ *
  * @param dst The destination image.
  * @param src The source image.
- * @param srcRect The source rectangle of what to draw from the source image.
+ * @param srcRect The source rectangle of what to draw from the source image. When the
+ * width or height are less than or equal to 0, the full image width or height are used,
+ * so a zeroed rectangle draws the whole image. pntr_draw_image_scaled_rec() and
+ * pntr_draw_image_dest_rec() instead read that as an empty region and draw nothing.
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
- * @param tint The color to tint the image when drawing.
+ * @param tint The color to tint the image when drawing. Use PNTR_WHITE to not change the
+ * source color, which also skips the tinting work entirely.
  *
  * @see pntr_draw_image()
+ * @see pntr_draw_image_rec()
+ * @see pntr_color_tint()
  */
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
     if (dst == NULL || src == NULL || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
@@ -4639,11 +4668,15 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
 /**
  * Flip an image, vertically, or horizontally, or both.
  *
+ * @details The image is flipped in place, across its whole extent rather than only within
+ * its clip region. A NULL image does nothing and reports no error.
+ *
  * @param image The image to flip.
  * @param horizontal Whether or not to flip the image horizontally.
  * @param vertical Whether or not to flip the image vertically.
  *
- * @see pntr_image_flip()
+ * @see pntr_draw_image_flipped()
+ * @see pntr_image_rotate()
  */
 PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical) {
     if (image == NULL) {
@@ -6756,6 +6789,31 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     return true;
 }
 
+/**
+ * Draw an image onto a destination image, flipped on either axis, or transposed.
+ *
+ * @details The three flips are applied to the whole source image, and the result is drawn
+ * with its top left corner at (posX, posY). `flipDiagonal` transposes the image, swapping
+ * its rows for its columns, so the drawn result is as tall as the source is wide. It
+ * combines with the other two, which pick which of the four transposed orientations is
+ * drawn, so a diagonal flip together with a horizontal one is a quarter turn.
+ *
+ * Passing no flips at all draws the image exactly as pntr_draw_image() would. Pixels are
+ * alpha blended into the destination, and anything outside the destination's clip region
+ * is skipped. A NULL source or destination draws nothing and reports no error.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param flipHorizontal Whether to mirror the image left to right.
+ * @param flipVertical Whether to mirror the image top to bottom.
+ * @param flipDiagonal Whether to transpose the image, swapping its rows and columns.
+ *
+ * @see pntr_draw_image()
+ * @see pntr_draw_image_flipped_rec()
+ * @see pntr_image_flip()
+ */
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     if (dst == NULL || src == NULL) {
         return;
@@ -6770,6 +6828,44 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
     );
 }
 
+/**
+ * Draw a portion of an image onto a destination image, flipped on either axis, or
+ * transposed.
+ *
+ * @details The three flips are applied to the source rectangle, and the result is drawn
+ * with its top left corner at (posX, posY). `flipDiagonal` transposes the region, swapping
+ * its rows for its columns, so the drawn result is as tall as the region is wide. It
+ * combines with the other two, which pick which of the four transposed orientations is
+ * drawn, so a diagonal flip together with a horizontal one is a quarter turn.
+ *
+ * @warning When any of the three flips is requested, only the **width and height** of
+ * `srcRec` are honoured: its `x` and `y` are ignored, and the pixels are read from the top
+ * left corner of the source image instead of from the rectangle. Drawing a flipped sprite
+ * out of a sheet therefore draws the wrong sprite. Passing no flips at all takes a
+ * different path, which does honour `srcRec.x` and `srcRec.y`, so the two disagree. Until
+ * that is settled, draw the region into its own image with pntr_image_from_image() and
+ * flip that, or use pntr_draw_image_rotated_rec() for the quarter turns.
+ *
+ * Also unlike the unflipped path, which reads a width or height of zero or less as the
+ * full source dimension, a flipped draw treats it as an empty region and paints nothing.
+ *
+ * Pixels are alpha blended into the destination, and anything outside the destination's
+ * clip region is skipped. A NULL source or destination draws nothing and reports no error.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param srcRec The portion of the source image to draw. Only its width and height are
+ * honoured when flipping; see the warning above.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param flipHorizontal Whether to mirror the region left to right.
+ * @param flipVertical Whether to mirror the region top to bottom.
+ * @param flipDiagonal Whether to transpose the region, swapping its rows and columns.
+ *
+ * @see pntr_draw_image_flipped()
+ * @see pntr_draw_image_rec()
+ * @see pntr_image_from_image()
+ */
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     // If we are not flipping at all, use the simpler draw function.
     if (!flipHorizontal && !flipVertical && !flipDiagonal) {
@@ -6808,6 +6904,15 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
 /**
  * Draw a scaled image.
  *
+ * @details The offset is an **edge** rather than a pivot: the left and top edges of the
+ * source pixel it names are what land on the position, which is what makes an offset of
+ * zero draw the image starting at the position at any scale. This differs from the
+ * rotated draws, whose offsets name the center of a pixel; see
+ * pntr_draw_image_scaled_rec() for why the two conventions are kept apart.
+ *
+ * A scale of zero or less on either axis draws nothing, as does a scale small enough that
+ * the drawn size truncates away to nothing.
+ *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
  * @param posX Where to draw the scaled image, at the X coordinate.
@@ -6816,9 +6921,11 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * @param scaleY The scale of which to apply to the height of the image.
  * @param offsetX How much to offset the X drawing of the image, in unscaled source pixels. The left edge of the source pixel there lands on posX.
  * @param offsetY How much to offset the Y drawing of the image, in unscaled source pixels. The top edge of the source pixel there lands on posY.
- * @param filter Filter to be applied during the rotation.
+ * @param filter Filter to be applied while scaling. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
+ * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
  *
  * @see pntr_draw_image_scaled_rec()
+ * @see pntr_draw_image_rotozoom()
  */
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL) {
@@ -6851,7 +6958,7 @@ PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX,
  *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
- * @param srcRect The portion of the source image to draw.
+ * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, nothing is drawn. This is unlike pntr_draw_image_rec() and the rotated draws, which read that as the full image dimension.
  * @param posX Where to draw the scaled image, at the X coordinate.
  * @param posY Where to draw the scaled image, at the Y coordinate.
  * @param scaleX The scale of which to apply to the width of the image.
@@ -7264,13 +7371,28 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
 /**
  * Creates a new image based off the given image, that's rotated by the given degrees.
  *
- * @param image The image to rotate.
- * @param degrees The desired amount to rotate the image in degrees.
+ * @details The new image is sized to hold the whole rotation, so nothing is cropped away:
+ * a quarter turn swaps the width and height, and any other angle gives an image large
+ * enough for the turned bounding box, with the corners left transparent. The image is
+ * spun about its own center, since any other pivot would carry part of it off the edge of
+ * an image that was made to fit all of it.
  *
- * @return The new rotated image.
+ * A rotation that normalizes to zero degrees returns a plain copy. The new image must be
+ * unloaded with pntr_unload_image().
+ *
+ * @param image The image to rotate.
+ * @param degrees The desired amount to rotate the image in degrees, turning clockwise on
+ * screen. Any value is accepted and normalized into 0 to 360.
+ * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and
+ * PNTR_FILTER_NEARESTNEIGHBOR are supported. The quarter turns map whole pixels onto
+ * whole pixels, so the filter makes no difference to them.
+ *
+ * @return The new rotated image, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
  *
  * @see pntr_draw_image_rotated()
  * @see pntr_draw_image_rotated_rec()
+ * @see pntr_unload_image()
  */
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_filter filter) {
     if (image == NULL) {
