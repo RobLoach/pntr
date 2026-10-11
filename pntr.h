@@ -4899,12 +4899,19 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
 /**
  * Load a BMFont from the file system.
  *
+ * @details The atlas image is loaded and then handed to
+ * pntr_load_font_bmf_from_image(), so see that for how the glyphs are found. The font
+ * owns the atlas it loads, so pntr_unload_font() is all that is needed to release it.
+ *
  * @param fileName The name of the image file to load as the bmfont.
  * @param characters A string representing the characters to load from the atlas.
  *
- * @return The newly loaded font.
+ * @return The newly loaded font, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
  *
  * @see examples/resources/bmfont.png
+ * @see pntr_load_font_bmf_from_image()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -4923,11 +4930,21 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
 /**
  * Load a BMFont from the given image data in memory.
  *
+ * @details The data is decoded as a PNG regardless of what the file extension would have
+ * said, since there is no file name to read one from. The decoded image becomes the
+ * font's atlas, and the font owns it from then on, so pntr_unload_font() is all that is
+ * needed to release it.
+ *
  * @param fileData A representation of the image data in memory.
  * @param dataSize The size of the image data.
  * @param characters A string representing the characters to load from the atlas.
  *
- * @return The newly loaded font, or NULL on failure.
+ * @return The newly loaded font, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
+ *
+ * @see pntr_load_font_bmf()
+ * @see pntr_load_font_bmf_from_image()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL) {
@@ -5003,10 +5020,26 @@ static pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pn
 /**
  * Load a BMFont from the given image.
  *
- * @param image The BMFont image.
+ * @details The glyphs are found by reading the top row of the atlas: the color of the
+ * pixel at (0, 0) is taken as the separator, and every later pixel on that row matching it
+ * closes off a glyph. Each glyph is as tall as the whole image. There must be at least as
+ * many glyphs on the atlas as there are characters in `characters`, which are matched to
+ * the glyphs in order.
+ *
+ * @warning On success the font **takes ownership of `image`**, which becomes the font's
+ * atlas. pntr_unload_font() frees it, so the caller must not also call
+ * pntr_unload_image() on it, or the image is freed twice. On failure ownership is not
+ * taken, and the caller still has to unload the image itself.
+ *
+ * @param image The BMFont image, which becomes the font's atlas on success.
  * @param characters A string representing the characters to load from the atlas.
  *
- * @return The newly loaded font, or NULL on failure.
+ * @return The newly loaded font, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
+ *
+ * @see pntr_load_font_bmf()
+ * @see pntr_load_font_bmf_from_memory()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters) {
     if (image == NULL || characters == NULL) {
@@ -5069,14 +5102,21 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
 /**
  * Loads a TTY Font from the file system.
  *
+ * @details The atlas image is loaded and then handed to
+ * pntr_load_font_tty_from_image(), so see that for how the glyph grid is read. The font
+ * owns the atlas it loads, so pntr_unload_font() is all that is needed to release it.
+ *
  * @param fileName The name of the image file to load as the font.
  * @param glyphWidth The width of each character on the font atlas.
  * @param glyphHeight The height of each character on the font atlas.
  * @param characters A string of characters that appear in the image.
  *
- * @return The newly loaded TTY font.
+ * @return The newly loaded TTY font, or NULL on failure, with the reason retrievable
+ * through pntr_get_error().
  *
  * @see examples/resources/ttyfont-16x16.png
+ * @see pntr_load_font_tty_from_image()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -5092,6 +5132,27 @@ PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int
     return output;
 }
 
+/**
+ * Loads a TTY Font from the given image data in memory.
+ *
+ * @details The data is decoded as a PNG regardless of what the file extension would have
+ * said, since there is no file name to read one from. The decoded image becomes the
+ * font's atlas, and the font owns it from then on, so pntr_unload_font() is all that is
+ * needed to release it.
+ *
+ * @param fileData A representation of the image data in memory.
+ * @param dataSize The size of the image data.
+ * @param glyphWidth The width of each character on the font atlas.
+ * @param glyphHeight The height of each character on the font atlas.
+ * @param characters A string of characters that appear in the image.
+ *
+ * @return The newly loaded TTY font, or NULL on failure, with the reason retrievable
+ * through pntr_get_error().
+ *
+ * @see pntr_load_font_tty()
+ * @see pntr_load_font_tty_from_image()
+ * @see pntr_unload_font()
+ */
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
         return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
@@ -5110,6 +5171,32 @@ PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData
     return output;
 }
 
+/**
+ * Loads a TTY Font from the given image.
+ *
+ * @details The atlas is read as a fixed grid of `glyphWidth` by `glyphHeight` cells,
+ * filled left to right and then top to bottom, and the characters in `characters` are
+ * matched to those cells in order. Any part of the atlas that does not divide evenly into
+ * whole cells is ignored, and the grid has to hold at least as many cells as there are
+ * characters.
+ *
+ * @warning On success the font **takes ownership of `image`**, which becomes the font's
+ * atlas. pntr_unload_font() frees it, so the caller must not also call
+ * pntr_unload_image() on it, or the image is freed twice. On failure ownership is not
+ * taken, and the caller still has to unload the image itself.
+ *
+ * @param image The font atlas image, which becomes the font's atlas on success.
+ * @param glyphWidth The width of each character on the font atlas.
+ * @param glyphHeight The height of each character on the font atlas.
+ * @param characters A string of characters that appear in the image.
+ *
+ * @return The newly loaded TTY font, or NULL on failure, with the reason retrievable
+ * through pntr_get_error().
+ *
+ * @see pntr_load_font_tty()
+ * @see pntr_load_font_tty_from_memory()
+ * @see pntr_unload_font()
+ */
 PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
     if (image == NULL || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
         return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
@@ -5166,7 +5253,15 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
 /**
  * Unloads the given font from memory.
  *
+ * @details The font owns its atlas image, so this unloads that too, however the font was
+ * loaded. A font built with pntr_load_font_bmf_from_image() or
+ * pntr_load_font_tty_from_image() therefore frees the image that was handed to it, and
+ * the caller must not unload that image itself. A NULL font does nothing.
+ *
  * @param font The font to unload from memory.
+ *
+ * @see pntr_load_font_bmf_from_image()
+ * @see pntr_load_font_tty_from_image()
  */
 PNTR_API void pntr_unload_font(pntr_font* font) {
     if (font == NULL) {
@@ -5219,7 +5314,15 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
  * @param scaleY The scale of which to resize the height of the font by.
  * @param filter The filter to apply when resizing the font. PNTR_FILTER_NEARESTNEIGHBOR is good for pixel fonts.
  *
- * @return The new font that has been resized.
+ * @return The new font that has been resized, or NULL on failure, with the reason
+ * retrievable through pntr_get_error().
+ *
+ * @note A scale small enough to leave the atlas with no pixels at all gives back a font
+ * whose atlas is NULL. Such a font draws nothing, and is still safe to pass to
+ * pntr_unload_font().
+ *
+ * @see pntr_font_copy()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY, pntr_filter filter) {
     if (font == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
