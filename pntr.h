@@ -1505,6 +1505,29 @@ extern "C" {
  */
 PNTR_ERROR_STORAGE pntr_error _pntr_error;
 
+/**
+ * Retrieve a human readable string describing the last error that pntr reported.
+ *
+ * @details The error state is sticky: it is only ever changed by pntr_set_error(), which
+ * the failing functions call on their way out, so it still describes the last failure
+ * long after a later call has succeeded. Call `pntr_set_error(PNTR_ERROR_NONE)` to clear
+ * it before a call whose outcome is to be checked this way.
+ *
+ * Which functions report an error is not uniform. The functions that hand back a pointer
+ * or an image generally do set one, as do pntr_save_file(), pntr_image_crop() and
+ * pntr_image_resize_canvas(). The drawing functions do not: they return quietly when they
+ * are given a NULL image, a fully transparent color, or geometry that lands nowhere.
+ *
+ * The error is stored in a single variable shared by every thread, unless
+ * `PNTR_ERROR_STORAGE` is defined as a thread-local storage class.
+ *
+ * @return A string describing the last reported error, or NULL when no error has been
+ * reported. The string is a static literal and must not be freed.
+ *
+ * @see pntr_get_error_code()
+ * @see pntr_set_error()
+ * @see PNTR_ERROR_STORAGE
+ */
 PNTR_API const char* pntr_get_error(void) {
     switch (_pntr_error) {
         case PNTR_ERROR_NONE: return NULL;
@@ -1521,16 +1544,41 @@ PNTR_API const char* pntr_get_error(void) {
     return NULL;
 }
 
+/**
+ * Retrieve the code of the last error that pntr reported.
+ *
+ * @details This is the same state that pntr_get_error() describes, as an enum value
+ * rather than as a string, so that a caller can tell the kinds of failure apart. It is
+ * `PNTR_ERROR_NONE` when no error has been reported, which is also what makes this the
+ * way to tell "no error" apart from "an error with no message".
+ *
+ * @return The last reported error code, or `PNTR_ERROR_NONE` when there is none.
+ *
+ * @see pntr_get_error()
+ * @see pntr_set_error()
+ * @see pntr_error
+ */
 PNTR_API pntr_error pntr_get_error_code(void) {
     return _pntr_error;
 }
 
 /**
- * Sets an error.
+ * Sets the error state that pntr_get_error() and pntr_get_error_code() report.
  *
- * @param error A string representing the error that had just occured.
+ * @details Pass `PNTR_ERROR_NONE` to clear the error state. pntr's own functions call
+ * this as they fail, so the state they leave behind is overwritten by the next failure
+ * rather than by the next success.
+ *
+ * The NULL return value is what lets a failing function both report and return in one
+ * statement, which is why so much of pntr reads `return (pntr_image*)pntr_set_error(...)`.
+ *
+ * @param error The error code to record.
  *
  * @return Always returns NULL.
+ *
+ * @see pntr_get_error()
+ * @see pntr_get_error_code()
+ * @see pntr_error
  */
 PNTR_API void* pntr_set_error(pntr_error error) {
     _pntr_error = error;
@@ -5715,11 +5763,20 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
 /**
  * Retrieve the size of the image data in memory in bytes, depending on the given pixel format.
  *
+ * @details A width or height of zero or less gives 0, quietly. A pixel format that pntr
+ * does not know is reported as `PNTR_ERROR_NOT_SUPPORTED`, but a size is still returned,
+ * assuming four bytes per pixel, so the result alone does not say whether the format was
+ * understood. Use pntr_get_error_code() when that matters.
+ *
  * @param width The width of the image data.
  * @param height The height of the image data.
  * @param pixelFormat The pixel format of the image data.
  *
- * @return The size of the image data, in bytes.
+ * @return The size of the image data, in bytes, or 0 when the width or height are zero or
+ * less.
+ *
+ * @see pntr_image_to_pixelformat()
+ * @see pntr_get_error_code()
  */
 PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat) {
     if (width <= 0 || height <= 0 || pixelFormat < 0) {
