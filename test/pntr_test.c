@@ -881,6 +881,41 @@ MODULE(pntr, {
         pntr_unload_image(src);
     });
 
+    IT("pntr_draw_image_scaled_rec() with no offset starts at the position", {
+        // The offset is an edge rather than a pivot, so no offset draws the source rectangle
+        // starting exactly at the position, at every scale. This is the common case, and the
+        // rotated draws name the center of the offset pixel instead, so this is the guard
+        // that keeps the half pixel between the two conventions out of here.
+        pntr_image* src = pntr_gen_image_color(8, 6, PNTR_RED);
+        NEQUALS(src, NULL);
+
+        pntr_rectangle srcRect = {0, 0, 8, 6};
+        float scales[8] = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 4.0f, 8.0f};
+
+        for (int i = 0; i < 8; i++) {
+            pntr_image* dst = pntr_test_canvas(100, 80);
+            NEQUALS(dst, NULL);
+
+            pntr_draw_image_scaled_rec(dst, src, srcRect, 20, 30, scales[i], scales[i],
+                0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+            // The drawn size is the source size scaled and truncated, which is what the
+            // destination rectangle drawing relies on to fill a rectangle exactly.
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {
+                .x = 20,
+                .y = 30,
+                .width = (int)(8.0f * scales[i]),
+                .height = (int)(6.0f * scales[i])
+            };
+            pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(bounds, expected);
+
+            pntr_unload_image(dst);
+        }
+
+        pntr_unload_image(src);
+    });
+
     IT("pntr_draw_image_dest_rec()", {
         IT("pntr_draw_image_dest_rec() with a 1:1 destination rectangle copies the source region", {
             // An 8x8 source where every pixel carries a unique color.
@@ -976,6 +1011,92 @@ MODULE(pntr, {
             });
 
             pntr_unload_image(expected);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() fills the destination rectangle at every size", {
+            // Every destination rectangle is painted whole, with nothing landing outside of
+            // it, whatever scale it works out to. The scaled drawing underneath offsets from
+            // the edge of the source pixel it is given rather than pivoting around its
+            // center, which is what lets a zero offset fill the rectangle from its corner at
+            // any scale. A pivot there would pull the fill half a destination pixel off the
+            // corner it was asked for and leave a gap on the far side.
+            pntr_image* src = pntr_gen_image_color(8, 6, PNTR_BLANK);
+            NEQUALS(src, NULL);
+            for (int y = 0; y < 6; y++) {
+                for (int x = 0; x < 8; x++) {
+                    pntr_draw_point(src, x, y, pntr_new_color(
+                        (unsigned char)(x * 30 + 5),
+                        (unsigned char)(y * 40 + 7),
+                        (unsigned char)(x * y + 1),
+                        255));
+                }
+            }
+
+            pntr_rectangle srcRect = {0, 0, 8, 6};
+            pntr_filter filters[2] = {PNTR_FILTER_NEARESTNEIGHBOR, PNTR_FILTER_BILINEAR};
+
+            for (int f = 0; f < 2; f++) {
+                for (int height = 1; height <= 20; height++) {
+                    for (int width = 1; width <= 25; width++) {
+                        pntr_image* dst = pntr_test_canvas(40, 36);
+                        NEQUALS(dst, NULL);
+
+                        pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = 5, .y = 7, .width = width, .height = height };
+                        pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, filters[f], PNTR_WHITE);
+
+                        // The bounds pin where the fill starts and stops, and the count pins
+                        // that there are no holes left inside of them.
+                        pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_TEST_BACKGROUND);
+                        RECTEQUALS(bounds, dstRect);
+                        EQUALS(pntr_test_painted_count(dst), width * height);
+
+                        pntr_unload_image(dst);
+                    }
+                }
+            }
+
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_dest_rec() reproduces the source region at every 1:1 size", {
+            // The identity case of the scale above: a destination rectangle the size of the
+            // source region copies it across untouched, for every region size, which is only
+            // true while a zero offset keeps drawing from the corner of the rectangle.
+            pntr_image* src = pntr_gen_image_color(12, 10, PNTR_BLANK);
+            NEQUALS(src, NULL);
+            for (int y = 0; y < 10; y++) {
+                for (int x = 0; x < 12; x++) {
+                    pntr_draw_point(src, x, y, pntr_new_color(
+                        (unsigned char)(x * 20 + 11),
+                        (unsigned char)(y * 25 + 3),
+                        (unsigned char)(x + y * 12 + 1),
+                        255));
+                }
+            }
+
+            for (int height = 1; height <= 10; height++) {
+                for (int width = 1; width <= 12; width++) {
+                    pntr_image* dst = pntr_test_canvas(20, 18);
+                    NEQUALS(dst, NULL);
+
+                    pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = width, .height = height };
+                    pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) { .x = 4, .y = 3, .width = width, .height = height };
+                    pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    for (int y = 0; y < height; y++) {
+                        for (int x = 0; x < width; x++) {
+                            COLOREQUALS(pntr_image_get_color(dst, 4 + x, 3 + y), pntr_image_get_color(src, x, y));
+                        }
+                    }
+
+                    pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_TEST_BACKGROUND);
+                    RECTEQUALS(bounds, dstRect);
+
+                    pntr_unload_image(dst);
+                }
+            }
+
             pntr_unload_image(src);
         });
 
@@ -3781,14 +3902,21 @@ MODULE(pntr, {
                 pntr_draw_rectangle_fill(src, 6, 0, 4, 10, PNTR_RED);
                 pntr_rectangle srcRect = {6, 0, 4, 4};
 
+                // The origin is a pivot, so the center of source pixel (0, 0) is what lands
+                // on (2, 2). At a scale of two that pixel covers two destination pixels, and
+                // its center falls on the second of them, which puts the 8x8 draw at
+                // (1, 1) through (8, 8) rather than (2, 2) through (9, 9).
+
                 IT("with the bilinear filter", {
                     pntr_image* dst = pntr_gen_image_color(20, 20, PNTR_GREEN);
                     NEQUALS(dst, NULL);
                     pntr_draw_image_rotozoom(dst, src, srcRect, 2, 2, 0.0f, 2.0f, 2.0f, 0.0f, 0.0f, PNTR_FILTER_BILINEAR, PNTR_WHITE);
                     COLOREQUALS(pntr_image_get_color(dst, 2, 2), PNTR_RED);
                     COLOREQUALS(pntr_image_get_color(dst, 5, 5), PNTR_RED);
-                    COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 1, 1), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 8, 8), PNTR_RED);
                     COLOREQUALS(pntr_image_get_color(dst, 0, 0), PNTR_GREEN);
+                    COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_GREEN);
                     COLOREQUALS(pntr_image_get_color(dst, 10, 10), PNTR_GREEN);
                     pntr_unload_image(dst);
                 });
@@ -3798,8 +3926,10 @@ MODULE(pntr, {
                     NEQUALS(dst, NULL);
                     pntr_draw_image_rotozoom(dst, src, srcRect, 2, 2, 0.0f, 2.0f, 2.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
                     COLOREQUALS(pntr_image_get_color(dst, 2, 2), PNTR_RED);
-                    COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 1, 1), PNTR_RED);
+                    COLOREQUALS(pntr_image_get_color(dst, 8, 8), PNTR_RED);
                     COLOREQUALS(pntr_image_get_color(dst, 0, 0), PNTR_GREEN);
+                    COLOREQUALS(pntr_image_get_color(dst, 9, 9), PNTR_GREEN);
                     pntr_unload_image(dst);
                 });
 
@@ -4043,6 +4173,107 @@ MODULE(pntr, {
                     GREATER(exact.width, 0);
                     LESSER(pntr_test_rectangle_distance(before, exact), 2);
                     LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                }
+            });
+
+            IT("pntr_draw_image_rotozoom() moves continuously through no rotation at any scale", {
+                // No rotation is the one angle that is handed to the scaled drawing path
+                // rather than to a rotation, so it is the angle most able to disagree with
+                // the general rotation a thousandth of a degree either side of it. The two
+                // only agree because both place the center of the origin pixel on the
+                // position: the scaled path offsets from the edge of that pixel, so
+                // pntr_draw_image_rotozoom() adds the half source pixel between them.
+                //
+                // A scale of one, whole number scales and scales that are neither are all
+                // covered, because the drawn size is a whole multiple of the source at the
+                // first two and a truncation of it at the third. The half pixel between the
+                // two conventions is worth half a destination pixel, so the step this used
+                // to leave grew with the scale rather than staying at a pixel: 2px at a
+                // scale of four and 4px at a scale of eight.
+                //
+                // A source small enough that eight times it still fits inside the
+                // destination, so the far edges report the draw rather than the clip.
+                pntr_image* zoomSource = pntr_test_pivot_source(16, 10, 2, 5);
+                NEQUALS(zoomSource, NULL);
+
+                float zoomScales[8] = {1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 4.0f, 6.0f, 8.0f};
+
+                for (int i = 0; i < 8; i++) {
+                    pntr_rectangle before = pntr_test_rotozoom_bounds(zoomSource, -0.001f, 2.0f, 5.0f, zoomScales[i]);
+                    pntr_rectangle exact = pntr_test_rotozoom_bounds(zoomSource, 0.0f, 2.0f, 5.0f, zoomScales[i]);
+                    pntr_rectangle after = pntr_test_rotozoom_bounds(zoomSource, 0.001f, 2.0f, 5.0f, zoomScales[i]);
+
+                    // Something was actually drawn, so an empty rectangle can't pass as still.
+                    GREATER(exact.width, 0);
+                    GREATER(exact.height, 0);
+
+                    // The scaled path truncates the drawn size while the rotation takes the
+                    // ceiling of it, so the two boxes can differ by a pixel in size however
+                    // well their pivots agree. They may not differ by more than that.
+                    LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                    LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                }
+
+                pntr_unload_image(zoomSource);
+            });
+
+            IT("pntr_draw_image_rotozoom() lands the origin pixel on the position when scaled", {
+                // A source where every pixel carries a color of its own, so the pixel that
+                // lands on the position names itself. At a whole number scale every source
+                // pixel covers a whole block of destination pixels, and the center of the
+                // origin pixel is inside its own block, so the position has to report the
+                // origin pixel exactly rather than within a pixel of it.
+                pntr_image* unique = pntr_gen_image_color(8, 6, PNTR_BLANK);
+                NEQUALS(unique, NULL);
+                for (int y = 0; y < 6; y++) {
+                    for (int x = 0; x < 8; x++) {
+                        pntr_draw_point(unique, x, y, pntr_new_color(
+                            (unsigned char)(x * 30 + 5),
+                            (unsigned char)(y * 40 + 7),
+                            (unsigned char)(x * y + 1),
+                            255));
+                    }
+                }
+
+                pntr_rectangle uniqueRect = {0, 0, 8, 6};
+                for (int scale = 1; scale <= 5; scale++) {
+                    for (int originY = 0; originY < 6; originY++) {
+                        for (int originX = 0; originX < 8; originX++) {
+                            pntr_image* dst = pntr_test_canvas(100, 100);
+                            NEQUALS(dst, NULL);
+
+                            pntr_draw_image_rotozoom(dst, unique, uniqueRect, 50, 50, 0.0f,
+                                (float)scale, (float)scale, (float)originX, (float)originY,
+                                PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                            COLOREQUALS(pntr_image_get_color(dst, 50, 50), pntr_image_get_color(unique, originX, originY));
+
+                            pntr_unload_image(dst);
+                        }
+                    }
+                }
+
+                pntr_unload_image(unique);
+            });
+
+            IT("pntr_draw_image_rotozoom() keeps its pivot on the position at a fractional scale", {
+                // A scale that truncates the drawn size steps the position onto one of the
+                // neighbours of the origin pixel instead, because the block the origin pixel
+                // was given is narrower than the half pixel its center sits at. Following
+                // the marker is what holds that to the pixel it has always been held to.
+                float fractionalScales[6] = {0.5f, 0.75f, 1.25f, 1.75f, 2.5f, 3.5f};
+
+                for (int i = 0; i < 6; i++) {
+                    pntr_image* dst = pntr_gen_image_color(300, 300, PNTR_GREEN);
+                    NEQUALS(dst, NULL);
+
+                    pntr_draw_image_rotozoom(dst, pivotSource, pivotRect, 150, 150, 0.0f,
+                        fractionalScales[i], fractionalScales[i], 2.0f, 12.0f,
+                        PNTR_FILTER_NEARESTNEIGHBOR, PNTR_WHITE);
+
+                    LESSER(pntr_test_pivot_offset(dst, 150, 150), 2);
+
+                    pntr_unload_image(dst);
                 }
             });
 
