@@ -470,6 +470,11 @@ typedef enum pntr_image_type {
     PNTR_IMAGE_TYPE_BMP /** Image type: BMP - Bitmap */
 } pntr_image_type;
 
+/**
+ * Horizontal alignment of rendered text.
+ *
+ * @see pntr_draw_text_aligned()
+ */
 typedef enum pntr_text_align {
     PNTR_TEXT_ALIGN_LEFT = 0, /** Text alignment: Left */
     PNTR_TEXT_ALIGN_CENTER,   /** Text alignment: Center */
@@ -1939,47 +1944,151 @@ PNTR_API pntr_color pntr_get_color(unsigned int hexValue) {
     );
 }
 
+/**
+ * Get the red channel of the given color.
+ *
+ * @details The accessors exist so that the channels can be reached without depending on
+ * the order the bytes sit in, which `PNTR_PIXELFORMAT_RGBA` and `PNTR_PIXELFORMAT_ARGB`
+ * disagree about.
+ *
+ * @param color The color to read the red channel from.
+ *
+ * @return The red channel, from 0 to 255.
+ *
+ * @see pntr_color_set_r()
+ * @see pntr_new_color()
+ */
 PNTR_API unsigned char pntr_color_r(pntr_color color) {
     return color.rgba.r;
 }
 
+/**
+ * Get the green channel of the given color.
+ *
+ * @param color The color to read the green channel from.
+ *
+ * @return The green channel, from 0 to 255.
+ *
+ * @see pntr_color_set_g()
+ * @see pntr_new_color()
+ */
 PNTR_API unsigned char pntr_color_g(pntr_color color) {
     return color.rgba.g;
 }
 
+/**
+ * Get the blue channel of the given color.
+ *
+ * @param color The color to read the blue channel from.
+ *
+ * @return The blue channel, from 0 to 255.
+ *
+ * @see pntr_color_set_b()
+ * @see pntr_new_color()
+ */
 PNTR_API unsigned char pntr_color_b(pntr_color color) {
     return color.rgba.b;
 }
 
+/**
+ * Get the alpha channel of the given color.
+ *
+ * @details An alpha of 0 is fully transparent, and 255 is fully opaque. Drawing with a
+ * color whose alpha is 0 paints nothing at all.
+ *
+ * @param color The color to read the alpha channel from.
+ *
+ * @return The alpha channel, from 0 to 255.
+ *
+ * @see pntr_color_set_a()
+ * @see pntr_color_fade()
+ */
 PNTR_API unsigned char pntr_color_a(pntr_color color) {
     return color.rgba.a;
 }
 
+/**
+ * Set the red channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param r The new red channel, from 0 to 255.
+ *
+ * @see pntr_color_r()
+ */
 PNTR_API void pntr_color_set_r(pntr_color* color, unsigned char r) {
     color->rgba.r = r;
 }
 
+/**
+ * Set the green channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param g The new green channel, from 0 to 255.
+ *
+ * @see pntr_color_g()
+ */
 PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g) {
     color->rgba.g = g;
 }
 
+/**
+ * Set the blue channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param b The new blue channel, from 0 to 255.
+ *
+ * @see pntr_color_b()
+ */
 PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b) {
     color->rgba.b = b;
 }
 
+/**
+ * Set the alpha channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param a The new alpha channel, from 0 to 255, where 0 is fully transparent.
+ *
+ * @see pntr_color_a()
+ */
 PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a) {
     color->rgba.a = a;
 }
 
 /**
  * Draws a point on the given image, without safety checks.
+ *
+ * @details The image is not tested for NULL and the coordinates are not clipped, so
+ * passing a coordinate that is not already known to lie inside the image's clip region
+ * writes outside of the image's pixel data. The color is alpha blended into the
+ * destination, unlike pntr_put_horizontal_line_unsafe(), which writes over it.
+ *
+ * @param dst The destination image. Must not be NULL.
+ * @param x The X coordinate of the point. Must be within the image.
+ * @param y The Y coordinate of the point. Must be within the image.
+ * @param color The color to blend into the point.
+ *
+ * @see pntr_draw_point()
+ * @see pntr_put_horizontal_line_unsafe()
  */
 PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_blend_color(&PNTR_PIXEL(dst, x, y), color);
 }
 
 /**
- * Draws a pixel on the given image.
+ * Draws a single pixel on the given image.
+ *
+ * @details The point is painted when it lands inside the destination's clip region, and
+ * skipped otherwise. A NULL image, or a fully transparent color, paints nothing and
+ * reports no error.
+ *
+ * @param dst The image to draw the point onto.
+ * @param x The X coordinate of the point.
+ * @param y The Y coordinate of the point.
+ * @param color The color of the point, alpha blended into the destination.
+ *
+ * @see pntr_draw_point_vec()
+ * @see pntr_draw_points()
  */
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
    if ((color.rgba.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
@@ -4297,10 +4406,18 @@ PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
 /**
  * Change brightness of the given color by a factor from -1.0f to 1.0f.
  *
+ * @details The factor is clamped into that range. A negative factor scales the red, green
+ * and blue channels towards black, and a positive one scales them towards white, so -1.0f
+ * gives black, 0.0f returns the color unchanged, and 1.0f gives white. The alpha channel
+ * is left alone.
+ *
  * @param color The color to change the brightness of.
  * @param factor The factor in which to change the brightness from -1.0f to 1.0f.
  *
+ * @return The new color with the brightness applied.
+ *
  * @see pntr_image_color_brightness()
+ * @see pntr_color_contrast()
  */
 PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor) {
     if (factor < -1.0f) {
