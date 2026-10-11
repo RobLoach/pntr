@@ -509,6 +509,94 @@ pntr_rectangle pntr_test_rotozoom_bounds(pntr_image* src, float degrees, float o
     return bounds;
 }
 
+/**
+ * Whether images can be decoded in this build.
+ *
+ * Each of these asks pntr which stub it settled on rather than repeating the
+ * reasoning, because a custom callback paired with one of the PNTR_NO_* defines keeps
+ * the feature even though the define is set.
+ *
+ * @see PNTR_NO_LOAD_IMAGE
+ */
+bool pntr_image_loading() {
+    #ifdef _PNTR_LOAD_IMAGE_DISABLED
+        return false;
+    #else
+        return true;
+    #endif
+}
+
+/**
+ * Whether images can be encoded in this build.
+ *
+ * @see PNTR_NO_SAVE_IMAGE
+ */
+bool pntr_image_saving() {
+    #ifdef _PNTR_SAVE_IMAGE_DISABLED
+        return false;
+    #else
+        return true;
+    #endif
+}
+
+/**
+ * Whether pntr can read and write files.
+ *
+ * Without it, pntr_load_file() and pntr_save_file() are stubs that report
+ * `PNTR_ERROR_NOT_SUPPORTED`, so everything that reaches the file system through them
+ * refuses rather than failing to open anything. The test suite's own `stdio.h` is
+ * untouched, which is what still lets a test create the file it then asks pntr for.
+ *
+ * @see PNTR_NO_STDIO
+ */
+bool pntr_file_io() {
+    #if defined(_PNTR_LOAD_FILE_DISABLED) || defined(_PNTR_SAVE_FILE_DISABLED)
+        return false;
+    #else
+        return true;
+    #endif
+}
+
+/**
+ * Whether an image can be loaded from the file system.
+ *
+ * Reading an image out of a file needs both the bytes to be read and the image to be
+ * decoded, so either one being compiled out takes it away.
+ *
+ * @see pntr_file_io()
+ * @see pntr_image_loading()
+ */
+bool pntr_image_from_file() {
+    return pntr_file_io() && pntr_image_loading();
+}
+
+/**
+ * Whether BMP images can be loaded back in. Saving them only needs pntr_bmp().
+ *
+ * @see PNTR_NO_BMP
+ */
+bool pntr_bmp_loading() {
+    #ifdef PNTR_NO_BMP
+        return false;
+    #else
+        return pntr_bmp() && pntr_image_loading();
+    #endif
+}
+
+/**
+ * Whether JPEG images can be saved. Loading them back also needs pntr_jpeg().
+ *
+ * @see pntr_jpeg()
+ */
+bool pntr_jpeg_saving() {
+    #ifdef PNTR_CUTE_PNG
+        // cute_png is a PNG-only backend, so it never writes a JPEG.
+        return false;
+    #else
+        return pntr_image_saving();
+    #endif
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -631,67 +719,119 @@ MODULE(pntr, {
         EQUALS(pntr_get_error(), NULL);
     });
 
-    IT("pntr_load_file(): A missing file and a directory differ", {
-        pntr_set_error(PNTR_ERROR_NONE);
+    if (pntr_file_io()) {
+        IT("pntr_load_file(): A missing file and a directory differ", {
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // Nothing can be opened at a name that isn't there.
-        EQUALS(pntr_load_file("FileNotFound.txt", NULL), NULL);
-        pntr_error missing = pntr_get_error_code();
-        EQUALS(missing, PNTR_ERROR_FAILED_TO_OPEN);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // Nothing can be opened at a name that isn't there.
+            EQUALS(pntr_load_file("FileNotFound.txt", NULL), NULL);
+            pntr_error missing = pntr_get_error_code();
+            EQUALS(missing, PNTR_ERROR_FAILED_TO_OPEN);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // A directory can't be loaded either, but for its own reason, and in no case
-        // because there wasn't enough memory for it.
-        EQUALS(pntr_load_file(".", NULL), NULL);
-        pntr_error directory = pntr_get_error_code();
-        NEQUALS(directory, PNTR_ERROR_NONE);
-        NEQUALS(directory, PNTR_ERROR_NO_MEMORY);
+            // A directory can't be loaded either, but for its own reason, and in no case
+            // because there wasn't enough memory for it.
+            EQUALS(pntr_load_file(".", NULL), NULL);
+            pntr_error directory = pntr_get_error_code();
+            NEQUALS(directory, PNTR_ERROR_NONE);
+            NEQUALS(directory, PNTR_ERROR_NO_MEMORY);
 
-        // Where the directory opens, the read is what fails, and the caller can tell the
-        // two apart.
-        if (pntr_test_directory_opens()) {
-            EQUALS(directory, PNTR_ERROR_FAILED_TO_READ);
-            NEQUALS(directory, missing);
-        }
+            // Where the directory opens, the read is what fails, and the caller can tell the
+            // two apart.
+            if (pntr_test_directory_opens()) {
+                EQUALS(directory, PNTR_ERROR_FAILED_TO_READ);
+                NEQUALS(directory, missing);
+            }
 
-        pntr_set_error(PNTR_ERROR_NONE);
-    });
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+    }
+    else {
+        IT("pntr_load_file(): Reports that it was compiled out", {
+            pntr_set_error(PNTR_ERROR_NONE);
 
-    IT("pntr_load_image(): Reports the file's error, not its own", {
-        pntr_set_error(PNTR_ERROR_NONE);
+            // Without a file system there is nothing to tell a missing file from a
+            // directory, so both are refused for the same reason, and the read size is
+            // still reported back as the nothing that was read.
+            unsigned int bytesRead = 1234;
+            EQUALS(pntr_load_file("FileNotFound.txt", &bytesRead), NULL);
+            EQUALS(bytesRead, 0);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // A missing image file must surface the same error pntr_load_file() reported,
-        // rather than a blanket failure to open that hides it.
-        EQUALS(pntr_load_image("NotFoundImage.png"), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
-        pntr_set_error(PNTR_ERROR_NONE);
+            EQUALS(pntr_load_file(".", NULL), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // A directory isn't a missing file, and is never a lack of memory.
-        EQUALS(pntr_load_image("."), NULL);
-        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
-        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
-        if (pntr_test_directory_opens()) {
-            EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_READ);
-        }
-        pntr_set_error(PNTR_ERROR_NONE);
+            // A name is still required, which is about the arguments rather than the
+            // missing file system.
+            EQUALS(pntr_load_file(NULL, NULL), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+    }
 
-        // A file that loads but holds no bytes is about the data, not the file.
-        const char* emptyName = "tempFileEmptyImage.png";
-        FILE* emptyFile = fopen(emptyName, "wb");
-        NEQUALS(emptyFile, NULL);
-        fclose(emptyFile);
+    if (pntr_image_from_file()) {
+        IT("pntr_load_image(): Reports the file's error, not its own", {
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        EQUALS(pntr_load_image(emptyName), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_DATA);
-        pntr_set_error(PNTR_ERROR_NONE);
-        remove(emptyName);
+            // A missing image file must surface the same error pntr_load_file() reported,
+            // rather than a blanket failure to open that hides it.
+            EQUALS(pntr_load_image("NotFoundImage.png"), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // So is a file full of bytes that aren't an image.
-        const char* notAnImage = "this is not an image";
-        EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, (const unsigned char*)notAnImage, 20), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_DATA);
-        pntr_set_error(PNTR_ERROR_NONE);
-    });
+            // A directory isn't a missing file, and is never a lack of memory.
+            EQUALS(pntr_load_image("."), NULL);
+            NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+            NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
+            if (pntr_test_directory_opens()) {
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_READ);
+            }
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // A file that loads but holds no bytes is about the data, not the file.
+            const char* emptyName = "tempFileEmptyImage.png";
+            FILE* emptyFile = fopen(emptyName, "wb");
+            NEQUALS(emptyFile, NULL);
+            fclose(emptyFile);
+
+            EQUALS(pntr_load_image(emptyName), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_DATA);
+            pntr_set_error(PNTR_ERROR_NONE);
+            remove(emptyName);
+
+            // So is a file full of bytes that aren't an image.
+            const char* notAnImage = "this is not an image";
+            EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, (const unsigned char*)notAnImage, 20), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_DATA);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+    }
+    else {
+        IT("pntr_load_image(): Reports that it was compiled out", {
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // With either the file system or the decoder gone, no file can be reached, so
+            // nothing about the file itself is ever reported.
+            EQUALS(pntr_load_image("resources/image.png"), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // A file that isn't there is refused too, for whichever of the two reasons is
+            // reached first, but never for a lack of memory.
+            EQUALS(pntr_load_image("NotFoundImage.png"), NULL);
+            NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+            NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // A name is still required, which is about the arguments rather than what was
+            // compiled out.
+            EQUALS(pntr_load_image(NULL), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+    }
 
     IT("pntr_color_rgba()", {
         pntr_color color = PNTR_RED;
@@ -2686,268 +2826,396 @@ MODULE(pntr, {
         EQUALS(pntr_get_file_image_type(""), PNTR_IMAGE_TYPE_UNKNOWN);
     });
 
-    IT("pntr_load_image()", {
-        pntr_image* image = pntr_load_image("NotFoundImage.png");
-        EQUALS(image, NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
+    if (pntr_image_from_file()) {
+        IT("pntr_load_image()", {
+            pntr_image* image = pntr_load_image("NotFoundImage.png");
+            EQUALS(image, NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        image = pntr_load_image("resources/image.png");
-        NEQUALS(image, NULL);
-        EQUALS(image->width, 128);
-        EQUALS(image->height, 128);
-        NEQUALS(image->data, NULL);
-        pntr_unload_image(image);
-    });
+            image = pntr_load_image("resources/image.png");
+            NEQUALS(image, NULL);
+            EQUALS(image->width, 128);
+            EQUALS(image->height, 128);
+            NEQUALS(image->data, NULL);
+            pntr_unload_image(image);
+        });
 
-    IT("pntr_load_image_from_memory()", {
-        unsigned int bytes;
-        unsigned char* fileData = pntr_load_file("resources/image.png", &bytes);
+        IT("pntr_load_image_from_memory()", {
+            unsigned int bytes;
+            unsigned char* fileData = pntr_load_file("resources/image.png", &bytes);
 
-        pntr_image* image = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
-        NEQUALS(image, NULL);
-        EQUALS(image->width, 128);
-        EQUALS(image->height, 128);
+            pntr_image* image = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
+            NEQUALS(image, NULL);
+            EQUALS(image->width, 128);
+            EQUALS(image->height, 128);
 
-        pntr_unload_image(image);
-        pntr_unload_file(fileData);
-    });
+            pntr_unload_image(image);
+            pntr_unload_file(fileData);
+        });
 
-    IT("pntr_load_font_bmf(), pntr_unload_font(), pntr_draw_text()", {
-        pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
-        NEQUALS(font, NULL);
-        GREATER(font->charactersLen, 10);
+        IT("pntr_load_font_bmf(), pntr_unload_font(), pntr_draw_text()", {
+            pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
+            NEQUALS(font, NULL);
+            GREATER(font->charactersLen, 10);
 
-        pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
-        NEQUALS(image, NULL);
-        pntr_draw_text(image, font, "Hello World!", 10, 10, PNTR_WHITE);
-        pntr_draw_text_wrapped(image, font, "The quick brown fox jumped over the lazy dog.", 10, 10, 100, PNTR_BLUE);
+            pntr_image* image = pntr_gen_image_color(200, 200, PNTR_DARKBROWN);
+            NEQUALS(image, NULL);
+            pntr_draw_text(image, font, "Hello World!", 10, 10, PNTR_WHITE);
+            pntr_draw_text_wrapped(image, font, "The quick brown fox jumped over the lazy dog.", 10, 10, 100, PNTR_BLUE);
 
-        pntr_unload_image(image);
-        pntr_unload_font(font);
-    });
+            pntr_unload_image(image);
+            pntr_unload_font(font);
+        });
 
-    IT("pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()", {
-        pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
-        GREATER(pntr_measure_text(font, "Hello World!"), 50);
-        pntr_vector size = pntr_measure_text_ex(font, "Hello World!", 0);
-        GREATER(size.x, 50);
-        EQUALS(size.y, font->atlas->height);
+        IT("pntr_measure_text(), pntr_measure_text_ex(), pntr_gen_image_text()", {
+            pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
+            GREATER(pntr_measure_text(font, "Hello World!"), 50);
+            pntr_vector size = pntr_measure_text_ex(font, "Hello World!", 0);
+            GREATER(size.x, 50);
+            EQUALS(size.y, font->atlas->height);
 
-        pntr_image* textImage = pntr_gen_image_text(font, "Hello World!", PNTR_WHITE, PNTR_BLANK);
-        NEQUALS(textImage, NULL);
-        EQUALS(textImage->width, size.x);
-        EQUALS(textImage->height, size.y);
-        pntr_unload_image(textImage);
+            pntr_image* textImage = pntr_gen_image_text(font, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(textImage, NULL);
+            EQUALS(textImage->width, size.x);
+            EQUALS(textImage->height, size.y);
+            pntr_unload_image(textImage);
 
-        size = pntr_measure_text_ex(font, "On\nNew\nLines", 0);
-        EQUALS(size.y, font->atlas->height * 3);
+            size = pntr_measure_text_ex(font, "On\nNew\nLines", 0);
+            EQUALS(size.y, font->atlas->height * 3);
 
-        pntr_unload_font(font);
-    });
+            pntr_unload_font(font);
+        });
 
-    IT("pntr_load_font_tty()", {
-        // The atlas is 760x8, which is exactly 95 8x8 glyphs.
-        pntr_font* font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, PNTR_TEST_TTY_CHARACTERS);
-        NEQUALS(font, NULL);
-        EQUALS(font->charactersLen, 95);
-        pntr_rectangle firstGlyph = PNTR_CLITERAL(pntr_rectangle) {0, 0, 8, 8};
-        pntr_rectangle lastGlyph = PNTR_CLITERAL(pntr_rectangle) {94 * 8, 0, 8, 8};
-        RECTEQUALS(font->srcRects[0], firstGlyph);
-        RECTEQUALS(font->srcRects[94], lastGlyph);
-        EQUALS(pntr_measure_text(font, "Hello World!"), 96);
-        pntr_unload_font(font);
-    });
+        IT("pntr_load_font_tty()", {
+            // The atlas is 760x8, which is exactly 95 8x8 glyphs.
+            pntr_font* font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, PNTR_TEST_TTY_CHARACTERS);
+            NEQUALS(font, NULL);
+            EQUALS(font->charactersLen, 95);
+            pntr_rectangle firstGlyph = PNTR_CLITERAL(pntr_rectangle) {0, 0, 8, 8};
+            pntr_rectangle lastGlyph = PNTR_CLITERAL(pntr_rectangle) {94 * 8, 0, 8, 8};
+            RECTEQUALS(font->srcRects[0], firstGlyph);
+            RECTEQUALS(font->srcRects[94], lastGlyph);
+            EQUALS(pntr_measure_text(font, "Hello World!"), 96);
+            pntr_unload_font(font);
+        });
 
-    IT("pntr_load_font_bmf_from_memory(), pntr_load_font_bmf_from_image()", {
-        unsigned int bytes;
-        unsigned char* fileData = pntr_load_file("resources/font.png", &bytes);
-        NEQUALS(fileData, NULL);
+        IT("pntr_load_font_bmf_from_memory(), pntr_load_font_bmf_from_image()", {
+            unsigned int bytes;
+            unsigned char* fileData = pntr_load_file("resources/font.png", &bytes);
+            NEQUALS(fileData, NULL);
 
-        // Loading from memory matches loading from the file system.
-        pntr_font* fromFile = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
-        NEQUALS(fromFile, NULL);
-        pntr_font* fromMemory = pntr_load_font_bmf_from_memory(fileData, bytes, PNTR_TEST_BMF_CHARACTERS);
-        NEQUALS(fromMemory, NULL);
-        EQUALS(fromFile->charactersLen, 70);
-        EQUALS(pntr_measure_text(fromFile, "Hello World!"), 83);
-        EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
-        RECTEQUALS(fromMemory->srcRects[0], fromFile->srcRects[0]);
-        RECTEQUALS(fromMemory->glyphRects[fromFile->charactersLen - 1], fromFile->glyphRects[fromFile->charactersLen - 1]);
+            // Loading from memory matches loading from the file system.
+            pntr_font* fromFile = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
+            NEQUALS(fromFile, NULL);
+            pntr_font* fromMemory = pntr_load_font_bmf_from_memory(fileData, bytes, PNTR_TEST_BMF_CHARACTERS);
+            NEQUALS(fromMemory, NULL);
+            EQUALS(fromFile->charactersLen, 70);
+            EQUALS(pntr_measure_text(fromFile, "Hello World!"), 83);
+            EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
+            RECTEQUALS(fromMemory->srcRects[0], fromFile->srcRects[0]);
+            RECTEQUALS(fromMemory->glyphRects[fromFile->charactersLen - 1], fromFile->glyphRects[fromFile->charactersLen - 1]);
 
-        // Both fonts measure and draw the same text identically.
-        pntr_vector sizeFromFile = pntr_measure_text_ex(fromFile, "Hello World!", 0);
-        pntr_vector sizeFromMemory = pntr_measure_text_ex(fromMemory, "Hello World!", 0);
-        EQUALS(sizeFromMemory.x, sizeFromFile.x);
-        EQUALS(sizeFromMemory.y, sizeFromFile.y);
+            // Both fonts measure and draw the same text identically.
+            pntr_vector sizeFromFile = pntr_measure_text_ex(fromFile, "Hello World!", 0);
+            pntr_vector sizeFromMemory = pntr_measure_text_ex(fromMemory, "Hello World!", 0);
+            EQUALS(sizeFromMemory.x, sizeFromFile.x);
+            EQUALS(sizeFromMemory.y, sizeFromFile.y);
 
-        pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_WHITE, PNTR_BLANK);
-        NEQUALS(expected, NULL);
-        pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_WHITE, PNTR_BLANK);
-        NEQUALS(actual, NULL);
-        IMAGEEQUALS(actual, expected);
-        pntr_unload_image(actual);
-        pntr_unload_image(expected);
+            pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(expected, NULL);
+            pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(actual, NULL);
+            IMAGEEQUALS(actual, expected);
+            pntr_unload_image(actual);
+            pntr_unload_image(expected);
 
-        pntr_unload_font(fromMemory);
-        pntr_unload_font(fromFile);
+            pntr_unload_font(fromMemory);
+            pntr_unload_font(fromFile);
 
-        // Asking for more characters than the atlas has glyphs is rejected.
-        pntr_font* tooMany = pntr_load_font_bmf_from_memory(fileData, bytes, PNTR_TEST_BMF_CHARACTERS "*=");
-        EQUALS(tooMany, NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // Asking for more characters than the atlas has glyphs is rejected.
+            pntr_font* tooMany = pntr_load_font_bmf_from_memory(fileData, bytes, PNTR_TEST_BMF_CHARACTERS "*=");
+            EQUALS(tooMany, NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // Invalid arguments.
-        EQUALS(pntr_load_font_bmf_from_memory(NULL, bytes, PNTR_TEST_BMF_CHARACTERS), NULL);
-        EQUALS(pntr_load_font_bmf_from_memory(fileData, 0, PNTR_TEST_BMF_CHARACTERS), NULL);
-        EQUALS(pntr_load_font_bmf_from_memory(fileData, bytes, NULL), NULL);
-        EQUALS(pntr_load_font_bmf_from_image(NULL, PNTR_TEST_BMF_CHARACTERS), NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // Invalid arguments.
+            EQUALS(pntr_load_font_bmf_from_memory(NULL, bytes, PNTR_TEST_BMF_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_bmf_from_memory(fileData, 0, PNTR_TEST_BMF_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_bmf_from_memory(fileData, bytes, NULL), NULL);
+            EQUALS(pntr_load_font_bmf_from_image(NULL, PNTR_TEST_BMF_CHARACTERS), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // A rejected pntr_load_font_bmf_from_image() leaves the image to the caller.
-        pntr_image* atlas = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
-        NEQUALS(atlas, NULL);
-        EQUALS(pntr_load_font_bmf_from_image(atlas, PNTR_TEST_BMF_CHARACTERS "*="), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
-        pntr_set_error(PNTR_ERROR_NONE);
-        EQUALS(atlas->width, 588);
-        pntr_unload_image(atlas);
+            // A rejected pntr_load_font_bmf_from_image() leaves the image to the caller.
+            pntr_image* atlas = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
+            NEQUALS(atlas, NULL);
+            EQUALS(pntr_load_font_bmf_from_image(atlas, PNTR_TEST_BMF_CHARACTERS "*="), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+            EQUALS(atlas->width, 588);
+            pntr_unload_image(atlas);
 
-        pntr_unload_file(fileData);
-    });
+            pntr_unload_file(fileData);
+        });
 
-    IT("pntr_load_font_tty_from_memory(), pntr_load_font_tty_from_image()", {
-        unsigned int bytes;
-        unsigned char* fileData = pntr_load_file("resources/font-tty-8x8.png", &bytes);
-        NEQUALS(fileData, NULL);
+        IT("pntr_load_font_tty_from_memory(), pntr_load_font_tty_from_image()", {
+            unsigned int bytes;
+            unsigned char* fileData = pntr_load_file("resources/font-tty-8x8.png", &bytes);
+            NEQUALS(fileData, NULL);
 
-        // Loading from memory matches loading from the file system.
-        pntr_font* fromFile = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, PNTR_TEST_TTY_CHARACTERS);
-        NEQUALS(fromFile, NULL);
-        pntr_font* fromMemory = pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, PNTR_TEST_TTY_CHARACTERS);
-        NEQUALS(fromMemory, NULL);
-        EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
-        RECTEQUALS(fromMemory->srcRects[94], fromFile->srcRects[94]);
+            // Loading from memory matches loading from the file system.
+            pntr_font* fromFile = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, PNTR_TEST_TTY_CHARACTERS);
+            NEQUALS(fromFile, NULL);
+            pntr_font* fromMemory = pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, PNTR_TEST_TTY_CHARACTERS);
+            NEQUALS(fromMemory, NULL);
+            EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
+            RECTEQUALS(fromMemory->srcRects[94], fromFile->srcRects[94]);
 
-        pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_WHITE, PNTR_BLANK);
-        NEQUALS(expected, NULL);
-        pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_WHITE, PNTR_BLANK);
-        NEQUALS(actual, NULL);
-        IMAGEEQUALS(actual, expected);
-        pntr_unload_image(actual);
-        pntr_unload_image(expected);
+            pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(expected, NULL);
+            pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(actual, NULL);
+            IMAGEEQUALS(actual, expected);
+            pntr_unload_image(actual);
+            pntr_unload_image(expected);
 
-        pntr_unload_font(fromMemory);
-        pntr_unload_font(fromFile);
+            pntr_unload_font(fromMemory);
+            pntr_unload_font(fromFile);
 
-        // A glyph that is wider than the atlas has no grid to index into.
-        EQUALS(pntr_load_font_tty("resources/font-tty-8x8.png", 1000, 8, "ABC"), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // A glyph that is wider than the atlas has no grid to index into.
+            EQUALS(pntr_load_font_tty("resources/font-tty-8x8.png", 1000, 8, "ABC"), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // Same for a glyph that is taller than the atlas.
-        EQUALS(pntr_load_font_tty("resources/font-tty-8x8.png", 8, 1000, "ABC"), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // Same for a glyph that is taller than the atlas.
+            EQUALS(pntr_load_font_tty("resources/font-tty-8x8.png", 8, 1000, "ABC"), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 1000, "ABC"), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
-        pntr_set_error(PNTR_ERROR_NONE);
+            EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 1000, "ABC"), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // Asking for more characters than the atlas has glyphs is rejected.
-        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, PNTR_TEST_TTY_CHARACTERS "~"), NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // Asking for more characters than the atlas has glyphs is rejected.
+            EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, PNTR_TEST_TTY_CHARACTERS "~"), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // Invalid arguments.
-        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 0, 8, "ABC"), NULL);
-        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, -8, "ABC"), NULL);
-        EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, NULL), NULL);
-        EQUALS(pntr_load_font_tty_from_image(NULL, 8, 8, "ABC"), NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // Invalid arguments.
+            EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 0, 8, "ABC"), NULL);
+            EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, -8, "ABC"), NULL);
+            EQUALS(pntr_load_font_tty_from_memory(fileData, bytes, 8, 8, NULL), NULL);
+            EQUALS(pntr_load_font_tty_from_image(NULL, 8, 8, "ABC"), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // A rejected pntr_load_font_tty_from_image() leaves the image to the caller.
-        pntr_image* atlas = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
-        NEQUALS(atlas, NULL);
-        EQUALS(pntr_load_font_tty_from_image(atlas, 8, 16, "ABC"), NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
-        EQUALS(atlas->height, 8);
-        pntr_unload_image(atlas);
+            // A rejected pntr_load_font_tty_from_image() leaves the image to the caller.
+            pntr_image* atlas = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, fileData, bytes);
+            NEQUALS(atlas, NULL);
+            EQUALS(pntr_load_font_tty_from_image(atlas, 8, 16, "ABC"), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+            EQUALS(atlas->height, 8);
+            pntr_unload_image(atlas);
 
-        pntr_unload_file(fileData);
-    });
+            pntr_unload_file(fileData);
+        });
+    }
+    else {
+        IT("pntr_load_image(): no image can be loaded from a file", {
+            // The refusal is pinned by "pntr_load_image(): Reports that it was compiled out",
+            // so there is nothing left for the happy path to say here.
+            SKIP();
+        });
 
-    IT("pntr_load_font_ttf_from_memory()", {
-        // Data that isn't a font must not produce a font.
-        const char* notAFont = "this is not a ttf";
-        pntr_font* font = pntr_load_font_ttf_from_memory((const unsigned char*)notAFont, 17, 20);
-        EQUALS(font, NULL);
-        NEQUALS(pntr_get_error(), NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
+        IT("pntr_load_image_from_memory(): no image to read", {
+            // A buffer still has to be handed over.
+            EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, NULL, 16), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+            EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, (const unsigned char*)"not a png", 0), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // Neither should a truncated font.
-        unsigned int bytes;
-        unsigned char* fileData = pntr_load_file("resources/tuffy.ttf", &bytes);
-        NEQUALS(fileData, NULL);
-        GREATER(bytes, 100);
+            // Bytes that reach the decoder are refused for being undecodable where there is a
+            // decoder, and for there being none where there isn't.
+            EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, (const unsigned char*)"not a png", 9), NULL);
+            pntr_error undecodable = pntr_image_loading() ? PNTR_ERROR_INVALID_DATA : PNTR_ERROR_NOT_SUPPORTED;
+            EQUALS(pntr_get_error_code(), undecodable);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
 
-        EQUALS(pntr_load_font_ttf_from_memory(fileData, 64, 20), NULL);
-        NEQUALS(pntr_get_error(), NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
+        IT("pntr_load_font_bmf(): refuses without its atlas", {
+            EQUALS(pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
 
-        // Invalid arguments.
-        EQUALS(pntr_load_font_ttf_from_memory(NULL, bytes, 20), NULL);
-        EQUALS(pntr_load_font_ttf_from_memory(fileData, 0, 20), NULL);
-        EQUALS(pntr_load_font_ttf_from_memory(fileData, bytes, 0), NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
+        IT("pntr_measure_text(), pntr_measure_text_ex(): without a font", {
+            // Nothing can be measured without an atlas to measure against, but neither is
+            // a missing font allowed to be read as a size.
+            EQUALS(pntr_measure_text(NULL, "Hello World!"), 0);
+            pntr_vector size = pntr_measure_text_ex(NULL, "Hello World!", 0);
+            EQUALS(size.x, 0);
+            EQUALS(size.y, 0);
+            EQUALS(pntr_gen_image_text(NULL, "Hello World!", PNTR_WHITE, PNTR_BLANK), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
 
-        // The real font still loads, and matches the file system loader.
-        pntr_font* fromFile = pntr_load_font_ttf("resources/tuffy.ttf", 20);
-        NEQUALS(fromFile, NULL);
-        pntr_font* fromMemory = pntr_load_font_ttf_from_memory(fileData, bytes, 20);
-        NEQUALS(fromMemory, NULL);
-        EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
-        EQUALS(fromMemory->atlas->width, fromFile->atlas->width);
-        EQUALS(fromMemory->atlas->height, fromFile->atlas->height);
-        IMAGEEQUALS(fromMemory->atlas, fromFile->atlas);
+        IT("pntr_load_font_tty(): refuses without its atlas", {
+            EQUALS(pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, PNTR_TEST_TTY_CHARACTERS), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
 
-        pntr_vector sizeFromFile = pntr_measure_text_ex(fromFile, "Hello World!", 0);
-        pntr_vector sizeFromMemory = pntr_measure_text_ex(fromMemory, "Hello World!", 0);
-        GREATER(sizeFromFile.x, 10);
-        EQUALS(sizeFromMemory.x, sizeFromFile.x);
-        EQUALS(sizeFromMemory.y, sizeFromFile.y);
+        IT("pntr_load_font_bmf_from_memory(): refuses without an atlas", {
+            const unsigned char* notAnAtlas = (const unsigned char*)"not a png";
 
-        pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_RED, PNTR_BLANK);
-        NEQUALS(expected, NULL);
-        pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_RED, PNTR_BLANK);
-        NEQUALS(actual, NULL);
-        IMAGEEQUALS(actual, expected);
-        pntr_unload_image(actual);
-        pntr_unload_image(expected);
+            // Whatever the atlas is, it has to decode into an image first.
+            EQUALS(pntr_load_font_bmf_from_memory(notAnAtlas, 9, PNTR_TEST_BMF_CHARACTERS), NULL);
+            pntr_error undecodable = pntr_image_loading() ? PNTR_ERROR_INVALID_DATA : PNTR_ERROR_NOT_SUPPORTED;
+            EQUALS(pntr_get_error_code(), undecodable);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        pntr_unload_font(fromMemory);
-        pntr_unload_font(fromFile);
-        pntr_unload_file(fileData);
-    });
+            // Invalid arguments are still rejected as such.
+            EQUALS(pntr_load_font_bmf_from_memory(NULL, 9, PNTR_TEST_BMF_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_bmf_from_memory(notAnAtlas, 0, PNTR_TEST_BMF_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_bmf_from_memory(notAnAtlas, 9, NULL), NULL);
+            EQUALS(pntr_load_font_bmf_from_image(NULL, PNTR_TEST_BMF_CHARACTERS), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
 
-    IT("pntr_draw_text(): unknown characters", {
-        // Characters that aren't in the font are skipped rather than indexed.
-        pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
-        NEQUALS(font, NULL);
+        IT("pntr_load_font_tty_from_memory(): refuses without an atlas", {
+            const unsigned char* notAnAtlas = (const unsigned char*)"not a png";
 
-        EQUALS(pntr_measure_text(font, "~~~"), 0);
+            EQUALS(pntr_load_font_tty_from_memory(notAnAtlas, 9, 8, 8, PNTR_TEST_TTY_CHARACTERS), NULL);
+            pntr_error undecodable = pntr_image_loading() ? PNTR_ERROR_INVALID_DATA : PNTR_ERROR_NOT_SUPPORTED;
+            EQUALS(pntr_get_error_code(), undecodable);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        pntr_image* image = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
-        NEQUALS(image, NULL);
-        pntr_image* expected = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
-        NEQUALS(expected, NULL);
-        pntr_draw_text(image, font, "~~~", 0, 0, PNTR_WHITE);
-        IMAGEEQUALS(image, expected);
+            // Invalid arguments are still rejected as such.
+            EQUALS(pntr_load_font_tty_from_memory(NULL, 9, 8, 8, PNTR_TEST_TTY_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_tty_from_memory(notAnAtlas, 0, 8, 8, PNTR_TEST_TTY_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_tty_from_memory(notAnAtlas, 9, 0, 8, PNTR_TEST_TTY_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_tty_from_memory(notAnAtlas, 9, 8, -8, PNTR_TEST_TTY_CHARACTERS), NULL);
+            EQUALS(pntr_load_font_tty_from_memory(notAnAtlas, 9, 8, 8, NULL), NULL);
+            EQUALS(pntr_load_font_tty_from_image(NULL, 8, 8, PNTR_TEST_TTY_CHARACTERS), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+    }
 
-        pntr_unload_image(expected);
-        pntr_unload_image(image);
-        pntr_unload_font(font);
-    });
+    if (pntr_file_io()) {
+        IT("pntr_load_font_ttf_from_memory()", {
+            // Data that isn't a font must not produce a font.
+            const char* notAFont = "this is not a ttf";
+            pntr_font* font = pntr_load_font_ttf_from_memory((const unsigned char*)notAFont, 17, 20);
+            EQUALS(font, NULL);
+            NEQUALS(pntr_get_error(), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Neither should a truncated font.
+            unsigned int bytes;
+            unsigned char* fileData = pntr_load_file("resources/tuffy.ttf", &bytes);
+            NEQUALS(fileData, NULL);
+            GREATER(bytes, 100);
+
+            EQUALS(pntr_load_font_ttf_from_memory(fileData, 64, 20), NULL);
+            NEQUALS(pntr_get_error(), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Invalid arguments.
+            EQUALS(pntr_load_font_ttf_from_memory(NULL, bytes, 20), NULL);
+            EQUALS(pntr_load_font_ttf_from_memory(fileData, 0, 20), NULL);
+            EQUALS(pntr_load_font_ttf_from_memory(fileData, bytes, 0), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // The real font still loads, and matches the file system loader.
+            pntr_font* fromFile = pntr_load_font_ttf("resources/tuffy.ttf", 20);
+            NEQUALS(fromFile, NULL);
+            pntr_font* fromMemory = pntr_load_font_ttf_from_memory(fileData, bytes, 20);
+            NEQUALS(fromMemory, NULL);
+            EQUALS(fromMemory->charactersLen, fromFile->charactersLen);
+            EQUALS(fromMemory->atlas->width, fromFile->atlas->width);
+            EQUALS(fromMemory->atlas->height, fromFile->atlas->height);
+            IMAGEEQUALS(fromMemory->atlas, fromFile->atlas);
+
+            pntr_vector sizeFromFile = pntr_measure_text_ex(fromFile, "Hello World!", 0);
+            pntr_vector sizeFromMemory = pntr_measure_text_ex(fromMemory, "Hello World!", 0);
+            GREATER(sizeFromFile.x, 10);
+            EQUALS(sizeFromMemory.x, sizeFromFile.x);
+            EQUALS(sizeFromMemory.y, sizeFromFile.y);
+
+            pntr_image* expected = pntr_gen_image_text(fromFile, "Hello World!", PNTR_RED, PNTR_BLANK);
+            NEQUALS(expected, NULL);
+            pntr_image* actual = pntr_gen_image_text(fromMemory, "Hello World!", PNTR_RED, PNTR_BLANK);
+            NEQUALS(actual, NULL);
+            IMAGEEQUALS(actual, expected);
+            pntr_unload_image(actual);
+            pntr_unload_image(expected);
+
+            pntr_unload_font(fromMemory);
+            pntr_unload_font(fromFile);
+            pntr_unload_file(fileData);
+        });
+    }
+    else {
+        IT("pntr_load_font_ttf_from_memory(): without a font file", {
+            // Data that isn't a ttf must not produce a font, which needs no file system.
+            const unsigned char* notAFont = (const unsigned char*)"this is not a ttf";
+            EQUALS(pntr_load_font_ttf_from_memory(notAFont, 17, 20), NULL);
+            NEQUALS(pntr_get_error(), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Invalid arguments.
+            EQUALS(pntr_load_font_ttf_from_memory(NULL, 17, 20), NULL);
+            EQUALS(pntr_load_font_ttf_from_memory(notAFont, 0, 20), NULL);
+            EQUALS(pntr_load_font_ttf_from_memory(notAFont, 17, 0), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // The real font can't be reached, so nothing is left to compare it against.
+            EQUALS(pntr_load_font_ttf("resources/tuffy.ttf", 20), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+    }
+
+    if (pntr_image_from_file()) {
+        IT("pntr_draw_text(): unknown characters", {
+            // Characters that aren't in the font are skipped rather than indexed.
+            pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
+            NEQUALS(font, NULL);
+
+            EQUALS(pntr_measure_text(font, "~~~"), 0);
+
+            pntr_image* image = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
+            NEQUALS(image, NULL);
+            pntr_image* expected = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
+            NEQUALS(expected, NULL);
+            pntr_draw_text(image, font, "~~~", 0, 0, PNTR_WHITE);
+            IMAGEEQUALS(image, expected);
+
+            pntr_unload_image(expected);
+            pntr_unload_image(image);
+            pntr_unload_font(font);
+        });
+    }
+    else {
+        IT("pntr_draw_text(): without a font", {
+            // Drawing needs the BMFont atlas, whose refusal is pinned by
+            // "pntr_load_font_bmf(): refuses without its atlas". Drawing with no font at all
+            // still has to leave the destination alone.
+            pntr_image* image = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
+            NEQUALS(image, NULL);
+            pntr_image* expected = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
+            NEQUALS(expected, NULL);
+
+            pntr_draw_text(image, NULL, "~~~", 0, 0, PNTR_WHITE);
+            IMAGEEQUALS(image, expected);
+
+            pntr_unload_image(expected);
+            pntr_unload_image(image);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+    }
 
     IT("pntr_load_font_default()", {
         pntr_font* font = pntr_load_font_default();
@@ -3293,210 +3561,372 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
-    IT("pntr_load_file(), pntr_unload_file()", {
-        unsigned int bytesRead;
-        unsigned char* fileData = pntr_load_file("resources/text.txt", &bytesRead);
+    if (pntr_file_io()) {
+        IT("pntr_load_file(), pntr_unload_file()", {
+            unsigned int bytesRead;
+            unsigned char* fileData = pntr_load_file("resources/text.txt", &bytesRead);
 
-        GREATER(bytesRead, 5);
-        STRCEQUALS((const char*)fileData, "Hello", 5);
-        pntr_unload_file(fileData);
+            GREATER(bytesRead, 5);
+            STRCEQUALS((const char*)fileData, "Hello", 5);
+            pntr_unload_file(fileData);
 
-        // Try to load a file that doesn't exist.
-        bytesRead = 1234;
-        unsigned char* fileNotFound = pntr_load_file("FileNotFound.txt", &bytesRead);
-        EQUALS(fileNotFound, NULL);
-        EQUALS(bytesRead, 0);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
+            // Try to load a file that doesn't exist.
+            bytesRead = 1234;
+            unsigned char* fileNotFound = pntr_load_file("FileNotFound.txt", &bytesRead);
+            EQUALS(fileNotFound, NULL);
+            EQUALS(bytesRead, 0);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
 
-        // Reporting the size back is optional.
-        fileNotFound = pntr_load_file("FileNotFound.txt", NULL);
-        EQUALS(fileNotFound, NULL);
+            // Reporting the size back is optional.
+            fileNotFound = pntr_load_file("FileNotFound.txt", NULL);
+            EQUALS(fileNotFound, NULL);
 
-        // Expect an error to result.
-        const char* error = pntr_get_error();
-        NEQUALS(error, NULL);
-        pntr_set_error(PNTR_ERROR_NONE);
-    });
-
-    IT("pntr_load_file(): Empty file", {
-        // A file that exists but holds no data loads successfully.
-        const char* fileName = "tempFileEmpty.txt";
-        FILE* emptyFile = fopen(fileName, "wb");
-        NEQUALS(emptyFile, NULL);
-        fclose(emptyFile);
-
-        unsigned int bytesRead = 1234;
-        unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
-        NEQUALS(fileData, NULL);
-        EQUALS(bytesRead, 0);
-        EQUALS(pntr_get_error(), NULL);
-        pntr_unload_file(fileData);
-
-        remove(fileName);
-    });
-
-    IT("pntr_load_file(): Directory", {
-        // A directory can't be loaded, but it isn't a lack of memory either.
-        unsigned int bytesRead = 1234;
-        unsigned char* fileData = pntr_load_file(".", &bytesRead);
-        EQUALS(fileData, NULL);
-        EQUALS(bytesRead, 0);
-        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
-        NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
-        pntr_set_error(PNTR_ERROR_NONE);
-    });
-
-    IT("pntr_load_file_text()", {
-        const char* text = pntr_load_file_text("resources/text.txt");
-        STRCEQUALS(text, "Hello, World!", 13);
-        pntr_unload_file_text(text);
-    });
-
-    IT("pntr_load_file_text(): Empty file", {
-        // Unlike pntr_load_file(), the text is always null terminated.
-        const char* fileName = "tempFileEmptyText.txt";
-        FILE* emptyFile = fopen(fileName, "wb");
-        NEQUALS(emptyFile, NULL);
-        fclose(emptyFile);
-
-        const char* text = pntr_load_file_text(fileName);
-        NEQUALS(text, NULL);
-        STREQUALS(text, "");
-        pntr_unload_file_text(text);
-
-        remove(fileName);
-    });
-
-    IT("pntr_load_font_ttf()", {
-        pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20);
-        NEQUALS(font, NULL);
-        GREATER(font->charactersLen, 20);
-
-        pntr_image* canvas = pntr_gen_image_text(font, "Hello World!", PNTR_RED, PNTR_BLANK);
-        NEQUALS(canvas, NULL);
-        GREATER(canvas->width, 10);
-        GREATER(canvas->height, 10);
-
-        IT("pntr_measure_text_ex()", {
-            pntr_vector size = pntr_measure_text_ex(font, "Hello!!", 0);
-            GREATER(size.x, 20);
-            GREATER(size.y, 5);
+            // Expect an error to result.
+            const char* error = pntr_get_error();
+            NEQUALS(error, NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
         });
 
-        pntr_unload_image(canvas);
-        pntr_unload_font(font);
-    });
+        IT("pntr_load_file(): Empty file", {
+            // A file that exists but holds no data loads successfully.
+            const char* fileName = "tempFileEmpty.txt";
+            FILE* emptyFile = fopen(fileName, "wb");
+            NEQUALS(emptyFile, NULL);
+            fclose(emptyFile);
 
-    IT("pntr_save_file()", {
-        const char* fileName = "tempFile.txt";
-        const char* fileData = "Hello World!";
-        unsigned int bytes = 12;
-        bool result = pntr_save_file(fileName, (unsigned char*)fileData, bytes);
-        EQUALS(result, true);
+            unsigned int bytesRead = 1234;
+            unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
+            NEQUALS(fileData, NULL);
+            EQUALS(bytesRead, 0);
+            EQUALS(pntr_get_error(), NULL);
+            pntr_unload_file(fileData);
 
-        unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
-        GREATER(bytes, 5);
-        STRCEQUALS((const char*)fileDataResult, "Hello", 5);
-        pntr_unload_file(fileDataResult);
+            remove(fileName);
+        });
 
-        remove(fileName);
-    });
+        IT("pntr_load_file(): Directory", {
+            // A directory can't be loaded, but it isn't a lack of memory either.
+            unsigned int bytesRead = 1234;
+            unsigned char* fileData = pntr_load_file(".", &bytesRead);
+            EQUALS(fileData, NULL);
+            EQUALS(bytesRead, 0);
+            NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+            NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
 
-    IT("pntr_save_file(): No data", {
-        // Saving nothing still creates and truncates the file, which is a success.
-        const char* fileName = "tempFileNoData.txt";
-        const char* fileData = "Hello World!";
+        IT("pntr_load_file_text()", {
+            const char* text = pntr_load_file_text("resources/text.txt");
+            STRCEQUALS(text, "Hello, World!", 13);
+            pntr_unload_file_text(text);
+        });
 
-        bool result = pntr_save_file(fileName, (unsigned char*)fileData, 12);
-        EQUALS(result, true);
+        IT("pntr_load_file_text(): Empty file", {
+            // Unlike pntr_load_file(), the text is always null terminated.
+            const char* fileName = "tempFileEmptyText.txt";
+            FILE* emptyFile = fopen(fileName, "wb");
+            NEQUALS(emptyFile, NULL);
+            fclose(emptyFile);
 
-        result = pntr_save_file(fileName, (unsigned char*)fileData, 0);
-        EQUALS(result, true);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+            const char* text = pntr_load_file_text(fileName);
+            NEQUALS(text, NULL);
+            STREQUALS(text, "");
+            pntr_unload_file_text(text);
 
-        // The file still exists, and is now empty.
-        unsigned int bytes = 1234;
-        unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
-        NEQUALS(fileDataResult, NULL);
-        EQUALS(bytes, 0);
-        pntr_unload_file(fileDataResult);
+            remove(fileName);
+        });
+    }
+    else {
+        IT("pntr_load_file(): nothing can be read", {
+            // A file that is really there is refused just the same, and the read size is still
+            // reported back as the nothing that was read.
+            unsigned int bytesRead = 1234;
+            EQUALS(pntr_load_file("resources/text.txt", &bytesRead), NULL);
+            EQUALS(bytesRead, 0);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        remove(fileName);
-    });
+            // Reporting the size back stays optional.
+            EQUALS(pntr_load_file("resources/text.txt", NULL), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-    IT("pntr_save_file(): Failures", {
-        const char* fileData = "Hello World!";
+            // Unloading nothing is still safe.
+            pntr_unload_file(NULL);
+        });
 
-        // A file in a directory that doesn't exist can't be opened.
-        bool result = pntr_save_file("MissingDirectory/tempFile.txt", (unsigned char*)fileData, 12);
-        EQUALS(result, false);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
-        pntr_set_error(PNTR_ERROR_NONE);
+        IT("pntr_load_file(): Empty file is refused too", {
+            // The refusal happens before anything about the file is looked at, so a file that
+            // exists and holds no data is refused for the same reason as any other.
+            const char* fileName = "tempFileEmpty.txt";
+            FILE* emptyFile = fopen(fileName, "wb");
+            NEQUALS(emptyFile, NULL);
+            fclose(emptyFile);
 
-        // A file that opens, but that can't hold what is written to it, reports the
-        // write as the thing that failed.
-        const char* unwritableFile = pntr_test_unwritable_file();
-        if (unwritableFile != NULL) {
-            FILE* exists = fopen(unwritableFile, "wb");
-            if (exists != NULL) {
-                fclose(exists);
+            unsigned int bytesRead = 1234;
+            EQUALS(pntr_load_file(fileName, &bytesRead), NULL);
+            EQUALS(bytesRead, 0);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-                result = pntr_save_file(unwritableFile, (unsigned char*)fileData, 12);
-                EQUALS(result, false);
-                EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_WRITE);
-                pntr_set_error(PNTR_ERROR_NONE);
-            }
-        }
-    });
+            remove(fileName);
+        });
 
-    IT("pntr_save_file(), pntr_load_file(): Round trip", {
-        const char* fileName = "tempFileRoundTrip.bin";
-        unsigned char fileData[4096];
-        for (int i = 0; i < 4096; i++) {
-            fileData[i] = (unsigned char)(i % 256);
-        }
+        IT("pntr_load_file(): Directory is refused too", {
+            // Pinned by "pntr_load_file(): Reports that it was compiled out", which is where a
+            // missing file and a directory are shown to be refused alike.
+            SKIP();
+        });
 
-        unsigned int sizes[3];
-        sizes[0] = 0;
-        sizes[1] = 1;
-        sizes[2] = 4096;
+        IT("pntr_load_file_text(): nothing can be read", {
+            // The one thing a caller must be able to rely on is that a refusal hands back
+            // nothing rather than a string that can't be read.
+            EQUALS(pntr_load_file_text("resources/text.txt"), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        for (int i = 0; i < 3; i++) {
-            bool result = pntr_save_file(fileName, fileData, sizes[i]);
+            EQUALS(pntr_load_file_text(NULL), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Unloading nothing is still safe.
+            pntr_unload_file_text(NULL);
+        });
+
+        IT("pntr_load_file_text(): Empty file is refused too", {
+            const char* fileName = "tempFileEmptyText.txt";
+            FILE* emptyFile = fopen(fileName, "wb");
+            NEQUALS(emptyFile, NULL);
+            fclose(emptyFile);
+
+            EQUALS(pntr_load_file_text(fileName), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            remove(fileName);
+        });
+    }
+
+    if (pntr_file_io()) {
+        IT("pntr_load_font_ttf()", {
+            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 20);
+            NEQUALS(font, NULL);
+            GREATER(font->charactersLen, 20);
+
+            pntr_image* canvas = pntr_gen_image_text(font, "Hello World!", PNTR_RED, PNTR_BLANK);
+            NEQUALS(canvas, NULL);
+            GREATER(canvas->width, 10);
+            GREATER(canvas->height, 10);
+
+            IT("pntr_measure_text_ex()", {
+                pntr_vector size = pntr_measure_text_ex(font, "Hello!!", 0);
+                GREATER(size.x, 20);
+                GREATER(size.y, 5);
+            });
+
+            pntr_unload_image(canvas);
+            pntr_unload_font(font);
+        });
+    }
+    else {
+        IT("pntr_load_font_ttf(): refuses without a file", {
+            EQUALS(pntr_load_font_ttf("resources/tuffy.ttf", 20), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Invalid arguments are still rejected as such.
+            EQUALS(pntr_load_font_ttf(NULL, 20), NULL);
+            EQUALS(pntr_load_font_ttf("resources/tuffy.ttf", 0), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            IT("pntr_measure_text_ex(): without a font", {
+                pntr_vector size = pntr_measure_text_ex(NULL, "Hello!!", 0);
+                EQUALS(size.x, 0);
+                EQUALS(size.y, 0);
+            });
+        });
+    }
+
+    if (pntr_file_io()) {
+        IT("pntr_save_file()", {
+            const char* fileName = "tempFile.txt";
+            const char* fileData = "Hello World!";
+            unsigned int bytes = 12;
+            bool result = pntr_save_file(fileName, (unsigned char*)fileData, bytes);
             EQUALS(result, true);
 
+            unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
+            GREATER(bytes, 5);
+            STRCEQUALS((const char*)fileDataResult, "Hello", 5);
+            pntr_unload_file(fileDataResult);
+
+            remove(fileName);
+        });
+
+        IT("pntr_save_file(): No data", {
+            // Saving nothing still creates and truncates the file, which is a success.
+            const char* fileName = "tempFileNoData.txt";
+            const char* fileData = "Hello World!";
+
+            bool result = pntr_save_file(fileName, (unsigned char*)fileData, 12);
+            EQUALS(result, true);
+
+            result = pntr_save_file(fileName, (unsigned char*)fileData, 0);
+            EQUALS(result, true);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+
+            // The file still exists, and is now empty.
             unsigned int bytes = 1234;
             unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
             NEQUALS(fileDataResult, NULL);
-            EQUALS(bytes, sizes[i]);
-            EQUALS(memcmp(fileDataResult, fileData, sizes[i]), 0);
+            EQUALS(bytes, 0);
             pntr_unload_file(fileDataResult);
-        }
 
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
-        remove(fileName);
-    });
+            remove(fileName);
+        });
 
-    IT("pntr_save_image()", {
-        int width = 400;
-        int height = 300;
-        pntr_image* saveImage = pntr_gen_image_color(width, height, PNTR_RED);
-        NEQUALS(saveImage, NULL);
-        pntr_draw_circle_fill(saveImage, 200, 150, 80, PNTR_BLUE);
-        pntr_draw_rectangle_fill(saveImage, 10, 10, 20, 20, PNTR_GREEN);
-        bool result = pntr_save_image(saveImage, "saveImage.png");
-        EQUALS(result, true);
-        pntr_unload_image(saveImage);
+        IT("pntr_save_file(): Failures", {
+            const char* fileData = "Hello World!";
 
-        pntr_image* loadedImage = pntr_load_image("saveImage.png");
-        NEQUALS(loadedImage, NULL);
-        EQUALS(loadedImage->width, 400);
-        EQUALS(loadedImage->height, height);
-        COLOREQUALS(pntr_image_get_color(loadedImage, 15, 15), PNTR_GREEN);
-        pntr_unload_image(loadedImage);
-    });
+            // A file in a directory that doesn't exist can't be opened.
+            bool result = pntr_save_file("MissingDirectory/tempFile.txt", (unsigned char*)fileData, 12);
+            EQUALS(result, false);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_OPEN);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-    if (pntr_bmp()) {
+            // A file that opens, but that can't hold what is written to it, reports the
+            // write as the thing that failed.
+            const char* unwritableFile = pntr_test_unwritable_file();
+            if (unwritableFile != NULL) {
+                FILE* exists = fopen(unwritableFile, "wb");
+                if (exists != NULL) {
+                    fclose(exists);
+
+                    result = pntr_save_file(unwritableFile, (unsigned char*)fileData, 12);
+                    EQUALS(result, false);
+                    EQUALS(pntr_get_error_code(), PNTR_ERROR_FAILED_TO_WRITE);
+                    pntr_set_error(PNTR_ERROR_NONE);
+                }
+            }
+        });
+
+        IT("pntr_save_file(), pntr_load_file(): Round trip", {
+            const char* fileName = "tempFileRoundTrip.bin";
+            unsigned char fileData[4096];
+            for (int i = 0; i < 4096; i++) {
+                fileData[i] = (unsigned char)(i % 256);
+            }
+
+            unsigned int sizes[3];
+            sizes[0] = 0;
+            sizes[1] = 1;
+            sizes[2] = 4096;
+
+            for (int i = 0; i < 3; i++) {
+                bool result = pntr_save_file(fileName, fileData, sizes[i]);
+                EQUALS(result, true);
+
+                unsigned int bytes = 1234;
+                unsigned char* fileDataResult = pntr_load_file(fileName, &bytes);
+                NEQUALS(fileDataResult, NULL);
+                EQUALS(bytes, sizes[i]);
+                EQUALS(memcmp(fileDataResult, fileData, sizes[i]), 0);
+                pntr_unload_file(fileDataResult);
+            }
+
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+            remove(fileName);
+        });
+    }
+    else {
+        IT("pntr_save_file(): nothing can be written", {
+            const char* fileName = "tempFile.txt";
+            const char* fileData = "Hello World!";
+
+            EQUALS(pntr_save_file(fileName, (unsigned char*)fileData, 12), false);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Nothing was created, so there is nothing to read back either.
+            EQUALS(pntr_load_file(fileName, NULL), NULL);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Invalid arguments are still rejected as such.
+            EQUALS(pntr_save_file(NULL, (unsigned char*)fileData, 12), false);
+            EQUALS(pntr_save_file(fileName, NULL, 12), false);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+
+        IT("pntr_save_file(): No data is refused too", {
+            // Saving zero bytes is a successful way of emptying a file where there is a file
+            // system, and nothing at all where there isn't.
+            EQUALS(pntr_save_file("tempFileNoData.txt", (unsigned char*)"Hello World!", 0), false);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+        });
+
+        IT("pntr_save_file(): Failures", {
+            // Every save already fails, so there is no failure of the file system left to
+            // tell apart from it.
+            SKIP();
+        });
+
+        IT("pntr_save_file(), pntr_load_file(): Round trip", {
+            // Neither half of the round trip is there to make.
+            SKIP();
+        });
+    }
+
+    if (pntr_image_saving() && pntr_image_from_file()) {
+        IT("pntr_save_image()", {
+            int width = 400;
+            int height = 300;
+            pntr_image* saveImage = pntr_gen_image_color(width, height, PNTR_RED);
+            NEQUALS(saveImage, NULL);
+            pntr_draw_circle_fill(saveImage, 200, 150, 80, PNTR_BLUE);
+            pntr_draw_rectangle_fill(saveImage, 10, 10, 20, 20, PNTR_GREEN);
+            bool result = pntr_save_image(saveImage, "saveImage.png");
+            EQUALS(result, true);
+            pntr_unload_image(saveImage);
+
+            pntr_image* loadedImage = pntr_load_image("saveImage.png");
+            NEQUALS(loadedImage, NULL);
+            EQUALS(loadedImage->width, 400);
+            EQUALS(loadedImage->height, height);
+            COLOREQUALS(pntr_image_get_color(loadedImage, 15, 15), PNTR_GREEN);
+            pntr_unload_image(loadedImage);
+        });
+    }
+    else {
+        IT("pntr_save_image(): without a round trip", {
+            pntr_image* saveImage = pntr_gen_image_color(400, 300, PNTR_RED);
+            NEQUALS(saveImage, NULL);
+            pntr_draw_rectangle_fill(saveImage, 10, 10, 20, 20, PNTR_GREEN);
+
+            if (pntr_image_saving() && pntr_file_io()) {
+                // The file is still written. It is only reading one back that was compiled out.
+                EQUALS(pntr_save_image(saveImage, "saveImage.png"), true);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+
+                EQUALS(pntr_load_image("saveImage.png"), NULL);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
+                remove("saveImage.png");
+            }
+            else {
+                // Without an encoder, or without a file system to write to, nothing is saved.
+                EQUALS(pntr_save_image(saveImage, "saveImage.png"), false);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
+            }
+
+            pntr_unload_image(saveImage);
+        });
+    }
+
+    if (pntr_bmp_loading() && pntr_image_saving() && pntr_file_io()) {
         IT("pntr_save_image(): .bmp", {
             pntr_image* saveImage = pntr_gen_image_color(64, 64, PNTR_RED);
             NEQUALS(saveImage, NULL);
@@ -3548,72 +3978,163 @@ MODULE(pntr, {
         });
     }
     else {
-        IT("pntr_save_image(): .bmp: the PNG-only backend does not support BMP", {
+        IT("pntr_save_image(): .bmp: without a round trip", {
             pntr_image* saveImage = pntr_gen_image_color(64, 64, PNTR_RED);
             NEQUALS(saveImage, NULL);
+            pntr_draw_rectangle_fill(saveImage, 8, 8, 16, 16, PNTR_GREEN);
 
-            // A PNG-only backend has to refuse the bitmap rather than write one.
+            // A 64x64 RGBA bitmap is a 14 byte file header, a 108 byte V4 info
+            // header, then 32 bits per pixel.
+            unsigned int expectedSize = 14 + 108 + (64 * 64 * 4);
+
             unsigned int memorySize = 100;
             unsigned char* memoryData = pntr_save_image_to_memory(saveImage, PNTR_IMAGE_TYPE_BMP, &memorySize);
-            EQUALS(memoryData, NULL);
-            EQUALS(memorySize, 0);
-            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
-            pntr_set_error(PNTR_ERROR_NONE);
 
-            EQUALS(pntr_save_image(saveImage, "saveImage.bmp"), false);
-            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
-            pntr_set_error(PNTR_ERROR_NONE);
+            if (!pntr_bmp() || !pntr_image_saving()) {
+                // A PNG-only backend, and a build with no encoder at all, both have to
+                // refuse the bitmap rather than write one.
+                EQUALS(memoryData, NULL);
+                EQUALS(memorySize, 0);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
 
+                EQUALS(pntr_save_image(saveImage, "saveImage.bmp"), false);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
+            }
+            else {
+                // The bitmap is still written, header and all.
+                NEQUALS(memoryData, NULL);
+                EQUALS(memorySize, expectedSize);
+                EQUALS(memoryData[0], 'B');
+                EQUALS(memoryData[1], 'M');
+                unsigned int declaredSize = (unsigned int)memoryData[2] | ((unsigned int)memoryData[3] << 8) |
+                    ((unsigned int)memoryData[4] << 16) | ((unsigned int)memoryData[5] << 24);
+                EQUALS(declaredSize, expectedSize);
+
+                if (pntr_file_io()) {
+                    // The file has to hold exactly what was saved to memory.
+                    EQUALS(pntr_save_image(saveImage, "saveImage.bmp"), true);
+
+                    unsigned int bytesRead = 0;
+                    unsigned char* fileData = pntr_load_file("saveImage.bmp", &bytesRead);
+                    NEQUALS(fileData, NULL);
+                    EQUALS(bytesRead, memorySize);
+                    EQUALS(memcmp(fileData, memoryData, (size_t)memorySize), 0);
+                    pntr_unload_file(fileData);
+                    remove("saveImage.bmp");
+                }
+                else {
+                    // There is nowhere to put it.
+                    EQUALS(pntr_save_image(saveImage, "saveImage.bmp"), false);
+                    EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                    pntr_set_error(PNTR_ERROR_NONE);
+                }
+
+                if (pntr_bmp_loading()) {
+                    // The bitmap still decodes, pixel for pixel, out of memory.
+                    pntr_image* loadedImage = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_BMP, memoryData, memorySize);
+                    NEQUALS(loadedImage, NULL);
+                    IMAGEEQUALS(loadedImage, saveImage);
+                    pntr_unload_image(loadedImage);
+                }
+                else {
+                    // What was written can't be read back, but never for a lack of memory.
+                    EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_BMP, memoryData, memorySize), NULL);
+                    NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+                    NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
+                    pntr_set_error(PNTR_ERROR_NONE);
+                }
+            }
+
+            pntr_unload_memory(memoryData);
             pntr_unload_image(saveImage);
         });
     }
 
-    IT("pntr_save_image_to_memory()", {
-        pntr_image* image = pntr_gen_image_color(64, 64, PNTR_BLUE);
-        NEQUALS(image, NULL);
-        pntr_draw_rectangle_fill(image, 4, 4, 10, 10, PNTR_WHITE);
+    if (pntr_image_saving()) {
+        IT("pntr_save_image_to_memory()", {
+            pntr_image* image = pntr_gen_image_color(64, 64, PNTR_BLUE);
+            NEQUALS(image, NULL);
+            pntr_draw_rectangle_fill(image, 4, 4, 10, 10, PNTR_WHITE);
 
-        // PNG is the default, and must still work the same as it always has.
-        unsigned int pngSize = 0;
-        unsigned char* png = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_PNG, &pngSize);
-        NEQUALS(png, NULL);
-        GREATER(pngSize, 8);
-        EQUALS(png[0], 0x89);
-        EQUALS(png[1], 'P');
-        EQUALS(png[2], 'N');
-        EQUALS(png[3], 'G');
+            // PNG is the default, and must still work the same as it always has.
+            unsigned int pngSize = 0;
+            unsigned char* png = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_PNG, &pngSize);
+            NEQUALS(png, NULL);
+            GREATER(pngSize, 8);
+            EQUALS(png[0], 0x89);
+            EQUALS(png[1], 'P');
+            EQUALS(png[2], 'N');
+            EQUALS(png[3], 'G');
 
-        pntr_image* loadedPng = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, png, pngSize);
-        NEQUALS(loadedPng, NULL);
-        IMAGEEQUALS(loadedPng, image);
-        pntr_unload_image(loadedPng);
-        pntr_unload_memory(png);
+            pntr_image* loadedPng = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_PNG, png, pngSize);
+            if (pntr_image_loading()) {
+                NEQUALS(loadedPng, NULL);
+                IMAGEEQUALS(loadedPng, image);
+                pntr_unload_image(loadedPng);
+            }
+            else {
+                // Decoding was compiled out, so what was just encoded can't be read back.
+                EQUALS(loadedPng, NULL);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
+            }
+            pntr_unload_memory(png);
 
-        // An unknown type falls back to PNG.
-        unsigned int unknownSize = 0;
-        unsigned char* unknown = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_UNKNOWN, &unknownSize);
-        NEQUALS(unknown, NULL);
-        EQUALS(unknownSize, pngSize);
-        pntr_unload_memory(unknown);
+            // An unknown type falls back to PNG.
+            unsigned int unknownSize = 0;
+            unsigned char* unknown = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_UNKNOWN, &unknownSize);
+            NEQUALS(unknown, NULL);
+            EQUALS(unknownSize, pngSize);
+            pntr_unload_memory(unknown);
 
-        // An unsupported type reports an error rather than handing back a buffer.
-        unsigned int badSize = 100;
-        unsigned char* bad = pntr_save_image_to_memory(image, (pntr_image_type)100, &badSize);
-        EQUALS(bad, NULL);
-        EQUALS(badSize, 0);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // An unsupported type reports an error rather than handing back a buffer.
+            unsigned int badSize = 100;
+            unsigned char* bad = pntr_save_image_to_memory(image, (pntr_image_type)100, &badSize);
+            EQUALS(bad, NULL);
+            EQUALS(badSize, 0);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        // A NULL image is invalid.
-        unsigned char* nothing = pntr_save_image_to_memory(NULL, PNTR_IMAGE_TYPE_PNG, NULL);
-        EQUALS(nothing, NULL);
-        EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
-        pntr_set_error(PNTR_ERROR_NONE);
+            // A NULL image is invalid.
+            unsigned char* nothing = pntr_save_image_to_memory(NULL, PNTR_IMAGE_TYPE_PNG, NULL);
+            EQUALS(nothing, NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
 
-        pntr_unload_image(image);
-    });
+            pntr_unload_image(image);
+        });
+    }
+    else {
+        IT("pntr_save_image_to_memory(): refuses without an encoder", {
+            pntr_image* image = pntr_gen_image_color(64, 64, PNTR_BLUE);
+            NEQUALS(image, NULL);
 
-    if (pntr_jpeg()) {
+            // Nothing is written, and the reported size has to say so rather than keep
+            // whatever the caller happened to pass in.
+            unsigned int pngSize = 100;
+            EQUALS(pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_PNG, &pngSize), NULL);
+            EQUALS(pngSize, 0);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // Every type is refused the same way, including the unknown one that otherwise
+            // falls back to PNG.
+            EQUALS(pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_UNKNOWN, NULL), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            // A NULL image is still invalid rather than unsupported.
+            EQUALS(pntr_save_image_to_memory(NULL, PNTR_IMAGE_TYPE_PNG, NULL), NULL);
+            EQUALS(pntr_get_error_code(), PNTR_ERROR_INVALID_ARGS);
+            pntr_set_error(PNTR_ERROR_NONE);
+
+            pntr_unload_image(image);
+        });
+    }
+
+    if (pntr_jpeg() && pntr_jpeg_saving() && pntr_file_io()) {
         IT("pntr_save_image(): .jpg", {
             pntr_image* image = pntr_gen_image_color(64, 64, PNTR_BLUE);
             NEQUALS(image, NULL);
@@ -3652,8 +4173,72 @@ MODULE(pntr, {
         });
     }
     else {
-        IT("pntr_save_image(): .jpg: PNTR_ENABLE_JPEG not enabled", {
-            // Nothing
+        IT("pntr_save_image(): .jpg: without a round trip", {
+            pntr_image* image = pntr_gen_image_color(64, 64, PNTR_BLUE);
+            NEQUALS(image, NULL);
+            pntr_draw_rectangle_fill(image, 4, 4, 10, 10, PNTR_WHITE);
+
+            unsigned int jpgSize = 100;
+            unsigned char* jpg = pntr_save_image_to_memory(image, PNTR_IMAGE_TYPE_JPG, &jpgSize);
+
+            if (!pntr_jpeg_saving()) {
+                // A PNG-only backend, and a build with no encoder at all, both have to
+                // refuse the JPEG rather than write one.
+                EQUALS(jpg, NULL);
+                EQUALS(jpgSize, 0);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
+
+                EQUALS(pntr_save_image(image, "saveImage.jpg"), false);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
+            }
+            else {
+                // Saving a JPEG is always available. It is only loading one back that
+                // needs PNTR_ENABLE_JPEG.
+                NEQUALS(jpg, NULL);
+                GREATER(jpgSize, 600);
+                EQUALS(jpg[0], 0xFF);
+                EQUALS(jpg[1], 0xD8);
+                EQUALS(jpg[jpgSize - 2], 0xFF);
+                EQUALS(jpg[jpgSize - 1], 0xD9);
+
+                if (pntr_file_io()) {
+                    // The file has to hold exactly what was saved to memory.
+                    EQUALS(pntr_save_image(image, "saveImage.jpg"), true);
+
+                    unsigned int bytesRead = 0;
+                    unsigned char* fileData = pntr_load_file("saveImage.jpg", &bytesRead);
+                    NEQUALS(fileData, NULL);
+                    EQUALS(bytesRead, jpgSize);
+                    EQUALS(memcmp(fileData, jpg, (size_t)jpgSize), 0);
+                    pntr_unload_file(fileData);
+                    remove("saveImage.jpg");
+                }
+                else {
+                    EQUALS(pntr_save_image(image, "saveImage.jpg"), false);
+                    EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                    pntr_set_error(PNTR_ERROR_NONE);
+                }
+
+                if (pntr_jpeg()) {
+                    pntr_image* loadedJpg = pntr_load_image_from_memory(PNTR_IMAGE_TYPE_JPG, jpg, jpgSize);
+                    NEQUALS(loadedJpg, NULL);
+                    EQUALS(loadedJpg->width, 64);
+                    EQUALS(loadedJpg->height, 64);
+                    pntr_unload_image(loadedJpg);
+                }
+                else {
+                    // What was written can't be read back, but never for a lack of memory.
+                    EQUALS(pntr_load_image_from_memory(PNTR_IMAGE_TYPE_JPG, jpg, jpgSize), NULL);
+                    NEQUALS(pntr_get_error_code(), PNTR_ERROR_NONE);
+                    NEQUALS(pntr_get_error_code(), PNTR_ERROR_NO_MEMORY);
+                    pntr_set_error(PNTR_ERROR_NONE);
+                }
+            }
+
+            pntr_unload_memory(jpg);
+            pntr_unload_image(image);
         });
     }
 
@@ -5032,7 +5617,7 @@ MODULE(pntr, {
         RECTEQUALS(out, expected);
     });
 
-    if (pntr_utf8()) {
+    if (pntr_utf8() && pntr_file_io()) {
         IT("PNTR_ENABLE_UTF8", {
             pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 38);
             NEQUALS(font, NULL);
@@ -5041,7 +5626,15 @@ MODULE(pntr, {
             const char* text = "Добрий день!";
             pntr_image* image = pntr_gen_image_text(font, text, PNTR_BLACK, PNTR_WHITE);
             NEQUALS(image, NULL);
-            pntr_save_image(image, "pntr_test_utf8.png");
+
+            if (pntr_image_saving()) {
+                EQUALS(pntr_save_image(image, "pntr_test_utf8.png"), true);
+            }
+            else {
+                EQUALS(pntr_save_image(image, "pntr_test_utf8.png"), false);
+                EQUALS(pntr_get_error_code(), PNTR_ERROR_NOT_SUPPORTED);
+                pntr_set_error(PNTR_ERROR_NONE);
+            }
 
             EQUALS(image->width, 190);
             EQUALS(image->height, 37);
@@ -5051,8 +5644,16 @@ MODULE(pntr, {
         });
     }
     else {
-        IT("PNTR_ENABLE_UTF8: Not enabled", {
-            // Nothing
+        IT("PNTR_ENABLE_UTF8: without a font to render it with", {
+            if (!pntr_utf8()) {
+                // There is no multi-byte text to render without UTF-8 support.
+                SKIP();
+            }
+
+            // UTF-8 is there, but the TrueType font it is rendered with can't be
+            // reached, whose refusal is pinned by
+            // "pntr_load_font_ttf(): refuses without a file".
+            SKIP();
         });
     }
 
