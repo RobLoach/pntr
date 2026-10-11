@@ -544,7 +544,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
 #ifdef PNTR_ENABLE_VARGS
 PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...);
 #endif
-PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+PNTR_API pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API unsigned char pntr_color_r(pntr_color color);
 PNTR_API unsigned char pntr_color_g(pntr_color color);
@@ -563,7 +563,7 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
 PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char* fileData, unsigned int dataSize);
-PNTR_API pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
+PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API void* pntr_set_error(pntr_error error);
 PNTR_API const char* pntr_get_error(void);
 PNTR_API pntr_error pntr_get_error_code(void);
@@ -571,9 +571,9 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
 PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
 PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint);
-PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color color);
-PNTR_API pntr_color pntr_color_fade(pntr_color color, float alpha);
-PNTR_API void pntr_image_color_fade(pntr_image* image, float alpha);
+PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint);
+PNTR_API pntr_color pntr_color_fade(pntr_color color, float factor);
+PNTR_API void pntr_image_color_fade(pntr_image* image, float factor);
 PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor);
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
 PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat, pntr_color color);
