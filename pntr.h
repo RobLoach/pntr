@@ -5814,9 +5814,12 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
     }
 
     #ifdef _PNTR_SAVE_IMAGE_DISABLED
-        // The disabled PNTR_SAVE_IMAGE_TO_MEMORY() discards its arguments.
+        // The disabled PNTR_SAVE_IMAGE_TO_MEMORY() discards its arguments, so zero the
+        // written size here like every backend does, for callers that check it.
         (void)type;
-        (void)dataSize;
+        if (dataSize != NULL) {
+            *dataSize = 0;
+        }
 
         // Image saving was compiled out, which is worth saying rather than handing back a
         // NULL that looks like the image was at fault.
