@@ -1807,6 +1807,136 @@ MODULE(pntr, {
             EQUALS(pntr_test_unfilled_circle(120), 0);
         });
 
+        IT("pntr_draw_circle() grows one pixel a side with its radius", {
+            // The radius is inclusive, so every radius is two pixels wider than the one
+            // before it, with no size skipped and none repeated. A radius of zero is the
+            // center point on its own and a radius of one is three across; both used to
+            // be special cased, which left the smallest circle a single pixel and no
+            // three pixel circle at all.
+            int outlineWidth[5] = {0};
+            int outlineHeight[5] = {0};
+            int outlinePainted[5] = {0};
+            int fillWidth[5] = {0};
+            int fillHeight[5] = {0};
+            int fillPainted[5] = {0};
+
+            for (int radius = 0; radius <= 4; radius++) {
+                pntr_image* outline = pntr_test_canvas(20, 20);
+                pntr_image* fill = pntr_test_canvas(20, 20);
+                NEQUALS(outline, NULL);
+                NEQUALS(fill, NULL);
+
+                pntr_draw_circle(outline, 10, 10, radius, PNTR_RED);
+                pntr_draw_circle_fill(fill, 10, 10, radius, PNTR_RED);
+
+                pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+                pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+                outlineWidth[radius] = outlineBounds.width;
+                outlineHeight[radius] = outlineBounds.height;
+                outlinePainted[radius] = pntr_test_painted_count(outline);
+                fillWidth[radius] = fillBounds.width;
+                fillHeight[radius] = fillBounds.height;
+                fillPainted[radius] = pntr_test_painted_count(fill);
+
+                // The outline and the fill are the same size as each other, and the fill
+                // covers every pixel of the outline, at the small radii too.
+                RECTEQUALS(fillBounds, outlineBounds);
+                EQUALS(pntr_test_uncovered(outline, fill), 0);
+                EQUALS(pntr_test_unfilled_circle(radius), 0);
+
+                pntr_unload_image(outline);
+                pntr_unload_image(fill);
+            }
+
+            for (int radius = 0; radius <= 4; radius++) {
+                EQUALS(outlineWidth[radius], radius * 2 + 1);
+                EQUALS(outlineHeight[radius], radius * 2 + 1);
+                EQUALS(fillWidth[radius], radius * 2 + 1);
+                EQUALS(fillHeight[radius], radius * 2 + 1);
+            }
+
+            // A radius of zero is the center point, the same as pntr_draw_arc() draws.
+            EQUALS(outlinePainted[0], 1);
+            EQUALS(fillPainted[0], 1);
+
+            // A radius of one is the four pixels around the center, which the fill turns
+            // into a plus by covering the center as well.
+            EQUALS(outlinePainted[1], 4);
+            EQUALS(fillPainted[1], 5);
+
+            // And every radius paints more than the one before it.
+            for (int radius = 1; radius <= 4; radius++) {
+                GREATER(outlinePainted[radius], outlinePainted[radius - 1]);
+                GREATER(fillPainted[radius], fillPainted[radius - 1]);
+            }
+        });
+
+        IT("pntr_draw_circle_thick() grows with its thickness", {
+            // pntr_draw_circle_thick() plots the outline with the same round brush the
+            // thick lines use, rather than dispatching to pntr_draw_circle_fill() at half
+            // the thickness, so the radius of one case can no longer flatten a thickness
+            // of two or three down to a single pixel.
+            int painted[4] = {0};
+            int width[4] = {0};
+            int height[4] = {0};
+
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_circle_thick(image, 20, 20, 8, thickness, PNTR_RED);
+
+                pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                painted[thickness] = pntr_test_painted_count(image);
+                width[thickness] = bounds.width;
+                height[thickness] = bounds.height;
+
+                pntr_unload_image(image);
+            }
+
+            // The brush straddles the outline, so each extra pixel of thickness reaches
+            // one pixel further out.
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                EQUALS(width[thickness], 8 * 2 + thickness);
+                EQUALS(height[thickness], 8 * 2 + thickness);
+            }
+
+            GREATER(painted[1], 0);
+            for (int thickness = 2; thickness <= 3; thickness++) {
+                GREATER(painted[thickness], painted[thickness - 1]);
+                GREATER(width[thickness], width[thickness - 1]);
+            }
+        });
+
+        IT("pntr_draw_line_thick() keeps its brush at a thickness of two and three", {
+            // The same knock-on, on the path that used to call pntr_draw_circle_fill()
+            // with thickness / 2: a thickness of two and three both came out as a single
+            // pixel, which made them render the same as a thickness of one.
+            int painted[4] = {0};
+            int brush[4] = {0};
+
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                pntr_image* image = pntr_test_canvas(40, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_line_thick(image, 10, 10, 30, 20, thickness, PNTR_RED);
+                painted[thickness] = pntr_test_painted_count(image);
+                pntr_clear_background(image, PNTR_TEST_BACKGROUND);
+
+                // A line of no length is the brush on its own.
+                pntr_draw_line_thick(image, 20, 20, 20, 20, thickness, PNTR_RED);
+                brush[thickness] = pntr_test_painted_count(image);
+
+                pntr_unload_image(image);
+            }
+
+            EQUALS(brush[1], 1);
+            for (int thickness = 2; thickness <= 3; thickness++) {
+                GREATER(brush[thickness], brush[thickness - 1]);
+                GREATER(painted[thickness], painted[thickness - 1]);
+            }
+        });
+
         IT("pntr_draw_ellipse_fill() reaches pntr_draw_ellipse()", {
             pntr_image* outline = pntr_test_canvas(40, 40);
             pntr_image* fill = pntr_test_canvas(40, 40);
@@ -1848,6 +1978,65 @@ MODULE(pntr, {
             EQUALS(pntr_test_unfilled_ellipse(120, 7), 0);
             EQUALS(pntr_test_unfilled_ellipse(7, 120), 0);
             EQUALS(pntr_test_unfilled_ellipse(120, 120), 0);
+        });
+
+        IT("pntr_draw_ellipse() covers both radii at a radius of one", {
+            // The ellipse never special cased a radius of one, so a radius of one on
+            // either axis is already three pixels across on that axis. A radius of zero
+            // collapses it onto a line through the center, and a radius of zero on both
+            // axes is the center point on its own, which is what pntr_draw_circle()
+            // draws for a radius of zero.
+            int radii[5][2] = {{0, 0}, {1, 1}, {1, 3}, {3, 1}, {0, 3}};
+
+            for (int i = 0; i < 5; i++) {
+                int radiusX = radii[i][0];
+                int radiusY = radii[i][1];
+
+                pntr_image* outline = pntr_test_canvas(20, 20);
+                pntr_image* fill = pntr_test_canvas(20, 20);
+                NEQUALS(outline, NULL);
+                NEQUALS(fill, NULL);
+
+                pntr_draw_ellipse(outline, 10, 10, radiusX, radiusY, PNTR_RED);
+                pntr_draw_ellipse_fill(fill, 10, 10, radiusX, radiusY, PNTR_RED);
+
+                pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {
+                    10 - radiusX, 10 - radiusY, radiusX * 2 + 1, radiusY * 2 + 1
+                };
+                pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+                pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+                RECTEQUALS(outlineBounds, expected);
+                RECTEQUALS(fillBounds, expected);
+
+                // And the fill still covers every pixel of the outline at these sizes.
+                EQUALS(pntr_test_uncovered(outline, fill), 0);
+                EQUALS(pntr_test_unfilled_ellipse(radiusX, radiusY), 0);
+
+                pntr_unload_image(outline);
+                pntr_unload_image(fill);
+            }
+
+            // A radius of one on both axes is the same four pixels the circle of radius
+            // one draws, and the fill covers the center on top of them.
+            pntr_image* ellipse = pntr_test_canvas(20, 20);
+            pntr_image* circle = pntr_test_canvas(20, 20);
+            NEQUALS(ellipse, NULL);
+            NEQUALS(circle, NULL);
+            pntr_draw_ellipse(ellipse, 10, 10, 1, 1, PNTR_RED);
+            pntr_draw_circle(circle, 10, 10, 1, PNTR_RED);
+            IMAGEEQUALS(ellipse, circle);
+            pntr_unload_image(ellipse);
+            pntr_unload_image(circle);
+
+            ellipse = pntr_test_canvas(20, 20);
+            circle = pntr_test_canvas(20, 20);
+            NEQUALS(ellipse, NULL);
+            NEQUALS(circle, NULL);
+            pntr_draw_ellipse_fill(ellipse, 10, 10, 1, 1, PNTR_RED);
+            pntr_draw_circle_fill(circle, 10, 10, 1, PNTR_RED);
+            IMAGEEQUALS(ellipse, circle);
+            pntr_unload_image(ellipse);
+            pntr_unload_image(circle);
         });
 
         IT("pntr_draw_rectangle() stops short of its width and height", {
@@ -2136,6 +2325,49 @@ MODULE(pntr, {
                 }
 
                 pntr_unload_image(image);
+            });
+
+            IT("pntr_draw_circle() and pntr_draw_circle_fill() at a radius of one", {
+                // The smallest circle is where the eightfold mirroring folds over the
+                // most, so it is the radius most likely to paint a pixel twice. A radius
+                // of zero folds every one of the eight onto the center.
+                int expectedOutline[2] = {1, 4};
+                int expectedFill[2] = {1, 5};
+                for (int radius = 0; radius <= 1; radius++) {
+                    pntr_image* outline = pntr_new_image(16, 16);
+                    pntr_image* fill = pntr_new_image(16, 16);
+                    NEQUALS(outline, NULL);
+                    NEQUALS(fill, NULL);
+                    pntr_clear_background(outline, PNTR_BLANK);
+                    pntr_clear_background(fill, PNTR_BLANK);
+
+                    pntr_draw_circle(outline, 8, 8, radius, semi);
+                    pntr_draw_circle_fill(fill, 8, 8, radius, semi);
+
+                    int outlinePainted = 0;
+                    int fillPainted = 0;
+                    for (int y = 0; y < 16; y++) {
+                        for (int x = 0; x < 16; x++) {
+                            unsigned char outlineAlpha = pntr_color_a(pntr_image_get_color(outline, x, y));
+                            unsigned char fillAlpha = pntr_color_a(pntr_image_get_color(fill, x, y));
+                            if (outlineAlpha != 0) {
+                                EQUALS((int)outlineAlpha, 128);
+                                outlinePainted++;
+                            }
+                            if (fillAlpha != 0) {
+                                EQUALS((int)fillAlpha, 128);
+                                fillPainted++;
+                            }
+                        }
+                    }
+
+                    // Which is only worth checking because something was painted.
+                    EQUALS(outlinePainted, expectedOutline[radius]);
+                    EQUALS(fillPainted, expectedFill[radius]);
+
+                    pntr_unload_image(outline);
+                    pntr_unload_image(fill);
+                }
             });
 
             IT("pntr_draw_polygon_fill()", {
