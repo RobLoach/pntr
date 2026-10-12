@@ -1041,6 +1041,47 @@ extern "C" {
     #define PNTR_DEG2RAD 0.017453293f
 #endif
 
+#ifndef PNTR_ROTATION_EPSILON
+    /**
+     * How far below a whole pixel the pivot of a rotated draw may land and still be read as
+     * that whole pixel, as a fraction of a pixel.
+     *
+     * @details _pntr_rotation_pivot_offset() rounds the rotated pivot down to name the
+     * bounding box pixel the drawing loops sample it from. At a quarter turn the sine and
+     * cosine are zero and one, so the rotated pivot lands exactly on a whole pixel, and
+     * rounding down has nothing between it and the pixel below. A rotation a thousandth of a
+     * degree away from the turn moves the pivot about a thousandth of a pixel, which on the
+     * near side of the whole number is enough to round down to the pixel before it. The
+     * bounding box grows by a pixel over the same thousandth of a degree, which it honestly
+     * should, because a rotated rectangle really does reach further than an unrotated one.
+     * The two together used to move the far edge of the draw by two pixels rather than one.
+     *
+     * Giving the rounding this much slack keeps the pivot on the pixel the quarter turn put
+     * it on until the rotation has moved it a real fraction of a pixel, which leaves the
+     * growing bounding box as the only pixel a sprite shifts by as it spins past the angle.
+     *
+     * The slack is bounded from both sides. It has to be wider than the thousandth of a pixel
+     * that a thousandth of a degree moves the pivot by, or the rounding is still deciding the
+     * pixel on the strength of the trigonometry's last few digits. It has to stay well under
+     * a quarter of a pixel, because the pivot names the center of a source pixel and so
+     * routinely lands on an exact half pixel, and slack enough to carry a half pixel up to
+     * the next whole one would move the quarter turns themselves. A sixty fourth of a pixel
+     * is about as far from either bound as it can be.
+     *
+     * The built in PNTR_SINF and PNTR_COSF and the sine and cosine of math.h disagree by
+     * more than this at some angles, which shows up as the two placing a draw a pixel apart
+     * from one another rather than as either of them jumping as it spins. What this buys is
+     * that each of them is continuous on its own, so the same guarantee holds whichever one
+     * a build uses.
+     *
+     * @see PNTR_SINF
+     * @see PNTR_COSF
+     * @see pntr_draw_image_rotated_rec()
+     * @see pntr_draw_image_rotozoom()
+     */
+    #define PNTR_ROTATION_EPSILON 0.015625f
+#endif
+
 #if !defined(PNTR_ENABLE_MATH) || defined(_DOXYGEN_)
     #if !defined(PNTR_SINF) || !defined(PNTR_COSF)
         /**
@@ -6450,8 +6491,14 @@ static void _pntr_rotation_pivot_offset(int srcWidth, int srcHeight, int bboxWid
 
     // The bounding box center is the integer division the drawing loops use, so that the
     // offset describes the pixel the loops actually sample the pivot from.
-    *offsetX = (int)PNTR_FLOORF((float)(bboxWidth / 2) + pivotX * cosTheta + pivotY * sinTheta);
-    *offsetY = (int)PNTR_FLOORF((float)(bboxHeight / 2) - pivotX * sinTheta + pivotY * cosTheta);
+    //
+    // At a quarter turn the rotated pivot lands exactly on a whole pixel, with nothing
+    // between the rounding and the pixel below it, so the rounding is given a sub pixel of
+    // slack. Without it a sine that is a few millionths below zero rather than at it drops
+    // the offset by a whole pixel, which is half of the two pixel step that a near exact
+    // quarter turn used to leave behind.
+    *offsetX = (int)PNTR_FLOORF((float)(bboxWidth / 2) + pivotX * cosTheta + pivotY * sinTheta + PNTR_ROTATION_EPSILON);
+    *offsetY = (int)PNTR_FLOORF((float)(bboxHeight / 2) - pivotX * sinTheta + pivotY * cosTheta + PNTR_ROTATION_EPSILON);
 }
 
 /**
