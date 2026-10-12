@@ -5137,6 +5137,96 @@ MODULE(pntr, {
                 pntr_unload_image(centered);
             });
 
+            IT("the rotated draws land in the same place either side of a quarter turn", {
+                // The pivot of a rotated draw is rounded down onto one of the bounding box
+                // pixels, and at a quarter turn the rotated pivot lands exactly on the
+                // boundary between two of them, because the sine and cosine there are zero
+                // and one. A rotation a thousandth of a degree to either side moves it by
+                // about a thousandth of a pixel, which without a tolerance is enough for the
+                // rounding to pick the pixel before the boundary on one side and the pixel
+                // after it on the other. The two sides of a quarter turn are mirror images,
+                // so they have to land in the same place, and holding them to that is what
+                // stops the rounding from being decided by the last few digits of whichever
+                // sine and cosine the build was given.
+                //
+                // This is the half of the two pixel step that PNTR_ENABLE_MATH used to leave
+                // behind. The other half is the bounding box honestly growing by a pixel the
+                // moment the rotation stops being an exact quarter turn, and the two of them
+                // compounded on the far edge of the draw.
+                //
+                // Whether the rounding lands on the boundary at all depends on the size of
+                // the source and on where in it the pivot sits, which is why these shapes are
+                // not the 40x24 the tests above use: that one happened to be a shape the
+                // rounding never fell foul of, and it is what let this go unnoticed. Each of
+                // these steps on at least one of the turns without the tolerance, in both the
+                // built in trigonometry and that of math.h.
+                int shapes[5][4] = {
+                    {7, 5, 3, 1},
+                    {15, 9, 1, 7},
+                    {21, 13, 19, 11},
+                    {33, 17, 30, 2},
+                    {40, 24, 2, 12}
+                };
+                float turns[4] = {0.0f, 90.0f, 180.0f, 270.0f};
+                float nudges[3] = {0.0001f, 0.001f, 0.01f};
+
+                for (int s = 0; s < 5; s++) {
+                    pntr_image* turnSource = pntr_test_pivot_source(shapes[s][0], shapes[s][1], shapes[s][2], shapes[s][3]);
+                    NEQUALS(turnSource, NULL);
+
+                    for (int t = 0; t < 4; t++) {
+                        for (int n = 0; n < 3; n++) {
+                            pntr_rectangle before = pntr_test_rotated_bounds(turnSource, turns[t] - nudges[n], (float)shapes[s][2], (float)shapes[s][3]);
+                            pntr_rectangle after = pntr_test_rotated_bounds(turnSource, turns[t] + nudges[n], (float)shapes[s][2], (float)shapes[s][3]);
+
+                            // Something was actually drawn, so two empty rectangles can't match.
+                            GREATER(before.width, 0);
+                            GREATER(before.height, 0);
+
+                            RECTEQUALS(before, after);
+                        }
+                    }
+
+                    pntr_unload_image(turnSource);
+                }
+            });
+
+            IT("pntr_draw_image_rotozoom() moves continuously past every quarter turn at any scale", {
+                // The whole sweep the continuity guarantee is made over, rather than the one
+                // angle and the one scale each of the tests above happens to cover. Every
+                // quarter turn hands the exact angle to a path of its own and the angles
+                // either side of it to the general rotation, at every scale, so each of them
+                // is a place the drawn area could step.
+                //
+                // A source small enough that eight times it still fits inside the
+                // destination, so the edges report the draw rather than the clip.
+                pntr_image* sweepSource = pntr_test_pivot_source(16, 10, 2, 5);
+                NEQUALS(sweepSource, NULL);
+
+                float turns[4] = {0.0f, 90.0f, 180.0f, 270.0f};
+                float sweepScales[5] = {1.0f, 1.5f, 2.0f, 4.0f, 8.0f};
+
+                for (int t = 0; t < 4; t++) {
+                    for (int s = 0; s < 5; s++) {
+                        pntr_rectangle before = pntr_test_rotozoom_bounds(sweepSource, turns[t] - 0.001f, 2.0f, 5.0f, sweepScales[s]);
+                        pntr_rectangle exact = pntr_test_rotozoom_bounds(sweepSource, turns[t], 2.0f, 5.0f, sweepScales[s]);
+                        pntr_rectangle after = pntr_test_rotozoom_bounds(sweepSource, turns[t] + 0.001f, 2.0f, 5.0f, sweepScales[s]);
+
+                        GREATER(exact.width, 0);
+                        GREATER(exact.height, 0);
+
+                        // The bounding box of a rotation is rounded up while the exact angle
+                        // measures its own size, so the two can differ by a pixel in size
+                        // however well their pivots agree. They may not differ by more.
+                        LESSER(pntr_test_rectangle_distance(before, exact), 2);
+                        LESSER(pntr_test_rectangle_distance(exact, after), 2);
+                        LESSER(pntr_test_rectangle_distance(before, after), 2);
+                    }
+                }
+
+                pntr_unload_image(sweepSource);
+            });
+
             pntr_unload_image(pivotSource);
         });
 
