@@ -1006,7 +1006,7 @@ EXAMPLE_RECURSIVE      = YES
 # that contain images that are to be included in the documentation (see the
 # \image command).
 
-IMAGE_PATH             = .
+IMAGE_PATH             = examples
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -1296,13 +1296,14 @@ HTML_EXTRA_STYLESHEET  = examples/resources/doxygen-awesome.css
 
 HTML_EXTRA_FILES       = \
     examples/resources/logo-128x128.png \
-    build/examples/pntr_examples_alphamask.png \
-    build/examples/pntr_examples_fonts.png \
-    build/examples/pntr_examples_image.png \
-    build/examples/pntr_examples_resize.png \
-    build/examples/pntr_examples_rotate.png \
-    build/examples/pntr_examples_shapes.png \
-    build/examples/pntr_examples_sprite.png
+    examples/pntr_examples_alphamask.png \
+    examples/pntr_examples_fonts.png \
+    examples/pntr_examples_image.png \
+    examples/pntr_examples_resize.png \
+    examples/pntr_examples_rotate.png \
+    examples/pntr_examples_shapes.png \
+    examples/pntr_examples_sprite.png \
+    examples/pntr_examples_thick.png
 
 HTML_COLORSTYLE_HUE    = LIGHT
 
