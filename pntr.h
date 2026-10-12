@@ -5681,6 +5681,11 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
 /**
  * Draws text on the given image with horizontal alignment.
  *
+ * @details Each line is measured with pntr_measure_text_ex() and then placed against
+ * `posX` on its own, so every line of a multi-line string is aligned individually. Lines
+ * are spaced by the font's line height, which is the same spacing pntr_draw_text() uses,
+ * so an empty line leaves a blank line behind rather than being skipped.
+ *
  * @param dst The image to draw on.
  * @param font The font to use.
  * @param text The text to draw. Multi-line supported via \\n.
@@ -5690,6 +5695,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
  * @param tint The tint color.
  *
  * @see pntr_draw_text()
+ * @see pntr_measure_text_ex()
  */
 PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
@@ -5703,19 +5709,42 @@ PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const cha
 
     const char* lineStart = text;
     int currentY = posY;
+    int lineHeight = _pntr_font_line_height(font);
 
     while (lineStart != NULL) {
         const char* lineEnd = PNTR_STRCHR(lineStart, '\n');
-        int lineLen = (int)(lineEnd != NULL ? lineEnd - lineStart : (int)PNTR_STRLEN(lineStart));
-        pntr_vector size = pntr_measure_text_ex(font, lineStart, lineLen);
-        int lineX;
-        if (align == PNTR_TEXT_ALIGN_CENTER) {
-            lineX = posX - size.x / 2;
-        } else {
-            lineX = posX - size.x;
+
+        // How long the line is, in the codepoints that pntr_draw_text_len() and
+        // pntr_measure_text_ex() count, rather than in the bytes that separate the two
+        // pointers.
+        int lineLen;
+        if (lineEnd != NULL) {
+            #ifdef PNTR_ENABLE_UTF8
+                lineLen = (int)utf8nlen(lineStart, (size_t)(lineEnd - lineStart));
+            #else
+                lineLen = (int)(lineEnd - lineStart);
+            #endif
         }
-        pntr_draw_text_len(dst, font, lineStart, lineLen, lineX, currentY, tint);
-        currentY += size.y;
+        else {
+            lineLen = (int)PNTR_STRLEN(lineStart);
+        }
+
+        // An empty line has nothing to align, and a length of zero would be taken as the
+        // whole of the rest of the string.
+        if (lineLen > 0) {
+            pntr_vector size = pntr_measure_text_ex(font, lineStart, lineLen);
+            int lineX;
+            if (align == PNTR_TEXT_ALIGN_CENTER) {
+                lineX = posX - size.x / 2;
+            }
+            else {
+                lineX = posX - size.x;
+            }
+
+            pntr_draw_text_len(dst, font, lineStart, lineLen, lineX, currentY, tint);
+        }
+
+        currentY += lineHeight;
         lineStart = (lineEnd != NULL) ? lineEnd + 1 : NULL;
     }
 }
