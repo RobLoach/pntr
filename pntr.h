@@ -82,6 +82,54 @@
  * @see PNTR_IMPLEMENTATION
  */
 
+/**
+ * The major version of pntr.
+ *
+ * @see PNTR_VERSION
+ */
+#define PNTR_VERSION_MAJOR 0
+
+/**
+ * The minor version of pntr.
+ *
+ * @see PNTR_VERSION
+ */
+#define PNTR_VERSION_MINOR 1
+
+/**
+ * The patch version of pntr.
+ *
+ * @see PNTR_VERSION
+ */
+#define PNTR_VERSION_PATCH 0
+
+// Builds PNTR_VERSION out of the version numbers above.
+#define _PNTR_VERSION_STRINGIFY_(value) #value
+#define _PNTR_VERSION_STRINGIFY(value) _PNTR_VERSION_STRINGIFY_(value)
+
+/**
+ * The version of pntr, as a `"MAJOR.MINOR.PATCH"` string.
+ *
+ * Use `PNTR_VERSION_MAJOR`, `PNTR_VERSION_MINOR` and `PNTR_VERSION_PATCH` to
+ * check the version at compile time.
+ *
+ * @code
+ * printf("pntr %s\n", PNTR_VERSION);
+ *
+ * #if PNTR_VERSION_MAJOR > 0 || (PNTR_VERSION_MAJOR == 0 && PNTR_VERSION_MINOR >= 1)
+ *     pntr_color color = pntr_image_get_color_bilinear(image, 1.5f, 1.5f);
+ * #endif
+ * @endcode
+ *
+ * @see PNTR_VERSION_MAJOR
+ * @see PNTR_VERSION_MINOR
+ * @see PNTR_VERSION_PATCH
+ */
+#define PNTR_VERSION \
+    _PNTR_VERSION_STRINGIFY(PNTR_VERSION_MAJOR) "." \
+    _PNTR_VERSION_STRINGIFY(PNTR_VERSION_MINOR) "." \
+    _PNTR_VERSION_STRINGIFY(PNTR_VERSION_PATCH)
+
 #ifdef _DOXYGEN_
     /**
      * @defgroup config Configuration

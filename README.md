@@ -62,6 +62,25 @@ In order to use *pntr*, define `PNTR_IMPLEMENTATION` in one of your *.c* files b
 #include "pntr.h"
 ```
 
+### Version
+
+`pntr.h` reports its own version, so you can display it or compile against a specific release:
+
+``` c
+printf("pntr %s\n", PNTR_VERSION); // "0.1.0"
+
+#if PNTR_VERSION_MAJOR > 0 || (PNTR_VERSION_MAJOR == 0 && PNTR_VERSION_MINOR >= 1)
+    pntr_color color = pntr_image_get_color_bilinear(image, 1.5f, 1.5f);
+#endif
+```
+
+| Define | Description |
+| --- | --- |
+| `PNTR_VERSION` | The version as a `"MAJOR.MINOR.PATCH"` string |
+| `PNTR_VERSION_MAJOR` | The major version number |
+| `PNTR_VERSION_MINOR` | The minor version number |
+| `PNTR_VERSION_PATCH` | The patch version number |
+
 ### Configuration
 
 You can modify how *pntr* functions based on the following defines:
