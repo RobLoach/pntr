@@ -25,11 +25,44 @@
 
 /**
  * Load a pntr_image using cute_png.
+ *
+ * @details This becomes `PNTR_LOAD_IMAGE_FROM_MEMORY`, and so the implementation of
+ * pntr_load_image_from_memory(), when `PNTR_CUTE_PNG` is defined. cute_png only reads
+ * PNG, so `PNTR_IMAGE_TYPE_PNG` and `PNTR_IMAGE_TYPE_UNKNOWN` are both decoded as PNG,
+ * and any other image type is reported as `PNTR_ERROR_NOT_SUPPORTED`. Data that is not a
+ * readable PNG is reported as `PNTR_ERROR_INVALID_DATA`.
+ *
+ * @param type The type of image to load.
+ * @param fileData The data of the file to be loaded.
+ * @param dataSize The size of the file data.
+ *
+ * @return A newly loaded image, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
+ *
+ * @see pntr_load_image_from_memory()
+ * @see PNTR_CUTE_PNG
  */
 pntr_image* pntr_cute_png_load_image_from_memory(pntr_image_type type, const unsigned char *fileData, unsigned int dataSize);
 
 /**
- * Save an image to memory using cutr_png.
+ * Save an image to memory using cute_png.
+ *
+ * @details This becomes `PNTR_SAVE_IMAGE_TO_MEMORY`, and so the implementation of
+ * pntr_save_image_to_memory(), when `PNTR_CUTE_PNG` is defined. cute_png only writes
+ * PNG, so `PNTR_IMAGE_TYPE_PNG` and `PNTR_IMAGE_TYPE_UNKNOWN` are both written as PNG,
+ * and any other image type is reported as `PNTR_ERROR_NOT_SUPPORTED`. Every failure
+ * leaves `dataSize` at zero.
+ *
+ * @param image The image to save to memory.
+ * @param type The type of the image to write.
+ * @param dataSize Where to put the resulting size of the image data. Use NULL if the size
+ * is not needed.
+ *
+ * @return The image data in memory, which must be freed with pntr_unload_memory() when
+ * finished, or NULL on failure, with the reason retrievable through pntr_get_error().
+ *
+ * @see pntr_save_image_to_memory()
+ * @see PNTR_CUTE_PNG
  */
 unsigned char* pntr_cute_png_save_image_to_memory(pntr_image* image, pntr_image_type type, unsigned int* dataSize);
 

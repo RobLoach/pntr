@@ -98,7 +98,7 @@
 
 #if PNTR_ASSERT_VARARGS
 #ifndef PNTR_ASSERT_UNUSED_ARGS
-int pntr_assert_unused_args_(const char* format, ...); /** Never called, nor defined. @private */
+int pntr_assert_unused_args_(const char* format, ...); /**< Never called, nor defined. @private */
 /**
  * Consumes a printf-style argument list without evaluating it.
  *

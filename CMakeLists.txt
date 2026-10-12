@@ -39,8 +39,13 @@ if (PNTR_BUILD_TESTS)
 endif()
 
 # Documentation
+#
+# Not gated on PNTR_BUILD_EXAMPLES: the example screenshots the docs embed are committed to
+# the repository, so the documentation can be generated without rebuilding them. Gating on
+# the examples meant the target could not even be configured anywhere they are turned off,
+# which includes CI.
 option(PNTR_BUILD_DOCS "Build Documentation" OFF)
-if (PNTR_BUILD_EXAMPLES AND PNTR_BUILD_DOCS)
+if (PNTR_BUILD_DOCS)
     find_package(Doxygen)
     if (DOXYGEN_FOUND)
         add_custom_target(pntr_doxygen ALL
@@ -48,8 +53,12 @@ if (PNTR_BUILD_EXAMPLES AND PNTR_BUILD_DOCS)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             COMMENT "Generating API documentation with Doxygen"
             VERBATIM
-            DEPENDS pntr_examples_output
         )
+
+        # Refresh the screenshots first when the examples are being built anyway.
+        if (PNTR_BUILD_EXAMPLES)
+            add_dependencies(pntr_doxygen pntr_examples_output)
+        endif()
     else (DOXYGEN_FOUND)
         message("Doxygen is required to build documentation")
     endif (DOXYGEN_FOUND)

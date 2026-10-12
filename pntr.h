@@ -314,7 +314,7 @@
          *
          * @code
          * pntr_color color = PNTR_CLITERAL(pntr_color) { 255, 255, 255, 255 };
-         * @endif
+         * @endcode
          */
         #define PNTR_CLITERAL(type)      (type)
     #endif
@@ -347,27 +347,27 @@ typedef union pntr_color {
      */
     struct pntr_color_rgba_t {
         #if defined(PNTR_PIXELFORMAT_RGBA)
-            unsigned char r; /** Red channel. */
-            unsigned char g; /** Green channel. */
-            unsigned char b; /** Blue channel. */
-            unsigned char a; /** Alpha channel. */
+            unsigned char r; /**< Red channel. */
+            unsigned char g; /**< Green channel. */
+            unsigned char b; /**< Blue channel. */
+            unsigned char a; /**< Alpha channel. */
         #elif defined(PNTR_PIXELFORMAT_ARGB)
-            unsigned char b; /** Blue channel. */
-            unsigned char g; /** Green channel. */
-            unsigned char r; /** Red channel. */
-            unsigned char a; /** Alpha channel. */
+            unsigned char b; /**< Blue channel. */
+            unsigned char g; /**< Green channel. */
+            unsigned char r; /**< Red channel. */
+            unsigned char a; /**< Alpha channel. */
         #endif
-    } rgba;
+    } rgba; /**< The color's individual red, green, blue and alpha channels. */
 } pntr_color;
 
 /**
  * A rectangle.
  */
 typedef struct pntr_rectangle {
-    int x; /** The x position of the rectangle. */
-    int y; /** The y position of the rectangle. */
-    int width; /** The width of the rectangle. */
-    int height; /** The height of the rectangle. */
+    int x; /**< The x position of the rectangle. */
+    int y; /**< The y position of the rectangle. */
+    int width; /**< The width of the rectangle. */
+    int height; /**< The height of the rectangle. */
 } pntr_rectangle;
 
 /**
@@ -377,10 +377,10 @@ typedef struct pntr_rectangle {
  * @see pntr_gen_image_color()
  */
 typedef struct pntr_image {
-    pntr_color* data; /** The pixel data for the image. */
-    int width; /** The width of the image. */
-    int height; /** The height of the image. */
-    int pitch; /** The amount of bytes of one row of the image. */
+    pntr_color* data; /**< The pixel data for the image. */
+    int width; /**< The width of the image. */
+    int height; /**< The height of the image. */
+    int pitch; /**< The amount of bytes of one row of the image. */
 
     /**
      * Whether or not the image is a portion of another image, sharing the same image data.
@@ -403,8 +403,8 @@ typedef struct pntr_image {
  * A vector, represented by x and y coordinates.
  */
 typedef struct pntr_vector {
-    int x; /** The X coordinate. */
-    int y; /** The Y coordinate. */
+    int x; /**< The X coordinate. */
+    int y; /**< The Y coordinate. */
 } pntr_vector;
 
 /**
@@ -417,29 +417,29 @@ typedef struct pntr_vector {
  * @see PNTR_ENABLE_TTF
  */
 typedef struct pntr_font {
-    pntr_image* atlas; /** The image used for the character atlas for the font. */
-    pntr_rectangle* srcRects; /** The glyph source rectangles on the atlas. */
-    pntr_rectangle* glyphRects; /** How the glyph appears when rendering. */
-    char* characters; /** An array of characters that are available in the font's atlas. */
-    int charactersLen; /** The number of characters that the font implements. */
-    void* user_data; /** General extra user data that can be referenced to by the font. */
+    pntr_image* atlas; /**< The image used for the character atlas for the font. */
+    pntr_rectangle* srcRects; /**< The glyph source rectangles on the atlas. */
+    pntr_rectangle* glyphRects; /**< How the glyph appears when rendering. */
+    char* characters; /**< An array of characters that are available in the font's atlas. */
+    int charactersLen; /**< The number of characters that the font implements. */
+    void* user_data; /**< General extra user data that can be referenced to by the font. */
 } pntr_font;
 
 /**
  * Pixel format.
  */
 typedef enum pntr_pixelformat {
-    PNTR_PIXELFORMAT_RGBA8888 = 0, /** RGBA, with 8 bytes for each component. */
-    PNTR_PIXELFORMAT_ARGB8888, /** ARGB, with 8 bytes for each component. */
-    PNTR_PIXELFORMAT_GRAYSCALE /** Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
+    PNTR_PIXELFORMAT_RGBA8888 = 0, /**< RGBA, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_ARGB8888, /**< ARGB, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_GRAYSCALE /**< Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
 } pntr_pixelformat;
 
 /**
  * Possible image filters to apply.
  */
 typedef enum pntr_filter {
-    PNTR_FILTER_NEARESTNEIGHBOR = 0, /** Nearest-neighbor interpolation for fast processing. Good for a pixel art look. */
-    PNTR_FILTER_BILINEAR /** Bilinear interpolation will combine multiple pixels together when processing for smoother scaling. */
+    PNTR_FILTER_NEARESTNEIGHBOR = 0, /**< Nearest-neighbor interpolation for fast processing. Good for a pixel art look. */
+    PNTR_FILTER_BILINEAR /**< Bilinear interpolation will combine multiple pixels together when processing for smoother scaling. */
 } pntr_filter;
 
 /**
@@ -449,31 +449,36 @@ typedef enum pntr_filter {
  * @see pntr_get_error()
  */
 typedef enum pntr_error {
-    PNTR_ERROR_NONE = 0, /** No error */
-    PNTR_ERROR_INVALID_ARGS = -1, /** Invalid arguments */
-    PNTR_ERROR_NO_MEMORY = -2, /** Not enough memory */
-    PNTR_ERROR_NOT_SUPPORTED = -3, /** Not supported */
-    PNTR_ERROR_FAILED_TO_OPEN = -4, /** Failed to open */
-    PNTR_ERROR_FAILED_TO_WRITE = -5, /** Failed to write */
-    PNTR_ERROR_UNKNOWN = -6, /** Unknown error occurred */
-    PNTR_ERROR_FAILED_TO_READ = -7, /** Opened, but failed to read */
-    PNTR_ERROR_INVALID_DATA = -8 /** The data that was given isn't what was expected */
+    PNTR_ERROR_NONE = 0, /**< No error */
+    PNTR_ERROR_INVALID_ARGS = -1, /**< Invalid arguments */
+    PNTR_ERROR_NO_MEMORY = -2, /**< Not enough memory */
+    PNTR_ERROR_NOT_SUPPORTED = -3, /**< Not supported */
+    PNTR_ERROR_FAILED_TO_OPEN = -4, /**< Failed to open */
+    PNTR_ERROR_FAILED_TO_WRITE = -5, /**< Failed to write */
+    PNTR_ERROR_UNKNOWN = -6, /**< Unknown error occurred */
+    PNTR_ERROR_FAILED_TO_READ = -7, /**< Opened, but failed to read */
+    PNTR_ERROR_INVALID_DATA = -8 /**< The data that was given isn't what was expected */
 } pntr_error;
 
 /**
  * The associated image format.
  */
 typedef enum pntr_image_type {
-    PNTR_IMAGE_TYPE_UNKNOWN = 0, /** Image type: Unknown. */
-    PNTR_IMAGE_TYPE_PNG, /** Image type: PNG - Portable Network Graphics */
-    PNTR_IMAGE_TYPE_JPG, /** Image type: JPEG - Joint Photographic Experts Group */
-    PNTR_IMAGE_TYPE_BMP /** Image type: BMP - Bitmap */
+    PNTR_IMAGE_TYPE_UNKNOWN = 0, /**< Image type: Unknown. */
+    PNTR_IMAGE_TYPE_PNG, /**< Image type: PNG - Portable Network Graphics */
+    PNTR_IMAGE_TYPE_JPG, /**< Image type: JPEG - Joint Photographic Experts Group */
+    PNTR_IMAGE_TYPE_BMP /**< Image type: BMP - Bitmap */
 } pntr_image_type;
 
+/**
+ * Horizontal alignment of rendered text.
+ *
+ * @see pntr_draw_text_aligned()
+ */
 typedef enum pntr_text_align {
-    PNTR_TEXT_ALIGN_LEFT = 0, /** Text alignment: Left */
-    PNTR_TEXT_ALIGN_CENTER,   /** Text alignment: Center */
-    PNTR_TEXT_ALIGN_RIGHT     /** Text alignment: Right */
+    PNTR_TEXT_ALIGN_LEFT = 0, /**< Text alignment: Left */
+    PNTR_TEXT_ALIGN_CENTER,   /**< Text alignment: Center */
+    PNTR_TEXT_ALIGN_RIGHT     /**< Text alignment: Right */
 } pntr_text_align;
 
 #ifdef __cplusplus
@@ -539,7 +544,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
 #ifdef PNTR_ENABLE_VARGS
 PNTR_API void pntr_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, const char* text, ...);
 #endif
-PNTR_API pntr_color pntr_new_color(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+PNTR_API pntr_color pntr_new_color(unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha);
 PNTR_API pntr_color pntr_get_color(unsigned int hexValue);
 PNTR_API unsigned char pntr_color_r(pntr_color color);
 PNTR_API unsigned char pntr_color_g(pntr_color color);
@@ -558,7 +563,7 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
 PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API pntr_image* pntr_load_image(const char* fileName);
 PNTR_API pntr_image* pntr_load_image_from_memory(pntr_image_type type, const unsigned char* fileData, unsigned int dataSize);
-PNTR_API pntr_image* pntr_image_from_pixelformat(const void* data, int width, int height, pntr_pixelformat pixelFormat);
+PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int width, int height, pntr_pixelformat pixelFormat);
 PNTR_API void* pntr_set_error(pntr_error error);
 PNTR_API const char* pntr_get_error(void);
 PNTR_API pntr_error pntr_get_error_code(void);
@@ -566,9 +571,9 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
 PNTR_API pntr_image* pntr_image_scale(pntr_image* image, float scaleX, float scaleY, pntr_filter filter);
 PNTR_API void pntr_image_color_replace(pntr_image* image, pntr_color color, pntr_color replace);
 PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint);
-PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color color);
-PNTR_API pntr_color pntr_color_fade(pntr_color color, float alpha);
-PNTR_API void pntr_image_color_fade(pntr_image* image, float alpha);
+PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint);
+PNTR_API pntr_color pntr_color_fade(pntr_color color, float factor);
+PNTR_API void pntr_image_color_fade(pntr_image* image, float factor);
 PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor);
 PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixelFormat);
 PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat, pntr_color color);
@@ -1441,10 +1446,10 @@ extern "C" {
  * Create a new color with the given red, green, blue, and alpha values.
  *
  * @def PNTR_NEW_COLOR(red, green, blue, alpha)
- * @param r The red value.
- * @param g The green value.
- * @param b The blue value.
- * @param a The alpha value.
+ * @param red The red value.
+ * @param green The green value.
+ * @param blue The blue value.
+ * @param alpha The alpha value.
  *
  * @return The new color.
  * @internal
@@ -1505,6 +1510,29 @@ extern "C" {
  */
 PNTR_ERROR_STORAGE pntr_error _pntr_error;
 
+/**
+ * Retrieve a human readable string describing the last error that pntr reported.
+ *
+ * @details The error state is sticky: it is only ever changed by pntr_set_error(), which
+ * the failing functions call on their way out, so it still describes the last failure
+ * long after a later call has succeeded. Call `pntr_set_error(PNTR_ERROR_NONE)` to clear
+ * it before a call whose outcome is to be checked this way.
+ *
+ * Which functions report an error is not uniform. The functions that hand back a pointer
+ * or an image generally do set one, as do pntr_save_file(), pntr_image_crop() and
+ * pntr_image_resize_canvas(). The drawing functions do not: they return quietly when they
+ * are given a NULL image, a fully transparent color, or geometry that lands nowhere.
+ *
+ * The error is stored in a single variable shared by every thread, unless
+ * `PNTR_ERROR_STORAGE` is defined as a thread-local storage class.
+ *
+ * @return A string describing the last reported error, or NULL when no error has been
+ * reported. The string is a static literal and must not be freed.
+ *
+ * @see pntr_get_error_code()
+ * @see pntr_set_error()
+ * @see PNTR_ERROR_STORAGE
+ */
 PNTR_API const char* pntr_get_error(void) {
     switch (_pntr_error) {
         case PNTR_ERROR_NONE: return NULL;
@@ -1521,16 +1549,41 @@ PNTR_API const char* pntr_get_error(void) {
     return NULL;
 }
 
+/**
+ * Retrieve the code of the last error that pntr reported.
+ *
+ * @details This is the same state that pntr_get_error() describes, as an enum value
+ * rather than as a string, so that a caller can tell the kinds of failure apart. It is
+ * `PNTR_ERROR_NONE` when no error has been reported, which is also what makes this the
+ * way to tell "no error" apart from "an error with no message".
+ *
+ * @return The last reported error code, or `PNTR_ERROR_NONE` when there is none.
+ *
+ * @see pntr_get_error()
+ * @see pntr_set_error()
+ * @see pntr_error
+ */
 PNTR_API pntr_error pntr_get_error_code(void) {
     return _pntr_error;
 }
 
 /**
- * Sets an error.
+ * Sets the error state that pntr_get_error() and pntr_get_error_code() report.
  *
- * @param error A string representing the error that had just occured.
+ * @details Pass `PNTR_ERROR_NONE` to clear the error state. pntr's own functions call
+ * this as they fail, so the state they leave behind is overwritten by the next failure
+ * rather than by the next success.
+ *
+ * The NULL return value is what lets a failing function both report and return in one
+ * statement, which is why so much of pntr reads `return (pntr_image*)pntr_set_error(...)`.
+ *
+ * @param error The error code to record.
  *
  * @return Always returns NULL.
+ *
+ * @see pntr_get_error()
+ * @see pntr_get_error_code()
+ * @see pntr_error
  */
 PNTR_API void* pntr_set_error(pntr_error error) {
     _pntr_error = error;
@@ -1581,11 +1634,17 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
 /**
  * Generate a new image with the given color.
  *
+ * @details The new image must be unloaded with pntr_unload_image().
+ *
  * @param width The width of the new image.
  * @param height The height of the given image.
  * @param color The desired color that will fill the new image.
  *
- * @return A pointer to the new image in memory.
+ * @return A pointer to the new image in memory, or NULL on failure, with the reason
+ * retrievable through pntr_get_error().
+ *
+ * @see pntr_new_image()
+ * @see pntr_unload_image()
  */
 PNTR_API pntr_image* pntr_gen_image_color(int width, int height, pntr_color color) {
     pntr_image* image = pntr_new_image(width, height);
@@ -1757,13 +1816,19 @@ PNTR_API pntr_image* pntr_image_from_image(pntr_image* image, int x, int y, int 
  *
  * This is useful to have images reference a sprite in a tileset. Sub-images still need to be cleared with pntr_unload_image().
  *
+ * @details No pixel data is copied, so drawing onto the subimage changes the parent
+ * image, and the subimage must not outlive the parent whose data it points into.
+ * Unloading a subimage releases only the container, not the shared pixels. The requested
+ * region is clamped to the parent image, so the result can be smaller than was asked for.
+ *
  * @param image The original image to reference for the new portion of the image.
  * @param x The X coorindate of the subimage.
  * @param y The Y coordinate of the subimage.
  * @param width The width of the subimage.
  * @param height The height of the subimage.
  *
- * @return The pntr_image referencing the section of the given image.
+ * @return The pntr_image referencing the section of the given image, or NULL on failure,
+ * with the reason retrievable through pntr_get_error().
  *
  * @see pntr_image_from_image()
  * @see pntr_unload_image()
@@ -1814,7 +1879,25 @@ PNTR_API void pntr_unload_image(pntr_image* image) {
 }
 
 /**
- * Draws a line on the destination image, ignoring clipping and bounds.
+ * Draws a horizontal line on the destination image, ignoring clipping and bounds.
+ *
+ * @details No check of any kind is performed: the image is not tested for NULL, the
+ * coordinates are not clipped, and the color is written straight over the destination
+ * without being alpha blended. Passing anything that is not already known to lie inside
+ * the image's clip region writes outside of the image's pixel data.
+ *
+ * The width is a count of pixels rather than a second coordinate, so the line covers
+ * `posX` through `posX + width - 1`. A width of zero or less paints nothing.
+ *
+ * @param dst The destination image. Must not be NULL.
+ * @param posX The X position of the first pixel of the line.
+ * @param posY The Y position of the line.
+ * @param width How many pixels long the line should be.
+ * @param color The color of the line. Written without blending, so its alpha is kept
+ * rather than applied.
+ *
+ * @see pntr_draw_line_horizontal()
+ * @see pntr_draw_point_unsafe()
  */
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
     pntr_color *row = &PNTR_PIXEL(dst, posX, posY);
@@ -1891,47 +1974,151 @@ PNTR_API pntr_color pntr_get_color(unsigned int hexValue) {
     );
 }
 
+/**
+ * Get the red channel of the given color.
+ *
+ * @details The accessors exist so that the channels can be reached without depending on
+ * the order the bytes sit in, which `PNTR_PIXELFORMAT_RGBA` and `PNTR_PIXELFORMAT_ARGB`
+ * disagree about.
+ *
+ * @param color The color to read the red channel from.
+ *
+ * @return The red channel, from 0 to 255.
+ *
+ * @see pntr_color_set_r()
+ * @see pntr_new_color()
+ */
 PNTR_API unsigned char pntr_color_r(pntr_color color) {
     return color.rgba.r;
 }
 
+/**
+ * Get the green channel of the given color.
+ *
+ * @param color The color to read the green channel from.
+ *
+ * @return The green channel, from 0 to 255.
+ *
+ * @see pntr_color_set_g()
+ * @see pntr_new_color()
+ */
 PNTR_API unsigned char pntr_color_g(pntr_color color) {
     return color.rgba.g;
 }
 
+/**
+ * Get the blue channel of the given color.
+ *
+ * @param color The color to read the blue channel from.
+ *
+ * @return The blue channel, from 0 to 255.
+ *
+ * @see pntr_color_set_b()
+ * @see pntr_new_color()
+ */
 PNTR_API unsigned char pntr_color_b(pntr_color color) {
     return color.rgba.b;
 }
 
+/**
+ * Get the alpha channel of the given color.
+ *
+ * @details An alpha of 0 is fully transparent, and 255 is fully opaque. Drawing with a
+ * color whose alpha is 0 paints nothing at all.
+ *
+ * @param color The color to read the alpha channel from.
+ *
+ * @return The alpha channel, from 0 to 255.
+ *
+ * @see pntr_color_set_a()
+ * @see pntr_color_fade()
+ */
 PNTR_API unsigned char pntr_color_a(pntr_color color) {
     return color.rgba.a;
 }
 
+/**
+ * Set the red channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param r The new red channel, from 0 to 255.
+ *
+ * @see pntr_color_r()
+ */
 PNTR_API void pntr_color_set_r(pntr_color* color, unsigned char r) {
     color->rgba.r = r;
 }
 
+/**
+ * Set the green channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param g The new green channel, from 0 to 255.
+ *
+ * @see pntr_color_g()
+ */
 PNTR_API void pntr_color_set_g(pntr_color* color, unsigned char g) {
     color->rgba.g = g;
 }
 
+/**
+ * Set the blue channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param b The new blue channel, from 0 to 255.
+ *
+ * @see pntr_color_b()
+ */
 PNTR_API void pntr_color_set_b(pntr_color* color, unsigned char b) {
     color->rgba.b = b;
 }
 
+/**
+ * Set the alpha channel of the given color, in place.
+ *
+ * @param color The color to change. Must not be NULL, as it is not checked.
+ * @param a The new alpha channel, from 0 to 255, where 0 is fully transparent.
+ *
+ * @see pntr_color_a()
+ */
 PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a) {
     color->rgba.a = a;
 }
 
 /**
  * Draws a point on the given image, without safety checks.
+ *
+ * @details The image is not tested for NULL and the coordinates are not clipped, so
+ * passing a coordinate that is not already known to lie inside the image's clip region
+ * writes outside of the image's pixel data. The color is alpha blended into the
+ * destination, unlike pntr_put_horizontal_line_unsafe(), which writes over it.
+ *
+ * @param dst The destination image. Must not be NULL.
+ * @param x The X coordinate of the point. Must be within the image.
+ * @param y The Y coordinate of the point. Must be within the image.
+ * @param color The color to blend into the point.
+ *
+ * @see pntr_draw_point()
+ * @see pntr_put_horizontal_line_unsafe()
  */
 PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_blend_color(&PNTR_PIXEL(dst, x, y), color);
 }
 
 /**
- * Draws a pixel on the given image.
+ * Draws a single pixel on the given image.
+ *
+ * @details The point is painted when it lands inside the destination's clip region, and
+ * skipped otherwise. A NULL image, or a fully transparent color, paints nothing and
+ * reports no error.
+ *
+ * @param dst The image to draw the point onto.
+ * @param x The X coordinate of the point.
+ * @param y The Y coordinate of the point.
+ * @param color The color of the point, alpha blended into the destination.
+ *
+ * @see pntr_draw_point_vec()
+ * @see pntr_draw_points()
  */
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
    if ((color.rgba.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
@@ -1941,12 +2128,36 @@ PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
     pntr_draw_point_unsafe(dst, x, y, color);
 }
 
+/**
+ * Draws a single pixel on the given image, using a vector for the position.
+ *
+ * @param dst The image to draw the point onto.
+ * @param point The position of the point. A NULL pointer paints nothing.
+ * @param color The color of the point, alpha blended into the destination.
+ *
+ * @see pntr_draw_point()
+ */
 PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_color color) {
     if (point != NULL) {
         pntr_draw_point(dst, point->x, point->y, color);
     }
 }
 
+/**
+ * Draws a number of single pixels on the given image.
+ *
+ * @details Each point is tested against the destination's clip region on its own, so the
+ * points that land outside of it are skipped rather than stopping the rest from being
+ * drawn. A NULL image or point array, a fully transparent color, or a count of zero or
+ * less, paints nothing and reports no error.
+ *
+ * @param dst The image to draw the points onto.
+ * @param points The positions of the points.
+ * @param pointsCount How many points there are in the array.
+ * @param color The color of the points, alpha blended into the destination.
+ *
+ * @see pntr_draw_point()
+ */
 PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0 || points == NULL || pointsCount <= 0) {
         return;
@@ -2285,6 +2496,25 @@ PNTR_API void pntr_draw_line_curve(pntr_image* dst, pntr_vector point1, pntr_vec
     pntr_draw_line_curve_thick(dst, point1, point2, point3, point4, segments, 1, color);
 }
 
+/**
+ * Draws a cubic bezier curve on the given image, with thickness.
+ *
+ * @details The curve is drawn as a chain of `segments` thick lines, so it covers both of
+ * its endpoints, and a curve whose four points are the same pixel paints that one pixel.
+ * A count of zero or fewer segments paints nothing.
+ *
+ * @param dst The image to draw the curve onto.
+ * @param point1 The point the curve starts at.
+ * @param point2 The first control point.
+ * @param point3 The second control point.
+ * @param point4 The point the curve ends at.
+ * @param segments How many line segments to build the curve from.
+ * @param thickness How many pixels wide the curve should be.
+ * @param color The color of the curve.
+ *
+ * @see pntr_draw_line_curve()
+ * @see pntr_draw_line_thick()
+ */
 PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, int thickness, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0 || segments <= 0) {
         return;
@@ -2325,6 +2555,23 @@ PNTR_API void pntr_draw_polyline(pntr_image* dst, pntr_vector* points, int numPo
     pntr_draw_polyline_thick(dst, points, numPoints, 1, color);
 }
 
+/**
+ * Draws a connected series of lines through the given points, with thickness.
+ *
+ * @details Every point is painted, including the first and the last. Unlike
+ * pntr_draw_polygon_thick(), the last point is not joined back to the first.
+ *
+ * A single point is drawn as a single pixel, so the thickness is not applied to it.
+ *
+ * @param dst The image to draw the lines onto.
+ * @param points The points to connect.
+ * @param numPoints How many points there are.
+ * @param thickness How many pixels wide the lines should be.
+ * @param color The color of the lines.
+ *
+ * @see pntr_draw_polyline()
+ * @see pntr_draw_polygon_thick()
+ */
 PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
     if (color.rgba.a == 0 || dst == NULL || numPoints <= 0 || points == NULL) {
         return;
@@ -2381,6 +2628,30 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
     }
 }
 
+/**
+ * Draw a horizontal line at the given x, y coordinates, with thickness.
+ *
+ * @details The width is a count of pixels rather than a second coordinate, so the line
+ * covers `posX` through `posX + width - 1`, the same as pntr_draw_line_horizontal(). The
+ * thickness is the number of pixels the line covers across its height, and is drawn with
+ * the same round brush as a line that is not axis-aligned, so the two run the same
+ * thickness. The brush is centered on `posY` for an odd thickness, and leans upwards of
+ * it for an even one.
+ *
+ * A thickness of zero paints nothing. A negative thickness paints only the two end
+ * pixels of the line, as single pixels, rather than nothing, which is unlike
+ * pntr_draw_line_thick(), where any thickness below one paints nothing.
+ *
+ * @param dst The destination image.
+ * @param posX The X position of the first pixel of the line.
+ * @param posY The Y position of the line.
+ * @param width How long the line should be.
+ * @param thickness How many pixels tall the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line_horizontal()
+ * @see pntr_draw_line_thick()
+ */
 PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color) {
     if (thickness == 0) {
         return;
@@ -2440,6 +2711,30 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
     }
 }
 
+/**
+ * Draw a vertical line at the given x, y coordinates, with thickness.
+ *
+ * @details The height is a count of pixels rather than a second coordinate, so the line
+ * covers `posY` through `posY + height - 1`, the same as pntr_draw_line_vertical(). The
+ * thickness is the number of pixels the line covers across its width, and is drawn with
+ * the same round brush as a line that is not axis-aligned, so the two run the same
+ * thickness. The brush is centered on `posX` for an odd thickness, and leans to the left
+ * of it for an even one.
+ *
+ * A thickness of zero paints nothing. A negative thickness paints only the two end
+ * pixels of the line, as single pixels, rather than nothing, which is unlike
+ * pntr_draw_line_thick(), where any thickness below one paints nothing.
+ *
+ * @param dst The destination image.
+ * @param posX The X position of the line.
+ * @param posY The Y position of the first pixel of the line.
+ * @param height How tall the line should be.
+ * @param thickness How many pixels wide the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line_vertical()
+ * @see pntr_draw_line_thick()
+ */
 PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color) {
     if (thickness == 0) {
         return;
@@ -2507,12 +2802,46 @@ PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width
     pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
 }
 
+/**
+ * Draw a rectangle on the given image, with thickness.
+ *
+ * @details Occupies exactly the same pixels as pntr_draw_rectangle() for the same `posX`,
+ * `posY`, `width` and `height`, so the width and height are a count of pixels rather than
+ * a second coordinate, and the thickness grows inwards from that outline rather than
+ * outwards from it. A thickness large enough to reach the middle fills the rectangle, and
+ * one larger still is harmlessly clamped by that, since the inner rings have nothing left
+ * to draw.
+ *
+ * A thickness of zero or less paints nothing.
+ *
+ * @param dst The destination image.
+ * @param posX The X position of the rectangle.
+ * @param posY The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param thickness How many pixels thick the outline should be, measured inwards.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle()
+ * @see pntr_draw_rectangle_thick_rec()
+ */
 PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
     for (int i = 0; i < thickness; i++) {
         pntr_draw_rectangle(dst, posX + i, posY + i, width - i * 2, height - i * 2, color);
     }
 }
 
+/**
+ * Draw a rectangle on the given image, with thickness, using a rectangle as input data.
+ *
+ * @param dst The destination image.
+ * @param rect The rectangle of which to draw. Its width and height are a count of pixels
+ * rather than a second coordinate.
+ * @param thickness How many pixels thick the outline should be, measured inwards.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle_thick()
+ */
 PNTR_API void pntr_draw_rectangle_thick_rec(pntr_image* dst, pntr_rectangle rect, int thickness, pntr_color color) {
     pntr_draw_rectangle_thick(dst, rect.x, rect.y, rect.width, rect.height, thickness, color);
 }
@@ -2573,6 +2902,34 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
     }
 }
 
+/**
+ * Draws a rectangle filled with a gradient between four corner colors, using a rectangle
+ * as input data.
+ *
+ * @details Covers the same pixels as pntr_draw_rectangle_fill(), so the width and height
+ * are a count of pixels rather than a second coordinate. Each pixel is alpha blended into
+ * the destination, so a corner color that is not fully opaque lets the destination show
+ * through.
+ *
+ * The gradient is sampled across the extent rather than between the corner pixels, so
+ * only `topLeft` is reached exactly: the fraction used on a row of `width` pixels runs
+ * from `0` up to `(width - 1) / width`, never to `1`. A gradient four pixels wide ends
+ * three quarters of the way towards `topRight`, not at it. Widen the rectangle, or draw
+ * the far row and column separately, when the far corner colors have to appear exactly.
+ *
+ * A rectangle with a width or height of zero or less paints nothing.
+ *
+ * @param dst The destination image.
+ * @param rect The rectangle to fill.
+ * @param topLeft The color at the top left of the rectangle.
+ * @param topRight The color approached towards the top right of the rectangle.
+ * @param bottomLeft The color approached towards the bottom left of the rectangle.
+ * @param bottomRight The color approached towards the bottom right of the rectangle.
+ *
+ * @see pntr_draw_rectangle_gradient()
+ * @see pntr_gen_image_gradient()
+ * @see pntr_color_bilinear_interpolate()
+ */
 PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
     if (dst == NULL) {
         return;
@@ -2603,6 +2960,27 @@ PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle r
     }
 }
 
+/**
+ * Draws a rectangle filled with a gradient between four corner colors.
+ *
+ * @details Covers the same pixels as pntr_draw_rectangle_fill(), so the width and height
+ * are a count of pixels rather than a second coordinate. Only `topLeft` is reached
+ * exactly, as the gradient is sampled across the extent rather than between the corner
+ * pixels; see pntr_draw_rectangle_gradient_rec() for the detail.
+ *
+ * @param dst The destination image.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param topLeft The color at the top left of the rectangle.
+ * @param topRight The color approached towards the top right of the rectangle.
+ * @param bottomLeft The color approached towards the bottom left of the rectangle.
+ * @param bottomRight The color approached towards the bottom right of the rectangle.
+ *
+ * @see pntr_draw_rectangle_gradient_rec()
+ * @see pntr_gen_image_gradient()
+ */
 PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int width, int height, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
     pntr_draw_rectangle_gradient_rec(dst, PNTR_CLITERAL(pntr_rectangle) {x, y, width, height}, topLeft, topRight, bottomLeft, bottomRight);
 }
@@ -2741,12 +3119,21 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
 /**
  * Draws a circle from the given center, with the given radius & line-thickness.
  *
+ * @details The radius is inclusive and is measured to the center of the outline, the same
+ * as it is for pntr_draw_circle(), so the thickness grows both inwards and outwards of
+ * that circle and the shape reaches further than `radius` on every side. A negative
+ * radius is treated as its absolute value, and a radius of zero paints the brush on the
+ * center point alone. A thickness below one paints nothing.
+ *
  * @param dst The image to draw the circle onto.
  * @param centerX The center of the circle at the X coordinate.
  * @param centerY The center of the circle at the Y coordinate.
  * @param radius The radius of the circle.
+ * @param thickness How many pixels wide the outline should be.
  * @param color The desired color of the circle.
  *
+ * @see pntr_draw_circle()
+ * @see pntr_draw_circle_fill()
  */
 PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
     if (thickness < 1) {
@@ -3123,10 +3510,40 @@ PNTR_API void pntr_draw_triangle_fill(pntr_image* dst, int x1, int y1, int x2, i
     );
 }
 
+/**
+ * Draws a line on the given image, using vectors for the endpoints.
+ *
+ * @details Both endpoints are painted, so a line from `x = 0` to `x = 10` covers 11
+ * pixels, and a line whose two endpoints are the same pixel paints that one pixel.
+ *
+ * @param dst The image to draw the line onto.
+ * @param start The first endpoint of the line.
+ * @param end The second endpoint of the line.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line()
+ * @see pntr_draw_line_thick_vec()
+ */
 PNTR_API void pntr_draw_line_vec(pntr_image* dst, pntr_vector start, pntr_vector end, pntr_color color) {
     pntr_draw_line(dst, start.x, start.y, end.x, end.y, color);
 }
 
+/**
+ * Draws a line on the given image, with thickness, using vectors for the endpoints.
+ *
+ * @details The line runs between the same two inclusive endpoints as
+ * pntr_draw_line_vec(), and is drawn with a round brush of the given thickness. A
+ * thickness below one paints nothing.
+ *
+ * @param dst The image to draw the line onto.
+ * @param start The first endpoint of the line.
+ * @param end The second endpoint of the line.
+ * @param thickness How many pixels wide the line should be.
+ * @param color The color of the line.
+ *
+ * @see pntr_draw_line_thick()
+ * @see pntr_draw_line_vec()
+ */
 PNTR_API void pntr_draw_line_thick_vec(pntr_image* dst, pntr_vector start, pntr_vector end, int thickness, pntr_color color) {
     pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, thickness, color);
 }
@@ -3148,6 +3565,24 @@ PNTR_API void pntr_draw_polygon(pntr_image* dst, pntr_vector* points, int numPoi
     pntr_draw_polygon_thick(dst, points, numPoints, 1, color);
 }
 
+/**
+ * Draws the outline of a polygon through the given points, with thickness.
+ *
+ * @details Every point is painted, and the last point is joined back to the first.
+ *
+ * A single point is drawn as the degenerate line from that point back to itself, so it
+ * does take the thickness, unlike pntr_draw_polyline_thick().
+ *
+ * @param dst The image to draw the polygon onto.
+ * @param points The corners of the polygon.
+ * @param numPoints How many corners there are.
+ * @param thickness How many pixels wide the outline should be.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_polygon()
+ * @see pntr_draw_polygon_fill()
+ * @see pntr_draw_polyline_thick()
+ */
 PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int numPoints, int thickness, pntr_color color) {
     if (dst == NULL || color.rgba.a == 0 || numPoints <= 0 || points == NULL) {
         return;
@@ -3381,6 +3816,38 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     }
 }
 
+/**
+ * Draws an arc as a chain of thick line segments along a circle.
+ *
+ * @details Uses the same angles and the same half-open sweep as pntr_draw_arc(): angles
+ * are in degrees, measured from the positive X axis, turning clockwise on screen, and
+ * `segments` points are sampled starting at `startAngle` and stepping by
+ * `(endAngle - startAngle) / segments`, so `endAngle` itself is never sampled.
+ *
+ * Unlike pntr_draw_arc(), which paints those sampled points, this joins them with lines,
+ * which has two consequences worth knowing. The chain of lines runs between the first and
+ * the last sampled point only, so a full `0` to `360` sweep leaves a gap rather than
+ * closing: use pntr_draw_circle_thick() for a closed circle. And a sweep of a single
+ * segment has no second point to draw a line to, so `segments` of 1 paints nothing at
+ * all, where pntr_draw_arc() paints one point.
+ *
+ * A radius of zero or less paints the center as a single point, ignoring the thickness.
+ * A count of zero or fewer segments paints nothing.
+ *
+ * @param dst The image to draw the arc onto.
+ * @param centerX The center of the arc's circle at the X coordinate.
+ * @param centerY The center of the arc's circle at the Y coordinate.
+ * @param radius The radius of the arc's circle.
+ * @param startAngle The angle, in degrees, that the sweep starts at.
+ * @param endAngle The angle, in degrees, that the sweep ends at.
+ * @param segments How many points to sample along the sweep.
+ * @param thickness How many pixels wide the arc should be.
+ * @param color The color of the arc.
+ *
+ * @see pntr_draw_arc()
+ * @see pntr_draw_arc_fill()
+ * @see pntr_draw_circle_thick()
+ */
 PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
@@ -3568,6 +4035,33 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
     pntr_draw_arc(dst, x + bottomLeftRadius, bottom - bottomLeftRadius, (float)bottomLeftRadius, 90.0f, 180.0f, bottomLeftRadius * 2, color); // Bottom Left
 }
 
+/**
+ * Draws the outline of a rectangle with rounded corners, with thickness.
+ *
+ * @details Occupies exactly the same pixels as pntr_draw_rectangle_rounded() for the same
+ * `x`, `y`, `width` and `height`, so the width and height are a count of pixels rather
+ * than a second coordinate, and the thickness grows inwards from that outline rather than
+ * outwards from it. Each ring is drawn one pixel further in with each corner radius one
+ * pixel smaller, which is what keeps the rounding from squaring off as it goes, and each
+ * radius is clamped per ring so that it can never reach past the middle of that ring.
+ *
+ * A thickness below one paints nothing.
+ *
+ * @param dst The image to draw the rectangle onto.
+ * @param x The X position of the rectangle.
+ * @param y The Y position of the rectangle.
+ * @param width How wide the rectangle should be.
+ * @param height How tall the rectangle should be.
+ * @param topLeftRadius The corner radius of the top left corner.
+ * @param topRightRadius The corner radius of the top right corner.
+ * @param bottomLeftRadius The corner radius of the bottom left corner.
+ * @param bottomRightRadius The corner radius of the bottom right corner.
+ * @param thickness How many pixels thick the outline should be, measured inwards.
+ * @param color The color of the outline.
+ *
+ * @see pntr_draw_rectangle_rounded()
+ * @see pntr_draw_rectangle_rounded_fill()
+ */
 PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color) {
     if (thickness < 1) {
         return;
@@ -3633,11 +4127,20 @@ PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, in
 /**
  * Get image pixel color at (x, y) position.
  *
+ * @details Reads anywhere inside the image, ignoring its clip region, since the clip only
+ * restricts what may be changed. A coordinate outside of the image, or a NULL image,
+ * gives `PNTR_BLANK` rather than reporting an error, so a transparent black pixel and an
+ * out of range read cannot be told apart from the result alone.
+ *
  * @param image The image to get the color from.
  * @param x The x position of the pixel.
  * @param y The y position of the pixel.
  *
- * @return The color at (x, y) position from the image.
+ * @return The color at (x, y) position from the image, or `PNTR_BLANK` when the
+ * coordinate is outside of the image.
+ *
+ * @see pntr_image_get_color_bilinear()
+ * @see pntr_draw_point()
  */
 PNTR_API pntr_color pntr_image_get_color(pntr_image* image, int x, int y) {
     if (image == NULL || x < 0 || y < 0 || x >= image->width || y >= image->height) {
@@ -3938,13 +4441,21 @@ PNTR_API pntr_color pntr_color_alpha_blend(pntr_color dst, pntr_color src) {
 /**
  * Draw a source image within a destination image.
  *
+ * @details The source rectangle is clamped to the source image, and the result is drawn
+ * with its top left corner at (posX, posY). Pixels are alpha blended into the
+ * destination, and anything outside the destination's clip region is skipped.
+ *
  * @param dst The destination image.
  * @param src The source image.
- * @param srcRect The source rectangle of what to draw from the source image.
+ * @param srcRect The source rectangle of what to draw from the source image. When the
+ * width or height are less than or equal to 0, the full image width or height are used,
+ * so a zeroed rectangle draws the whole image. pntr_draw_image_scaled_rec() and
+ * pntr_draw_image_dest_rec() instead read that as an empty region and draw nothing.
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
  *
  * @see pntr_draw_image()
+ * @see pntr_draw_image_tint_rec()
  */
 PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY) {
     pntr_draw_image_tint_rec(dst, src, srcRect, posX, posY, PNTR_WHITE);
@@ -3953,14 +4464,26 @@ PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectang
 /**
  * Draw a source image within a destination image, with tint.
  *
+ * @details This is the blit that most of the other unrotated, unscaled image draws and
+ * the text rendering go through. The source rectangle is clamped to the source image, the
+ * result is drawn with its top left corner at (posX, posY), and the part of it that falls
+ * outside the destination's clip region is trimmed away rather than wrapped. Pixels are
+ * alpha blended into the destination.
+ *
  * @param dst The destination image.
  * @param src The source image.
- * @param srcRect The source rectangle of what to draw from the source image.
+ * @param srcRect The source rectangle of what to draw from the source image. When the
+ * width or height are less than or equal to 0, the full image width or height are used,
+ * so a zeroed rectangle draws the whole image. pntr_draw_image_scaled_rec() and
+ * pntr_draw_image_dest_rec() instead read that as an empty region and draw nothing.
  * @param posX Where to draw the image on the x coordinate.
  * @param posY Where to draw the image on the y coordinate.
- * @param tint The color to tint the image when drawing.
+ * @param tint The color to tint the image when drawing. Use PNTR_WHITE to not change the
+ * source color, which also skips the tinting work entirely.
  *
  * @see pntr_draw_image()
+ * @see pntr_draw_image_rec()
+ * @see pntr_color_tint()
  */
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
     if (dst == NULL || src == NULL || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
@@ -4157,11 +4680,15 @@ PNTR_API pntr_image* pntr_image_resize(pntr_image* image, int newWidth, int newH
 /**
  * Flip an image, vertically, or horizontally, or both.
  *
+ * @details The image is flipped in place, across its whole extent rather than only within
+ * its clip region. A NULL image does nothing and reports no error.
+ *
  * @param image The image to flip.
  * @param horizontal Whether or not to flip the image horizontally.
  * @param vertical Whether or not to flip the image vertically.
  *
- * @see pntr_image_flip()
+ * @see pntr_draw_image_flipped()
+ * @see pntr_image_rotate()
  */
 PNTR_API void pntr_image_flip(pntr_image* image, bool horizontal, bool vertical) {
     if (image == NULL) {
@@ -4249,10 +4776,18 @@ PNTR_API pntr_color pntr_color_tint(pntr_color color, pntr_color tint) {
 /**
  * Change brightness of the given color by a factor from -1.0f to 1.0f.
  *
+ * @details The factor is clamped into that range. A negative factor scales the red, green
+ * and blue channels towards black, and a positive one scales them towards white, so -1.0f
+ * gives black, 0.0f returns the color unchanged, and 1.0f gives white. The alpha channel
+ * is left alone.
+ *
  * @param color The color to change the brightness of.
  * @param factor The factor in which to change the brightness from -1.0f to 1.0f.
  *
+ * @return The new color with the brightness applied.
+ *
  * @see pntr_image_color_brightness()
+ * @see pntr_color_contrast()
  */
 PNTR_API pntr_color pntr_color_brightness(pntr_color color, float factor) {
     if (factor < -1.0f) {
@@ -4409,12 +4944,19 @@ PNTR_API void pntr_image_color_tint(pntr_image* image, pntr_color tint) {
 /**
  * Load a BMFont from the file system.
  *
+ * @details The atlas image is loaded and then handed to
+ * pntr_load_font_bmf_from_image(), so see that for how the glyphs are found. The font
+ * owns the atlas it loads, so pntr_unload_font() is all that is needed to release it.
+ *
  * @param fileName The name of the image file to load as the bmfont.
  * @param characters A string representing the characters to load from the atlas.
  *
- * @return The newly loaded font.
+ * @return The newly loaded font, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
  *
  * @see examples/resources/bmfont.png
+ * @see pntr_load_font_bmf_from_image()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -4433,11 +4975,21 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
 /**
  * Load a BMFont from the given image data in memory.
  *
+ * @details The data is decoded as a PNG regardless of what the file extension would have
+ * said, since there is no file name to read one from. The decoded image becomes the
+ * font's atlas, and the font owns it from then on, so pntr_unload_font() is all that is
+ * needed to release it.
+ *
  * @param fileData A representation of the image data in memory.
  * @param dataSize The size of the image data.
  * @param characters A string representing the characters to load from the atlas.
  *
- * @return The newly loaded font, or NULL on failure.
+ * @return The newly loaded font, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
+ *
+ * @see pntr_load_font_bmf()
+ * @see pntr_load_font_bmf_from_image()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL) {
@@ -4513,10 +5065,26 @@ static pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pn
 /**
  * Load a BMFont from the given image.
  *
- * @param image The BMFont image.
+ * @details The glyphs are found by reading the top row of the atlas: the color of the
+ * pixel at (0, 0) is taken as the separator, and every later pixel on that row matching it
+ * closes off a glyph. Each glyph is as tall as the whole image. There must be at least as
+ * many glyphs on the atlas as there are characters in `characters`, which are matched to
+ * the glyphs in order.
+ *
+ * @warning On success the font **takes ownership of `image`**, which becomes the font's
+ * atlas. pntr_unload_font() frees it, so the caller must not also call
+ * pntr_unload_image() on it, or the image is freed twice. On failure ownership is not
+ * taken, and the caller still has to unload the image itself.
+ *
+ * @param image The BMFont image, which becomes the font's atlas on success.
  * @param characters A string representing the characters to load from the atlas.
  *
- * @return The newly loaded font, or NULL on failure.
+ * @return The newly loaded font, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
+ *
+ * @see pntr_load_font_bmf()
+ * @see pntr_load_font_bmf_from_memory()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters) {
     if (image == NULL || characters == NULL) {
@@ -4579,14 +5147,21 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
 /**
  * Loads a TTY Font from the file system.
  *
+ * @details The atlas image is loaded and then handed to
+ * pntr_load_font_tty_from_image(), so see that for how the glyph grid is read. The font
+ * owns the atlas it loads, so pntr_unload_font() is all that is needed to release it.
+ *
  * @param fileName The name of the image file to load as the font.
  * @param glyphWidth The width of each character on the font atlas.
  * @param glyphHeight The height of each character on the font atlas.
  * @param characters A string of characters that appear in the image.
  *
- * @return The newly loaded TTY font.
+ * @return The newly loaded TTY font, or NULL on failure, with the reason retrievable
+ * through pntr_get_error().
  *
  * @see examples/resources/ttyfont-16x16.png
+ * @see pntr_load_font_tty_from_image()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters) {
     pntr_image* image = pntr_load_image(fileName);
@@ -4602,6 +5177,27 @@ PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int
     return output;
 }
 
+/**
+ * Loads a TTY Font from the given image data in memory.
+ *
+ * @details The data is decoded as a PNG regardless of what the file extension would have
+ * said, since there is no file name to read one from. The decoded image becomes the
+ * font's atlas, and the font owns it from then on, so pntr_unload_font() is all that is
+ * needed to release it.
+ *
+ * @param fileData A representation of the image data in memory.
+ * @param dataSize The size of the image data.
+ * @param glyphWidth The width of each character on the font atlas.
+ * @param glyphHeight The height of each character on the font atlas.
+ * @param characters A string of characters that appear in the image.
+ *
+ * @return The newly loaded TTY font, or NULL on failure, with the reason retrievable
+ * through pntr_get_error().
+ *
+ * @see pntr_load_font_tty()
+ * @see pntr_load_font_tty_from_image()
+ * @see pntr_unload_font()
+ */
 PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData, unsigned int dataSize, int glyphWidth, int glyphHeight, const char* characters) {
     if (fileData == NULL || dataSize == 0 || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
         return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
@@ -4620,6 +5216,32 @@ PNTR_API pntr_font* pntr_load_font_tty_from_memory(const unsigned char* fileData
     return output;
 }
 
+/**
+ * Loads a TTY Font from the given image.
+ *
+ * @details The atlas is read as a fixed grid of `glyphWidth` by `glyphHeight` cells,
+ * filled left to right and then top to bottom, and the characters in `characters` are
+ * matched to those cells in order. Any part of the atlas that does not divide evenly into
+ * whole cells is ignored, and the grid has to hold at least as many cells as there are
+ * characters.
+ *
+ * @warning On success the font **takes ownership of `image`**, which becomes the font's
+ * atlas. pntr_unload_font() frees it, so the caller must not also call
+ * pntr_unload_image() on it, or the image is freed twice. On failure ownership is not
+ * taken, and the caller still has to unload the image itself.
+ *
+ * @param image The font atlas image, which becomes the font's atlas on success.
+ * @param glyphWidth The width of each character on the font atlas.
+ * @param glyphHeight The height of each character on the font atlas.
+ * @param characters A string of characters that appear in the image.
+ *
+ * @return The newly loaded TTY font, or NULL on failure, with the reason retrievable
+ * through pntr_get_error().
+ *
+ * @see pntr_load_font_tty()
+ * @see pntr_load_font_tty_from_memory()
+ * @see pntr_unload_font()
+ */
 PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWidth, int glyphHeight, const char* characters) {
     if (image == NULL || characters == NULL || glyphWidth <= 0 || glyphHeight <= 0) {
         return (pntr_font*)pntr_set_error(PNTR_ERROR_INVALID_ARGS);
@@ -4676,7 +5298,15 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
 /**
  * Unloads the given font from memory.
  *
+ * @details The font owns its atlas image, so this unloads that too, however the font was
+ * loaded. A font built with pntr_load_font_bmf_from_image() or
+ * pntr_load_font_tty_from_image() therefore frees the image that was handed to it, and
+ * the caller must not unload that image itself. A NULL font does nothing.
+ *
  * @param font The font to unload from memory.
+ *
+ * @see pntr_load_font_bmf_from_image()
+ * @see pntr_load_font_tty_from_image()
  */
 PNTR_API void pntr_unload_font(pntr_font* font) {
     if (font == NULL) {
@@ -4729,7 +5359,15 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
  * @param scaleY The scale of which to resize the height of the font by.
  * @param filter The filter to apply when resizing the font. PNTR_FILTER_NEARESTNEIGHBOR is good for pixel fonts.
  *
- * @return The new font that has been resized.
+ * @return The new font that has been resized, or NULL on failure, with the reason
+ * retrievable through pntr_get_error().
+ *
+ * @note A scale small enough to leave the atlas with no pixels at all gives back a font
+ * whose atlas is NULL. Such a font draws nothing, and is still safe to pass to
+ * pntr_unload_font().
+ *
+ * @see pntr_font_copy()
+ * @see pntr_unload_font()
  */
 PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY, pntr_filter filter) {
     if (font == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
@@ -5715,11 +6353,20 @@ PNTR_API bool pntr_save_file(const char *fileName, const void *data, unsigned in
 /**
  * Retrieve the size of the image data in memory in bytes, depending on the given pixel format.
  *
+ * @details A width or height of zero or less gives 0, quietly. A pixel format that pntr
+ * does not know is reported as `PNTR_ERROR_NOT_SUPPORTED`, but a size is still returned,
+ * assuming four bytes per pixel, so the result alone does not say whether the format was
+ * understood. Use pntr_get_error_code() when that matters.
+ *
  * @param width The width of the image data.
  * @param height The height of the image data.
  * @param pixelFormat The pixel format of the image data.
  *
- * @return The size of the image data, in bytes.
+ * @return The size of the image data, in bytes, or 0 when the width or height are zero or
+ * less.
+ *
+ * @see pntr_image_to_pixelformat()
+ * @see pntr_get_error_code()
  */
 PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pixelFormat) {
     if (width <= 0 || height <= 0 || pixelFormat < 0) {
@@ -5832,13 +6479,23 @@ PNTR_API unsigned char* pntr_save_image_to_memory(pntr_image* image, pntr_image_
 /**
  * Saves an image to the file system.
  *
+ * @details The format is chosen from the file name's extension with
+ * pntr_get_file_image_type(). An extension that is not recognized gives
+ * `PNTR_IMAGE_TYPE_UNKNOWN`, which the bundled backends write as a PNG, so a file saved
+ * under an unexpected name still holds valid image data.
+ *
+ * The image is encoded into memory first and then written in one go, so a failure to
+ * encode leaves no file behind, while a failure to write may leave a truncated one.
+ *
  * @param image The image to save to the file system.
  * @param fileName The name of the file to save.
  *
- * @return True when the file was saved successfully, false otherwise.
+ * @return True when the file was saved successfully, false otherwise. Use
+ * pntr_get_error() for why.
  *
  * @see pntr_save_image_to_memory()
  * @see pntr_save_file()
+ * @see pntr_get_file_image_type()
  */
 PNTR_API bool pntr_save_image(pntr_image* image, const char* fileName) {
     pntr_image_type type = pntr_get_file_image_type(fileName);
@@ -5868,10 +6525,22 @@ PNTR_API void pntr_unload_file(unsigned char* fileData) {
 /**
  * Calculates a rectangle representing the available alpha border.
  *
+ * @details Finds the smallest rectangle that holds every pixel whose alpha is strictly
+ * greater than the threshold. The whole image is scanned, ignoring its clip region, and
+ * the rectangle is inclusive of the furthest such pixel, so its width and height are a
+ * count of pixels and can be handed straight to pntr_image_crop().
+ *
+ * A fully transparent image, or a NULL one, gives a rectangle of all zeroes rather than
+ * reporting an error, so an empty result and a failure cannot be told apart.
+ *
  * @param image The image to calculate the alpha border on.
  * @param threshold A threshold factor from 0.0f to 1.0f to consider alpha.
  *
- * @return The rectangle representing the alpha border of the image.
+ * @return The rectangle representing the alpha border of the image, or a rectangle of all
+ * zeroes when nothing in the image passes the threshold.
+ *
+ * @see pntr_image_alpha_crop()
+ * @see pntr_image_crop()
  */
 PNTR_API pntr_rectangle pntr_image_alpha_border(pntr_image* image, float threshold) {
     if (image == NULL) {
@@ -5941,13 +6610,29 @@ static void _pntr_image_adopt(pntr_image* image, pntr_image* newImage) {
 /**
  * Crops an image by the given coordinates.
  *
+ * @details The image is changed in place: its pixel data is replaced by the cropped data,
+ * and its clip region is reset to the new bounds. The crop rectangle is clamped to the
+ * image first, so asking for more than the image holds crops to whatever part of the
+ * rectangle overlaps it. The width and height are a count of pixels rather than a second
+ * coordinate.
+ *
+ * A crop that lands entirely outside of the image, or one with a width or height of zero
+ * or less, leaves the image untouched, reports `PNTR_ERROR_INVALID_ARGS` and returns
+ * false.
+ *
+ * Cropping a subimage replaces it with pixel data of its own, so it no longer references
+ * its parent.
+ *
  * @param image The image to crop.
  * @param x The x coordinate to crop from.
  * @param y The y coordinate to crop from.
  * @param width The width of the desired crop.
  * @param height The height of the desired crop.
  *
+ * @return True when the image was cropped, false otherwise. Use pntr_get_error() for why.
+ *
  * @see pntr_image_from_image()
+ * @see pntr_image_alpha_crop()
  */
 PNTR_API bool pntr_image_crop(pntr_image* image, int x, int y, int width, int height) {
     if (image == NULL) {
@@ -6109,6 +6794,16 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
 /**
  * Resize the canvas of the given image.
  *
+ * @details The image keeps its pixels at their original size; only the canvas around them
+ * changes. The new canvas is filled with `fill`, and the old image is then drawn onto it
+ * with its top left corner at (offsetX, offsetY), so the offset here is a plain position
+ * rather than one of the pivots that the rotated and scaled draws take. Anything that
+ * falls outside the new canvas is lost.
+ *
+ * The image is changed in place. An image whose clip was the whole image gets a clip of
+ * the whole new canvas; any other clip is moved by the offset and trimmed to the new
+ * canvas.
+ *
  * @param image The image you would like to resize.
  * @param newWidth The desired width of the new canvas.
  * @param newHeight The desired height of the new canvas.
@@ -6116,7 +6811,11 @@ PNTR_API void pntr_image_alpha_mask(pntr_image* image, pntr_image* alphaMask, in
  * @param offsetY How to offset the image once its canvas is resized. Use 0 if you like to keep the original image at the top.
  * @param fill The color to use for the background of the new image.
  *
- * @return True or false depending on if the image was resized correctly.
+ * @return True or false depending on if the image was resized correctly. Use
+ * pntr_get_error() for why.
+ *
+ * @see pntr_image_resize()
+ * @see pntr_image_crop()
  */
 PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newHeight, int offsetX, int offsetY, pntr_color fill) {
     if (image == NULL) {
@@ -6157,6 +6856,31 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
     return true;
 }
 
+/**
+ * Draw an image onto a destination image, flipped on either axis, or transposed.
+ *
+ * @details The three flips are applied to the whole source image, and the result is drawn
+ * with its top left corner at (posX, posY). `flipDiagonal` transposes the image, swapping
+ * its rows for its columns, so the drawn result is as tall as the source is wide. It
+ * combines with the other two, which pick which of the four transposed orientations is
+ * drawn, so a diagonal flip together with a horizontal one is a quarter turn.
+ *
+ * Passing no flips at all draws the image exactly as pntr_draw_image() would. Pixels are
+ * alpha blended into the destination, and anything outside the destination's clip region
+ * is skipped. A NULL source or destination draws nothing and reports no error.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param flipHorizontal Whether to mirror the image left to right.
+ * @param flipVertical Whether to mirror the image top to bottom.
+ * @param flipDiagonal Whether to transpose the image, swapping its rows and columns.
+ *
+ * @see pntr_draw_image()
+ * @see pntr_draw_image_flipped_rec()
+ * @see pntr_image_flip()
+ */
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     if (dst == NULL || src == NULL) {
         return;
@@ -6171,6 +6895,44 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
     );
 }
 
+/**
+ * Draw a portion of an image onto a destination image, flipped on either axis, or
+ * transposed.
+ *
+ * @details The three flips are applied to the source rectangle, and the result is drawn
+ * with its top left corner at (posX, posY). `flipDiagonal` transposes the region, swapping
+ * its rows for its columns, so the drawn result is as tall as the region is wide. It
+ * combines with the other two, which pick which of the four transposed orientations is
+ * drawn, so a diagonal flip together with a horizontal one is a quarter turn.
+ *
+ * @warning When any of the three flips is requested, only the **width and height** of
+ * `srcRec` are honoured: its `x` and `y` are ignored, and the pixels are read from the top
+ * left corner of the source image instead of from the rectangle. Drawing a flipped sprite
+ * out of a sheet therefore draws the wrong sprite. Passing no flips at all takes a
+ * different path, which does honour `srcRec.x` and `srcRec.y`, so the two disagree. Until
+ * that is settled, draw the region into its own image with pntr_image_from_image() and
+ * flip that, or use pntr_draw_image_rotated_rec() for the quarter turns.
+ *
+ * Also unlike the unflipped path, which reads a width or height of zero or less as the
+ * full source dimension, a flipped draw treats it as an empty region and paints nothing.
+ *
+ * Pixels are alpha blended into the destination, and anything outside the destination's
+ * clip region is skipped. A NULL source or destination draws nothing and reports no error.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param srcRec The portion of the source image to draw. Only its width and height are
+ * honoured when flipping; see the warning above.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param flipHorizontal Whether to mirror the region left to right.
+ * @param flipVertical Whether to mirror the region top to bottom.
+ * @param flipDiagonal Whether to transpose the region, swapping its rows and columns.
+ *
+ * @see pntr_draw_image_flipped()
+ * @see pntr_draw_image_rec()
+ * @see pntr_image_from_image()
+ */
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     // If we are not flipping at all, use the simpler draw function.
     if (!flipHorizontal && !flipVertical && !flipDiagonal) {
@@ -6209,6 +6971,15 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
 /**
  * Draw a scaled image.
  *
+ * @details The offset is an **edge** rather than a pivot: the left and top edges of the
+ * source pixel it names are what land on the position, which is what makes an offset of
+ * zero draw the image starting at the position at any scale. This differs from the
+ * rotated draws, whose offsets name the center of a pixel; see
+ * pntr_draw_image_scaled_rec() for why the two conventions are kept apart.
+ *
+ * A scale of zero or less on either axis draws nothing, as does a scale small enough that
+ * the drawn size truncates away to nothing.
+ *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
  * @param posX Where to draw the scaled image, at the X coordinate.
@@ -6217,9 +6988,11 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * @param scaleY The scale of which to apply to the height of the image.
  * @param offsetX How much to offset the X drawing of the image, in unscaled source pixels. The left edge of the source pixel there lands on posX.
  * @param offsetY How much to offset the Y drawing of the image, in unscaled source pixels. The top edge of the source pixel there lands on posY.
- * @param filter Filter to be applied during the rotation.
+ * @param filter Filter to be applied while scaling. PNTR_FILTER_BILINEAR and PNTR_FILTER_NEARESTNEIGHBOR are supported.
+ * @param tint The color to tint the image by. Use PNTR_WHITE to not change the source color.
  *
  * @see pntr_draw_image_scaled_rec()
+ * @see pntr_draw_image_rotozoom()
  */
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
     if (dst == NULL || src == NULL) {
@@ -6252,7 +7025,7 @@ PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX,
  *
  * @param dst Pointer to the destination image where the output will be stored.
  * @param src Pointer to the source image that will be drawn onto the destination image.
- * @param srcRect The portion of the source image to draw.
+ * @param srcRect The portion of the source image to draw. When the width or height are less than or equal to 0, nothing is drawn. This is unlike pntr_draw_image_rec() and the rotated draws, which read that as the full image dimension.
  * @param posX Where to draw the scaled image, at the X coordinate.
  * @param posY Where to draw the scaled image, at the Y coordinate.
  * @param scaleX The scale of which to apply to the width of the image.
@@ -6665,13 +7438,28 @@ PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_re
 /**
  * Creates a new image based off the given image, that's rotated by the given degrees.
  *
- * @param image The image to rotate.
- * @param degrees The desired amount to rotate the image in degrees.
+ * @details The new image is sized to hold the whole rotation, so nothing is cropped away:
+ * a quarter turn swaps the width and height, and any other angle gives an image large
+ * enough for the turned bounding box, with the corners left transparent. The image is
+ * spun about its own center, since any other pivot would carry part of it off the edge of
+ * an image that was made to fit all of it.
  *
- * @return The new rotated image.
+ * A rotation that normalizes to zero degrees returns a plain copy. The new image must be
+ * unloaded with pntr_unload_image().
+ *
+ * @param image The image to rotate.
+ * @param degrees The desired amount to rotate the image in degrees, turning clockwise on
+ * screen. Any value is accepted and normalized into 0 to 360.
+ * @param filter Filter to be applied during the rotation. PNTR_FILTER_BILINEAR and
+ * PNTR_FILTER_NEARESTNEIGHBOR are supported. The quarter turns map whole pixels onto
+ * whole pixels, so the filter makes no difference to them.
+ *
+ * @return The new rotated image, or NULL on failure, with the reason retrievable through
+ * pntr_get_error().
  *
  * @see pntr_draw_image_rotated()
  * @see pntr_draw_image_rotated_rec()
+ * @see pntr_unload_image()
  */
 PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_filter filter) {
     if (image == NULL) {
