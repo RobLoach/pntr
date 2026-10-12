@@ -314,7 +314,7 @@
          *
          * @code
          * pntr_color color = PNTR_CLITERAL(pntr_color) { 255, 255, 255, 255 };
-         * @endif
+         * @endcode
          */
         #define PNTR_CLITERAL(type)      (type)
     #endif
