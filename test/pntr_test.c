@@ -2824,7 +2824,90 @@ MODULE(pntr, {
         EQUALS(pntr_get_file_image_type("myimage.exe"), PNTR_IMAGE_TYPE_UNKNOWN);
         EQUALS(pntr_get_file_image_type(NULL), PNTR_IMAGE_TYPE_UNKNOWN);
         EQUALS(pntr_get_file_image_type(""), PNTR_IMAGE_TYPE_UNKNOWN);
+
+        // Only the last path component decides the type, so an extension that appears in
+        // a directory name is not the file's own.
+        EQUALS(pntr_get_file_image_type("/home/me/.png-cache/photo.jpg"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("png/jpeg/image.bmp"), PNTR_IMAGE_TYPE_BMP);
+        EQUALS(pntr_get_file_image_type("my.png/image.jpeg"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("my.png/image"), PNTR_IMAGE_TYPE_UNKNOWN);
+
+        // Only the last extension counts, in the order the name has them rather than any
+        // order of preference.
+        EQUALS(pntr_get_file_image_type("screenshot.PNG.bak"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("archive.png.bmp"), PNTR_IMAGE_TYPE_BMP);
+        EQUALS(pntr_get_file_image_type("archive.bmp.png"), PNTR_IMAGE_TYPE_PNG);
+        EQUALS(pntr_get_file_image_type("archive.jpg.png"), PNTR_IMAGE_TYPE_PNG);
+
+        // The extension has to end the name, not just start it.
+        EQUALS(pntr_get_file_image_type("myimage.pngx"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("myimage.jpgs"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("myimage.bmps"), PNTR_IMAGE_TYPE_UNKNOWN);
+
+        // The case of the extension makes no difference, in any mix.
+        EQUALS(pntr_get_file_image_type("photo.Png"), PNTR_IMAGE_TYPE_PNG);
+        EQUALS(pntr_get_file_image_type("photo.pNG"), PNTR_IMAGE_TYPE_PNG);
+        EQUALS(pntr_get_file_image_type("photo.PNG"), PNTR_IMAGE_TYPE_PNG);
+        EQUALS(pntr_get_file_image_type("photo.Jpg"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("image.JPg"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("image.JPG"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("image.Jpeg"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("image.jPeG"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("image.JPEG"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("image.Bmp"), PNTR_IMAGE_TYPE_BMP);
+        EQUALS(pntr_get_file_image_type("image.bMP"), PNTR_IMAGE_TYPE_BMP);
+        EQUALS(pntr_get_file_image_type("image.BMP"), PNTR_IMAGE_TYPE_BMP);
+
+        // Windows separates path components with a backslash.
+        EQUALS(pntr_get_file_image_type("C:\\Users\\me\\photo.jpg"), PNTR_IMAGE_TYPE_JPG);
+        EQUALS(pntr_get_file_image_type("C:\\png-cache\\photo.BMP"), PNTR_IMAGE_TYPE_BMP);
+        EQUALS(pntr_get_file_image_type("C:\\my.png\\photo"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("C:\\my.png\\"), PNTR_IMAGE_TYPE_UNKNOWN);
+
+        // A name with no extension of its own has no type to find.
+        EQUALS(pntr_get_file_image_type("myimage"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("my/path/myimage"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("myimage."), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("myimage.png."), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("."), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type(".."), PNTR_IMAGE_TYPE_UNKNOWN);
+
+        // A directory is not a file, however it is spelled.
+        EQUALS(pntr_get_file_image_type("my/path/"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("my/image.png/"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("/"), PNTR_IMAGE_TYPE_UNKNOWN);
+
+        // A leading dot hides a file rather than giving it an extension.
+        EQUALS(pntr_get_file_image_type(".gitignore"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type(".png"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type("/home/me/.png"), PNTR_IMAGE_TYPE_UNKNOWN);
+        EQUALS(pntr_get_file_image_type(".hidden.png"), PNTR_IMAGE_TYPE_PNG);
     });
+
+    if (pntr_bmp() && pntr_image_saving() && pntr_file_io()) {
+        IT("pntr_save_image() with an extension that used to be mistaken", {
+            pntr_image* image = pntr_gen_image_color(8, 8, PNTR_RED);
+            NEQUALS(image, NULL);
+
+            // The ".png" in the middle of the name used to choose the encoder, which put
+            // a PNG inside a file called .bmp.
+            EQUALS(pntr_save_image(image, "save.png.bmp"), true);
+
+            unsigned int bytesRead = 0;
+            unsigned char* fileData = pntr_load_file("save.png.bmp", &bytesRead);
+            NEQUALS(fileData, NULL);
+            GREATER(bytesRead, 2u);
+
+            // "BM" starts every bitmap, where a PNG would start with its own signature.
+            EQUALS(fileData[0], 'B');
+            EQUALS(fileData[1], 'M');
+            NEQUALS(fileData[0], 0x89);
+
+            pntr_unload_file(fileData);
+            remove("save.png.bmp");
+            pntr_unload_image(image);
+        });
+    }
 
     if (pntr_image_from_file()) {
         IT("pntr_load_image()", {
