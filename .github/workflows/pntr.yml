@@ -1,4 +1,4 @@
-name: CMake
+name: pntr
 
 on:
   push:
@@ -6,32 +6,153 @@ on:
   pull_request:
     branches: [ "master" ]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Debug
-  DEFINES: -DPNTR_BUILD_EXAMPLES=false
+# Everything below runs in a single Linux job, on purpose. The three decisions that shape
+# this file, so that nobody has to guess at them later:
+#
+#   1. One job, no `strategy.matrix`. The configuration coverage is a shell `for` loop
+#      inside one step instead. One job is one checkout, one apt-get and one log to read,
+#      and adding a configuration means adding a line to a list rather than editing YAML
+#      that fans out into twenty runners. The whole thing finishes in a couple of minutes.
+#      Keeping it simple is the point; a matrix is the thing to reach for only if a
+#      configuration ever needs a different compiler or a different runner.
+#
+#   2. Linux only. No Windows runner, no macOS runner. This is a choice, not an oversight
+#      -- the comment that used to sit here suggesting "convert this to a matrix build if
+#      you need cross-platform coverage" is gone deliberately. pntr is portable C99 with
+#      no platform-specific code of its own, and every defect CI has ever let through
+#      (a segfault, four out-of-bounds reads, 114 Doxygen errors, 1.5 MB of committed
+#      build output) reproduced on plain gcc. Tripling the wall clock to re-prove that on
+#      two more operating systems buys very little.
+#
+#   3. The examples are never built: -DPNTR_BUILD_EXAMPLES=false everywhere. They are
+#      screenshot generators whose output is already committed to the repository, and
+#      nothing here needs them. Leaving them off is what keeps this job fast. Deliberate
+#      -- please do not helpfully turn them back on.
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ${{env.DEFINES}}
+    - name: No tracked build output
+      # 239 build artifacts were committed by accident once and survived nine merges
+      # before anyone noticed. .gitignore lists build*/, so this only has to confirm that
+      # nothing got in despite it. Costs nothing, so it runs first.
+      run: |
+        tracked=$(git ls-files | grep '^build' || true)
+        if [ -n "$tracked" ]; then echo "Build output is tracked by git:"; echo "$tracked"; exit 1; fi
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Build and test
+      # The original build, kept as it was: a Debug build through CMake and the ctest run.
+      # ctest executes the suite from build/test, which is where test/CMakeLists.txt has
+      # copied resources/ to, and that is what lets the suite find resources/image.png.
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Debug -DPNTR_BUILD_EXAMPLES=false
+        cmake --build build
+        ctest --test-dir build -V
 
-    - name: Test
-      working-directory: ${{github.workspace}}/build
-      # Execute tests defined by the CMake configuration.
-      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}} -V
+    - name: Sanitizers
+      # The most valuable step in this file. A Debug ctest run passes perfectly happily
+      # while reading past the end of an image, which is how four out-of-bounds reads and
+      # a segfault reached master. AddressSanitizer and UndefinedBehaviorSanitizer see all
+      # of it, and leak detection catches images the suite forgets to unload.
+      #
+      # Compiled by hand rather than through CMake, and run from inside test/, because the
+      # suite loads resources/image.png and friends relative to its working directory.
+      # -fno-sanitize-recover=all matters: UBSan reports and then carries on by default,
+      # which would leave this step green. -O0 keeps the compile quick and the traces exact.
+      run: |
+        cd test
+        gcc -std=c99 -g -O0 \
+          -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer \
+          -Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion \
+          -o pntr_test_sanitize pntr_test.c -lm
+        ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=print_stacktrace=1 ./pntr_test_sanitize
+
+    - name: Install Doxygen
+      # graphviz is deliberately not installed: .Doxyfile sets HAVE_DOT = NO, so there is
+      # nothing for dot to draw and installing it would only slow the job down.
+      run: sudo apt-get update && sudo apt-get install -y doxygen
+
+    - name: Documentation
+      # .Doxyfile sets WARN_AS_ERROR = FAIL_ON_WARNINGS, which was a gate with nothing
+      # pulling it -- exactly how 114 documentation errors piled up unnoticed. This pulls
+      # it. A missing @param on a new function now fails the build, which is the point.
+      run: doxygen .Doxyfile
+
+    - name: Configuration coverage
+      # pntr is a header with roughly twenty documented switches, and both the library and
+      # the test suite have to hold across them. Each configuration is checked two ways:
+      # pntr.h has to compile standalone and warning-free, and the test suite has to build
+      # and pass. The suite is where every bug in this codebase was found, so it runs for
+      # every configuration that can link one.
+      #
+      # The list is every PNTR_* option in README.md's configuration table and in pntr.h's
+      # own header comment that a command-line -D can express. Options are defined empty
+      # (-DNAME=) rather than -DNAME, which would define them to 1: nothing ever asks what
+      # these expand to, only whether they are defined, and the test suite already
+      # #defines some of them itself. An empty definition is an identical redefinition, so
+      # it does not trip -Werror.
+      #
+      # Left out on purpose:
+      #   PNTR_IMPLEMENTATION          always on; every configuration below defines it
+      #   PNTR_ERROR_STORAGE           takes a storage class, not a flag
+      #   PNTR_LOAD_FILE               these four are callbacks. They need a function to
+      #   PNTR_SAVE_FILE               point at, so a bare -D cannot express them and a
+      #   PNTR_LOAD_IMAGE_FROM_MEMORY  real check would mean committing a fixture .c file
+      #   PNTR_SAVE_IMAGE_TO_MEMORY    for each one.
+      #   PNTR_NO_ALPHABLEND           the test suite does not link under it today. pntr.h
+      #                                marks pntr_blend_color `inline` with no external
+      #                                definition, so at -O0 every caller of it becomes an
+      #                                undefined symbol. Add it to CONFIGS once that is
+      #                                fixed -- the library itself already compiles clean.
+      run: |
+        WARNINGS="-Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion"
+
+        # Checked both ways: the library compiles, and the test suite builds and passes.
+        CONFIGS=(
+          ""                                       # the documented default
+          "PNTR_ENABLE_MATH"
+          "PNTR_PIXELFORMAT_RGBA"
+          "PNTR_PIXELFORMAT_ARGB"
+          "PNTR_ENABLE_DEFAULT_FONT"
+          "PNTR_ENABLE_JPEG"
+          "PNTR_ENABLE_TTF"
+          "PNTR_ENABLE_UTF8"
+          "PNTR_ENABLE_VARGS"
+          "PNTR_NO_BMP"
+          "PNTR_NO_STDIO"
+          "PNTR_NO_LOAD_IMAGE"
+          "PNTR_NO_SAVE_IMAGE"
+          "PNTR_NO_LOAD_IMAGE PNTR_NO_SAVE_IMAGE"
+          "PNTR_CUTE_PNG"
+          "PNTR_STB_IMAGE"
+        )
+
+        # Checked one way, library only. The whole point of these four is that the
+        # application supplies the third-party implementation itself, so the test suite
+        # has nothing to link against and never can -- that is the option working, not a
+        # failure. pntr.h still has to compile under every one of them.
+        LIBRARY_ONLY=(
+          "PNTR_NO_CUTE_PNG_IMPLEMENTATION"
+          "PNTR_NO_STB_IMAGE_IMPLEMENTATION"
+          "PNTR_NO_STB_IMAGE_WRITE_IMPLEMENTATION"
+          "PNTR_NO_STB_TRUETYPE_IMPLEMENTATION"
+        )
+
+        for config in "${CONFIGS[@]}"; do
+          defines=""
+          for option in $config; do defines="$defines -D$option="; done
+          echo "::group::${config:-default}"
+          gcc -std=c99 $WARNINGS $defines -DPNTR_IMPLEMENTATION= -c -x c pntr.h -o /dev/null
+          (cd test && gcc -std=c99 $WARNINGS $defines -o pntr_test_config pntr_test.c -lm && ./pntr_test_config)
+          echo "::endgroup::"
+        done
+
+        for config in "${LIBRARY_ONLY[@]}"; do
+          echo "::group::$config (library only)"
+          gcc -std=c99 $WARNINGS -D$config= -DPNTR_IMPLEMENTATION= -c -x c pntr.h -o /dev/null
+          echo "::endgroup::"
+        done
