@@ -347,27 +347,27 @@ typedef union pntr_color {
      */
     struct pntr_color_rgba_t {
         #if defined(PNTR_PIXELFORMAT_RGBA)
-            unsigned char r; /** Red channel. */
-            unsigned char g; /** Green channel. */
-            unsigned char b; /** Blue channel. */
-            unsigned char a; /** Alpha channel. */
+            unsigned char r; /**< Red channel. */
+            unsigned char g; /**< Green channel. */
+            unsigned char b; /**< Blue channel. */
+            unsigned char a; /**< Alpha channel. */
         #elif defined(PNTR_PIXELFORMAT_ARGB)
-            unsigned char b; /** Blue channel. */
-            unsigned char g; /** Green channel. */
-            unsigned char r; /** Red channel. */
-            unsigned char a; /** Alpha channel. */
+            unsigned char b; /**< Blue channel. */
+            unsigned char g; /**< Green channel. */
+            unsigned char r; /**< Red channel. */
+            unsigned char a; /**< Alpha channel. */
         #endif
-    } rgba;
+    } rgba; /**< The color's individual red, green, blue and alpha channels. */
 } pntr_color;
 
 /**
  * A rectangle.
  */
 typedef struct pntr_rectangle {
-    int x; /** The x position of the rectangle. */
-    int y; /** The y position of the rectangle. */
-    int width; /** The width of the rectangle. */
-    int height; /** The height of the rectangle. */
+    int x; /**< The x position of the rectangle. */
+    int y; /**< The y position of the rectangle. */
+    int width; /**< The width of the rectangle. */
+    int height; /**< The height of the rectangle. */
 } pntr_rectangle;
 
 /**
@@ -377,10 +377,10 @@ typedef struct pntr_rectangle {
  * @see pntr_gen_image_color()
  */
 typedef struct pntr_image {
-    pntr_color* data; /** The pixel data for the image. */
-    int width; /** The width of the image. */
-    int height; /** The height of the image. */
-    int pitch; /** The amount of bytes of one row of the image. */
+    pntr_color* data; /**< The pixel data for the image. */
+    int width; /**< The width of the image. */
+    int height; /**< The height of the image. */
+    int pitch; /**< The amount of bytes of one row of the image. */
 
     /**
      * Whether or not the image is a portion of another image, sharing the same image data.
@@ -403,8 +403,8 @@ typedef struct pntr_image {
  * A vector, represented by x and y coordinates.
  */
 typedef struct pntr_vector {
-    int x; /** The X coordinate. */
-    int y; /** The Y coordinate. */
+    int x; /**< The X coordinate. */
+    int y; /**< The Y coordinate. */
 } pntr_vector;
 
 /**
@@ -417,29 +417,29 @@ typedef struct pntr_vector {
  * @see PNTR_ENABLE_TTF
  */
 typedef struct pntr_font {
-    pntr_image* atlas; /** The image used for the character atlas for the font. */
-    pntr_rectangle* srcRects; /** The glyph source rectangles on the atlas. */
-    pntr_rectangle* glyphRects; /** How the glyph appears when rendering. */
-    char* characters; /** An array of characters that are available in the font's atlas. */
-    int charactersLen; /** The number of characters that the font implements. */
-    void* user_data; /** General extra user data that can be referenced to by the font. */
+    pntr_image* atlas; /**< The image used for the character atlas for the font. */
+    pntr_rectangle* srcRects; /**< The glyph source rectangles on the atlas. */
+    pntr_rectangle* glyphRects; /**< How the glyph appears when rendering. */
+    char* characters; /**< An array of characters that are available in the font's atlas. */
+    int charactersLen; /**< The number of characters that the font implements. */
+    void* user_data; /**< General extra user data that can be referenced to by the font. */
 } pntr_font;
 
 /**
  * Pixel format.
  */
 typedef enum pntr_pixelformat {
-    PNTR_PIXELFORMAT_RGBA8888 = 0, /** RGBA, with 8 bytes for each component. */
-    PNTR_PIXELFORMAT_ARGB8888, /** ARGB, with 8 bytes for each component. */
-    PNTR_PIXELFORMAT_GRAYSCALE /** Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
+    PNTR_PIXELFORMAT_RGBA8888 = 0, /**< RGBA, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_ARGB8888, /**< ARGB, with 8 bytes for each component. */
+    PNTR_PIXELFORMAT_GRAYSCALE /**< Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
 } pntr_pixelformat;
 
 /**
  * Possible image filters to apply.
  */
 typedef enum pntr_filter {
-    PNTR_FILTER_NEARESTNEIGHBOR = 0, /** Nearest-neighbor interpolation for fast processing. Good for a pixel art look. */
-    PNTR_FILTER_BILINEAR /** Bilinear interpolation will combine multiple pixels together when processing for smoother scaling. */
+    PNTR_FILTER_NEARESTNEIGHBOR = 0, /**< Nearest-neighbor interpolation for fast processing. Good for a pixel art look. */
+    PNTR_FILTER_BILINEAR /**< Bilinear interpolation will combine multiple pixels together when processing for smoother scaling. */
 } pntr_filter;
 
 /**
@@ -449,25 +449,25 @@ typedef enum pntr_filter {
  * @see pntr_get_error()
  */
 typedef enum pntr_error {
-    PNTR_ERROR_NONE = 0, /** No error */
-    PNTR_ERROR_INVALID_ARGS = -1, /** Invalid arguments */
-    PNTR_ERROR_NO_MEMORY = -2, /** Not enough memory */
-    PNTR_ERROR_NOT_SUPPORTED = -3, /** Not supported */
-    PNTR_ERROR_FAILED_TO_OPEN = -4, /** Failed to open */
-    PNTR_ERROR_FAILED_TO_WRITE = -5, /** Failed to write */
-    PNTR_ERROR_UNKNOWN = -6, /** Unknown error occurred */
-    PNTR_ERROR_FAILED_TO_READ = -7, /** Opened, but failed to read */
-    PNTR_ERROR_INVALID_DATA = -8 /** The data that was given isn't what was expected */
+    PNTR_ERROR_NONE = 0, /**< No error */
+    PNTR_ERROR_INVALID_ARGS = -1, /**< Invalid arguments */
+    PNTR_ERROR_NO_MEMORY = -2, /**< Not enough memory */
+    PNTR_ERROR_NOT_SUPPORTED = -3, /**< Not supported */
+    PNTR_ERROR_FAILED_TO_OPEN = -4, /**< Failed to open */
+    PNTR_ERROR_FAILED_TO_WRITE = -5, /**< Failed to write */
+    PNTR_ERROR_UNKNOWN = -6, /**< Unknown error occurred */
+    PNTR_ERROR_FAILED_TO_READ = -7, /**< Opened, but failed to read */
+    PNTR_ERROR_INVALID_DATA = -8 /**< The data that was given isn't what was expected */
 } pntr_error;
 
 /**
  * The associated image format.
  */
 typedef enum pntr_image_type {
-    PNTR_IMAGE_TYPE_UNKNOWN = 0, /** Image type: Unknown. */
-    PNTR_IMAGE_TYPE_PNG, /** Image type: PNG - Portable Network Graphics */
-    PNTR_IMAGE_TYPE_JPG, /** Image type: JPEG - Joint Photographic Experts Group */
-    PNTR_IMAGE_TYPE_BMP /** Image type: BMP - Bitmap */
+    PNTR_IMAGE_TYPE_UNKNOWN = 0, /**< Image type: Unknown. */
+    PNTR_IMAGE_TYPE_PNG, /**< Image type: PNG - Portable Network Graphics */
+    PNTR_IMAGE_TYPE_JPG, /**< Image type: JPEG - Joint Photographic Experts Group */
+    PNTR_IMAGE_TYPE_BMP /**< Image type: BMP - Bitmap */
 } pntr_image_type;
 
 /**
@@ -476,9 +476,9 @@ typedef enum pntr_image_type {
  * @see pntr_draw_text_aligned()
  */
 typedef enum pntr_text_align {
-    PNTR_TEXT_ALIGN_LEFT = 0, /** Text alignment: Left */
-    PNTR_TEXT_ALIGN_CENTER,   /** Text alignment: Center */
-    PNTR_TEXT_ALIGN_RIGHT     /** Text alignment: Right */
+    PNTR_TEXT_ALIGN_LEFT = 0, /**< Text alignment: Left */
+    PNTR_TEXT_ALIGN_CENTER,   /**< Text alignment: Center */
+    PNTR_TEXT_ALIGN_RIGHT     /**< Text alignment: Right */
 } pntr_text_align;
 
 #ifdef __cplusplus

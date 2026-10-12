@@ -130,10 +130,10 @@ unsigned char* pntr_stb_image_save_image_to_memory(pntr_image* image, pntr_image
  * @see pntr_stb_image_write_func()
  */
 typedef struct pntr_stb_image_context {
-    unsigned int dataSize; /** How many bytes have been written to `data` so far. */
-    unsigned int capacity; /** How many bytes are currently allocated for `data`. */
-    void* data; /** The growing buffer holding the written image data. */
-    bool failed; /** Whether an allocation failed, which stops any further writing. */
+    unsigned int dataSize; /**< How many bytes have been written to `data` so far. */
+    unsigned int capacity; /**< How many bytes are currently allocated for `data`. */
+    void* data; /**< The growing buffer holding the written image data. */
+    bool failed; /**< Whether an allocation failed, which stops any further writing. */
 } pntr_stb_image_context;
 
 /**
