@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.11)
 project(pntr
     DESCRIPTION "pntr: Header-only CPU graphics library for C99 and C++"
     HOMEPAGE_URL "https://github.com/robloach/pntr"
-    VERSION 0.0.1
+    VERSION 0.1.0
     LANGUAGES C
 )
 
