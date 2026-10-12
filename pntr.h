@@ -1446,10 +1446,10 @@ extern "C" {
  * Create a new color with the given red, green, blue, and alpha values.
  *
  * @def PNTR_NEW_COLOR(red, green, blue, alpha)
- * @param r The red value.
- * @param g The green value.
- * @param b The blue value.
- * @param a The alpha value.
+ * @param red The red value.
+ * @param green The green value.
+ * @param blue The blue value.
+ * @param alpha The alpha value.
  *
  * @return The new color.
  * @internal
