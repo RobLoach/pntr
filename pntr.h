@@ -2302,6 +2302,49 @@ PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsC
 }
 
 /**
+ * The integer square root of a value, rounded down.
+ *
+ * @details Bit by bit rather than through a float, because the values here are up to the
+ * square of a thickness and a float carries only 24 bits of mantissa, so `sqrtf()` would
+ * round the edge of a large brush to the wrong column.
+ *
+ * @param value The value to take the root of.
+ *
+ * @return The largest whole number whose square is no greater than the value, or zero for
+ * a value of zero or less.
+ *
+ * @internal
+ */
+static int64_t _pntr_isqrt(int64_t value) {
+    if (value <= 0) {
+        return 0;
+    }
+
+    int64_t root = 0;
+
+    // The largest power of four no greater than the value, found by scaling up from one
+    // rather than down from the top of the range, so a small value costs a couple of
+    // shifts instead of thirty.
+    int64_t bit = 1;
+    while (bit <= value >> 2) {
+        bit <<= 2;
+    }
+
+    while (bit != 0) {
+        if (value >= root + bit) {
+            value -= root + bit;
+            root = (root >> 1) + bit;
+        }
+        else {
+            root >>= 1;
+        }
+        bit >>= 2;
+    }
+
+    return root;
+}
+
+/**
  * Plots a single point of a line or outline, either as a pixel, or as a round brush when
  * thick.
  *
@@ -2319,6 +2362,10 @@ static void _pntr_draw_thick_point(pntr_image* dst, int x, int y, int thickness,
         return;
     }
 
+    if (dst == NULL || color.rgba.a == 0) {
+        return;
+    }
+
     int low = -(thickness / 2);
     int high = thickness - 1 + low;
 
@@ -2331,18 +2378,40 @@ static void _pntr_draw_thick_point(pntr_image* dst, int x, int y, int thickness,
     // two squares overflows at about 32767.
     int64_t diameter2 = (int64_t)thickness * (int64_t)thickness;
 
-    for (int offsetY = low; offsetY <= high; offsetY++) {
+    // Only the rows that can reach the clip are worth walking. Without this the brush
+    // costs the same whether all of it lands on the image or none of it does, which made a
+    // thick line quadratic in a thickness the caller chooses. Widened for the same reason
+    // the rest of this function is: y is a caller coordinate and can sit at either end of
+    // the int range.
+    int64_t clipFirst = (int64_t)dst->clip.y - (int64_t)y;
+    int64_t clipLast = (int64_t)dst->clip.y + (int64_t)dst->clip.height - 1 - (int64_t)y;
+    int firstRow = (clipFirst > (int64_t)low) ? (int)((clipFirst > (int64_t)high) ? (int64_t)high + 1 : clipFirst) : low;
+    int lastRow = (clipLast < (int64_t)high) ? (int)((clipLast < (int64_t)low) ? (int64_t)low - 1 : clipLast) : high;
+
+    for (int offsetY = firstRow; offsetY <= lastRow; offsetY++) {
         int distanceY = 2 * offsetY - center;
-        int64_t distanceY2 = (int64_t)distanceY * (int64_t)distanceY;
-        for (int offsetX = low; offsetX <= high; offsetX++) {
-            int distanceX = 2 * offsetX - center;
-            if ((int64_t)distanceX * (int64_t)distanceX + distanceY2 <= diameter2) {
-                // The brush is symmetric, so the row reaches just as far past the center
-                // on the right as this first pixel does on the left.
-                pntr_draw_line_horizontal(dst, x + offsetX, y + offsetY, center - 2 * offsetX + 1, color);
-                break;
-            }
+        int64_t remaining = diameter2 - (int64_t)distanceY * (int64_t)distanceY;
+        if (remaining < 0) {
+            continue;
         }
+
+        // The leftmost offset of this row, solved rather than searched for. The row is the
+        // offsets whose doubled distance from the center is within the diameter, so the
+        // first of them is where `2 * offsetX - center` reaches `-sqrt(remaining)`.
+        // Searching for it cost up to half the thickness per row, which is where the other
+        // half of the quadratic came from.
+        int64_t edge = (int64_t)center - _pntr_isqrt(remaining);
+        int64_t offsetX = (edge >= 0) ? (edge + 1) / 2 : -((-edge) / 2);
+        if (offsetX < (int64_t)low) {
+            offsetX = (int64_t)low;
+        }
+        if (offsetX > (int64_t)high) {
+            continue;
+        }
+
+        // The brush is symmetric, so the row reaches just as far past the center on the
+        // right as this first pixel does on the left.
+        pntr_draw_line_horizontal(dst, _pntr_add_clamped(x, (int)offsetX), _pntr_add_clamped(y, offsetY), center - 2 * (int)offsetX + 1, color);
     }
 }
 

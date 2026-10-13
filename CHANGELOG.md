@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **A thick brush no longer costs the square of its thickness** ([#268]). `_pntr_draw_thick_point()` walked its whole thickness box for every point of a line, without clipping it to the image first, and searched each row for its first column rather than solving for it. A thick stroke was therefore quadratic in a thickness the caller chooses, whether or not any of it landed on the canvas. The rows are clamped to the clip now, and each row's edge comes from an integer square root.
+
+  A 100 pixel line on a 200x200 image at a thickness of 2048 went from 61 ms to 2.4 ms, and the cost now flattens once the brush is wider than the canvas instead of growing. `pntr_draw_line_thick(image, 0, 10, 19, 10, 1000000, color)` on a 20x20 image did not finish before; it returns immediately. Thicknesses small enough to fit on the canvas are unchanged in cost. Rendered output is byte-identical, verified by hashing every thickness from 1 to 200 across seven primitives, three clip configurations and brushes straddling each clip edge and corner.
+
 - **`pntr_image_resize_canvas()` moves pixels rather than blending them** ([#269]). It used to draw the original onto the filled canvas, which composites: a semi-transparent pixel came out mixed with the fill, and under `PNTR_NO_ALPHABLEND` it was skipped entirely and the fill was left in its place, so a partially transparent image came back as a blank rectangle. The rows are copied now, which is independent of what the build does about blending.
 
   Resizing the canvas of an image with any non-opaque pixel in it previously changed those pixels; it no longer does. Measured on an image with a different alpha in every pixel: 30 of 30 wrong in the default build and 67 of 71 under `PNTR_NO_ALPHABLEND`, now 0 in both.
@@ -121,3 +125,4 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 [#263]: https://github.com/RobLoach/pntr/issues/263
 [#267]: https://github.com/RobLoach/pntr/pull/267
 [#269]: https://github.com/RobLoach/pntr/issues/269
+[#268]: https://github.com/RobLoach/pntr/issues/268

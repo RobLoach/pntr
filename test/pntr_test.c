@@ -3408,6 +3408,74 @@ MODULE(pntr, {
             }
         });
 
+        IT("A thickness far larger than the canvas finishes", {
+            // The brush used to walk its whole thickness box for every point of the line,
+            // without clipping it first and scanning for each row's first column rather
+            // than computing it, so the cost was quadratic in a thickness the caller
+            // chooses. pntr_draw_line_thick() at a thickness of a million on a 20x20
+            // canvas did not finish; the curve put it in the hours. These all return
+            // immediately now, and a test that hangs is a test that failed.
+            int thicknesses[4] = {100000, 1000000, 100000000, INT_MAX};
+
+            for (int i = 0; i < 4; i++) {
+                pntr_image* image = pntr_test_canvas(20, 20);
+                NEQUALS(image, NULL);
+
+                // A brush this wide covers every pixel of the canvas from any center.
+                pntr_draw_line_thick(image, 0, 10, 19, 10, thicknesses[i], PNTR_RED);
+                EQUALS(pntr_test_painted_count(image), 20 * 20);
+
+                pntr_unload_image(image);
+
+                pntr_image* circle = pntr_test_canvas(20, 20);
+                NEQUALS(circle, NULL);
+
+                pntr_draw_circle_thick(circle, 10, 10, 5, thicknesses[i], PNTR_RED);
+                EQUALS(pntr_test_painted_count(circle), 20 * 20);
+
+                pntr_unload_image(circle);
+            }
+        });
+
+        IT("A thick brush stays inside the clip", {
+            // Clamping the brush to the clip rows is what made the above fast, so the
+            // clamp has to be right at every edge and corner rather than only in the
+            // middle. Each center below puts part of the brush outside the clip.
+            int centers[9][2] = {
+                {0, 0}, {39, 0}, {0, 39}, {39, 39},
+                {20, 0}, {0, 20}, {39, 20}, {20, 39}, {20, 20}
+            };
+
+            for (int i = 0; i < 9; i++) {
+                for (int thickness = 2; thickness <= 12; thickness++) {
+                    pntr_image* image = pntr_test_canvas(40, 40);
+                    NEQUALS(image, NULL);
+
+                    pntr_image* reference = pntr_image_copy(image);
+                    NEQUALS(reference, NULL);
+
+                    pntr_image_set_clip(image, 12, 14, 15, 13);
+                    pntr_draw_line_thick(image, centers[i][0], centers[i][1], centers[i][0], centers[i][1], thickness, PNTR_RED);
+                    pntr_image_reset_clip(image);
+
+                    // Nothing outside the clip changed, and the clip is where it was.
+                    int outside = 0;
+                    for (int y = 0; y < 40; y++) {
+                        for (int x = 0; x < 40; x++) {
+                            bool inside = (x >= 12 && x < 27 && y >= 14 && y < 27);
+                            if (!inside && pntr_image_get_color(image, x, y).value != pntr_image_get_color(reference, x, y).value) {
+                                outside++;
+                            }
+                        }
+                    }
+                    EQUALS(outside, 0);
+
+                    pntr_unload_image(reference);
+                    pntr_unload_image(image);
+                }
+            }
+        });
+
         IT("pntr_draw_circle_thick() grows with its thickness", {
             // pntr_draw_circle_thick() plots the outline with the same round brush the
             // thick lines use, rather than dispatching to pntr_draw_circle_fill() at half
