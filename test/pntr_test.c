@@ -301,6 +301,13 @@ pntr_image* pntr_test_canvas(int width, int height) {
  * @details Zero means the second image covers everything the first one painted. The two
  * have to be the same size, which is what lets a test compare an outline against its own
  * fill pixel for pixel rather than only comparing their bounds.
+ *
+ * A first image with nothing painted on it reports -1 rather than zero, because nothing
+ * is covered by anything. Every caller compares this against zero, so a primitive that
+ * stopped drawing entirely fails them all instead of passing them all vacuously.
+ *
+ * @return How many pixels are uncovered, or -1 when the comparison says nothing: either
+ * image missing, the two being different sizes, or the first one being blank.
  */
 int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
     if (painted == NULL || cover == NULL || painted->width != cover->width || painted->height != cover->height) {
@@ -308,12 +315,22 @@ int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
     }
 
     int uncovered = 0;
+    int total = 0;
     for (int y = 0; y < painted->height; y++) {
         for (int x = 0; x < painted->width; x++) {
-            if (pntr_test_painted(painted, x, y) && !pntr_test_painted(cover, x, y)) {
+            if (!pntr_test_painted(painted, x, y)) {
+                continue;
+            }
+
+            total++;
+            if (!pntr_test_painted(cover, x, y)) {
                 uncovered++;
             }
         }
+    }
+
+    if (total == 0) {
+        return -1;
     }
 
     return uncovered;
@@ -326,6 +343,10 @@ int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
  * at the same center and radii, and counts the outline pixels the fill misses, so zero
  * means the fill registers exactly with the outline. Both walk the same midpoint
  * traversal, so sweeping the radii through this is what keeps them in step.
+ *
+ * An outline that painted nothing reports -1, not zero.
+ *
+ * @see pntr_test_uncovered()
  */
 int pntr_test_unfilled_ellipse(int radiusX, int radiusY) {
     int width = radiusX * 2 + 5;
@@ -353,7 +374,10 @@ int pntr_test_unfilled_ellipse(int radiusX, int radiusY) {
 /**
  * How many pixels of a circle's outline the matching fill leaves unpainted.
  *
+ * An outline that painted nothing reports -1, not zero.
+ *
  * @see pntr_test_unfilled_ellipse()
+ * @see pntr_test_uncovered()
  */
 int pntr_test_unfilled_circle(int radius) {
     int size = radius * 2 + 5;
@@ -2399,8 +2423,17 @@ MODULE(pntr, {
             pntr_draw_polygon(outline, points, 4, PNTR_RED);
             pntr_draw_polygon_fill(fill, points, 4, PNTR_RED);
 
+            // Stated first, because the loop below says nothing at all about an outline
+            // that painted nothing.
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(outlineBounds, expected);
+            RECTEQUALS(fillBounds, expected);
+
             // An axis-aligned square has no shallow edges to round out, so here the fill
             // does cover every single pixel of the outline.
+            EQUALS(pntr_test_uncovered(outline, fill), 0);
             for (int y = 0; y < 40; y++) {
                 for (int x = 0; x < 40; x++) {
                     if (pntr_test_painted(outline, x, y)) {
@@ -2792,7 +2825,10 @@ MODULE(pntr, {
             EQUALS(pntr_test_painted(rounded, 28, 13), true);
             EQUALS(pntr_test_painted(rounded, 17, 20), true);
 
-            // The fill reaches every pixel of the outline of the same rectangle.
+            // The fill reaches every pixel of the outline of the same rectangle. Stated
+            // through pntr_test_uncovered() as well as the loop, because the loop on its
+            // own says nothing about an outline that painted nothing.
+            EQUALS(pntr_test_uncovered(outline, rounded), 0);
             for (int y = 0; y < 40; y++) {
                 for (int x = 0; x < 40; x++) {
                     if (pntr_test_painted(outline, x, y)) {
@@ -2978,14 +3014,21 @@ MODULE(pntr, {
                 pntr_clear_background(image, PNTR_BLANK);
 
                 pntr_draw_ellipse_fill(image, 20, 20, 15, 9, semi);
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
+
+                // Which is only worth checking because something was painted: every
+                // assertion above holds on a blank canvas.
+                GREATER(painted, 0);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 20)), 128);
 
                 pntr_unload_image(image);
             });
@@ -2999,14 +3042,24 @@ MODULE(pntr, {
                 // the cardinal and diagonal points are where that mirroring folds over
                 // onto itself.
                 pntr_draw_circle(image, 20, 20, 12, semi);
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
+
+                // Which is only worth checking because something was painted, and the
+                // four cardinal points are where the mirroring folds over onto itself.
+                GREATER(painted, 0);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 8, 20)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 32, 20)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 8)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 32)), 128);
 
                 pntr_unload_image(image);
             });
@@ -3066,14 +3119,20 @@ MODULE(pntr, {
                 points[3] = PNTR_CLITERAL(pntr_vector) {6, 20};
                 pntr_draw_polygon_fill(image, points, 4, semi);
 
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
+
+                // Which is only worth checking because something was painted.
+                GREATER(painted, 0);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 20)), 128);
 
                 pntr_unload_image(image);
             });
@@ -3084,14 +3143,23 @@ MODULE(pntr, {
                 pntr_clear_background(image, PNTR_BLANK);
 
                 pntr_draw_rectangle_rounded_fill(image, 5, 5, 24, 16, 4, semi);
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
+
+                // Which is only worth checking because something was painted. The corner
+                // discs, the two bars and the center fill are stitched together without
+                // overlapping, so the whole rectangle is painted exactly once, less the
+                // eight pixels that each radius of four cuts out of its corner.
+                EQUALS(painted, 24 * 16 - 4 * 8);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 17, 13)), 128);
 
                 pntr_unload_image(image);
             });
@@ -3107,6 +3175,37 @@ MODULE(pntr, {
             EQUALS(pntr_test_painted_count(image), 0);
 
             pntr_unload_image(image);
+        });
+
+        IT("pntr_test_uncovered() refuses an outline that painted nothing", {
+            // Every caller compares this against zero, so reporting zero for a blank
+            // image would be a pass for a primitive that stopped drawing entirely. The
+            // sweeps of pntr_test_unfilled_circle() and pntr_test_unfilled_ellipse()
+            // are the tests that rest on this.
+            pntr_image* blank = pntr_test_canvas(10, 10);
+            pntr_image* cover = pntr_test_canvas(10, 10);
+            NEQUALS(blank, NULL);
+            NEQUALS(cover, NULL);
+
+            pntr_draw_rectangle_fill(cover, 0, 0, 10, 10, PNTR_RED);
+            EQUALS(pntr_test_uncovered(blank, cover), -1);
+
+            // A single painted pixel is enough for the answer to mean something.
+            pntr_draw_point(blank, 4, 4, PNTR_RED);
+            EQUALS(pntr_test_uncovered(blank, cover), 0);
+
+            // And an uncovered pixel is still counted.
+            pntr_image* empty = pntr_test_canvas(10, 10);
+            NEQUALS(empty, NULL);
+            EQUALS(pntr_test_uncovered(blank, empty), 1);
+
+            // A mismatched or missing image says nothing either.
+            EQUALS(pntr_test_uncovered(blank, NULL), -1);
+            EQUALS(pntr_test_uncovered(NULL, cover), -1);
+
+            pntr_unload_image(empty);
+            pntr_unload_image(cover);
+            pntr_unload_image(blank);
         });
     });
 
