@@ -2946,6 +2946,15 @@ MODULE(pntr, {
 
                     pntr_draw_line_aa(image, startX, startY, endX, endY, PNTR_RED);
 
+                    // Every pixel Xiaolin Wu's algorithm plots is a partial one, and
+                    // pntr_blend_color() skips those outright without alpha blending, so
+                    // the whole line is dropped rather than merely un-anti-aliased.
+                    if (!pntr_alphablend()) {
+                        EQUALS(pntr_test_blended_count(image), 0);
+                        pntr_unload_image(image);
+                        continue;
+                    }
+
                     // Both endpoints are painted, the same as pntr_draw_line() paints them.
                     GREATER((int)pntr_color_a(pntr_image_get_color(image, startX, startY)), 0);
                     GREATER((int)pntr_color_a(pntr_image_get_color(image, endX, endY)), 0);
@@ -2988,6 +2997,17 @@ MODULE(pntr, {
 
                     pntr_draw_line_aa(aa, lines[i][0], lines[i][1], lines[i][2], lines[i][3], PNTR_RED);
                     pntr_draw_line(plain, lines[i][0], lines[i][1], lines[i][2], lines[i][3], PNTR_RED);
+
+                    // Without blending the anti-aliased line paints nothing at all, since
+                    // every pixel it plots is a partial one, while the plain line is
+                    // unaffected because the colour it writes is opaque.
+                    if (!pntr_alphablend()) {
+                        EQUALS(pntr_test_painted_count(aa), 0);
+                        GREATER(pntr_test_painted_count(plain), 0);
+                        pntr_unload_image(aa);
+                        pntr_unload_image(plain);
+                        continue;
+                    }
 
                     pntr_rectangle aaBounds = pntr_test_painted_bounds(aa, PNTR_TEST_BACKGROUND);
                     pntr_rectangle plainBounds = pntr_test_painted_bounds(plain, PNTR_TEST_BACKGROUND);
