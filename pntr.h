@@ -4280,7 +4280,50 @@ PNTR_API pntr_color pntr_image_get_color_bilinear(pntr_image* image, float x, fl
 }
 
 /**
+ * Whether a file extension is the given extension, ignoring the case of its letters.
+ *
+ * Only the ASCII letters `A` through `Z` are folded, which is all that an image extension
+ * is made of. That keeps the comparison away from `tolower()`, which pntr doesn't wrap and
+ * which answers to the active locale, and leaves every byte of a UTF-8 sequence alone.
+ *
+ * @param extension The extension to check, including its leading dot, and ending with the
+ * string.
+ * @param expected The extension to look for, including its leading dot, in lower case.
+ *
+ * @return True when the extension matches the expected one, false otherwise.
+ *
+ * @see pntr_get_file_image_type()
+ *
+ * @internal
+ */
+static bool _pntr_file_extension_equals(const char* extension, const char* expected) {
+    while (*expected != '\0') {
+        char character = *extension;
+        if (character >= 'A' && character <= 'Z') {
+            character = (char)(character - 'A' + 'a');
+        }
+
+        if (character != *expected) {
+            return false;
+        }
+
+        extension++;
+        expected++;
+    }
+
+    // The extension has to end where the expected one does, so that ".pngx" isn't a PNG.
+    return *extension == '\0';
+}
+
+/**
  * Get the file type of the given image, based on its filename.
+ *
+ * @details The type comes from the last extension of the last component of the path,
+ * compared without regard to the case of its letters. Both `/` and `\` separate path
+ * components, so a dot in a directory name never decides the type, and neither does an
+ * extension that something else follows: `"png-cache/photo.jpg"` is a JPEG, and
+ * `"photo.PNG.bak"` is unknown. A name with no extension, a name ending in a dot, and a
+ * dot-file like `".gitignore"` are all unknown, as is a path that is only a directory.
  *
  * @param filePath The file path to the image.
  *
@@ -4296,15 +4339,36 @@ PNTR_API pntr_image_type pntr_get_file_image_type(const char* filePath) {
         return PNTR_IMAGE_TYPE_UNKNOWN;
     }
 
-    if (PNTR_STRSTR(filePath, ".png") != NULL || PNTR_STRSTR(filePath, ".PNG") != NULL) {
+    // Find the last dot of the last path component. Walking the whole path keeps this to
+    // one pass, and to plain byte comparisons against ASCII, which is what makes it safe
+    // for the UTF-8 paths that PNTR_ENABLE_UTF8 allows.
+    const char* component = filePath;
+    const char* extension = NULL;
+    for (const char* cursor = filePath; *cursor != '\0'; cursor++) {
+        if (*cursor == '/' || *cursor == '\\') {
+            // A separator starts a new component, so any dot before it was in a directory.
+            component = cursor + 1;
+            extension = NULL;
+        }
+        else if (*cursor == '.' && cursor != component) {
+            // A dot that starts the name makes a hidden file rather than an extension.
+            extension = cursor;
+        }
+    }
+
+    if (extension == NULL) {
+        return PNTR_IMAGE_TYPE_UNKNOWN;
+    }
+
+    if (_pntr_file_extension_equals(extension, ".png")) {
         return PNTR_IMAGE_TYPE_PNG;
     }
 
-    if (PNTR_STRSTR(filePath, ".bmp") != NULL || PNTR_STRSTR(filePath, ".BMP") != NULL) {
+    if (_pntr_file_extension_equals(extension, ".bmp")) {
         return PNTR_IMAGE_TYPE_BMP;
     }
 
-    if (PNTR_STRSTR(filePath, ".jpg") != NULL || PNTR_STRSTR(filePath, ".jpeg") != NULL || PNTR_STRSTR(filePath, ".JPG") != NULL || PNTR_STRSTR(filePath, ".JPEG") != NULL) {
+    if (_pntr_file_extension_equals(extension, ".jpg") || _pntr_file_extension_equals(extension, ".jpeg")) {
         return PNTR_IMAGE_TYPE_JPG;
     }
 
