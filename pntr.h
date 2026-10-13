@@ -1775,17 +1775,18 @@ PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
 /**
  * Alpha blend the source color into the destination color.
  *
+ * @details An opaque source replaces the destination, a fully transparent one leaves it
+ * alone, and anything between the two is blended into it. With `PNTR_NO_ALPHABLEND` only
+ * an opaque source is written: every non-opaque source is skipped and the destination is
+ * left as it was.
+ *
  * @param dst The destination color.
  * @param src The source color.
  *
  * @see PNTR_NO_ALPHABLEND
  * @see pntr_color_alpha_blend()
  */
-PNTR_API
-#ifdef PNTR_NO_ALPHABLEND
-inline
-#endif
-void pntr_blend_color(pntr_color* dst, pntr_color src) {
+PNTR_API void pntr_blend_color(pntr_color* dst, pntr_color src) {
     if (src.rgba.a == 255) {
         *dst = src;
         return;

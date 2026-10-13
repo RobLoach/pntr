@@ -750,6 +750,52 @@ int pntr_test_painted_rows(pntr_image* image, int top, int bottom) {
     return count;
 }
 
+/**
+ * Whether a non-opaque source is blended into the destination in this build.
+ *
+ * Without it, pntr_blend_color() writes a fully opaque source and skips every other one,
+ * leaving the destination exactly as it was, so a semi-transparent draw paints nothing at
+ * all. Everything that paints through pntr_blend_color() inherits that, which is most of
+ * the drawing API.
+ *
+ * @see PNTR_NO_ALPHABLEND
+ */
+bool pntr_alphablend() {
+    #ifdef PNTR_NO_ALPHABLEND
+        return false;
+    #else
+        return true;
+    #endif
+}
+
+/**
+ * How many pixels of a transparent image have had any alpha painted onto them.
+ *
+ * @details The counterpart to pntr_test_painted_count() for the images that start out as
+ * PNTR_BLANK rather than at PNTR_TEST_BACKGROUND, so it says how much of a draw landed on
+ * one. Zero means the image was left as it was found, which is what a semi-transparent
+ * draw leaves behind when pntr_alphablend() is false.
+ *
+ * @see pntr_test_painted_count()
+ * @see pntr_alphablend()
+ */
+int pntr_test_blended_count(pntr_image* image) {
+    if (image == NULL) {
+        return 0;
+    }
+
+    int count = 0;
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_color_a(pntr_image_get_color(image, x, y)) != 0) {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -1342,7 +1388,22 @@ MODULE(pntr, {
                         // that there are no holes left inside of them.
                         pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_TEST_BACKGROUND);
                         RECTEQUALS(bounds, dstRect);
-                        EQUALS(pntr_test_painted_count(dst), width * height);
+
+                        int painted = pntr_test_painted_count(dst);
+                        if (pntr_alphablend() || filters[f] == PNTR_FILTER_NEARESTNEIGHBOR) {
+                            EQUALS(painted, width * height);
+                        }
+                        else {
+                            // Bilinear interpolation of four fully opaque pixels can round
+                            // its way to an alpha of 254, and pntr_alphablend() being false
+                            // skips anything that is not fully opaque rather than blending
+                            // it, so the bilinear fill is allowed holes. It still covers the
+                            // rectangle it was given, which the bounds above pin, and it
+                            // never reaches outside of it. Nearest neighbor takes the
+                            // source's own opaque pixels, so it fills completely either way.
+                            GREATER(painted, 0);
+                            LESSEREQ(painted, width * height);
+                        }
 
                         pntr_unload_image(dst);
                     }
@@ -2908,7 +2969,12 @@ MODULE(pntr, {
             // Blending onto a transparent pixel leaves the color as it is, so an alpha
             // that is still 128 is a pixel that was painted exactly once. A pixel that
             // was painted twice reports 192 instead.
+            //
+            // Without pntr_alphablend() there is no blending to count: a non-opaque source
+            // is skipped rather than blended, so every one of these draws leaves its
+            // transparent image exactly as it found it and the alpha stays at 0.
             pntr_color semi = pntr_new_color(230, 41, 55, 128);
+            int semiAlpha = pntr_alphablend() ? 128 : 0;
 
             IT("pntr_draw_rectangle() one pixel tall", {
                 pntr_image* image = pntr_new_image(40, 40);
@@ -2917,7 +2983,7 @@ MODULE(pntr, {
 
                 pntr_draw_rectangle(image, 5, 5, 20, 1, semi);
                 for (int x = 5; x < 25; x++) {
-                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, x, 5)), 128);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, x, 5)), semiAlpha);
                 }
 
                 pntr_unload_image(image);
@@ -2930,7 +2996,7 @@ MODULE(pntr, {
 
                 pntr_draw_rectangle(image, 5, 5, 1, 20, semi);
                 for (int y = 5; y < 25; y++) {
-                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, y)), 128);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, y)), semiAlpha);
                 }
 
                 pntr_unload_image(image);
@@ -2943,10 +3009,10 @@ MODULE(pntr, {
 
                 // The corners are where the horizontal and vertical edges used to meet.
                 pntr_draw_rectangle(image, 5, 5, 20, 12, semi);
-                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, 5)), 128);
-                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 24, 5)), 128);
-                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, 16)), 128);
-                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 24, 16)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, 5)), semiAlpha);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 24, 5)), semiAlpha);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 5, 16)), semiAlpha);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 24, 16)), semiAlpha);
 
                 pntr_unload_image(image);
             });
@@ -2967,7 +3033,7 @@ MODULE(pntr, {
                 }
 
                 // Including the center row, which both halves of the fill run along.
-                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 20)), 128);
+                EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 20)), semiAlpha);
 
                 pntr_unload_image(image);
             });
@@ -2985,6 +3051,16 @@ MODULE(pntr, {
                             EQUALS((int)alpha, 128);
                         }
                     }
+                }
+
+                // Something was painted, which is what makes the alpha above worth
+                // checking. Without pntr_alphablend() nothing is, and the fill is skipped.
+                int painted = pntr_test_blended_count(image);
+                if (pntr_alphablend()) {
+                    GREATER(painted, 0);
+                }
+                else {
+                    EQUALS(painted, 0);
                 }
 
                 pntr_unload_image(image);
@@ -3006,6 +3082,16 @@ MODULE(pntr, {
                             EQUALS((int)alpha, 128);
                         }
                     }
+                }
+
+                // Something was painted, which is what makes the alpha above worth
+                // checking. Without pntr_alphablend() nothing is, and the outline is skipped.
+                int painted = pntr_test_blended_count(image);
+                if (pntr_alphablend()) {
+                    GREATER(painted, 0);
+                }
+                else {
+                    EQUALS(painted, 0);
                 }
 
                 pntr_unload_image(image);
@@ -3045,9 +3131,12 @@ MODULE(pntr, {
                         }
                     }
 
-                    // Which is only worth checking because something was painted.
-                    EQUALS(outlinePainted, expectedOutline[radius]);
-                    EQUALS(fillPainted, expectedFill[radius]);
+                    // Which is only worth checking because something was painted, and
+                    // without pntr_alphablend() nothing is.
+                    int expectedOutlinePainted = pntr_alphablend() ? expectedOutline[radius] : 0;
+                    int expectedFillPainted = pntr_alphablend() ? expectedFill[radius] : 0;
+                    EQUALS(outlinePainted, expectedOutlinePainted);
+                    EQUALS(fillPainted, expectedFillPainted);
 
                     pntr_unload_image(outline);
                     pntr_unload_image(fill);
@@ -3075,6 +3164,16 @@ MODULE(pntr, {
                     }
                 }
 
+                // Something was painted, which is what makes the alpha above worth
+                // checking. Without pntr_alphablend() nothing is, and the fill is skipped.
+                int painted = pntr_test_blended_count(image);
+                if (pntr_alphablend()) {
+                    GREATER(painted, 0);
+                }
+                else {
+                    EQUALS(painted, 0);
+                }
+
                 pntr_unload_image(image);
             });
 
@@ -3091,6 +3190,16 @@ MODULE(pntr, {
                             EQUALS((int)alpha, 128);
                         }
                     }
+                }
+
+                // Something was painted, which is what makes the alpha above worth
+                // checking. Without pntr_alphablend() nothing is, and the fill is skipped.
+                int painted = pntr_test_blended_count(image);
+                if (pntr_alphablend()) {
+                    GREATER(painted, 0);
+                }
+                else {
+                    EQUALS(painted, 0);
                 }
 
                 pntr_unload_image(image);
@@ -4395,10 +4504,18 @@ MODULE(pntr, {
         // A partially transparent source pulls the destination towards it, and raises alpha.
         pntr_color half = pntr_color_fade(PNTR_RED, -0.5f);
         EQUALS(half.rgba.a, 127);
-        pntr_color blended = pntr_color_alpha_blend(pntr_color_fade(PNTR_BLUE, -0.5f), half);
-        GREATER(blended.rgba.r, PNTR_BLUE.rgba.r);
-        GREATER(blended.rgba.a, 127);
-        LESSER(blended.rgba.b, PNTR_BLUE.rgba.b);
+        pntr_color halfBlue = pntr_color_fade(PNTR_BLUE, -0.5f);
+        pntr_color blended = pntr_color_alpha_blend(halfBlue, half);
+        if (pntr_alphablend()) {
+            GREATER(blended.rgba.r, PNTR_BLUE.rgba.r);
+            GREATER(blended.rgba.a, 127);
+            LESSER(blended.rgba.b, PNTR_BLUE.rgba.b);
+        }
+        else {
+            // A non-opaque source is skipped rather than blended, so the destination
+            // comes back exactly as it went in.
+            COLOREQUALS(blended, halfBlue);
+        }
     });
 
     IT("pntr_color_contrast() is the identity at 0.0f", {
