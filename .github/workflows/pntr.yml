@@ -103,11 +103,6 @@ jobs:
       #   PNTR_SAVE_FILE               point at, so a bare -D cannot express them and a
       #   PNTR_LOAD_IMAGE_FROM_MEMORY  real check would mean committing a fixture .c file
       #   PNTR_SAVE_IMAGE_TO_MEMORY    for each one.
-      #   PNTR_NO_ALPHABLEND           the test suite does not link under it today. pntr.h
-      #                                marks pntr_blend_color `inline` with no external
-      #                                definition, so at -O0 every caller of it becomes an
-      #                                undefined symbol. Add it to CONFIGS once that is
-      #                                fixed -- the library itself already compiles clean.
       run: |
         WARNINGS="-Wall -Wextra -Wpedantic -Werror -Wconversion -Wsign-conversion"
 
@@ -122,6 +117,7 @@ jobs:
           "PNTR_ENABLE_TTF"
           "PNTR_ENABLE_UTF8"
           "PNTR_ENABLE_VARGS"
+          "PNTR_NO_ALPHABLEND"
           "PNTR_NO_BMP"
           "PNTR_NO_STDIO"
           "PNTR_NO_LOAD_IMAGE"
