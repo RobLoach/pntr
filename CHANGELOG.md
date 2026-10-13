@@ -6,25 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-### Fixed
-
-- **A thick brush no longer costs the square of its thickness** ([#268]). `_pntr_draw_thick_point()` walked its whole thickness box for every point of a line, without clipping it to the image first, and searched each row for its first column rather than solving for it. A thick stroke was therefore quadratic in a thickness the caller chooses, whether or not any of it landed on the canvas. The rows are clamped to the clip now, and each row's edge comes from an integer square root.
-
-  A 100 pixel line on a 200x200 image at a thickness of 2048 went from 61 ms to 2.4 ms, and the cost now flattens once the brush is wider than the canvas instead of growing. `pntr_draw_line_thick(image, 0, 10, 19, 10, 1000000, color)` on a 20x20 image did not finish before; it returns immediately. Thicknesses small enough to fit on the canvas are unchanged in cost. Rendered output is byte-identical, verified by hashing every thickness from 1 to 200 across seven primitives, three clip configurations and brushes straddling each clip edge and corner.
-
-- **`pntr_image_resize_canvas()` moves pixels rather than blending them** ([#269]). It used to draw the original onto the filled canvas, which composites: a semi-transparent pixel came out mixed with the fill, and under `PNTR_NO_ALPHABLEND` it was skipped entirely and the fill was left in its place, so a partially transparent image came back as a blank rectangle. The rows are copied now, which is independent of what the build does about blending.
-
-  Resizing the canvas of an image with any non-opaque pixel in it previously changed those pixels; it no longer does. Measured on an image with a different alpha in every pixel: 30 of 30 wrong in the default build and 67 of 71 under `PNTR_NO_ALPHABLEND`, now 0 in both.
-
-- **A coordinate near the end of the int range no longer overflows** ([#267]). `pntr_draw_rectangle_fill(image, INT_MAX - 1, 0, 10, 10, color)` segfaulted: the clip test computed `x + width`, which overflowed and wrapped negative, so the far edge came back smaller than the near one and the subtraction wrapped again into a positive width. An entirely off-image rectangle was reported as visible and written through. Squaring a radius or a thickness overflowed above 46340 as well, and the sum of two squares above about 32767, so a circle wide enough to cover the canvas was drawn from a wrapped radius.
-
-  Measured over 30 entry points called with extreme but legal arguments: **21 reached undefined behavior, now 0.** Rendered output for ordinary values is unchanged, verified by hashing 20 primitives across 6 parameter variations against the previous `master`.
-
-- **Bilinear interpolation rounds instead of truncating** ([#263]). Interpolating between four copies of the same color now returns that color exactly, on every channel and at every fractional coordinate. The four weights sum to one in exact arithmetic but not in float, so truncating the result shaved a unit off: a bilinear-scaled draw of a fully opaque image produced pixels at an alpha of 254, which `PNTR_NO_ALPHABLEND` then discarded outright and left holes in the fill. Red, green and blue were losing the same unit in the same places.
-
-  **What to do:** rendered output changes by at most one unit per channel for anything scaled, resized or rotated with `PNTR_FILTER_BILINEAR`, so pixel-exact baselines against bilinear output need regenerating. `pntr_draw_image_dest_rec()` with a bilinear filter now fills its destination rectangle completely under `PNTR_NO_ALPHABLEND`, matching nearest neighbor.
-
-## [0.1.0] - 2026-10-12
+## [0.1.0] - 2026-10-13
 
 The first tagged release of *pntr*. Since there was no previous tag, the entries below are written against the untagged `master` history, so they are aimed at anyone who has been vendoring `pntr.h` directly or shipping one of the integrations.
 
@@ -69,6 +51,30 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 
 ### Fixed
 
+- **A thick brush no longer costs the square of its thickness** ([#268]). `_pntr_draw_thick_point()` walked its whole thickness box for every point of a line, without clipping it to the image first, and searched each row for its first column rather than solving for it. A thick stroke was therefore quadratic in a thickness the caller chooses, whether or not any of it landed on the canvas. The rows are clamped to the clip now, and each row's edge comes from an integer square root.
+
+  A 100 pixel line on a 200x200 image at a thickness of 2048 went from 61 ms to 2.4 ms, and the cost now flattens once the brush is wider than the canvas instead of growing. `pntr_draw_line_thick(image, 0, 10, 19, 10, 1000000, color)` on a 20x20 image did not finish before; it returns immediately. Thicknesses small enough to fit on the canvas are unchanged in cost. Rendered output is byte-identical, verified by hashing every thickness from 1 to 200 across seven primitives, three clip configurations and brushes straddling each clip edge and corner.
+
+- **`pntr_image_resize_canvas()` moves pixels rather than blending them** ([#269]). It used to draw the original onto the filled canvas, which composites: a semi-transparent pixel came out mixed with the fill, and under `PNTR_NO_ALPHABLEND` it was skipped entirely and the fill was left in its place, so a partially transparent image came back as a blank rectangle. The rows are copied now, which is independent of what the build does about blending.
+
+  Resizing the canvas of an image with any non-opaque pixel in it previously changed those pixels; it no longer does. Measured on an image with a different alpha in every pixel: 30 of 30 wrong in the default build and 67 of 71 under `PNTR_NO_ALPHABLEND`, now 0 in both.
+
+- **A coordinate near the end of the int range no longer overflows** ([#267]). `pntr_draw_rectangle_fill(image, INT_MAX - 1, 0, 10, 10, color)` segfaulted: the clip test computed `x + width`, which overflowed and wrapped negative, so the far edge came back smaller than the near one and the subtraction wrapped again into a positive width. An entirely off-image rectangle was reported as visible and written through. Squaring a radius or a thickness overflowed above 46340 as well, and the sum of two squares above about 32767, so a circle wide enough to cover the canvas was drawn from a wrapped radius.
+
+  Measured over 30 entry points called with extreme but legal arguments: **21 reached undefined behavior, now 0.** Rendered output for ordinary values is unchanged, verified by hashing 20 primitives across 6 parameter variations against the previous `master`.
+
+- **Bilinear interpolation rounds instead of truncating** ([#263]). Interpolating between four copies of the same color now returns that color exactly, on every channel and at every fractional coordinate. The four weights sum to one in exact arithmetic but not in float, so truncating the result shaved a unit off: a bilinear-scaled draw of a fully opaque image produced pixels at an alpha of 254, which `PNTR_NO_ALPHABLEND` then discarded outright and left holes in the fill. Red, green and blue were losing the same unit in the same places.
+
+  **What to do:** rendered output changes by at most one unit per channel for anything scaled, resized or rotated with `PNTR_FILTER_BILINEAR`, so pixel-exact baselines against bilinear output need regenerating. `pntr_draw_image_dest_rec()` with a bilinear filter now fills its destination rectangle completely under `PNTR_NO_ALPHABLEND`, matching nearest neighbor.
+
+- **`pntr_draw_text_aligned()` no longer repeats and blanks its lines** ([#260], [#228]). `pntr_draw_text_len()` reads a length of zero or less as "draw to the NUL terminator", and the aligned draw could compute exactly that for an empty line, so the rest of the string was drawn again on top of itself. Multi-line aligned text with a blank line in it now places each line once, and every line advances by the font's line height rather than by its own measured height, so blank lines take up space.
+
+- **`pntr_blend_color()` can be linked under `PNTR_NO_ALPHABLEND`** ([#262], [#261]). It was declared `inline` only in that configuration, with no external definition anywhere, so any build that defined the option and called it failed to link. The default build's object code is unchanged.
+
+- **`pntr_draw_image_flipped_rec()` reads from the source rectangle it was given** ([#256]). It ignored the rectangle's X and Y offset and always read from the top left of the source, so flipping a sprite out of an atlas drew the wrong sprite.
+
+- **`pntr_get_file_image_type()` matches the real file extension** ([#257], [#254]). It searched the whole path for `.png`, `.bmp` and `.jpg`, so `/cache/.png/photo.jpg` was detected as a PNG, and it only recognised all-lower and all-upper spellings, missing `.Png`. The extension is now taken from the end of the path and folded case-insensitively, without depending on the locale.
+
 - Heap overflow in `pntr_draw_arc_fill()` ([#236]).
 - Heap overflow in `pntr_clear_background()` when called on a subimage ([#237]).
 - Out-of-bounds reads in bilinear filtering. Every bilinear sample now goes through one clamped sampler, which also stops `pntr_image_resize()` from reading past the right and bottom edges, and stops the rotated and rotozoom draws from skipping the last row and column of the source instead of sampling it ([#231]). Bilinear scaling of a source rectangle also read its X from the rectangle's Y offset ([#219]).
@@ -95,11 +101,12 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 [#121]: https://github.com/RobLoach/pntr/pull/121
 [#211]: https://github.com/RobLoach/pntr/pull/211
 [#212]: https://github.com/RobLoach/pntr/pull/212
-[#214]: https://github.com/RobLoach/pntr/pull/214
 [#213]: https://github.com/RobLoach/pntr/pull/213
+[#214]: https://github.com/RobLoach/pntr/pull/214
 [#215]: https://github.com/RobLoach/pntr/pull/215
 [#217]: https://github.com/RobLoach/pntr/pull/217
 [#219]: https://github.com/RobLoach/pntr/pull/219
+[#228]: https://github.com/RobLoach/pntr/issues/228
 [#230]: https://github.com/RobLoach/pntr/pull/230
 [#231]: https://github.com/RobLoach/pntr/pull/231
 [#232]: https://github.com/RobLoach/pntr/issues/232
@@ -114,15 +121,21 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 [#249]: https://github.com/RobLoach/pntr/pull/249
 [#250]: https://github.com/RobLoach/pntr/pull/250
 [#251]: https://github.com/RobLoach/pntr/pull/251
+[#254]: https://github.com/RobLoach/pntr/issues/254
 [#255]: https://github.com/RobLoach/pntr/pull/255
+[#256]: https://github.com/RobLoach/pntr/pull/256
+[#257]: https://github.com/RobLoach/pntr/pull/257
+[#260]: https://github.com/RobLoach/pntr/pull/260
+[#261]: https://github.com/RobLoach/pntr/issues/261
+[#262]: https://github.com/RobLoach/pntr/pull/262
+[#263]: https://github.com/RobLoach/pntr/issues/263
+[#267]: https://github.com/RobLoach/pntr/pull/267
+[#268]: https://github.com/RobLoach/pntr/issues/268
+[#269]: https://github.com/RobLoach/pntr/issues/269
+[0.1.0]: https://github.com/RobLoach/pntr/releases/tag/v0.1.0
 [@JesseTG]: https://github.com/JesseTG
 [@konsumer]: https://github.com/konsumer
+[Unreleased]: https://github.com/RobLoach/pntr/compare/v0.1.0...HEAD
 [pntr_app]: https://github.com/RobLoach/pntr_app
 [pntr_aseprite]: https://github.com/RobLoach/pntr_aseprite
 [pntr_tiled]: https://github.com/RobLoach/pntr_tiled
-[Unreleased]: https://github.com/RobLoach/pntr/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/RobLoach/pntr/releases/tag/v0.1.0
-[#263]: https://github.com/RobLoach/pntr/issues/263
-[#267]: https://github.com/RobLoach/pntr/pull/267
-[#269]: https://github.com/RobLoach/pntr/issues/269
-[#268]: https://github.com/RobLoach/pntr/issues/268
