@@ -2135,6 +2135,73 @@ MODULE(pntr, {
         });
     });
 
+    IT("pntr_draw_image_rec() lands the source rectangle on the position", {
+        // Asserted against the coordinates the rectangle names rather than against
+        // another pntr call. pntr_draw_image_rec() is the oracle the
+        // pntr_draw_image_dest_rec() tests are written against, so a test of it that
+        // asked a second pntr function where a pixel came from would pass just as well
+        // if both of them ignored srcRect.x and srcRect.y.
+        //
+        // Every pixel of the source carries its own position in its red and green
+        // channels, so the color found at a destination pixel says which source pixel was
+        // read for it, and the expectation below is arithmetic on the rectangle.
+        pntr_image* src = pntr_test_coordinate_image(20, 20);
+        pntr_image* dst = pntr_test_canvas(40, 40);
+        NEQUALS(src, NULL);
+        NEQUALS(dst, NULL);
+
+        pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) {5, 3, 7, 4};
+        int posX = 9;
+        int posY = 11;
+        pntr_draw_image_rec(dst, src, srcRect, posX, posY);
+
+        for (int y = 0; y < srcRect.height; y++) {
+            for (int x = 0; x < srcRect.width; x++) {
+                pntr_color expected = pntr_new_color(
+                    (unsigned char)(10 + (srcRect.x + x) * 9),
+                    (unsigned char)(10 + (srcRect.y + y) * 9),
+                    180, 255);
+                pntr_color actual = pntr_image_get_color(dst, posX + x, posY + y);
+                if (actual.value != expected.value) {
+                    printf("\n\tpntr_draw_image_rec() at (%d, %d)\n", posX + x, posY + y);
+                }
+                COLOREQUALS(actual, expected);
+            }
+        }
+
+        // And the rectangle is the only thing that was drawn: nothing spilled past it,
+        // and no row or column of it was skipped.
+        pntr_rectangle expectedBounds = PNTR_CLITERAL(pntr_rectangle) {posX, posY, srcRect.width, srcRect.height};
+        pntr_rectangle actualBounds = pntr_test_painted_bounds(dst, PNTR_TEST_BACKGROUND);
+        RECTEQUALS(actualBounds, expectedBounds);
+        EQUALS(pntr_test_painted_count(dst), srcRect.width * srcRect.height);
+
+        // The tinted form reads the same source pixels, then multiplies each of them by
+        // the tint.
+        pntr_image* tinted = pntr_test_canvas(40, 40);
+        NEQUALS(tinted, NULL);
+        pntr_color tint = pntr_new_color(128, 200, 64, 255);
+        pntr_draw_image_tint_rec(tinted, src, srcRect, posX, posY, tint);
+
+        for (int y = 0; y < srcRect.height; y++) {
+            for (int x = 0; x < srcRect.width; x++) {
+                pntr_color expected = pntr_color_tint(pntr_new_color(
+                    (unsigned char)(10 + (srcRect.x + x) * 9),
+                    (unsigned char)(10 + (srcRect.y + y) * 9),
+                    180, 255), tint);
+                pntr_color actual = pntr_image_get_color(tinted, posX + x, posY + y);
+                if (actual.value != expected.value) {
+                    printf("\n\tpntr_draw_image_tint_rec() at (%d, %d)\n", posX + x, posY + y);
+                }
+                COLOREQUALS(actual, expected);
+            }
+        }
+
+        pntr_unload_image(tinted);
+        pntr_unload_image(dst);
+        pntr_unload_image(src);
+    });
+
     IT("pntr_draw_image_flipped_rec()", {
         IT("pntr_draw_image_flipped_rec() reads from the source rectangle", {
             // The reproduction from https://github.com/RobLoach/pntr/issues/252. The
