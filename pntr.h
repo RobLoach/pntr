@@ -56,6 +56,7 @@
 #include <stdint.h> // uint32_t
 #include <stdbool.h> // bool
 #include <stddef.h> // size_t
+#include <limits.h> // INT_MAX
 
 /**
  * @defgroup pntr pntr
@@ -1817,6 +1818,35 @@ PNTR_API void pntr_blend_color(pntr_color* dst, pntr_color src) {
 }
 
 /**
+ * Add two coordinates without overflowing an int.
+ *
+ * @details A coordinate near the end of the int range plus an extent overflows, which is
+ * undefined behavior and wraps to the opposite end, turning an off-image edge into an
+ * on-image one. The sum is clamped instead: no image can be that wide, so a clamped edge
+ * is outside the clip either way and every caller rejects it the same as it would have
+ * rejected the true sum.
+ *
+ * @param a The coordinate.
+ * @param b What to add to it.
+ *
+ * @return The sum, clamped to the range of an int.
+ *
+ * @internal
+ */
+static int _pntr_add_clamped(int a, int b) {
+    int64_t sum = (int64_t)a + (int64_t)b;
+
+    if (sum > (int64_t)INT_MAX) {
+        return INT_MAX;
+    }
+    if (sum < (int64_t)INT_MIN) {
+        return INT_MIN;
+    }
+
+    return (int)sum;
+}
+
+/**
  * Get a new rectangle representing the intersection of the two given rectangles.
  *
  * @code
@@ -1845,17 +1875,28 @@ static bool _pntr_rectangle_intersect(int x, int y, int width, int height, int d
         return false;
     }
 
-    out->x = PNTR_MAX(x, destX);
-    out->width = PNTR_MIN(x + width, destX + destWidth) - out->x;
-    if (out->width <= 0) {
+    // Widened, because a coordinate near the end of the int range plus its extent
+    // overflows: the sum wraps negative, PNTR_MIN then picks the wrapped value, and the
+    // subtraction wraps back to a positive width. The intersect reported an entirely
+    // off-image rectangle as visible, and the caller wrote through it.
+    int64_t left = PNTR_MAX((int64_t)x, (int64_t)destX);
+    int64_t right = PNTR_MIN((int64_t)x + (int64_t)width, (int64_t)destX + (int64_t)destWidth);
+    if (right <= left) {
         return false;
     }
 
-    out->y = PNTR_MAX(y, destY);
-    out->height = PNTR_MIN(y + height, destY + destHeight) - out->y;
-    if (out->height <= 0) {
+    int64_t top = PNTR_MAX((int64_t)y, (int64_t)destY);
+    int64_t bottom = PNTR_MIN((int64_t)y + (int64_t)height, (int64_t)destY + (int64_t)destHeight);
+    if (bottom <= top) {
         return false;
     }
+
+    // Clamped to the destination, which is the image's own clip, so each of these is
+    // back inside the range of an int.
+    out->x = (int)left;
+    out->width = (int)(right - left);
+    out->y = (int)top;
+    out->height = (int)(bottom - top);
 
     return true;
 }
@@ -2285,14 +2326,17 @@ static void _pntr_draw_thick_point(pntr_image* dst, int x, int y, int thickness,
     // distance test stays in integers. Comparing against the diameter rather than the
     // radius is what keeps a brush of 2 a full 2x2 block.
     int center = low + high;
-    int diameter2 = thickness * thickness;
+
+    // Widened, because squaring a thickness over 46340 overflows an int, and the sum of
+    // two squares overflows at about 32767.
+    int64_t diameter2 = (int64_t)thickness * (int64_t)thickness;
 
     for (int offsetY = low; offsetY <= high; offsetY++) {
         int distanceY = 2 * offsetY - center;
-        int distanceY2 = distanceY * distanceY;
+        int64_t distanceY2 = (int64_t)distanceY * (int64_t)distanceY;
         for (int offsetX = low; offsetX <= high; offsetX++) {
             int distanceX = 2 * offsetX - center;
-            if (distanceX * distanceX + distanceY2 <= diameter2) {
+            if ((int64_t)distanceX * (int64_t)distanceX + distanceY2 <= diameter2) {
                 // The brush is symmetric, so the row reaches just as far past the center
                 // on the right as this first pixel does on the left.
                 pntr_draw_line_horizontal(dst, x + offsetX, y + offsetY, center - 2 * offsetX + 1, color);
@@ -2341,12 +2385,16 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
     }
 
     int startU, startV, endU, stepV;
-    int A, B, P;
+
+    // Widened, because doubling a span over half the int range overflows. These three are
+    // the Bresenham error state and never leave the stepping below, so carrying them wider
+    // costs nothing.
+    int64_t A, B, P;
     int reversedXY = (absChangeInY < absChangeInX);
 
     if (reversedXY) {
-        A = 2 * absChangeInY;
-        B = A - 2 * absChangeInX;
+        A = (int64_t)2 * absChangeInY;
+        B = A - (int64_t)2 * absChangeInX;
         P = A - absChangeInX;
 
         if (changeInX > 0) {
@@ -2371,8 +2419,8 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
         _pntr_draw_thick_point(dst, startU, startV, thickness, color);
     }
     else {
-        A = 2 * absChangeInX;
-        B = A - 2 * absChangeInY;
+        A = (int64_t)2 * absChangeInX;
+        B = A - (int64_t)2 * absChangeInY;
         P = A - absChangeInY;
 
         if (changeInY > 0) {
@@ -2514,9 +2562,9 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
 
     color.rgba.a = (unsigned char)(frac * xgap * baseAlpha);
     if (steep)
-        pntr_draw_point(dst, ypxl2 + 1, xpxl2, color);
+        pntr_draw_point(dst, _pntr_add_clamped(ypxl2, 1), xpxl2, color);
     else
-        pntr_draw_point(dst, xpxl2, ypxl2 + 1, color);
+        pntr_draw_point(dst, xpxl2, _pntr_add_clamped(ypxl2, 1), color);
 
     for (int x = xpxl1 + 1; x < xpxl2; x++) {
         frac = intery - PNTR_FLOORF(intery);
@@ -2887,9 +2935,9 @@ PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width
     }
 
     pntr_draw_line_horizontal(dst, posX, posY, width, color);
-    pntr_draw_line_horizontal(dst, posX, posY + height - 1, width, color);
-    pntr_draw_line_vertical(dst, posX, posY + 1, height - 2, color);
-    pntr_draw_line_vertical(dst, posX + width - 1, posY + 1, height - 2, color);
+    pntr_draw_line_horizontal(dst, posX, _pntr_add_clamped(posY, height - 1), width, color);
+    pntr_draw_line_vertical(dst, posX, _pntr_add_clamped(posY, 1), height - 2, color);
+    pntr_draw_line_vertical(dst, _pntr_add_clamped(posX, width - 1), _pntr_add_clamped(posY, 1), height - 2, color);
 }
 
 /**
@@ -2917,7 +2965,7 @@ PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width
  */
 PNTR_API void pntr_draw_rectangle_thick(pntr_image* dst, int posX, int posY, int width, int height, int thickness, pntr_color color) {
     for (int i = 0; i < thickness; i++) {
-        pntr_draw_rectangle(dst, posX + i, posY + i, width - i * 2, height - i * 2, color);
+        pntr_draw_rectangle(dst, _pntr_add_clamped(posX, i), _pntr_add_clamped(posY, i), width - i * 2, height - i * 2, color);
     }
 }
 
@@ -3082,16 +3130,19 @@ PNTR_API void pntr_draw_rectangle_gradient(pntr_image* dst, int x, int y, int wi
  */
 static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
     int largestX = radius;
-    int r2 = radius * radius;
+
+    // Widened, because squaring a radius over 46340 overflows an int, and the sum of two
+    // squares overflows at about 32767.
+    int64_t r2 = (int64_t)radius * (int64_t)radius;
 
     // Only the first eighth of the circle is walked, and the other seven are mirrored
     // from it. Walking a whole quarter would reach both (x, y) and (y, x), and the eight
     // points mirrored from one of those are the same eight points as the other, so every
     // pixel would be painted twice and a semi-transparent color blended twice with it.
     for (int y = 0; y <= radius; ++y) {
-        int y2 = y * y;
+        int64_t y2 = (int64_t)y * (int64_t)y;
         int x = largestX;
-        while (x > 0 && x * x + y2 > r2) {
+        while (x > 0 && (int64_t)x * (int64_t)x + y2 > r2) {
             --x;
         }
         if (y > x) {
@@ -3153,7 +3204,8 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
     }
 
     // Check that the circle is in the bounds.
-    if (centerX + radius < dst->clip.x || centerY + radius < dst->clip.y || centerX - radius > dst->clip.x + dst->clip.width || centerY - radius > dst->clip.y + dst->clip.height) {
+    // Widened, because a center near the end of the int range plus its radius overflows.
+    if ((int64_t)centerX + radius < dst->clip.x || (int64_t)centerY + radius < dst->clip.y || (int64_t)centerX - radius > (int64_t)dst->clip.x + dst->clip.width || (int64_t)centerY - radius > (int64_t)dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -3182,16 +3234,19 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
         radius = -radius;
     }
 
-    if (dst == NULL || color.rgba.a == 0 || centerX + radius < dst->clip.x || centerX - radius >= dst->clip.x + dst->clip.width || centerY + radius < dst->clip.y || centerY - radius >= dst->clip.y + dst->clip.height) {
+    // Widened, because a center near the end of the int range plus its radius overflows.
+    if (dst == NULL || color.rgba.a == 0 || (int64_t)centerX + radius < dst->clip.x || (int64_t)centerX - radius >= (int64_t)dst->clip.x + dst->clip.width || (int64_t)centerY + radius < dst->clip.y || (int64_t)centerY - radius >= (int64_t)dst->clip.y + dst->clip.height) {
         return;
     }
 
     int largestX = radius;
-    int r2 = radius * radius;
+    // Widened, because squaring a radius over 46340 overflows an int, and the sum of two
+    // squares overflows at about 32767.
+    int64_t r2 = (int64_t)radius * (int64_t)radius;
     for (int y = 0; y <= radius; ++y) {
-        int y2 = y * y;
+        int64_t y2 = (int64_t)y * (int64_t)y;
         for (int x = largestX; x >= 0; --x) {
-            if (x * x + y2 <= r2) {
+            if ((int64_t)x * (int64_t)x + y2 <= r2) {
                 // The row reaches both centerX - x and centerX + x, which is what keeps
                 // the fill symmetric and lets it reach the outline on the right. At the
                 // center both halves are the same row, so it is only painted once.
@@ -3242,7 +3297,8 @@ PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, 
     }
 
     // Check that the circle is in the bounds.
-    if (centerX + radius < dst->clip.x || centerY + radius < dst->clip.y || centerX - radius > dst->clip.x + dst->clip.width || centerY - radius > dst->clip.y + dst->clip.height) {
+    // Widened, because a center near the end of the int range plus its radius overflows.
+    if ((int64_t)centerX + radius < dst->clip.x || (int64_t)centerY + radius < dst->clip.y || (int64_t)centerX - radius > (int64_t)dst->clip.x + dst->clip.width || (int64_t)centerY - radius > (int64_t)dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -3475,7 +3531,8 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
     if (radiusX < 0) radiusX = -radiusX;
     if (radiusY < 0) radiusY = -radiusY;
 
-    if (dst == NULL || color.rgba.a == 0 || centerX + radiusX < dst->clip.x || centerX - radiusX > dst->clip.x + dst->clip.width || centerY + radiusY < dst->clip.y || centerY - radiusY > dst->clip.y + dst->clip.height) {
+    // Widened, because a center near the end of the int range plus its radius overflows.
+    if (dst == NULL || color.rgba.a == 0 || (int64_t)centerX + radiusX < dst->clip.x || (int64_t)centerX - radiusX > (int64_t)dst->clip.x + dst->clip.width || (int64_t)centerY + radiusY < dst->clip.y || (int64_t)centerY - radiusY > (int64_t)dst->clip.y + dst->clip.height) {
         return;
     }
 
@@ -3818,7 +3875,7 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
         for (i = 0; i < spans; i++) {
             spanLeft = spanStart[i];
             spanRight = spanEnd[i];
-            while (i + 1 < spans && spanStart[i + 1] <= spanRight + 1) {
+            while (i + 1 < spans && spanStart[i + 1] <= _pntr_add_clamped(spanRight, 1)) {
                 if (spanEnd[i + 1] > spanRight) {
                     spanRight = spanEnd[i + 1];
                 }
@@ -3900,8 +3957,8 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
     for (int i = 0; i < segments; i++) {
         endAngleRad = startAngleRad + (float)i * stepAngle;
         pntr_draw_point(dst,
-            centerX + (int)(radius * PNTR_COSF(endAngleRad)),
-            centerY + (int)(radius * PNTR_SINF(endAngleRad)),
+            _pntr_add_clamped(centerX, (int)(radius * PNTR_COSF(endAngleRad))),
+            _pntr_add_clamped(centerY, (int)(radius * PNTR_SINF(endAngleRad))),
             color);
     }
 }
@@ -4007,8 +4064,8 @@ PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, floa
 
     for (int i = 0; i < segments; i++) {
         endAngleRad = startAngleRad + (float)i * stepAngle;
-        points[i].x = centerX + (int)(radius * PNTR_COSF(endAngleRad));
-        points[i].y = centerY + (int)(radius * PNTR_SINF(endAngleRad));
+        points[i].x = _pntr_add_clamped(centerX, (int)(radius * PNTR_COSF(endAngleRad)));
+        points[i].y = _pntr_add_clamped(centerY, (int)(radius * PNTR_SINF(endAngleRad)));
     }
 
     points[segments].x = centerX;
@@ -4052,12 +4109,14 @@ static int _pntr_rectangle_rounded_radius(int radius, int width, int height) {
  */
 static void _pntr_draw_quarter_disc_fill(pntr_image* dst, int centerX, int centerY, int radius, int directionX, int directionY, pntr_color color) {
     int largestX = radius;
-    int r2 = radius * radius;
+    // Widened, because squaring a radius over 46340 overflows an int, and the sum of two
+    // squares overflows at about 32767.
+    int64_t r2 = (int64_t)radius * (int64_t)radius;
 
     for (int y = 0; y <= radius; y++) {
-        int y2 = y * y;
+        int64_t y2 = (int64_t)y * (int64_t)y;
         for (int x = largestX; x >= 0; x--) {
-            if (x * x + y2 <= r2) {
+            if ((int64_t)x * (int64_t)x + y2 <= r2) {
                 pntr_draw_line_horizontal(dst, (directionX < 0) ? centerX - x : centerX, centerY + directionY * y, x + 1, color);
                 largestX = x;
                 break;
@@ -4108,21 +4167,21 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
 
     // The far edges sit on the last pixel the rectangle covers, the same as they do for
     // pntr_draw_rectangle().
-    int right = x + width - 1;
-    int bottom = y + height - 1;
+    int right = _pntr_add_clamped(x, width - 1);
+    int bottom = _pntr_add_clamped(y, height - 1);
 
-    pntr_draw_line_horizontal(dst, x + topLeftRadius, y, width - topLeftRadius - topRightRadius, color); // Top
-    pntr_draw_line_horizontal(dst, x + bottomLeftRadius, bottom, width - bottomLeftRadius - bottomRightRadius, color); // Bottom
-    pntr_draw_line_vertical(dst, x, y + topLeftRadius, height - topLeftRadius - bottomLeftRadius, color); // Left
-    pntr_draw_line_vertical(dst, right, y + topRightRadius, height - topRightRadius - bottomRightRadius, color); // Right
+    pntr_draw_line_horizontal(dst, _pntr_add_clamped(x, topLeftRadius), y, width - topLeftRadius - topRightRadius, color); // Top
+    pntr_draw_line_horizontal(dst, _pntr_add_clamped(x, bottomLeftRadius), bottom, width - bottomLeftRadius - bottomRightRadius, color); // Bottom
+    pntr_draw_line_vertical(dst, x, _pntr_add_clamped(y, topLeftRadius), height - topLeftRadius - bottomLeftRadius, color); // Left
+    pntr_draw_line_vertical(dst, right, _pntr_add_clamped(y, topRightRadius), height - topRightRadius - bottomRightRadius, color); // Right
 
     // Each corner sweeps a quarter turn, clockwise, from the straight edge before it to
     // the straight edge after it. The sweep is half-open, so it stops one step short of
     // that second edge, whose own first pixel sits where the sweep would have ended.
-    pntr_draw_arc(dst, x + topLeftRadius, y + topLeftRadius, (float)topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
-    pntr_draw_arc(dst, right - topRightRadius, y + topRightRadius, (float)topRightRadius, 270.0f, 360.0f, topRightRadius * 2, color); // Top Right
+    pntr_draw_arc(dst, _pntr_add_clamped(x, topLeftRadius), _pntr_add_clamped(y, topLeftRadius), (float)topLeftRadius, 180.0f, 270.0f, topLeftRadius * 2, color); // Top Left
+    pntr_draw_arc(dst, right - topRightRadius, _pntr_add_clamped(y, topRightRadius), (float)topRightRadius, 270.0f, 360.0f, topRightRadius * 2, color); // Top Right
     pntr_draw_arc(dst, right - bottomRightRadius, bottom - bottomRightRadius, (float)bottomRightRadius, 0.0f, 90.0f, bottomRightRadius * 2, color); // Bottom Right
-    pntr_draw_arc(dst, x + bottomLeftRadius, bottom - bottomLeftRadius, (float)bottomLeftRadius, 90.0f, 180.0f, bottomLeftRadius * 2, color); // Bottom Left
+    pntr_draw_arc(dst, _pntr_add_clamped(x, bottomLeftRadius), bottom - bottomLeftRadius, (float)bottomLeftRadius, 90.0f, 180.0f, bottomLeftRadius * 2, color); // Bottom Left
 }
 
 /**
@@ -4197,21 +4256,21 @@ PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, in
 
     // The far edges sit on the last pixel the rectangle covers, the same as they do for
     // pntr_draw_rectangle_fill().
-    int right = x + width - 1;
-    int bottom = y + height - 1;
+    int right = _pntr_add_clamped(x, width - 1);
+    int bottom = _pntr_add_clamped(y, height - 1);
 
     // Corners. Each one covers the cornerRadius + 1 columns and rows that run from the
     // edge of the rectangle in to the center of its own disc.
-    _pntr_draw_quarter_disc_fill(dst, x + cornerRadius, y + cornerRadius, cornerRadius, -1, -1, color); // Top Left
-    _pntr_draw_quarter_disc_fill(dst, right - cornerRadius, y + cornerRadius, cornerRadius, 1, -1, color); // Top Right
-    _pntr_draw_quarter_disc_fill(dst, x + cornerRadius, bottom - cornerRadius, cornerRadius, -1, 1, color); // Bottom Left
+    _pntr_draw_quarter_disc_fill(dst, _pntr_add_clamped(x, cornerRadius), _pntr_add_clamped(y, cornerRadius), cornerRadius, -1, -1, color); // Top Left
+    _pntr_draw_quarter_disc_fill(dst, right - cornerRadius, _pntr_add_clamped(y, cornerRadius), cornerRadius, 1, -1, color); // Top Right
+    _pntr_draw_quarter_disc_fill(dst, _pntr_add_clamped(x, cornerRadius), bottom - cornerRadius, cornerRadius, -1, 1, color); // Bottom Left
     _pntr_draw_quarter_disc_fill(dst, right - cornerRadius, bottom - cornerRadius, cornerRadius, 1, 1, color); // Bottom Right
 
     // What is left over after the corners, filled without painting over them, so that a
     // semi-transparent color is blended exactly once everywhere.
-    pntr_draw_rectangle_fill(dst, x + cornerRadius + 1, y, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Top bar
-    pntr_draw_rectangle_fill(dst, x + cornerRadius + 1, bottom - cornerRadius, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Bottom bar
-    pntr_draw_rectangle_fill(dst, x, y + cornerRadius + 1, width, height - cornerRadius * 2 - 2, color); // Center fill
+    pntr_draw_rectangle_fill(dst, _pntr_add_clamped(x, cornerRadius + 1), y, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Top bar
+    pntr_draw_rectangle_fill(dst, _pntr_add_clamped(x, cornerRadius + 1), bottom - cornerRadius, width - cornerRadius * 2 - 2, cornerRadius + 1, color); // Bottom bar
+    pntr_draw_rectangle_fill(dst, x, _pntr_add_clamped(y, cornerRadius + 1), width, height - cornerRadius * 2 - 2, color); // Center fill
 }
 
 /**
