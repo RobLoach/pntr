@@ -1225,6 +1225,31 @@ int pntr_test_first_difference(pntr_image* a, pntr_image* b) {
     return -1;
 }
 
+/**
+ * How many pixels of the given image are neither fully transparent nor fully opaque.
+ *
+ * @details This is what proves that an anti-aliased draw anti-aliased anything: a line
+ * that fell back to plotting whole pixels leaves every pixel it touched at the alpha it
+ * was handed, so the count is zero.
+ */
+int pntr_test_partial_alpha_count(pntr_image* image) {
+    if (image == NULL) {
+        return 0;
+    }
+
+    int count = 0;
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
+            if (alpha > 0 && alpha < 255) {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -2796,6 +2821,90 @@ MODULE(pntr, {
                 pntr_unload_image(image);
             });
 
+            IT("pntr_draw_line_aa() anti-aliases a diagonal", {
+                // The axis-aligned cases above hand the line straight to
+                // pntr_draw_line_horizontal() or pntr_draw_line_vertical() and return, so
+                // they never reach Xiaolin Wu's algorithm at all. A diagonal does, and the
+                // four below are the shallow and the steep case in both directions, which
+                // is every combination of the two swaps the algorithm opens with.
+                int lines[4][4] = {
+                    { 5, 20, 35, 30}, // shallow, left to right
+                    {35, 30,  5, 20}, // shallow, right to left
+                    {20,  5, 30, 35}, // steep, top to bottom
+                    {30, 35, 20,  5}  // steep, bottom to top
+                };
+
+                for (int i = 0; i < 4; i++) {
+                    int startX = lines[i][0];
+                    int startY = lines[i][1];
+                    int endX = lines[i][2];
+                    int endY = lines[i][3];
+
+                    // Drawn onto a fully transparent canvas, so that the alpha each pixel
+                    // was given survives to be read back rather than being blended into
+                    // an opaque background.
+                    pntr_image* image = pntr_new_image(40, 40);
+                    NEQUALS(image, NULL);
+                    pntr_clear_background(image, PNTR_BLANK);
+
+                    pntr_draw_line_aa(image, startX, startY, endX, endY, PNTR_RED);
+
+                    // Both endpoints are painted, the same as pntr_draw_line() paints them.
+                    GREATER((int)pntr_color_a(pntr_image_get_color(image, startX, startY)), 0);
+                    GREATER((int)pntr_color_a(pntr_image_get_color(image, endX, endY)), 0);
+
+                    // And nothing is painted outside the box the two endpoints span: the
+                    // partial pixels straddle the line, they do not overhang its ends.
+                    pntr_rectangle expectedBounds = PNTR_CLITERAL(pntr_rectangle) {
+                        startX < endX ? startX : endX,
+                        startY < endY ? startY : endY,
+                        (startX < endX ? endX - startX : startX - endX) + 1,
+                        (startY < endY ? endY - startY : startY - endY) + 1
+                    };
+                    pntr_rectangle actualBounds = pntr_test_painted_bounds(image, PNTR_BLANK);
+                    RECTEQUALS(actualBounds, expectedBounds);
+
+                    // Which is the anti-aliasing: a line that fell through to plotting
+                    // whole pixels leaves every pixel it touched fully opaque.
+                    GREATER(pntr_test_partial_alpha_count(image), 0);
+
+                    pntr_unload_image(image);
+                }
+            });
+
+            IT("pntr_draw_line_aa() covers the same bounds as pntr_draw_line()", {
+                // The same diagonals, against the line that is not anti-aliased. The two
+                // do not paint the same pixels, but they run between the same endpoints,
+                // so they occupy the same area.
+                int lines[4][4] = {
+                    { 5, 20, 35, 30},
+                    {35, 30,  5, 20},
+                    {20,  5, 30, 35},
+                    {30, 35, 20,  5}
+                };
+
+                for (int i = 0; i < 4; i++) {
+                    pntr_image* aa = pntr_test_canvas(40, 40);
+                    pntr_image* plain = pntr_test_canvas(40, 40);
+                    NEQUALS(aa, NULL);
+                    NEQUALS(plain, NULL);
+
+                    pntr_draw_line_aa(aa, lines[i][0], lines[i][1], lines[i][2], lines[i][3], PNTR_RED);
+                    pntr_draw_line(plain, lines[i][0], lines[i][1], lines[i][2], lines[i][3], PNTR_RED);
+
+                    pntr_rectangle aaBounds = pntr_test_painted_bounds(aa, PNTR_TEST_BACKGROUND);
+                    pntr_rectangle plainBounds = pntr_test_painted_bounds(plain, PNTR_TEST_BACKGROUND);
+                    RECTEQUALS(aaBounds, plainBounds);
+
+                    // The anti-aliased line paints the pixels on both sides of the one the
+                    // plain line stepped onto, so it covers strictly more of them.
+                    GREATER(pntr_test_painted_count(aa), pntr_test_painted_count(plain));
+
+                    pntr_unload_image(aa);
+                    pntr_unload_image(plain);
+                }
+            });
+
             IT("pntr_draw_polyline() covers its first and last point", {
                 pntr_image* image = pntr_test_canvas(40, 40);
                 NEQUALS(image, NULL);
@@ -3141,6 +3250,64 @@ MODULE(pntr, {
                 GREATER(painted[thickness], painted[thickness - 1]);
                 GREATER(width[thickness], width[thickness - 1]);
             }
+        });
+
+        IT("pntr_draw_ellipse_thick() grows with its thickness", {
+            // The same shape as the circle: the brush straddles the outline, so each
+            // extra pixel of thickness reaches one pixel further out on both axes. A
+            // thickness of one is pntr_draw_ellipse() itself, which the differential
+            // tests pin, so this is about what the thicknesses above one do.
+            int painted[4] = {0};
+            int width[4] = {0};
+            int height[4] = {0};
+
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                pntr_image* image = pntr_test_canvas(60, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_ellipse_thick(image, 30, 20, 16, 9, thickness, PNTR_RED);
+
+                pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                painted[thickness] = pntr_test_painted_count(image);
+                width[thickness] = bounds.width;
+                height[thickness] = bounds.height;
+
+                pntr_unload_image(image);
+            }
+
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                EQUALS(width[thickness], 16 * 2 + thickness);
+                EQUALS(height[thickness], 9 * 2 + thickness);
+            }
+
+            GREATER(painted[1], 0);
+            for (int thickness = 2; thickness <= 3; thickness++) {
+                GREATER(painted[thickness], painted[thickness - 1]);
+            }
+
+            // A negative radius is the same ellipse as the positive one it mirrors, on
+            // both axes and at every thickness.
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                pntr_image* positive = pntr_test_canvas(60, 40);
+                pntr_image* negative = pntr_test_canvas(60, 40);
+                NEQUALS(positive, NULL);
+                NEQUALS(negative, NULL);
+
+                pntr_draw_ellipse_thick(positive, 30, 20, 16, 9, thickness, PNTR_RED);
+                pntr_draw_ellipse_thick(negative, 30, 20, -16, -9, thickness, PNTR_RED);
+                IMAGEEQUALS(negative, positive);
+
+                pntr_unload_image(negative);
+                pntr_unload_image(positive);
+            }
+
+            // And an ellipse that is nowhere near the canvas draws nothing at all.
+            pntr_image* offscreen = pntr_test_canvas(60, 40);
+            NEQUALS(offscreen, NULL);
+            pntr_draw_ellipse_thick(offscreen, 400, 400, 16, 9, 3, PNTR_RED);
+            pntr_draw_circle_thick(offscreen, 400, 400, 12, 3, PNTR_RED);
+            EQUALS(pntr_test_painted_count(offscreen), 0);
+            pntr_unload_image(offscreen);
         });
 
         IT("pntr_draw_line_thick() keeps its brush at a thickness of two and three", {
