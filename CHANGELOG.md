@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **A coordinate near the end of the int range no longer overflows** ([#267]). `pntr_draw_rectangle_fill(image, INT_MAX - 1, 0, 10, 10, color)` segfaulted: the clip test computed `x + width`, which overflowed and wrapped negative, so the far edge came back smaller than the near one and the subtraction wrapped again into a positive width. An entirely off-image rectangle was reported as visible and written through. Squaring a radius or a thickness overflowed above 46340 as well, and the sum of two squares above about 32767, so a circle wide enough to cover the canvas was drawn from a wrapped radius.
+
+  Measured over 30 entry points called with extreme but legal arguments: **21 reached undefined behavior, now 0.** Rendered output for ordinary values is unchanged, verified by hashing 20 primitives across 6 parameter variations against the previous `master`.
+
 - **Bilinear interpolation rounds instead of truncating** ([#263]). Interpolating between four copies of the same color now returns that color exactly, on every channel and at every fractional coordinate. The four weights sum to one in exact arithmetic but not in float, so truncating the result shaved a unit off: a bilinear-scaled draw of a fully opaque image produced pixels at an alpha of 254, which `PNTR_NO_ALPHABLEND` then discarded outright and left holes in the fill. Red, green and blue were losing the same unit in the same places.
 
   **What to do:** rendered output changes by at most one unit per channel for anything scaled, resized or rotated with `PNTR_FILTER_BILINEAR`, so pixel-exact baselines against bilinear output need regenerating. `pntr_draw_image_dest_rec()` with a bilinear filter now fills its destination rectangle completely under `PNTR_NO_ALPHABLEND`, matching nearest neighbor.
@@ -111,3 +115,4 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 [Unreleased]: https://github.com/RobLoach/pntr/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/RobLoach/pntr/releases/tag/v0.1.0
 [#263]: https://github.com/RobLoach/pntr/issues/263
+[#267]: https://github.com/RobLoach/pntr/pull/267

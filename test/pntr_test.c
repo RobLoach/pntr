@@ -1,6 +1,7 @@
 #define UNIT_TEST_PREFIX ""
 #define UNIT_STATIC
 #include "unit.h"
+#include <limits.h>
 
 #define PNTR_ENABLE_DEFAULT_FONT
 #define PNTR_ENABLE_TTF
@@ -3631,6 +3632,89 @@ MODULE(pntr, {
             IMAGEEQUALS(ellipse, circle);
             pntr_unload_image(ellipse);
             pntr_unload_image(circle);
+        });
+
+        IT("A coordinate at the end of the int range draws nothing", {
+            // pntr_draw_rectangle_fill() used to segfault here. The clip test computed
+            // `x + width`, which overflows, so PNTR_MIN picked the wrapped negative sum
+            // and the subtraction wrapped back to a positive width: an entirely off-image
+            // rectangle was reported as visible and written through.
+            pntr_image* image = pntr_test_canvas(40, 40);
+            NEQUALS(image, NULL);
+
+            int far = INT_MAX - 1;
+
+            pntr_draw_rectangle_fill(image, far, 0, 10, 10, PNTR_RED);
+            pntr_draw_rectangle(image, far, 0, 10, 10, PNTR_RED);
+            pntr_draw_rectangle_fill(image, 0, far, 10, 10, PNTR_RED);
+            pntr_draw_circle(image, far, 10, 5, PNTR_RED);
+            pntr_draw_circle_fill(image, far, 10, 5, PNTR_RED);
+            pntr_draw_circle_thick(image, far, 10, 5, 2, PNTR_RED);
+            pntr_draw_ellipse(image, far, 10, 5, 5, PNTR_RED);
+            pntr_draw_ellipse_fill(image, far, 10, 5, 5, PNTR_RED);
+            pntr_draw_rectangle_rounded(image, far, 0, 10, 10, 2, 2, 2, 2, PNTR_RED);
+            pntr_draw_rectangle_rounded_fill(image, far, 0, 10, 10, 2, PNTR_RED);
+            pntr_draw_rectangle_thick(image, far, 0, 10, 10, 3, PNTR_RED);
+            pntr_draw_line_horizontal(image, far, 5, 10, PNTR_RED);
+            pntr_draw_line_vertical(image, 5, far, 10, PNTR_RED);
+            pntr_draw_arc_fill(image, far, 10, 5.0f, 0.0f, 360.0f, 32, PNTR_RED);
+            pntr_draw_point(image, far, far, PNTR_RED);
+
+            EQUALS(pntr_test_painted_count(image), 0);
+
+            // pntr_image_set_clip() leaves the clip alone when the rectangle it is given
+            // does not reach the image, rather than clipping everything away, so the
+            // following fill covers the canvas. That is the existing behavior, asserted
+            // here only so the arithmetic above is not mistaken for it.
+            pntr_image_set_clip(image, far, far, 10, 10);
+            pntr_draw_rectangle_fill(image, 0, 0, 40, 40, PNTR_RED);
+            pntr_image_reset_clip(image);
+
+            EQUALS(pntr_test_painted_count(image), 40 * 40);
+
+            pntr_unload_image(image);
+        });
+
+        IT("A rectangle the size of the int range covers the whole image", {
+            // The other direction of the same arithmetic: the far edge overflows, so the
+            // intersect has to come back as the whole clip rather than as nothing.
+            pntr_image* image = pntr_test_canvas(40, 40);
+            NEQUALS(image, NULL);
+
+            pntr_draw_rectangle_fill(image, 0, 0, INT_MAX, INT_MAX, PNTR_RED);
+
+            EQUALS(pntr_test_painted_count(image), 40 * 40);
+
+            pntr_unload_image(image);
+        });
+
+        IT("A radius past the square root of the int range still fills", {
+            // Squaring the radius overflowed an int above 46340, and the sum of two
+            // squares overflowed above about 32767, so a circle wide enough to cover the
+            // canvas was computed from a wrapped radius. Both are now widened. The sweep
+            // crosses 32767 and 46340 rather than only sitting past them.
+            int radii[5] = {32766, 32768, 46339, 46341, 1000000};
+
+            for (int i = 0; i < 5; i++) {
+                pntr_image* image = pntr_test_canvas(20, 20);
+                NEQUALS(image, NULL);
+
+                // Centered on the canvas, with a radius far larger than it, so every
+                // pixel is inside the circle and the fill has to cover all of them.
+                pntr_draw_circle_fill(image, 10, 10, radii[i], PNTR_RED);
+                EQUALS(pntr_test_painted_count(image), 20 * 20);
+
+                pntr_unload_image(image);
+            }
+
+            // The same for the thickness brush, which squares its thickness the same way.
+            pntr_image* thick = pntr_test_canvas(20, 20);
+            NEQUALS(thick, NULL);
+
+            pntr_draw_line_thick(thick, 0, 10, 19, 10, 50000, PNTR_RED);
+            EQUALS(pntr_test_painted_count(thick), 20 * 20);
+
+            pntr_unload_image(thick);
         });
 
         IT("pntr_draw_rectangle() stops short of its width and height", {
