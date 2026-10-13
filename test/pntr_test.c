@@ -776,6 +776,36 @@ int pntr_test_painted_rows(pntr_image* image, int top, int bottom) {
 }
 
 /**
+ * How wide the painted pixels between two rows of a PNTR_TEST_BACKGROUND canvas are.
+ *
+ * @details The first painted column of the band through to the last, which for a band one
+ * line height tall is the width of the line of text drawn on it, and so the number a
+ * maximum width has to hold. Zero means the band of rows was left alone.
+ */
+int pntr_test_painted_width(pntr_image* image, int top, int bottom) {
+    if (image == NULL) {
+        return 0;
+    }
+
+    int left = 0;
+    int right = -1;
+    for (int y = top; y < bottom; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_test_painted(image, x, y)) {
+                if (right < 0 || x < left) {
+                    left = x;
+                }
+                if (x > right) {
+                    right = x;
+                }
+            }
+        }
+    }
+
+    return (right < 0) ? 0 : right - left + 1;
+}
+
+/**
  * Every drawing call that another one has to agree with, pixel for pixel.
  *
  * @details pntr is full of entry points that exist only to reach another one: a `_vec`
@@ -5461,8 +5491,7 @@ MODULE(pntr, {
         pntr_draw_text(word, font, "Hello", 5, 4, PNTR_BLACK);
         IMAGEEQUALS(unbreakable, word);
 
-        // Two words that do not fit on one line are the two of them on their own lines,
-        // which is the one wrap that comes out right.
+        // Two words that do not fit on one line are the two of them on their own lines.
         pntr_image* twoWords = pntr_test_canvas(160, 40);
         pntr_image* twoLines = pntr_test_canvas(160, 40);
         NEQUALS(twoWords, NULL);
@@ -5470,20 +5499,6 @@ MODULE(pntr, {
         pntr_draw_text_wrapped(twoWords, font, "Hello world", 5, 4, 50, PNTR_BLACK);
         pntr_draw_text(twoLines, font, "Hello\nworld", 5, 4, PNTR_BLACK);
         IMAGEEQUALS(twoWords, twoLines);
-
-        // NOT ASSERTED: three or more words that need more than one line come out wrong,
-        // and the test for it is left out rather than weakened. pntr_draw_text_wrapped()
-        // never clears lastSpace when it wraps at a space, so after the first wrap the
-        // stale pointer is behind lineStart, the trailing-line fixup computes a negative
-        // length, pntr_draw_text_len() reads a non-positive length as "all of it", and
-        // the remainder of the string is drawn once by the fixup and then again by the
-        // final pntr_draw_text() one line lower. With the default font and a maxWidth of
-        // 20, "aa bb cc" draws "aa", then "bb cc" twice, on three lines, two of which are
-        // 38 pixels wide. Expected: "aa", "bb", "cc". Enable this once that is fixed:
-        //
-        //     pntr_draw_text_wrapped(a, font, "aa bb cc", 5, 4, 20, PNTR_BLACK);
-        //     pntr_draw_text(b, font, "aa\nbb\ncc", 5, 4, PNTR_BLACK);
-        //     IMAGEEQUALS(a, b);
 
         pntr_unload_image(twoLines);
         pntr_unload_image(twoWords);
@@ -5495,6 +5510,244 @@ MODULE(pntr, {
         pntr_unload_image(wrapped);
         pntr_unload_font(font);
     });
+
+    IT("pntr_draw_text_wrapped(): breaks at every space, not only the first", {
+        // Every line after the first used to be drawn twice and unwrapped, because the
+        // space the line before it was broken at was still remembered, left behind the
+        // start of the new line, and read as a negative length.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+        EQUALS(lineHeight, 8);
+
+        // Two letters of the default font measure 16 pixels, so only one word at a time
+        // fits inside 20 of them.
+        pntr_image* three = pntr_test_canvas(160, 48);
+        pntr_image* threeLines = pntr_test_canvas(160, 48);
+        NEQUALS(three, NULL);
+        NEQUALS(threeLines, NULL);
+        pntr_draw_text_wrapped(three, font, "aa bb cc", 5, 4, 20, PNTR_BLACK);
+        pntr_draw_text(threeLines, font, "aa\nbb\ncc", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(three, threeLines);
+
+        pntr_image* four = pntr_test_canvas(160, 48);
+        pntr_image* fourLines = pntr_test_canvas(160, 48);
+        NEQUALS(four, NULL);
+        NEQUALS(fourLines, NULL);
+        pntr_draw_text_wrapped(four, font, "aa bb cc dd", 5, 4, 20, PNTR_BLACK);
+        pntr_draw_text(fourLines, font, "aa\nbb\ncc\ndd", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(four, fourLines);
+
+        // Every one of the four lines holds a single two letter word, inside the 20
+        // pixels asked for, where the remainder of the string used to be drawn 63 pixels
+        // wide on three lines in a row.
+        for (int line = 0; line < 4; line++) {
+            int top = 4 + line * lineHeight;
+            GREATER(pntr_test_painted_width(four, top, top + lineHeight), 0);
+            LESSEREQ(pntr_test_painted_width(four, top, top + lineHeight), 20);
+        }
+        EQUALS(pntr_test_painted_rows(four, 4 + lineHeight * 4, 48), 0);
+
+        // Nothing is painted twice: the four words drawn one per line are all there is.
+        pntr_image* words = pntr_test_canvas(160, 48);
+        NEQUALS(words, NULL);
+        pntr_draw_text(words, font, "aa", 5, 4, PNTR_BLACK);
+        pntr_draw_text(words, font, "bb", 5, 4 + lineHeight, PNTR_BLACK);
+        pntr_draw_text(words, font, "cc", 5, 4 + lineHeight * 2, PNTR_BLACK);
+        pntr_draw_text(words, font, "dd", 5, 4 + lineHeight * 3, PNTR_BLACK);
+        IMAGEEQUALS(four, words);
+        EQUALS(pntr_test_painted_count(four), pntr_test_painted_count(words));
+
+        // As many words as fit go on a line, so twice the width is two words to a line.
+        pntr_image* pairs = pntr_test_canvas(160, 48);
+        pntr_image* pairLines = pntr_test_canvas(160, 48);
+        NEQUALS(pairs, NULL);
+        NEQUALS(pairLines, NULL);
+        pntr_draw_text_wrapped(pairs, font, "aa bb cc dd", 5, 4, 40, PNTR_BLACK);
+        pntr_draw_text(pairLines, font, "aa bb\ncc dd", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(pairs, pairLines);
+
+        pntr_unload_image(pairLines);
+        pntr_unload_image(pairs);
+        pntr_unload_image(words);
+        pntr_unload_image(fourLines);
+        pntr_unload_image(four);
+        pntr_unload_image(threeLines);
+        pntr_unload_image(three);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_wrapped(): no line is wider than the maximum", {
+        // The invariant, rather than any particular arrangement of the words: no line is
+        // drawn wider than it was told it could be, for every width a caller might ask
+        // for. A single word that cannot be broken is the only exception, and the widest
+        // word here is "jumped" at 48 pixels.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+        const char* text = "The quick brown fox jumped over the lazy dog.";
+
+        // The whole of it on one line, which is every glyph of it painted exactly once.
+        pntr_image* oneLine = pntr_test_canvas(400, 128);
+        NEQUALS(oneLine, NULL);
+        pntr_draw_text(oneLine, font, text, 2, 0, PNTR_BLACK);
+        GREATER(pntr_test_painted_count(oneLine), 0);
+
+        for (int maxWidth = 48; maxWidth <= 200; maxWidth += 8) {
+            pntr_image* image = pntr_test_canvas(400, 128);
+            NEQUALS(image, NULL);
+            pntr_draw_text_wrapped(image, font, text, 2, 0, maxWidth, PNTR_BLACK);
+
+            for (int top = 0; top + lineHeight <= image->height; top += lineHeight) {
+                LESSEREQ(pntr_test_painted_width(image, top, top + lineHeight), maxWidth);
+            }
+
+            // Spaces paint nothing and a glyph paints the same wherever it lands, so the
+            // wrapped text is the same number of pixels as the unwrapped text. Fewer
+            // would mean a word was dropped, more that one was drawn twice.
+            EQUALS(pntr_test_painted_count(image), pntr_test_painted_count(oneLine));
+
+            pntr_unload_image(image);
+        }
+
+        pntr_unload_image(oneLine);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_wrapped(): the spaces and newlines around a break", {
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+
+        pntr_image* broken = pntr_test_canvas(160, 48);
+        NEQUALS(broken, NULL);
+        pntr_draw_text(broken, font, "aa\nbb", 5, 4, PNTR_BLACK);
+
+        // The spaces a line is broken at are not carried onto the next line, however many
+        // of them there are.
+        pntr_image* twoSpaces = pntr_test_canvas(160, 48);
+        NEQUALS(twoSpaces, NULL);
+        pntr_draw_text_wrapped(twoSpaces, font, "aa  bb", 5, 4, 20, PNTR_BLACK);
+        IMAGEEQUALS(twoSpaces, broken);
+
+        // A space at the end of the text paints nothing and opens no line of its own.
+        pntr_image* trailing = pntr_test_canvas(160, 48);
+        NEQUALS(trailing, NULL);
+        pntr_draw_text_wrapped(trailing, font, "aa bb ", 5, 4, 20, PNTR_BLACK);
+        IMAGEEQUALS(trailing, broken);
+
+        // A space in front of the text is drawn, the way pntr_draw_text() draws it.
+        pntr_image* leading = pntr_test_canvas(160, 48);
+        pntr_image* leadingExpected = pntr_test_canvas(160, 48);
+        NEQUALS(leading, NULL);
+        NEQUALS(leadingExpected, NULL);
+        pntr_draw_text_wrapped(leading, font, " aa bb", 5, 4, 20, PNTR_BLACK);
+        pntr_draw_text(leadingExpected, font, " aa\nbb", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(leading, leadingExpected);
+
+        // Nothing but spaces is nothing to draw.
+        pntr_image* spaces = pntr_test_canvas(160, 48);
+        NEQUALS(spaces, NULL);
+        pntr_draw_text_wrapped(spaces, font, "   ", 5, 4, 20, PNTR_BLACK);
+        EQUALS(pntr_test_painted_count(spaces), 0);
+
+        // And so is nothing at all.
+        pntr_image* empty = pntr_test_canvas(160, 48);
+        NEQUALS(empty, NULL);
+        pntr_draw_text_wrapped(empty, font, "", 5, 4, 20, PNTR_BLACK);
+        EQUALS(pntr_test_painted_count(empty), 0);
+
+        // A newline the text asks for breaks a line, and the wrapping carries on below it.
+        pntr_image* mixed = pntr_test_canvas(160, 48);
+        pntr_image* mixedExpected = pntr_test_canvas(160, 48);
+        NEQUALS(mixed, NULL);
+        NEQUALS(mixedExpected, NULL);
+        pntr_draw_text_wrapped(mixed, font, "aa\nbb cc", 5, 4, 20, PNTR_BLACK);
+        pntr_draw_text(mixedExpected, font, "aa\nbb\ncc", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(mixed, mixedExpected);
+
+        // A newline at the end of the text opens a line with nothing on it.
+        pntr_image* trailingNewline = pntr_test_canvas(160, 48);
+        NEQUALS(trailingNewline, NULL);
+        pntr_draw_text_wrapped(trailingNewline, font, "aa bb\n", 5, 4, 20, PNTR_BLACK);
+        IMAGEEQUALS(trailingNewline, broken);
+
+        // An empty line is as tall as a full one, so what wraps below it starts two lines
+        // down rather than one.
+        pntr_image* blank = pntr_test_canvas(160, 48);
+        pntr_image* blankExpected = pntr_test_canvas(160, 48);
+        NEQUALS(blank, NULL);
+        NEQUALS(blankExpected, NULL);
+        pntr_draw_text_wrapped(blank, font, "aa\n\nbb cc", 5, 4, 20, PNTR_BLACK);
+        pntr_draw_text(blankExpected, font, "aa\n\nbb\ncc", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(blank, blankExpected);
+        EQUALS(pntr_test_painted_rows(blank, 4 + lineHeight, 4 + lineHeight * 2), 0);
+
+        pntr_unload_image(blankExpected);
+        pntr_unload_image(blank);
+        pntr_unload_image(trailingNewline);
+        pntr_unload_image(mixedExpected);
+        pntr_unload_image(mixed);
+        pntr_unload_image(empty);
+        pntr_unload_image(spaces);
+        pntr_unload_image(leadingExpected);
+        pntr_unload_image(leading);
+        pntr_unload_image(trailing);
+        pntr_unload_image(twoSpaces);
+        pntr_unload_image(broken);
+        pntr_unload_font(font);
+    });
+
+    if (pntr_utf8()) {
+        IT("pntr_draw_text_wrapped(): multi-byte characters", {
+            // A line is broken on the characters of the text rather than on the bytes
+            // they take up, so the length handed to pntr_draw_text_len() means the same
+            // thing as the length handed to pntr_measure_text_ex().
+            pntr_font* font = pntr_load_font_default();
+            NEQUALS(font, NULL);
+
+            // "héllo" is six bytes of five characters.
+            const char* text = "h\xC3\xA9llo world";
+
+            pntr_image* wrapped = pntr_test_canvas(200, 48);
+            pntr_image* expected = pntr_test_canvas(200, 48);
+            NEQUALS(wrapped, NULL);
+            NEQUALS(expected, NULL);
+            pntr_draw_text_wrapped(wrapped, font, text, 5, 4, 48, PNTR_BLACK);
+            pntr_draw_text(expected, font, "h\xC3\xA9llo\nworld", 5, 4, PNTR_BLACK);
+            IMAGEEQUALS(wrapped, expected);
+
+            // Counted in bytes, the break would be a character into "world", so the "w"
+            // would be drawn on the first line as well as the second.
+            pntr_vector size = pntr_measure_text_ex(font, "h\xC3\xA9llo", 0);
+            LESSEREQ(pntr_test_painted_width(wrapped, 4, 4 + pntr_test_line_height(font)), size.x);
+
+            // Both words together when there is room for the two of them.
+            pntr_image* together = pntr_test_canvas(200, 48);
+            pntr_image* oneLine = pntr_test_canvas(200, 48);
+            NEQUALS(together, NULL);
+            NEQUALS(oneLine, NULL);
+            pntr_draw_text_wrapped(together, font, text, 5, 4, 200, PNTR_BLACK);
+            pntr_draw_text(oneLine, font, text, 5, 4, PNTR_BLACK);
+            IMAGEEQUALS(together, oneLine);
+
+            pntr_unload_image(oneLine);
+            pntr_unload_image(together);
+            pntr_unload_image(expected);
+            pntr_unload_image(wrapped);
+            pntr_unload_font(font);
+        });
+    }
+    else {
+        IT("pntr_draw_text_wrapped(): multi-byte characters", {
+            // Without PNTR_ENABLE_UTF8 a character is a byte, so a line broken on bytes
+            // and a line broken on characters are the same line.
+            SKIP();
+        });
+    }
 
     if (pntr_vargs()) {
         IT("pntr_draw_text_ex() draws what pntr_draw_text() draws of the same string", {
