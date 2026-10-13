@@ -597,6 +597,71 @@ bool pntr_jpeg_saving() {
     #endif
 }
 
+/**
+ * A source image whose every pixel is a different opaque color.
+ *
+ * @details The red and green channels carry the coordinates the pixel was painted at, so
+ * every pixel says where in the source it came from. That is what lets the flipped drawing
+ * tests tell a region read from the source rectangle apart from the same sized region read
+ * from the top left corner of the image.
+ */
+pntr_image* pntr_test_coordinate_image(int width, int height) {
+    pntr_image* image = pntr_gen_image_color(width, height, PNTR_BLANK);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            pntr_draw_point(image, x, y, pntr_new_color(
+                (unsigned char)(10 + x * 9),
+                (unsigned char)(10 + y * 9),
+                180, 255));
+        }
+    }
+
+    return image;
+}
+
+/**
+ * The region of a source image that a flipped draw of it should produce, as its own image.
+ *
+ * @details Built out of a crop and pntr_image_flip() rather than out of the same arithmetic
+ * pntr_draw_image_flipped_rec() uses, so it is an independent answer to compare a flipped
+ * draw against. The diagonal flip transposes first and the other two then mirror the
+ * transposed result, which is the order the drawing path applies them in, so a diagonal
+ * flip together with a horizontal one is a quarter turn either way.
+ *
+ * @see pntr_test_coordinate_image()
+ */
+pntr_image* pntr_test_flipped_region(pntr_image* src, pntr_rectangle srcRec, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
+    pntr_image* region = pntr_image_from_image(src, srcRec.x, srcRec.y, srcRec.width, srcRec.height);
+    if (region == NULL) {
+        return NULL;
+    }
+
+    if (flipDiagonal) {
+        pntr_image* transposed = pntr_gen_image_color(region->height, region->width, PNTR_BLANK);
+        if (transposed == NULL) {
+            pntr_unload_image(region);
+            return NULL;
+        }
+
+        for (int y = 0; y < region->height; y++) {
+            for (int x = 0; x < region->width; x++) {
+                pntr_draw_point(transposed, y, x, pntr_image_get_color(region, x, y));
+            }
+        }
+
+        pntr_unload_image(region);
+        region = transposed;
+    }
+
+    pntr_image_flip(region, flipHorizontal, flipVertical);
+
+    return region;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -1505,6 +1570,397 @@ MODULE(pntr, {
             pntr_unload_image(dst);
             pntr_unload_image(src);
         });
+    });
+
+    IT("pntr_draw_image_flipped_rec()", {
+        IT("pntr_draw_image_flipped_rec() reads from the source rectangle", {
+            // The reproduction from https://github.com/RobLoach/pntr/issues/252. The
+            // rectangle's origin used to size the sampling loops without offsetting the
+            // read, so a flipped sprite came out of the top left corner of the sheet
+            // instead of out of the rectangle.
+            pntr_image* src = pntr_gen_image_color(4, 1, PNTR_BLANK);
+            NEQUALS(src, NULL);
+            pntr_draw_point(src, 0, 0, PNTR_RED);
+            pntr_draw_point(src, 1, 0, PNTR_GREEN);
+            pntr_draw_point(src, 2, 0, PNTR_BLUE);
+            pntr_draw_point(src, 3, 0, PNTR_WHITE);
+
+            // The blue and white pixels.
+            pntr_rectangle rect = {2, 0, 2, 1};
+
+            pntr_image* expected = pntr_gen_image_color(2, 1, PNTR_BLACK);
+            NEQUALS(expected, NULL);
+            pntr_draw_point(expected, 0, 0, PNTR_BLUE);
+            pntr_draw_point(expected, 1, 0, PNTR_WHITE);
+
+            pntr_image* dst = pntr_gen_image_color(2, 1, PNTR_BLACK);
+            NEQUALS(dst, NULL);
+            pntr_draw_image_rec(dst, src, rect, 0, 0);
+            IMAGEEQUALS(dst, expected);
+
+            // A vertical flip of a single row is the identity, so it has to agree. This
+            // used to draw the red and green pixels instead.
+            pntr_clear_background(dst, PNTR_BLACK);
+            pntr_draw_image_flipped_rec(dst, src, rect, 0, 0, false, true, false);
+            IMAGEEQUALS(dst, expected);
+
+            // So does asking for no flips at all, which delegates to the unflipped draw.
+            pntr_clear_background(dst, PNTR_BLACK);
+            pntr_draw_image_flipped_rec(dst, src, rect, 0, 0, false, false, false);
+            IMAGEEQUALS(dst, expected);
+
+            pntr_unload_image(expected);
+            pntr_unload_image(dst);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_flipped_rec() with no flips matches pntr_draw_image_rec()", {
+            // The no-flip path delegates to the unflipped blit, so the two can only agree
+            // once the flipping path reads from the same place. Every rectangle here is a
+            // different origin, which is what the two used to disagree about.
+            pntr_image* src = pntr_test_coordinate_image(8, 6);
+            NEQUALS(src, NULL);
+
+            pntr_rectangle rects[6] = {
+                {0, 0, 8, 6},
+                {0, 0, 3, 2},
+                {2, 1, 4, 3},
+                {5, 4, 3, 2},
+                {7, 5, 1, 1},
+                {6, 2, 4, 6}    // Hangs off of the right and bottom edges of the source.
+            };
+
+            for (int i = 0; i < 6; i++) {
+                pntr_image* expected = pntr_test_canvas(14, 12);
+                NEQUALS(expected, NULL);
+                pntr_draw_image_rec(expected, src, rects[i], 2, 3);
+
+                pntr_image* dst = pntr_test_canvas(14, 12);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_flipped_rec(dst, src, rects[i], 2, 3, false, false, false);
+                IMAGEEQUALS(dst, expected);
+
+                pntr_unload_image(dst);
+                pntr_unload_image(expected);
+            }
+
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_flipped_rec() mirrors the rectangle and not the image", {
+            // The bottom right 2x2 of the source, named pixel by pixel so that a region
+            // taken from the top left corner instead cannot pass.
+            pntr_image* src = pntr_test_coordinate_image(4, 4);
+            NEQUALS(src, NULL);
+            pntr_rectangle rect = {2, 2, 2, 2};
+
+            pntr_image* dst = pntr_test_canvas(2, 2);
+            NEQUALS(dst, NULL);
+
+            // Horizontally, the rectangle's two columns swap.
+            pntr_draw_image_flipped_rec(dst, src, rect, 0, 0, true, false, false);
+            COLOREQUALS(pntr_image_get_color(dst, 0, 0), pntr_image_get_color(src, 3, 2));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 0), pntr_image_get_color(src, 2, 2));
+            COLOREQUALS(pntr_image_get_color(dst, 0, 1), pntr_image_get_color(src, 3, 3));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 1), pntr_image_get_color(src, 2, 3));
+
+            // Vertically, its two rows swap.
+            pntr_clear_background(dst, PNTR_TEST_BACKGROUND);
+            pntr_draw_image_flipped_rec(dst, src, rect, 0, 0, false, true, false);
+            COLOREQUALS(pntr_image_get_color(dst, 0, 0), pntr_image_get_color(src, 2, 3));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 0), pntr_image_get_color(src, 3, 3));
+            COLOREQUALS(pntr_image_get_color(dst, 0, 1), pntr_image_get_color(src, 2, 2));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 1), pntr_image_get_color(src, 3, 2));
+
+            // Both at once is a half turn of the rectangle.
+            pntr_clear_background(dst, PNTR_TEST_BACKGROUND);
+            pntr_draw_image_flipped_rec(dst, src, rect, 0, 0, true, true, false);
+            COLOREQUALS(pntr_image_get_color(dst, 0, 0), pntr_image_get_color(src, 3, 3));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 0), pntr_image_get_color(src, 2, 3));
+            COLOREQUALS(pntr_image_get_color(dst, 0, 1), pntr_image_get_color(src, 3, 2));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 1), pntr_image_get_color(src, 2, 2));
+
+            // The diagonal flip transposes the rectangle, swapping its rows for its columns.
+            pntr_clear_background(dst, PNTR_TEST_BACKGROUND);
+            pntr_draw_image_flipped_rec(dst, src, rect, 0, 0, false, false, true);
+            COLOREQUALS(pntr_image_get_color(dst, 0, 0), pntr_image_get_color(src, 2, 2));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 0), pntr_image_get_color(src, 2, 3));
+            COLOREQUALS(pntr_image_get_color(dst, 0, 1), pntr_image_get_color(src, 3, 2));
+            COLOREQUALS(pntr_image_get_color(dst, 1, 1), pntr_image_get_color(src, 3, 3));
+
+            pntr_unload_image(dst);
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_flipped_rec() flips every orientation of a sub-rectangle", {
+            // Each of the eight flag combinations, against a region cropped out of the
+            // source and flipped on its own, which is an answer that does not share any
+            // arithmetic with the drawing path.
+            pntr_image* src = pntr_test_coordinate_image(8, 6);
+            NEQUALS(src, NULL);
+
+            pntr_rectangle rects[5] = {
+                {0, 0, 8, 6},
+                {2, 1, 4, 3},
+                {3, 0, 2, 6},
+                {0, 4, 8, 2},
+                {5, 3, 3, 3}
+            };
+
+            for (int i = 0; i < 5; i++) {
+                for (int flips = 0; flips < 8; flips++) {
+                    bool flipHorizontal = (flips & 1) != 0;
+                    bool flipVertical = (flips & 2) != 0;
+                    bool flipDiagonal = (flips & 4) != 0;
+
+                    pntr_image* region = pntr_test_flipped_region(src, rects[i], flipHorizontal, flipVertical, flipDiagonal);
+                    NEQUALS(region, NULL);
+
+                    pntr_image* expected = pntr_test_canvas(20, 20);
+                    NEQUALS(expected, NULL);
+                    pntr_draw_image(expected, region, 3, 4);
+
+                    pntr_image* dst = pntr_test_canvas(20, 20);
+                    NEQUALS(dst, NULL);
+                    pntr_draw_image_flipped_rec(dst, src, rects[i], 3, 4, flipHorizontal, flipVertical, flipDiagonal);
+                    IMAGEEQUALS(dst, expected);
+
+                    pntr_unload_image(dst);
+                    pntr_unload_image(expected);
+                    pntr_unload_image(region);
+                }
+            }
+
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_flipped_rec() keeps a rectangle at the source corner in bounds", {
+            // A rectangle sitting on the far corner is where an unoffset read used to stay
+            // safe and an offset one can run past the last pixel, so this is the block
+            // worth running under -fsanitize=address.
+            pntr_image* src = pntr_test_coordinate_image(8, 6);
+            NEQUALS(src, NULL);
+
+            pntr_rectangle corners[4] = {
+                {7, 5, 1, 1},   // The single bottom right pixel.
+                {6, 4, 2, 2},   // The bottom right corner exactly.
+                {6, 4, 8, 8},   // Running off of the far corner, which clamps to the above.
+                {7, 0, 1, 6}    // The last column.
+            };
+
+            for (int i = 0; i < 4; i++) {
+                for (int flips = 0; flips < 8; flips++) {
+                    bool flipHorizontal = (flips & 1) != 0;
+                    bool flipVertical = (flips & 2) != 0;
+                    bool flipDiagonal = (flips & 4) != 0;
+
+                    pntr_image* region = pntr_test_flipped_region(src, corners[i], flipHorizontal, flipVertical, flipDiagonal);
+                    NEQUALS(region, NULL);
+
+                    pntr_image* expected = pntr_test_canvas(12, 12);
+                    NEQUALS(expected, NULL);
+                    pntr_draw_image(expected, region, 1, 2);
+
+                    pntr_image* dst = pntr_test_canvas(12, 12);
+                    NEQUALS(dst, NULL);
+                    pntr_draw_image_flipped_rec(dst, src, corners[i], 1, 2, flipHorizontal, flipVertical, flipDiagonal);
+                    IMAGEEQUALS(dst, expected);
+
+                    pntr_unload_image(dst);
+                    pntr_unload_image(expected);
+                    pntr_unload_image(region);
+                }
+            }
+
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_flipped_rec() clips without shifting what it samples", {
+            // Clipping trims the destination, and the source offset has to compose with it
+            // rather than slide the region, so the pixels that survive have to be the same
+            // ones a full draw would have put there.
+            pntr_image* src = pntr_test_coordinate_image(8, 6);
+            NEQUALS(src, NULL);
+            pntr_rectangle rect = {2, 1, 4, 3};
+
+            IT("partially off of the destination", {
+                int positions[4][2] = { {-2, -1}, {6, 5}, {-3, 4}, {5, -2} };
+
+                for (int i = 0; i < 4; i++) {
+                    for (int flips = 0; flips < 8; flips++) {
+                        bool flipHorizontal = (flips & 1) != 0;
+                        bool flipVertical = (flips & 2) != 0;
+                        bool flipDiagonal = (flips & 4) != 0;
+
+                        pntr_image* region = pntr_test_flipped_region(src, rect, flipHorizontal, flipVertical, flipDiagonal);
+                        NEQUALS(region, NULL);
+
+                        pntr_image* expected = pntr_test_canvas(8, 8);
+                        NEQUALS(expected, NULL);
+                        pntr_draw_image(expected, region, positions[i][0], positions[i][1]);
+
+                        pntr_image* dst = pntr_test_canvas(8, 8);
+                        NEQUALS(dst, NULL);
+                        pntr_draw_image_flipped_rec(dst, src, rect, positions[i][0], positions[i][1],
+                            flipHorizontal, flipVertical, flipDiagonal);
+                        IMAGEEQUALS(dst, expected);
+
+                        pntr_unload_image(dst);
+                        pntr_unload_image(expected);
+                        pntr_unload_image(region);
+                    }
+                }
+            });
+
+            IT("against the clip rectangle of the destination", {
+                pntr_rectangle clip = {3, 3, 3, 2};
+
+                for (int flips = 0; flips < 8; flips++) {
+                    bool flipHorizontal = (flips & 1) != 0;
+                    bool flipVertical = (flips & 2) != 0;
+                    bool flipDiagonal = (flips & 4) != 0;
+
+                    pntr_image* region = pntr_test_flipped_region(src, rect, flipHorizontal, flipVertical, flipDiagonal);
+                    NEQUALS(region, NULL);
+
+                    pntr_image* expected = pntr_test_canvas(10, 10);
+                    NEQUALS(expected, NULL);
+                    pntr_image_set_clip(expected, clip.x, clip.y, clip.width, clip.height);
+                    RECTEQUALS(pntr_image_get_clip(expected), clip);
+                    pntr_draw_image(expected, region, 2, 2);
+                    pntr_image_reset_clip(expected);
+
+                    pntr_image* dst = pntr_test_canvas(10, 10);
+                    NEQUALS(dst, NULL);
+                    pntr_image_set_clip(dst, clip.x, clip.y, clip.width, clip.height);
+                    pntr_draw_image_flipped_rec(dst, src, rect, 2, 2, flipHorizontal, flipVertical, flipDiagonal);
+                    pntr_image_reset_clip(dst);
+
+                    // Only the clip region was painted, and with the pixels the unclipped
+                    // draw would have left there.
+                    IMAGEEQUALS(dst, expected);
+                    GREATER(pntr_test_painted_count(dst), 0);
+
+                    pntr_unload_image(dst);
+                    pntr_unload_image(expected);
+                    pntr_unload_image(region);
+                }
+            });
+
+            pntr_unload_image(src);
+        });
+
+        IT("pntr_draw_image_flipped_rec() ignores invalid arguments", {
+            pntr_image* src = pntr_test_coordinate_image(8, 6);
+            NEQUALS(src, NULL);
+            pntr_image* dst = pntr_test_canvas(10, 10);
+            NEQUALS(dst, NULL);
+            pntr_image* expected = pntr_test_canvas(10, 10);
+            NEQUALS(expected, NULL);
+
+            pntr_rectangle rect = {2, 1, 4, 3};
+
+            // NULL images do not crash, and draw nothing.
+            pntr_draw_image_flipped_rec(NULL, src, rect, 0, 0, true, true, true);
+            pntr_draw_image_flipped_rec(dst, NULL, rect, 0, 0, true, true, true);
+            pntr_draw_image_flipped_rec(NULL, NULL, rect, 0, 0, true, true, true);
+            pntr_draw_image_flipped_rec(NULL, src, rect, 0, 0, false, false, false);
+            pntr_draw_image_flipped_rec(dst, NULL, rect, 0, 0, false, false, false);
+            IMAGEEQUALS(dst, expected);
+
+            // A rectangle that is entirely off of the source draws nothing.
+            pntr_rectangle offSource[2] = { {20, 20, 4, 4}, {-8, -8, 4, 4} };
+            for (int i = 0; i < 2; i++) {
+                for (int flips = 0; flips < 8; flips++) {
+                    pntr_draw_image_flipped_rec(dst, src, offSource[i], 0, 0,
+                        (flips & 1) != 0, (flips & 2) != 0, (flips & 4) != 0);
+                }
+            }
+            IMAGEEQUALS(dst, expected);
+
+            // A flipped draw reads a width or height of zero or less as an empty region
+            // and paints nothing. The unflipped path deliberately differs, reading it as
+            // the full source dimension, which is what pntr_draw_image_rec() does.
+            pntr_rectangle sizeless[4] = {
+                {0, 0, 0, 6},
+                {0, 0, 8, 0},
+                {0, 0, -8, 6},
+                {0, 0, 8, -6}
+            };
+            for (int i = 0; i < 4; i++) {
+                for (int flips = 1; flips < 8; flips++) {
+                    pntr_draw_image_flipped_rec(dst, src, sizeless[i], 0, 0,
+                        (flips & 1) != 0, (flips & 2) != 0, (flips & 4) != 0);
+                }
+            }
+            IMAGEEQUALS(dst, expected);
+
+            // The documented exception: no flips means the full source is drawn instead.
+            pntr_draw_image_flipped_rec(dst, src, sizeless[0], 0, 0, false, false, false);
+            pntr_draw_image(expected, src, 0, 0);
+            IMAGEEQUALS(dst, expected);
+
+            pntr_unload_image(expected);
+            pntr_unload_image(dst);
+            pntr_unload_image(src);
+        });
+    });
+
+    IT("pntr_draw_image_flipped()", {
+        // The whole-image variant hands the full rectangle down, so its origin is zero and
+        // the source offset cannot change what it draws.
+        pntr_image* src = pntr_test_coordinate_image(8, 6);
+        NEQUALS(src, NULL);
+        pntr_rectangle whole = {0, 0, 8, 6};
+
+        for (int flips = 0; flips < 8; flips++) {
+            bool flipHorizontal = (flips & 1) != 0;
+            bool flipVertical = (flips & 2) != 0;
+            bool flipDiagonal = (flips & 4) != 0;
+
+            pntr_image* region = pntr_test_flipped_region(src, whole, flipHorizontal, flipVertical, flipDiagonal);
+            NEQUALS(region, NULL);
+
+            pntr_image* expected = pntr_test_canvas(20, 20);
+            NEQUALS(expected, NULL);
+            pntr_draw_image(expected, region, 4, 5);
+
+            pntr_image* dst = pntr_test_canvas(20, 20);
+            NEQUALS(dst, NULL);
+            pntr_draw_image_flipped(dst, src, 4, 5, flipHorizontal, flipVertical, flipDiagonal);
+            IMAGEEQUALS(dst, expected);
+
+            // And it agrees with handing the same full rectangle down by hand.
+            pntr_image* viaRec = pntr_test_canvas(20, 20);
+            NEQUALS(viaRec, NULL);
+            pntr_draw_image_flipped_rec(viaRec, src, whole, 4, 5, flipHorizontal, flipVertical, flipDiagonal);
+            IMAGEEQUALS(viaRec, expected);
+
+            pntr_unload_image(viaRec);
+            pntr_unload_image(dst);
+            pntr_unload_image(expected);
+            pntr_unload_image(region);
+        }
+
+        // No flips at all draws the image exactly as pntr_draw_image() would.
+        pntr_image* plain = pntr_test_canvas(20, 20);
+        NEQUALS(plain, NULL);
+        pntr_draw_image_flipped(plain, src, 4, 5, false, false, false);
+
+        pntr_image* plainExpected = pntr_test_canvas(20, 20);
+        NEQUALS(plainExpected, NULL);
+        pntr_draw_image(plainExpected, src, 4, 5);
+        IMAGEEQUALS(plain, plainExpected);
+
+        // NULL images do not crash, and draw nothing.
+        pntr_draw_image_flipped(NULL, src, 0, 0, true, true, true);
+        pntr_draw_image_flipped(plain, NULL, 0, 0, true, true, true);
+        pntr_draw_image_flipped(NULL, NULL, 0, 0, false, false, false);
+        IMAGEEQUALS(plain, plainExpected);
+
+        pntr_unload_image(plainExpected);
+        pntr_unload_image(plain);
+        pntr_unload_image(src);
     });
 
     IT("pntr_image_rotate(PNTR_FILTER_BILINEAR) draws a single pixel source", {

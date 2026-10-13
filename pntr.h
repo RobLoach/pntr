@@ -6946,15 +6946,10 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
  * combines with the other two, which pick which of the four transposed orientations is
  * drawn, so a diagonal flip together with a horizontal one is a quarter turn.
  *
- * @warning When any of the three flips is requested, only the **width and height** of
- * `srcRec` are honoured: its `x` and `y` are ignored, and the pixels are read from the top
- * left corner of the source image instead of from the rectangle. Drawing a flipped sprite
- * out of a sheet therefore draws the wrong sprite. Passing no flips at all takes a
- * different path, which does honour `srcRec.x` and `srcRec.y`, so the two disagree. Until
- * that is settled, draw the region into its own image with pntr_image_from_image() and
- * flip that, or use pntr_draw_image_rotated_rec() for the quarter turns.
+ * Passing no flips at all draws the region exactly as pntr_draw_image_rec() would, which
+ * is the path it delegates to.
  *
- * Also unlike the unflipped path, which reads a width or height of zero or less as the
+ * @warning Unlike the unflipped path, which reads a width or height of zero or less as the
  * full source dimension, a flipped draw treats it as an empty region and paints nothing.
  *
  * Pixels are alpha blended into the destination, and anything outside the destination's
@@ -6962,8 +6957,9 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
  *
  * @param dst The destination image where the source image will be drawn.
  * @param src The source image to be drawn.
- * @param srcRec The portion of the source image to draw. Only its width and height are
- * honoured when flipping; see the warning above.
+ * @param srcRec The portion of the source image to draw, clamped to the source image. When
+ * the width or height are less than or equal to 0, nothing is drawn, unless no flips are
+ * requested; see the warning above.
  * @param posX The x-coordinate of the position where the source image will be drawn.
  * @param posY The y-coordinate of the position where the source image will be drawn.
  * @param flipHorizontal Whether to mirror the region left to right.
@@ -6972,7 +6968,7 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
  *
  * @see pntr_draw_image_flipped()
  * @see pntr_draw_image_rec()
- * @see pntr_image_from_image()
+ * @see pntr_image_flip()
  */
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
     // If we are not flipping at all, use the simpler draw function.
@@ -7003,7 +6999,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
             }
 
             pntr_draw_point(dst, posX + dstX, posY + dstY,
-                pntr_image_get_color(src, x, y)
+                pntr_image_get_color(src, srcRec.x + x, srcRec.y + y)
             );
         }
     }
