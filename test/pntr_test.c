@@ -1635,6 +1635,92 @@ MODULE(pntr, {
         COLOREQUALS(pntr_color_bilinear_interpolate(color00, color01, color10, color11, 0.5f, 0.5f), pntr_new_color(50, 50, 0, 255));
     });
 
+    IT("pntr_color_bilinear_interpolate() of four identical colors is that color", {
+        // The property, rather than particular positions: the four weights always sum to
+        // one, so interpolating between four copies of a color cannot be anything but
+        // that color. It used to round down to one less, on every channel, because the
+        // weights do not sum to exactly one in float arithmetic.
+        pntr_color colors[3];
+        colors[0] = pntr_new_color(200, 100, 50, 255);
+        colors[1] = pntr_new_color(255, 255, 255, 255);
+        colors[2] = pntr_new_color(1, 128, 254, 1);
+
+        for (int c = 0; c < 3; c++) {
+            for (int i = 0; i <= 64; i++) {
+                for (int j = 0; j <= 64; j++) {
+                    float coordinateX = (float)i / 64.0f;
+                    float coordinateY = (float)j / 64.0f;
+
+                    COLOREQUALS(pntr_color_bilinear_interpolate(colors[c], colors[c], colors[c], colors[c], coordinateX, coordinateY), colors[c]);
+                }
+            }
+        }
+    });
+
+    IT("pntr_image_get_color_bilinear() of a solid image is that color", {
+        // The same property through the sampling path, which computes its own fractions
+        // and is where the rounding actually showed. Swept across and past the edges, so
+        // the clamped fractions are covered as well as the interior ones.
+        pntr_color solid = pntr_new_color(200, 100, 50, 255);
+        pntr_image* image = pntr_gen_image_color(9, 7, solid);
+        NEQUALS(image, NULL);
+
+        for (int i = 0; i <= 90; i++) {
+            for (int j = 0; j <= 70; j++) {
+                float x = (float)i / 10.0f;
+                float y = (float)j / 10.0f;
+
+                COLOREQUALS(pntr_image_get_color_bilinear(image, x, y), solid);
+            }
+        }
+
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_draw_image_dest_rec(PNTR_FILTER_BILINEAR) of an opaque image stays opaque", {
+        // What the rounding cost in practice: a scaled draw of an image with no
+        // transparency in it anywhere produced pixels at an alpha of 254, which
+        // PNTR_NO_ALPHABLEND then dropped outright and left holes in the fill. Swept over
+        // source and destination sizes, since whether the unit is lost depends on the
+        // fractions the ratio between them happens to land on.
+        pntr_color opaque = pntr_new_color(200, 100, 50, 255);
+
+        for (int sourceWidth = 1; sourceWidth <= 8; sourceWidth += 2) {
+            for (int sourceHeight = 1; sourceHeight <= 8; sourceHeight += 2) {
+                pntr_image* src = pntr_gen_image_color(sourceWidth, sourceHeight, opaque);
+                NEQUALS(src, NULL);
+
+                for (int width = 1; width <= 23; width += 2) {
+                    for (int height = 1; height <= 17; height += 2) {
+                        pntr_image* dst = pntr_gen_image_color(width, height, PNTR_BLANK);
+                        NEQUALS(dst, NULL);
+
+                        pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) {0, 0, sourceWidth, sourceHeight};
+                        pntr_rectangle dstRect = PNTR_CLITERAL(pntr_rectangle) {0, 0, width, height};
+                        pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, PNTR_FILTER_BILINEAR, PNTR_WHITE);
+
+                        // Every destination pixel is the source color exactly, on all four
+                        // channels. The alpha is the one that mattered, but the same
+                        // truncation shaved red, green and blue in the same places.
+                        int exact = 0;
+                        for (int y = 0; y < height; y++) {
+                            for (int x = 0; x < width; x++) {
+                                if (pntr_image_get_color(dst, x, y).value == opaque.value) {
+                                    exact++;
+                                }
+                            }
+                        }
+                        EQUALS(exact, width * height);
+
+                        pntr_unload_image(dst);
+                    }
+                }
+
+                pntr_unload_image(src);
+            }
+        }
+    });
+
     IT("pntr_image_get_color_bilinear()", {
         pntr_color topLeft = pntr_new_color(0, 0, 0, 255);
         pntr_color topRight = pntr_new_color(100, 0, 0, 255);
@@ -1925,21 +2011,10 @@ MODULE(pntr, {
                         pntr_rectangle bounds = pntr_test_painted_bounds(dst, PNTR_TEST_BACKGROUND);
                         RECTEQUALS(bounds, dstRect);
 
-                        int painted = pntr_test_painted_count(dst);
-                        if (pntr_alphablend() || filters[f] == PNTR_FILTER_NEARESTNEIGHBOR) {
-                            EQUALS(painted, width * height);
-                        }
-                        else {
-                            // Bilinear interpolation of four fully opaque pixels can round
-                            // its way to an alpha of 254, and pntr_alphablend() being false
-                            // skips anything that is not fully opaque rather than blending
-                            // it, so the bilinear fill is allowed holes. It still covers the
-                            // rectangle it was given, which the bounds above pin, and it
-                            // never reaches outside of it. Nearest neighbor takes the
-                            // source's own opaque pixels, so it fills completely either way.
-                            GREATER(painted, 0);
-                            LESSEREQ(painted, width * height);
-                        }
+                        // Exactly, in both filters and whether or not this build blends. An
+                        // opaque source interpolates to an opaque destination, so there is
+                        // nothing for PNTR_NO_ALPHABLEND to skip.
+                        EQUALS(pntr_test_painted_count(dst), width * height);
 
                         pntr_unload_image(dst);
                     }
