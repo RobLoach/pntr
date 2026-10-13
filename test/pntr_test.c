@@ -1250,6 +1250,41 @@ int pntr_test_partial_alpha_count(pntr_image* image) {
     return count;
 }
 
+/**
+ * Whether pntr_draw_text_ex() is available in this build.
+ *
+ * @see PNTR_ENABLE_VARGS
+ */
+bool pntr_vargs() {
+    #ifdef PNTR_ENABLE_VARGS
+        return true;
+    #else
+        return false;
+    #endif
+}
+
+/**
+ * Draws `n=<number>` through pntr_draw_text_ex(), where the build has it.
+ *
+ * @details pntr_draw_text_ex() only exists under PNTR_ENABLE_VARGS, and a `#ifdef` cannot
+ * live inside the arguments of an IT(), so the call is wrapped here instead.
+ *
+ * @see pntr_vargs()
+ */
+void pntr_test_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, int number) {
+    #ifdef PNTR_ENABLE_VARGS
+        pntr_draw_text_ex(dst, font, posX, posY, tint, maxlen, "n=%d", number);
+    #else
+        (void)dst;
+        (void)font;
+        (void)posX;
+        (void)posY;
+        (void)tint;
+        (void)maxlen;
+        (void)number;
+    #endif
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -4956,6 +4991,216 @@ MODULE(pntr, {
         GREATER(font->charactersLen, 10);
         pntr_unload_font(font);
     });
+
+    IT("pntr_draw_text() paints the default font's glyphs where it says", {
+        // Every other pixel-level assertion about text in this suite is a negative one:
+        // that a row was left blank, or that two draws agree with each other. None of
+        // them would notice a glyph landing a pixel off, or the wrong glyph being picked
+        // out of the atlas, or the whole string being drawn upside down.
+        //
+        // The default font is font8x8, so its glyphs are exactly known. Each row below is
+        // one row of a glyph, with bit 0 the leftmost pixel, copied from
+        // external/font8x8_basic.h. These are the expectation; nothing in pntr is asked
+        // where the pixels should be.
+        struct {
+            char character;
+            unsigned char rows[8];
+        } glyphs[] = {
+            {'_', {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF}},
+            {'-', {0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x00}},
+            {'|', {0x18, 0x18, 0x18, 0x00, 0x18, 0x18, 0x18, 0x00}},
+            {'+', {0x00, 0x0C, 0x0C, 0x3F, 0x0C, 0x0C, 0x00, 0x00}},
+            {'A', {0x0C, 0x1E, 0x33, 0x33, 0x3F, 0x33, 0x33, 0x00}},
+            {'H', {0x33, 0x33, 0x33, 0x3F, 0x33, 0x33, 0x33, 0x00}},
+            {'L', {0x0F, 0x06, 0x06, 0x06, 0x46, 0x66, 0x7F, 0x00}},
+            {'T', {0x3F, 0x2D, 0x0C, 0x0C, 0x0C, 0x0C, 0x1E, 0x00}},
+            {'0', {0x3E, 0x63, 0x73, 0x7B, 0x6F, 0x67, 0x3E, 0x00}},
+            {' ', {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}
+        };
+        int glyphsLen = (int)(sizeof(glyphs) / sizeof(glyphs[0]));
+
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        // Drawn away from the origin on both axes, so that a draw that ignored the
+        // position would land somewhere else entirely.
+        int posX = 6;
+        int posY = 5;
+
+        for (int i = 0; i < glyphsLen; i++) {
+            pntr_image* canvas = pntr_test_canvas(32, 24);
+            NEQUALS(canvas, NULL);
+
+            char text[2];
+            text[0] = glyphs[i].character;
+            text[1] = '\0';
+            pntr_draw_text(canvas, font, text, posX, posY, PNTR_BLACK);
+
+            int painted = 0;
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    bool expected = ((glyphs[i].rows[y] >> x) & 1) != 0;
+                    bool actual = pntr_test_painted(canvas, posX + x, posY + y);
+                    if (actual != expected) {
+                        printf("\n\tglyph '%c' at (%d, %d): %d, expected %d\n",
+                            glyphs[i].character, x, y, (int)actual, (int)expected);
+                    }
+                    EQUALS(actual, expected);
+                    if (expected) {
+                        painted++;
+                    }
+                }
+            }
+
+            // The glyph is the only thing on the canvas, so nothing was drawn outside of
+            // its eight by eight cell either.
+            EQUALS(pntr_test_painted_count(canvas), painted);
+
+            pntr_unload_image(canvas);
+        }
+
+        // The tint is the color the glyph is painted in, not a filter over the atlas.
+        pntr_image* tinted = pntr_test_canvas(32, 24);
+        NEQUALS(tinted, NULL);
+        pntr_draw_text(tinted, font, "_", posX, posY, PNTR_BLUE);
+        for (int x = 0; x < 8; x++) {
+            COLOREQUALS(pntr_image_get_color(tinted, posX + x, posY + 7), PNTR_BLUE);
+        }
+        EQUALS(pntr_test_painted_count(tinted), 8);
+        pntr_unload_image(tinted);
+
+        // A glyph in a string sits one glyph width to the right of the one before it, and
+        // the space between them is left alone rather than being drawn over.
+        pntr_image* word = pntr_test_canvas(40, 24);
+        NEQUALS(word, NULL);
+        pntr_draw_text(word, font, "_ _", posX, posY, PNTR_BLACK);
+        for (int x = 0; x < 8; x++) {
+            EQUALS(pntr_test_painted(word, posX + x, posY + 7), true);
+            EQUALS(pntr_test_painted(word, posX + 8 + x, posY + 7), false);
+            EQUALS(pntr_test_painted(word, posX + 16 + x, posY + 7), true);
+        }
+        EQUALS(pntr_test_painted_count(word), 16);
+        pntr_unload_image(word);
+
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_wrapped() with nothing to wrap is pntr_draw_text()", {
+        // pntr_draw_text_wrapped() had one call in this suite and no assertion at all
+        // against it. These are the cases where it has nothing to decide, so they say
+        // only that it draws the text it was handed in the place it was handed.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+        EQUALS(lineHeight, 8);
+
+        // A width that nothing can exceed.
+        pntr_image* wrapped = pntr_test_canvas(160, 40);
+        pntr_image* plain = pntr_test_canvas(160, 40);
+        NEQUALS(wrapped, NULL);
+        NEQUALS(plain, NULL);
+        pntr_draw_text_wrapped(wrapped, font, "Hello world", 5, 4, 1000, PNTR_BLACK);
+        pntr_draw_text(plain, font, "Hello world", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(wrapped, plain);
+        GREATER(pntr_test_painted_count(plain), 0);
+
+        // Including when the text breaks its own lines.
+        pntr_image* newlines = pntr_test_canvas(160, 40);
+        pntr_image* plainNewlines = pntr_test_canvas(160, 40);
+        NEQUALS(newlines, NULL);
+        NEQUALS(plainNewlines, NULL);
+        pntr_draw_text_wrapped(newlines, font, "Hello\nworld", 5, 4, 1000, PNTR_BLACK);
+        pntr_draw_text(plainNewlines, font, "Hello\nworld", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(newlines, plainNewlines);
+
+        // A single word wider than the maximum has no space to break at, so it is drawn
+        // as it is rather than being dropped.
+        pntr_image* unbreakable = pntr_test_canvas(160, 40);
+        pntr_image* word = pntr_test_canvas(160, 40);
+        NEQUALS(unbreakable, NULL);
+        NEQUALS(word, NULL);
+        pntr_draw_text_wrapped(unbreakable, font, "Hello", 5, 4, 10, PNTR_BLACK);
+        pntr_draw_text(word, font, "Hello", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(unbreakable, word);
+
+        // Two words that do not fit on one line are the two of them on their own lines,
+        // which is the one wrap that comes out right.
+        pntr_image* twoWords = pntr_test_canvas(160, 40);
+        pntr_image* twoLines = pntr_test_canvas(160, 40);
+        NEQUALS(twoWords, NULL);
+        NEQUALS(twoLines, NULL);
+        pntr_draw_text_wrapped(twoWords, font, "Hello world", 5, 4, 50, PNTR_BLACK);
+        pntr_draw_text(twoLines, font, "Hello\nworld", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(twoWords, twoLines);
+
+        // NOT ASSERTED: three or more words that need more than one line come out wrong,
+        // and the test for it is left out rather than weakened. pntr_draw_text_wrapped()
+        // never clears lastSpace when it wraps at a space, so after the first wrap the
+        // stale pointer is behind lineStart, the trailing-line fixup computes a negative
+        // length, pntr_draw_text_len() reads a non-positive length as "all of it", and
+        // the remainder of the string is drawn once by the fixup and then again by the
+        // final pntr_draw_text() one line lower. With the default font and a maxWidth of
+        // 20, "aa bb cc" draws "aa", then "bb cc" twice, on three lines, two of which are
+        // 38 pixels wide. Expected: "aa", "bb", "cc". Enable this once that is fixed:
+        //
+        //     pntr_draw_text_wrapped(a, font, "aa bb cc", 5, 4, 20, PNTR_BLACK);
+        //     pntr_draw_text(b, font, "aa\nbb\ncc", 5, 4, PNTR_BLACK);
+        //     IMAGEEQUALS(a, b);
+
+        pntr_unload_image(twoLines);
+        pntr_unload_image(twoWords);
+        pntr_unload_image(word);
+        pntr_unload_image(unbreakable);
+        pntr_unload_image(plainNewlines);
+        pntr_unload_image(newlines);
+        pntr_unload_image(plain);
+        pntr_unload_image(wrapped);
+        pntr_unload_font(font);
+    });
+
+    if (pntr_vargs()) {
+        IT("pntr_draw_text_ex() draws what pntr_draw_text() draws of the same string", {
+            // pntr_draw_text_ex() formats its arguments and hands the result to
+            // pntr_draw_text(), so the only thing it can get wrong is the formatting.
+            pntr_font* font = pntr_load_font_default();
+            NEQUALS(font, NULL);
+
+            pntr_image* formatted = pntr_test_canvas(120, 24);
+            pntr_image* expected = pntr_test_canvas(120, 24);
+            NEQUALS(formatted, NULL);
+            NEQUALS(expected, NULL);
+
+            pntr_test_draw_text_ex(formatted, font, 4, 6, PNTR_BLACK, 0, 42);
+            pntr_draw_text(expected, font, "n=42", 4, 6, PNTR_BLACK);
+            IMAGEEQUALS(formatted, expected);
+            GREATER(pntr_test_painted_count(expected), 0);
+
+            // A maximum length truncates the formatted string, counting its terminator.
+            pntr_image* truncated = pntr_test_canvas(120, 24);
+            pntr_image* shorter = pntr_test_canvas(120, 24);
+            NEQUALS(truncated, NULL);
+            NEQUALS(shorter, NULL);
+
+            pntr_test_draw_text_ex(truncated, font, 4, 6, PNTR_BLACK, 4, 42);
+            pntr_draw_text(shorter, font, "n=4", 4, 6, PNTR_BLACK);
+            IMAGEEQUALS(truncated, shorter);
+            NEQUALS(pntr_test_painted_count(truncated), pntr_test_painted_count(formatted));
+
+            pntr_unload_image(shorter);
+            pntr_unload_image(truncated);
+            pntr_unload_image(expected);
+            pntr_unload_image(formatted);
+            pntr_unload_font(font);
+        });
+    }
+    else {
+        IT("pntr_draw_text_ex() draws what pntr_draw_text() draws of the same string", {
+            // pntr_draw_text_ex() needs variadic arguments, so without PNTR_ENABLE_VARGS
+            // there is no formatted draw to compare.
+            SKIP();
+        });
+    }
 
     IT("pntr_draw_text_len(): with a length", {
         // A length counts characters of the text, where zero means all of them.
