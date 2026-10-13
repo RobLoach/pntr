@@ -5554,7 +5554,41 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
 }
 
 /**
+ * How far a newline moves down the page with the given font.
+ *
+ * @details The tallest glyph the whole font holds, measured from the top of the line to
+ * the bottom of the glyph, so that every glyph in the font fits inside one line. This is
+ * deliberately not derived from the text being drawn: a line height that came from the
+ * glyphs that happen to appear would make an empty line shorter than a full one, and
+ * would let pntr_measure_text_ex() disagree with what pntr_draw_text() paints.
+ *
+ * @param font The font to find the line height of.
+ *
+ * @return The height of a single line of text, in pixels.
+ *
+ * @internal
+ */
+static int _pntr_font_line_height(pntr_font* font) {
+    if (font == NULL) {
+        return 0;
+    }
+
+    int lineHeight = 0;
+    for (int i = 0; i < font->charactersLen; i++) {
+        int glyphBottom = font->glyphRects[i].y + font->glyphRects[i].height;
+        if (glyphBottom > lineHeight) {
+            lineHeight = glyphBottom;
+        }
+    }
+
+    return lineHeight;
+}
+
+/**
  * Prints text on the given image, provided the length of the string.
+ *
+ * @details A newline moves down by the font's line height, which is the tallest glyph
+ * the font holds, so an empty line takes up as much room as a full one.
  *
  * @param dst The image of which to print the text on.
  * @param font The font to use when rendering the text.
@@ -5573,7 +5607,10 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
 
     int x = posX;
     int y = posY;
-    int tallestCharacter = 0;
+
+    // Resolved from the font the first time a line ends, since text without a newline in
+    // it never needs it, and finding it walks every glyph of the font.
+    int lineHeight = 0;
 
     // Iterate through each character.
     pntr_codepoint_t codepoint;
@@ -5589,8 +5626,12 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
         // If the character is a newline, move to the next line.
         if (codepoint == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
+            if (lineHeight == 0) {
+                lineHeight = _pntr_font_line_height(font);
+            }
+
             x = posX;
-            y += tallestCharacter;
+            y += lineHeight;
             continue;
         }
 
@@ -5618,9 +5659,6 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
         }
 
         x += font->glyphRects[i].x + font->glyphRects[i].width;
-        if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
-            tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
-        }
     }
 }
 
@@ -5643,6 +5681,11 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
 /**
  * Draws text on the given image with horizontal alignment.
  *
+ * @details Each line is measured with pntr_measure_text_ex() and then placed against
+ * `posX` on its own, so every line of a multi-line string is aligned individually. Lines
+ * are spaced by the font's line height, which is the same spacing pntr_draw_text() uses,
+ * so an empty line leaves a blank line behind rather than being skipped.
+ *
  * @param dst The image to draw on.
  * @param font The font to use.
  * @param text The text to draw. Multi-line supported via \\n.
@@ -5652,6 +5695,7 @@ PNTR_API void pntr_draw_text(pntr_image* dst, pntr_font* font, const char* text,
  * @param tint The tint color.
  *
  * @see pntr_draw_text()
+ * @see pntr_measure_text_ex()
  */
 PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, pntr_text_align align, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
@@ -5665,19 +5709,42 @@ PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const cha
 
     const char* lineStart = text;
     int currentY = posY;
+    int lineHeight = _pntr_font_line_height(font);
 
     while (lineStart != NULL) {
         const char* lineEnd = PNTR_STRCHR(lineStart, '\n');
-        int lineLen = (int)(lineEnd != NULL ? lineEnd - lineStart : (int)PNTR_STRLEN(lineStart));
-        pntr_vector size = pntr_measure_text_ex(font, lineStart, lineLen);
-        int lineX;
-        if (align == PNTR_TEXT_ALIGN_CENTER) {
-            lineX = posX - size.x / 2;
-        } else {
-            lineX = posX - size.x;
+
+        // How long the line is, in the codepoints that pntr_draw_text_len() and
+        // pntr_measure_text_ex() count, rather than in the bytes that separate the two
+        // pointers.
+        int lineLen;
+        if (lineEnd != NULL) {
+            #ifdef PNTR_ENABLE_UTF8
+                lineLen = (int)utf8nlen(lineStart, (size_t)(lineEnd - lineStart));
+            #else
+                lineLen = (int)(lineEnd - lineStart);
+            #endif
         }
-        pntr_draw_text_len(dst, font, lineStart, lineLen, lineX, currentY, tint);
-        currentY += size.y;
+        else {
+            lineLen = (int)PNTR_STRLEN(lineStart);
+        }
+
+        // An empty line has nothing to align, and a length of zero would be taken as the
+        // whole of the rest of the string.
+        if (lineLen > 0) {
+            pntr_vector size = pntr_measure_text_ex(font, lineStart, lineLen);
+            int lineX;
+            if (align == PNTR_TEXT_ALIGN_CENTER) {
+                lineX = posX - size.x / 2;
+            }
+            else {
+                lineX = posX - size.x;
+            }
+
+            pntr_draw_text_len(dst, font, lineStart, lineLen, lineX, currentY, tint);
+        }
+
+        currentY += lineHeight;
         lineStart = (lineEnd != NULL) ? lineEnd + 1 : NULL;
     }
 }
@@ -5824,11 +5891,18 @@ PNTR_API int pntr_measure_text(pntr_font* font, const char* text) {
 /**
  * Measures the width and height of the given text when rendered with the font.
  *
+ * @details The height is one line height for every newline in the text, plus the height
+ * of the tallest glyph on the last line, which is exactly the area pntr_draw_text()
+ * paints on. Every newline moves down by the same amount, whether the line it ends holds
+ * any glyphs or not, so an empty line is as tall as a full one.
+ *
  * @param font The font to use when rendering the text.
  * @param text The text to measure the length of.
  * @param textLength (Optional) How long the string to measure is from text. Provide 0 to determine the string length with a null character.
  *
  * @return A vector containing the width and height of the text when rendered by the font.
+ *
+ * @see pntr_draw_text()
  */
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength) {
     if (font == NULL || text == NULL) {
@@ -5837,8 +5911,12 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
 
     pntr_vector output = PNTR_CLITERAL(pntr_vector) { .x = 0, .y = 0 };
     int currentX = 0;
-    int currentY = 0;
+    int tallestCharacter = 0;
     int index = 0;
+
+    // Resolved from the font the first time a line ends, the same way
+    // pntr_draw_text_len() resolves it, since text without a newline never needs it.
+    int lineHeight = 0;
 
     pntr_codepoint_t codepoint;
     for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
@@ -5849,8 +5927,13 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
 
         // Consider any newlines
         if (codepoint == '\n') {
-            output.y += currentY;
+            if (lineHeight == 0) {
+                lineHeight = _pntr_font_line_height(font);
+            }
+
+            output.y += lineHeight;
             currentX = 0;
+            tallestCharacter = 0;
             continue;
         }
 
@@ -5874,15 +5957,15 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
                 output.x = currentX;
             }
 
-            // Find the tallest character
-            if (currentY < font->glyphRects[i].y + font->glyphRects[i].height) {
-                currentY = font->glyphRects[i].y + font->glyphRects[i].height;
+            // Find the tallest character on this line.
+            if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+                tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
             }
         }
     }
 
     // Has at least one line.
-    output.y += currentY;
+    output.y += tallestCharacter;
 
     return output;
 }

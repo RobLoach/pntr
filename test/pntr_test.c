@@ -662,6 +662,94 @@ pntr_image* pntr_test_flipped_region(pntr_image* src, pntr_rectangle srcRec, boo
     return region;
 }
 
+/**
+ * The height of a single line of text drawn with the given font.
+ *
+ * @details Taken from a measurement of a single glyph, so it is the line height for any
+ * font whose glyphs are all the same height, which is every font the tests draw with.
+ */
+int pntr_test_line_height(pntr_font* font) {
+    return pntr_measure_text_ex(font, "A", 0).y;
+}
+
+/**
+ * What a horizontally aligned draw of the given multi-line text is expected to look like.
+ *
+ * @details Every line of the text is drawn on its own, by pntr_draw_text() alone, at the
+ * offset that pntr_measure_text_ex() says that line needs for the alignment, one line
+ * height below the line before it. That makes this an expectation built only out of
+ * single-line measuring and single-line drawing, which is what pntr_draw_text_aligned()
+ * has to reproduce for a string with newlines in it. A line with nothing on it still
+ * takes up its line of the canvas.
+ *
+ * The text is drawn in PNTR_BLACK onto a pntr_test_canvas(), so the result can be
+ * compared against another canvas of the same size pixel for pixel.
+ *
+ * @see pntr_test_canvas()
+ */
+pntr_image* pntr_test_text_lines(pntr_font* font, const char* text, int width, int height, int posX, int posY, pntr_text_align align) {
+    pntr_image* canvas = pntr_test_canvas(width, height);
+    if (canvas == NULL || font == NULL || text == NULL) {
+        return canvas;
+    }
+
+    int lineHeight = pntr_test_line_height(font);
+    int currentY = posY;
+    const char* lineStart = text;
+
+    while (lineStart != NULL) {
+        // The line on its own, so that the draw being compared against is the only one
+        // that is ever handed a string with a newline in it.
+        const char* lineEnd = strchr(lineStart, '\n');
+        size_t bytes = (lineEnd != NULL) ? (size_t)(lineEnd - lineStart) : strlen(lineStart);
+        char line[64];
+        if (bytes > sizeof(line) - 1) {
+            bytes = sizeof(line) - 1;
+        }
+        memcpy(line, lineStart, bytes);
+        line[bytes] = '\0';
+
+        pntr_vector size = pntr_measure_text_ex(font, line, 0);
+        int lineX = posX;
+        if (align == PNTR_TEXT_ALIGN_CENTER) {
+            lineX = posX - size.x / 2;
+        }
+        else if (align == PNTR_TEXT_ALIGN_RIGHT) {
+            lineX = posX - size.x;
+        }
+
+        pntr_draw_text(canvas, font, line, lineX, currentY, PNTR_BLACK);
+
+        currentY += lineHeight;
+        lineStart = (lineEnd != NULL) ? lineEnd + 1 : NULL;
+    }
+
+    return canvas;
+}
+
+/**
+ * How many pixels of the given PNTR_TEST_BACKGROUND canvas are painted between two rows.
+ *
+ * @details Zero means the band of rows was left alone, which is what an empty line of
+ * text has to leave behind.
+ */
+int pntr_test_painted_rows(pntr_image* image, int top, int bottom) {
+    if (image == NULL) {
+        return 0;
+    }
+
+    int count = 0;
+    for (int y = top; y < bottom; y++) {
+        for (int x = 0; x < image->width; x++) {
+            if (pntr_test_painted(image, x, y)) {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
 MODULE(pntr_math, {
     IT("PNTR_SINF", {
         EQUALS((int)PNTR_SINF(PNTR_PI / 2.0f), 1);
@@ -3761,6 +3849,314 @@ MODULE(pntr, {
         NEQUALS(font, NULL);
         NEQUALS(font->atlas, NULL);
         GREATER(font->charactersLen, 10);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_len(): with a length", {
+        // A length counts characters of the text, where zero means all of them.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        pntr_image* whole = pntr_test_canvas(60, 10);
+        pntr_image* counted = pntr_test_canvas(60, 10);
+        pntr_draw_text_len(whole, font, "Hello", 0, 2, 1, PNTR_BLACK);
+        pntr_draw_text_len(counted, font, "Hello", 5, 2, 1, PNTR_BLACK);
+        IMAGEEQUALS(counted, whole);
+
+        // A length that reaches past the end of the string is the whole string.
+        pntr_image* tooLong = pntr_test_canvas(60, 10);
+        pntr_draw_text_len(tooLong, font, "Hello", 50, 2, 1, PNTR_BLACK);
+        IMAGEEQUALS(tooLong, whole);
+
+        // A shorter length stops where it says it does.
+        pntr_image* partial = pntr_test_canvas(60, 10);
+        pntr_image* expected = pntr_test_canvas(60, 10);
+        pntr_draw_text_len(partial, font, "Hello", 2, 2, 1, PNTR_BLACK);
+        pntr_draw_text_len(expected, font, "He", 0, 2, 1, PNTR_BLACK);
+        IMAGEEQUALS(partial, expected);
+        NEQUALS(pntr_test_painted_count(partial), pntr_test_painted_count(whole));
+
+        // A newline is one of the characters counted, so this stops before the "B".
+        pntr_image* newline = pntr_test_canvas(60, 20);
+        pntr_image* onlyA = pntr_test_canvas(60, 20);
+        pntr_draw_text_len(newline, font, "A\nB", 2, 2, 1, PNTR_BLACK);
+        pntr_draw_text_len(onlyA, font, "A", 0, 2, 1, PNTR_BLACK);
+        IMAGEEQUALS(newline, onlyA);
+
+        pntr_unload_image(onlyA);
+        pntr_unload_image(newline);
+        pntr_unload_image(expected);
+        pntr_unload_image(partial);
+        pntr_unload_image(tooLong);
+        pntr_unload_image(counted);
+        pntr_unload_image(whole);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_aligned(): against the measured width", {
+        // Each alignment places the text exactly where pntr_measure_text_ex() says it
+        // will land, which is what lets a caller reserve room for it.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        const char* text = "Bye";
+        int width = pntr_measure_text(font, text);
+        EQUALS(width, 24);
+
+        pntr_image* left = pntr_test_canvas(100, 16);
+        pntr_draw_text_aligned(left, font, text, 40, 4, PNTR_TEXT_ALIGN_LEFT, PNTR_BLACK);
+        pntr_image* leftExpected = pntr_test_text_lines(font, text, 100, 16, 40, 4, PNTR_TEXT_ALIGN_LEFT);
+        IMAGEEQUALS(left, leftExpected);
+
+        pntr_image* center = pntr_test_canvas(100, 16);
+        pntr_draw_text_aligned(center, font, text, 40, 4, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        pntr_image* centerExpected = pntr_test_text_lines(font, text, 100, 16, 40, 4, PNTR_TEXT_ALIGN_CENTER);
+        IMAGEEQUALS(center, centerExpected);
+
+        pntr_image* right = pntr_test_canvas(100, 16);
+        pntr_draw_text_aligned(right, font, text, 40, 4, PNTR_TEXT_ALIGN_RIGHT, PNTR_BLACK);
+        pntr_image* rightExpected = pntr_test_text_lines(font, text, 100, 16, 40, 4, PNTR_TEXT_ALIGN_RIGHT);
+        IMAGEEQUALS(right, rightExpected);
+
+        // The "B" paints from the first column of its glyph, so the left edge of what is
+        // painted is the position the line was started at.
+        pntr_rectangle leftBounds = pntr_test_painted_bounds(left, PNTR_TEST_BACKGROUND);
+        pntr_rectangle centerBounds = pntr_test_painted_bounds(center, PNTR_TEST_BACKGROUND);
+        pntr_rectangle rightBounds = pntr_test_painted_bounds(right, PNTR_TEST_BACKGROUND);
+        EQUALS(leftBounds.x, 40);
+        EQUALS(centerBounds.x, 40 - width / 2);
+        EQUALS(rightBounds.x, 40 - width);
+        EQUALS(leftBounds.y, 4);
+        EQUALS(centerBounds.y, 4);
+        EQUALS(rightBounds.y, 4);
+        EQUALS(centerBounds.width, leftBounds.width);
+        EQUALS(rightBounds.width, leftBounds.width);
+        EQUALS(centerBounds.height, leftBounds.height);
+        EQUALS(rightBounds.height, leftBounds.height);
+
+        pntr_unload_image(rightExpected);
+        pntr_unload_image(right);
+        pntr_unload_image(centerExpected);
+        pntr_unload_image(center);
+        pntr_unload_image(leftExpected);
+        pntr_unload_image(left);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_aligned(): an empty line", {
+        // An empty line leaves a blank line behind, and the line after it is drawn once.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+        EQUALS(lineHeight, 8);
+
+        pntr_image* image = pntr_test_canvas(100, 48);
+        pntr_draw_text_aligned(image, font, "Hi\n\nBye", 40, 4, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        pntr_image* expected = pntr_test_text_lines(font, "Hi\n\nBye", 100, 48, 40, 4, PNTR_TEXT_ALIGN_CENTER);
+        IMAGEEQUALS(image, expected);
+
+        // Three lines of text, from the top of the first to the bottom of the third.
+        pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+        pntr_rectangle wanted = PNTR_CLITERAL(pntr_rectangle) { .x = 28, .y = 4, .width = 22, .height = 24 };
+        RECTEQUALS(bounds, wanted);
+
+        // The middle line has nothing on it.
+        EQUALS(pntr_test_painted_rows(image, 4 + lineHeight, 4 + lineHeight * 2), 0);
+
+        // Nothing is painted twice, so the two words together are all there is.
+        pntr_image* words = pntr_test_canvas(100, 48);
+        pntr_draw_text_aligned(words, font, "Hi", 40, 4, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        pntr_draw_text_aligned(words, font, "Bye", 40, 4 + lineHeight * 2, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        EQUALS(pntr_test_painted_count(image), pntr_test_painted_count(words));
+        IMAGEEQUALS(image, words);
+
+        pntr_unload_image(words);
+        pntr_unload_image(expected);
+        pntr_unload_image(image);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_aligned(): a leading newline", {
+        // A newline before any text has been drawn still moves down a line.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+
+        pntr_image* center = pntr_test_canvas(100, 32);
+        pntr_draw_text_aligned(center, font, "\nAB", 40, 0, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        pntr_image* centerExpected = pntr_test_text_lines(font, "\nAB", 100, 32, 40, 0, PNTR_TEXT_ALIGN_CENTER);
+        IMAGEEQUALS(center, centerExpected);
+
+        pntr_rectangle centerBounds = pntr_test_painted_bounds(center, PNTR_TEST_BACKGROUND);
+        EQUALS(centerBounds.y, lineHeight);
+        EQUALS(pntr_test_painted_rows(center, 0, lineHeight), 0);
+
+        // The left alignment hands the whole string to pntr_draw_text(), which has to
+        // agree about where the second line is.
+        pntr_image* left = pntr_test_canvas(100, 32);
+        pntr_draw_text_aligned(left, font, "\nAB", 40, 0, PNTR_TEXT_ALIGN_LEFT, PNTR_BLACK);
+        pntr_image* leftExpected = pntr_test_text_lines(font, "\nAB", 100, 32, 40, 0, PNTR_TEXT_ALIGN_LEFT);
+        IMAGEEQUALS(left, leftExpected);
+
+        pntr_rectangle leftBounds = pntr_test_painted_bounds(left, PNTR_TEST_BACKGROUND);
+        EQUALS(leftBounds.y, lineHeight);
+
+        pntr_unload_image(leftExpected);
+        pntr_unload_image(left);
+        pntr_unload_image(centerExpected);
+        pntr_unload_image(center);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_aligned(): a trailing newline", {
+        // The line a trailing newline opens is empty, so it paints nothing.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        pntr_image* center = pntr_test_canvas(100, 32);
+        pntr_image* centerExpected = pntr_test_canvas(100, 32);
+        pntr_draw_text_aligned(center, font, "A\n", 40, 4, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        pntr_draw_text_aligned(centerExpected, font, "A", 40, 4, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        IMAGEEQUALS(center, centerExpected);
+
+        pntr_image* right = pntr_test_canvas(100, 32);
+        pntr_image* rightExpected = pntr_test_canvas(100, 32);
+        pntr_draw_text_aligned(right, font, "A\n", 40, 4, PNTR_TEXT_ALIGN_RIGHT, PNTR_BLACK);
+        pntr_draw_text_aligned(rightExpected, font, "A", 40, 4, PNTR_TEXT_ALIGN_RIGHT, PNTR_BLACK);
+        IMAGEEQUALS(right, rightExpected);
+
+        pntr_unload_image(rightExpected);
+        pntr_unload_image(right);
+        pntr_unload_image(centerExpected);
+        pntr_unload_image(center);
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_aligned(): consecutive newlines", {
+        // Every newline moves down one line, however many of them there are in a row.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+
+        pntr_image* image = pntr_test_canvas(100, 48);
+        pntr_draw_text_aligned(image, font, "A\n\n\nB", 40, 0, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        pntr_image* expected = pntr_test_text_lines(font, "A\n\n\nB", 100, 48, 40, 0, PNTR_TEXT_ALIGN_CENTER);
+        IMAGEEQUALS(image, expected);
+
+        // The "B" is on the fourth line, three line heights down.
+        pntr_image* words = pntr_test_canvas(100, 48);
+        pntr_draw_text_aligned(words, font, "A", 40, 0, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        pntr_draw_text_aligned(words, font, "B", 40, lineHeight * 3, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+        IMAGEEQUALS(image, words);
+        EQUALS(pntr_test_painted_rows(image, lineHeight, lineHeight * 3), 0);
+
+        pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+        EQUALS(bounds.y, 0);
+        EQUALS(bounds.height, lineHeight * 3 + 7);
+
+        pntr_unload_image(words);
+        pntr_unload_image(expected);
+        pntr_unload_image(image);
+        pntr_unload_font(font);
+    });
+
+    if (pntr_utf8()) {
+        IT("pntr_draw_text_aligned(): multi-byte characters", {
+            // A line is as long as the characters on it, not as the bytes they take up,
+            // which is what keeps the newline that ends the line out of the measurement.
+            pntr_font* font = pntr_load_font_default();
+            NEQUALS(font, NULL);
+
+            int lineHeight = pntr_test_line_height(font);
+
+            // "héllo" is six bytes of five characters.
+            const char* text = "h\xC3\xA9llo\nworld";
+            pntr_image* image = pntr_test_canvas(120, 48);
+            pntr_draw_text_aligned(image, font, text, 60, 0, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+            pntr_image* expected = pntr_test_text_lines(font, text, 120, 48, 60, 0, PNTR_TEXT_ALIGN_CENTER);
+            IMAGEEQUALS(image, expected);
+
+            // "world" is one line below "héllo", not two.
+            pntr_image* lines = pntr_test_canvas(120, 48);
+            pntr_draw_text_aligned(lines, font, "h\xC3\xA9llo", 60, 0, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+            pntr_draw_text_aligned(lines, font, "world", 60, lineHeight, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+            IMAGEEQUALS(image, lines);
+
+            // Two multi-byte characters would reach two bytes past the newline, and draw
+            // the start of the next line twice.
+            const char* twice = "h\xC3\xA9ll\xC3\xB3\nworld";
+            pntr_image* spill = pntr_test_canvas(120, 48);
+            pntr_draw_text_aligned(spill, font, twice, 60, 0, PNTR_TEXT_ALIGN_CENTER, PNTR_BLACK);
+            pntr_image* spillExpected = pntr_test_text_lines(font, twice, 120, 48, 60, 0, PNTR_TEXT_ALIGN_CENTER);
+            IMAGEEQUALS(spill, spillExpected);
+            EQUALS(pntr_test_painted_rows(spill, lineHeight * 2, 48), 0);
+
+            // A length is counted in characters too, so five of them stops at the newline.
+            pntr_vector size = pntr_measure_text_ex(font, text, 5);
+            pntr_vector line = pntr_measure_text_ex(font, "h\xC3\xA9llo", 0);
+            EQUALS(size.x, line.x);
+            EQUALS(size.y, line.y);
+            EQUALS(size.y, lineHeight);
+
+            pntr_unload_image(spillExpected);
+            pntr_unload_image(spill);
+            pntr_unload_image(lines);
+            pntr_unload_image(expected);
+            pntr_unload_image(image);
+            pntr_unload_font(font);
+        });
+    }
+    else {
+        IT("pntr_draw_text_aligned(): multi-byte characters", {
+            // Without PNTR_ENABLE_UTF8 a character is a byte, so there is no multi-byte
+            // text for the line length to be counted wrong from.
+            SKIP();
+        });
+    }
+
+    IT("pntr_measure_text_ex(), pntr_gen_image_text(): newlines", {
+        // The height of the text is a line for each newline, plus the last line.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+
+        pntr_vector single = pntr_measure_text_ex(font, "Hello", 0);
+        EQUALS(single.x, 40);
+        EQUALS(single.y, lineHeight);
+
+        // A newline before any glyph still opens a line of its own.
+        pntr_vector leading = pntr_measure_text_ex(font, "\nHello", 0);
+        EQUALS(leading.x, single.x);
+        EQUALS(leading.y, lineHeight * 2);
+
+        // An empty line between two words is as tall as a full one.
+        pntr_vector blank = pntr_measure_text_ex(font, "Hi\n\nBye", 0);
+        EQUALS(blank.x, 24);
+        EQUALS(blank.y, lineHeight * 3);
+
+        // A measurement of nothing is nothing, which is what pntr_gen_image_text()
+        // refuses on.
+        pntr_vector empty = pntr_measure_text_ex(font, "", 0);
+        EQUALS(empty.x, 0);
+        EQUALS(empty.y, 0);
+
+        // The image generated for the text is sized by that measurement, and the text is
+        // drawn on the line the measurement left room for.
+        pntr_image* image = pntr_gen_image_text(font, "\nHello", PNTR_BLACK, PNTR_TEST_BACKGROUND);
+        NEQUALS(image, NULL);
+        EQUALS(image->width, leading.x);
+        EQUALS(image->height, leading.y);
+
+        pntr_image* expected = pntr_test_canvas(leading.x, leading.y);
+        pntr_draw_text(expected, font, "Hello", 0, lineHeight, PNTR_BLACK);
+        IMAGEEQUALS(image, expected);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(image);
         pntr_unload_font(font);
     });
 
