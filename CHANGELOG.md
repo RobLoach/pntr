@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **`pntr_image_resize_canvas()` moves pixels rather than blending them** ([#269]). It used to draw the original onto the filled canvas, which composites: a semi-transparent pixel came out mixed with the fill, and under `PNTR_NO_ALPHABLEND` it was skipped entirely and the fill was left in its place, so a partially transparent image came back as a blank rectangle. The rows are copied now, which is independent of what the build does about blending.
+
+  Resizing the canvas of an image with any non-opaque pixel in it previously changed those pixels; it no longer does. Measured on an image with a different alpha in every pixel: 30 of 30 wrong in the default build and 67 of 71 under `PNTR_NO_ALPHABLEND`, now 0 in both.
+
 - **A coordinate near the end of the int range no longer overflows** ([#267]). `pntr_draw_rectangle_fill(image, INT_MAX - 1, 0, 10, 10, color)` segfaulted: the clip test computed `x + width`, which overflowed and wrapped negative, so the far edge came back smaller than the near one and the subtraction wrapped again into a positive width. An entirely off-image rectangle was reported as visible and written through. Squaring a radius or a thickness overflowed above 46340 as well, and the sum of two squares above about 32767, so a circle wide enough to cover the canvas was drawn from a wrapped radius.
 
   Measured over 30 entry points called with extreme but legal arguments: **21 reached undefined behavior, now 0.** Rendered output for ordinary values is unchanged, verified by hashing 20 primitives across 6 parameter variations against the previous `master`.
@@ -116,3 +120,4 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 [0.1.0]: https://github.com/RobLoach/pntr/releases/tag/v0.1.0
 [#263]: https://github.com/RobLoach/pntr/issues/263
 [#267]: https://github.com/RobLoach/pntr/pull/267
+[#269]: https://github.com/RobLoach/pntr/issues/269

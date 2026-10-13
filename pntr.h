@@ -7124,7 +7124,20 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
         return false;
     }
 
-    pntr_draw_image(newImage, image, offsetX, offsetY);
+    // Copied rather than drawn. Resizing a canvas moves the pixels, and drawing them puts
+    // them through pntr_blend_color(), which under PNTR_NO_ALPHABLEND skips anything that
+    // is not fully opaque and so left the fill in place of every semi-transparent pixel of
+    // the original. A copy is independent of what the build does about blending, which is
+    // the property this operation needs.
+    pntr_rectangle destination;
+    if (_pntr_rectangle_intersect(offsetX, offsetY, image->width, image->height, 0, 0, newWidth, newHeight, &destination)) {
+        for (int y = 0; y < destination.height; y++) {
+            PNTR_MEMCPY(
+                &PNTR_PIXEL(newImage, destination.x, destination.y + y),
+                &PNTR_PIXEL(image, destination.x - offsetX, destination.y - offsetY + y),
+                (size_t)destination.width * sizeof(pntr_color));
+        }
+    }
 
     bool hadDefaultClip = (image->clip.x == 0 && image->clip.y == 0 &&
         image->clip.width == image->width && image->clip.height == image->height);

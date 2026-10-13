@@ -6989,6 +6989,151 @@ MODULE(pntr, {
         pntr_unload_image(image);
     });
 
+    IT("pntr_image_resize_canvas() moves pixels rather than blending them", {
+        // It used to draw the original onto the filled canvas, which blends: a
+        // semi-transparent pixel came out mixed with the fill in the default build, and
+        // under PNTR_NO_ALPHABLEND it was skipped entirely and the fill was left in its
+        // place. Resizing a canvas moves pixels, so every one has to arrive unchanged
+        // whatever the build does about blending. All three existing tests here use opaque
+        // colors over an opaque fill, which is why this was invisible.
+        pntr_image* image = pntr_new_image(6, 5);
+        NEQUALS(image, NULL);
+
+        // No two pixels alike, and a different alpha in each, so a blend cannot coincide
+        // with the right answer.
+        for (int y = 0; y < 5; y++) {
+            for (int x = 0; x < 6; x++) {
+                pntr_draw_point(image, x, y, pntr_new_color(
+                    (unsigned char)(x * 20 + 1),
+                    (unsigned char)(y * 30 + 2),
+                    (unsigned char)(x * y + 3),
+                    (unsigned char)(x * 7 + y * 11)));
+            }
+        }
+
+        pntr_image* expected = pntr_image_copy(image);
+        NEQUALS(expected, NULL);
+
+        // An opaque fill, which is what makes a blend visible on every channel.
+        pntr_color fill = pntr_new_color(9, 9, 9, 200);
+        EQUALS(pntr_image_resize_canvas(image, 20, 16, 7, 6, fill), true);
+
+        int moved = 0;
+        for (int y = 0; y < 5; y++) {
+            for (int x = 0; x < 6; x++) {
+                if (pntr_image_get_color(image, 7 + x, 6 + y).value == pntr_image_get_color(expected, x, y).value) {
+                    moved++;
+                }
+            }
+        }
+        EQUALS(moved, 6 * 5);
+
+        // And the margin is the fill, not a blend of it with anything.
+        COLOREQUALS(pntr_image_get_color(image, 0, 0), fill);
+        COLOREQUALS(pntr_image_get_color(image, 19, 15), fill);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_resize_canvas() with a negative offset and a smaller canvas", {
+        // The offset can push the image off the top left, and the new canvas can be
+        // smaller than the old one, so only part of the original survives. What survives
+        // still has to be exact rather than blended.
+        pntr_image* image = pntr_new_image(10, 10);
+        NEQUALS(image, NULL);
+
+        for (int y = 0; y < 10; y++) {
+            for (int x = 0; x < 10; x++) {
+                pntr_draw_point(image, x, y, pntr_new_color(
+                    (unsigned char)(x * 25),
+                    (unsigned char)(y * 25),
+                    7,
+                    (unsigned char)(x + y * 10)));
+            }
+        }
+
+        pntr_image* expected = pntr_image_copy(image);
+        NEQUALS(expected, NULL);
+
+        EQUALS(pntr_image_resize_canvas(image, 6, 6, -3, -2, PNTR_BLANK), true);
+
+        int exact = 0;
+        for (int y = 0; y < 6; y++) {
+            for (int x = 0; x < 6; x++) {
+                // The pixel of the original that landed here, or the fill where the
+                // original did not reach.
+                pntr_color want = (x + 3 < 10 && y + 2 < 10)
+                    ? pntr_image_get_color(expected, x + 3, y + 2)
+                    : PNTR_BLANK;
+
+                if (pntr_image_get_color(image, x, y).value == want.value) {
+                    exact++;
+                }
+            }
+        }
+        EQUALS(exact, 6 * 6);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(image);
+    });
+
+    IT("pntr_image_resize_canvas() of a subimage", {
+        // A subimage has a pitch wider than its width, so copying it row by row has to
+        // step by the pitch rather than by the width.
+        pntr_image* parent = pntr_gen_image_color(16, 16, PNTR_RED);
+        NEQUALS(parent, NULL);
+
+        pntr_image* image = pntr_image_subimage(parent, 4, 4, 5, 5);
+        NEQUALS(image, NULL);
+
+        for (int y = 0; y < 5; y++) {
+            for (int x = 0; x < 5; x++) {
+                pntr_draw_point(image, x, y, pntr_new_color(
+                    (unsigned char)(x + 1), (unsigned char)(y + 1), 2, (unsigned char)(x * 5 + y + 1)));
+            }
+        }
+
+        pntr_image* expected = pntr_image_copy(image);
+        NEQUALS(expected, NULL);
+
+        EQUALS(pntr_image_resize_canvas(image, 9, 9, 2, 2, PNTR_BLANK), true);
+
+        int exact = 0;
+        for (int y = 0; y < 5; y++) {
+            for (int x = 0; x < 5; x++) {
+                if (pntr_image_get_color(image, 2 + x, 2 + y).value == pntr_image_get_color(expected, x, y).value) {
+                    exact++;
+                }
+            }
+        }
+        EQUALS(exact, 5 * 5);
+
+        pntr_unload_image(expected);
+        pntr_unload_image(image);
+        pntr_unload_image(parent);
+    });
+
+    IT("pntr_image_resize_canvas() pushed entirely off the new canvas", {
+        pntr_image* image = pntr_gen_image_color(4, 4, pntr_new_color(10, 20, 30, 128));
+        NEQUALS(image, NULL);
+
+        EQUALS(pntr_image_resize_canvas(image, 4, 4, 100, 100, PNTR_WHITE), true);
+
+        // Nothing of the original reaches the new canvas, so all of it is the fill.
+        int fill = 0;
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+                if (pntr_image_get_color(image, x, y).value == PNTR_WHITE.value) {
+                    fill++;
+                }
+            }
+        }
+        EQUALS(fill, 4 * 4);
+
+        pntr_unload_image(image);
+    });
+
     IT("pntr_image_resize_canvas()", {
         pntr_image* image = pntr_gen_image_color(200, 200, PNTR_BLUE);
         NEQUALS(image, NULL);
