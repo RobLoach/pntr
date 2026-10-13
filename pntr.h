@@ -5881,6 +5881,14 @@ PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const cha
 /**
  * Draws word-wrapped text on the given image.
  *
+ * @details Words are taken in order and as many as fit within `maxWidth` are put on each
+ * line, measured by pntr_measure_text_ex(). A line is only ever broken at a space, so a
+ * single word wider than `maxWidth` is drawn in full rather than being cut or dropped: it
+ * is the only way a line can be wider than asked for. The spaces a line is broken at are
+ * not carried onto the next line. Newlines in the text break a line of their own, and
+ * every line is spaced by the font's line height, the same spacing pntr_draw_text() uses,
+ * so an empty line takes up as much room as a full one.
+ *
  * @param dst The image of which to print the text on.
  * @param font The font to use when rendering the text.
  * @param text The text to write. Must be NULL terminated.
@@ -5890,82 +5898,84 @@ PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const cha
  * @param tint What color to tint the font when drawing. Use PNTR_WHITE if you don't want to change the source color.
  *
  * @see pntr_draw_text()
+ * @see pntr_measure_text_ex()
  */
 PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const char* text, int posX, int posY, int maxWidth, pntr_color tint) {
     if (dst == NULL || font == NULL || text == NULL) {
         return;
     }
 
-    pntr_codepoint_t codepoint;
-    char* currentChar = (char*)text;
-    char* lineStart = currentChar;
-    int lineLength = 1;
-    char* lastSpace = NULL;
-    int currentY = 0;
-    pntr_vector textSize = {0, 0};
+    int lineHeight = _pntr_font_line_height(font);
+    int currentY = posY;
+    const char* lineStart = text;
 
-    // Iterate through each character.
-    for (char* nextChar = PNTR_STRCODEPOINT(text, &codepoint); codepoint; nextChar = PNTR_STRCODEPOINT(nextChar, &codepoint)) {
-        if (codepoint == ' ' || codepoint == '\n') {
-            textSize = pntr_measure_text_ex(font, lineStart, lineLength - 1);
-            if (textSize.x > maxWidth) {
-                if (lastSpace != NULL) {
-                    #ifdef PNTR_ENABLE_UTF8
-                        lineLength = (int)utf8nlen(lineStart, (size_t)(lastSpace - lineStart));
-                    #else
-                        lineLength = (int)(lastSpace - lineStart);
-                    #endif
-                    pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
-                    currentY += textSize.y;
-                    lineStart = lastSpace + 1;
-                    #ifdef PNTR_ENABLE_UTF8
-                        lineLength = (int)utf8nlen(lineStart, (size_t)(currentChar - lineStart));
-                    #else
-                        lineLength = (int)(currentChar - lineStart);
-                    #endif
+    while (lineStart != NULL) {
+        // How much of the line is drawn, in the codepoints that pntr_draw_text_len()
+        // counts, never the bytes they take up. It stays at the end of the last word that
+        // fit, so the spaces that follow it are left off the line.
+        int lineLength = 0;
+
+        // Where the line after this one starts: the word that did not fit, the character
+        // after a newline, or NULL at the end of the string.
+        const char* nextLine = NULL;
+
+        // How far ahead the next word has been read, from lineStart.
+        const char* scan = lineStart;
+        int scanLength = 0;
+
+        while (true) {
+            pntr_codepoint_t codepoint;
+            const char* next = PNTR_STRCODEPOINT(scan, &codepoint);
+
+            // The spaces in front of the word. They are part of the line they are read
+            // on, but a line is never broken in the middle of a run of them.
+            while (codepoint == ' ') {
+                scan = next;
+                scanLength++;
+                next = PNTR_STRCODEPOINT(scan, &codepoint);
+            }
+
+            // The word itself.
+            const char* wordStart = scan;
+            while (codepoint != ' ' && codepoint != '\n' && codepoint != 0) {
+                scan = next;
+                scanLength++;
+                next = PNTR_STRCODEPOINT(scan, &codepoint);
+            }
+
+            if (scan != wordStart) {
+                // The first word of a line is kept however wide it is, since there is no
+                // earlier space on the line to break it at.
+                if (lineLength == 0 || pntr_measure_text_ex(font, lineStart, scanLength).x <= maxWidth) {
+                    lineLength = scanLength;
                 }
                 else {
-                    // No current space, so draw what's in and move to new line.
-                    pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
-                    currentY += textSize.y;
-                    lineStart = nextChar;
-                    lineLength = 0;
+                    // It belongs to the next line, which therefore starts after the
+                    // spaces that separated the two words.
+                    nextLine = wordStart;
+                    break;
                 }
             }
-            else if (codepoint == '\n') {
-                #ifdef PNTR_ENABLE_UTF8
-                    lineLength = (int)utf8nlen(lineStart, (size_t)(currentChar - lineStart));
-                #else
-                    lineLength = (int)(currentChar - lineStart);
-                #endif
-                pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
-                currentY += textSize.y;
-                lineStart = nextChar;
-                lineLength = 0;
-                lastSpace = NULL;
+
+            if (codepoint == '\n') {
+                nextLine = next;
+                break;
             }
-            else {
-                lastSpace = currentChar;
+
+            if (codepoint == 0) {
+                break;
             }
         }
 
-        currentChar = nextChar;
-        lineLength++;
-    }
+        // A length of zero would be read as the whole of the rest of the string, and an
+        // empty line has nothing to draw anyway.
+        if (lineLength > 0) {
+            pntr_draw_text_len(dst, font, lineStart, lineLength, posX, currentY, tint);
+        }
 
-    // Check if the last line is too long, and split it by the last space.
-    if (pntr_measure_text(font, lineStart) > maxWidth && lastSpace != NULL) {
-        #ifdef PNTR_ENABLE_UTF8
-            lineLength = (int)utf8nlen(lineStart, (size_t)(lastSpace - lineStart));
-        #else
-            lineLength = (int)(lastSpace - lineStart);
-        #endif
-        pntr_draw_text_len(dst, font, lineStart, lineLength, posX, posY + currentY, tint);
-        currentY += textSize.y;
-        lineStart = lastSpace + 1;
+        currentY += lineHeight;
+        lineStart = nextLine;
     }
-
-    pntr_draw_text(dst, font, lineStart, posX, posY + currentY, tint);
 }
 
 #ifdef PNTR_ENABLE_VARGS
