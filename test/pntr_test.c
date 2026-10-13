@@ -301,6 +301,13 @@ pntr_image* pntr_test_canvas(int width, int height) {
  * @details Zero means the second image covers everything the first one painted. The two
  * have to be the same size, which is what lets a test compare an outline against its own
  * fill pixel for pixel rather than only comparing their bounds.
+ *
+ * A first image with nothing painted on it reports -1 rather than zero, because nothing
+ * is covered by anything. Every caller compares this against zero, so a primitive that
+ * stopped drawing entirely fails them all instead of passing them all vacuously.
+ *
+ * @return How many pixels are uncovered, or -1 when the comparison says nothing: either
+ * image missing, the two being different sizes, or the first one being blank.
  */
 int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
     if (painted == NULL || cover == NULL || painted->width != cover->width || painted->height != cover->height) {
@@ -308,12 +315,22 @@ int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
     }
 
     int uncovered = 0;
+    int total = 0;
     for (int y = 0; y < painted->height; y++) {
         for (int x = 0; x < painted->width; x++) {
-            if (pntr_test_painted(painted, x, y) && !pntr_test_painted(cover, x, y)) {
+            if (!pntr_test_painted(painted, x, y)) {
+                continue;
+            }
+
+            total++;
+            if (!pntr_test_painted(cover, x, y)) {
                 uncovered++;
             }
         }
+    }
+
+    if (total == 0) {
+        return -1;
     }
 
     return uncovered;
@@ -326,6 +343,10 @@ int pntr_test_uncovered(pntr_image* painted, pntr_image* cover) {
  * at the same center and radii, and counts the outline pixels the fill misses, so zero
  * means the fill registers exactly with the outline. Both walk the same midpoint
  * traversal, so sweeping the radii through this is what keeps them in step.
+ *
+ * An outline that painted nothing reports -1, not zero.
+ *
+ * @see pntr_test_uncovered()
  */
 int pntr_test_unfilled_ellipse(int radiusX, int radiusY) {
     int width = radiusX * 2 + 5;
@@ -353,7 +374,10 @@ int pntr_test_unfilled_ellipse(int radiusX, int radiusY) {
 /**
  * How many pixels of a circle's outline the matching fill leaves unpainted.
  *
+ * An outline that painted nothing reports -1, not zero.
+ *
  * @see pntr_test_unfilled_ellipse()
+ * @see pntr_test_uncovered()
  */
 int pntr_test_unfilled_circle(int radius) {
     int size = radius * 2 + 5;
@@ -751,6 +775,482 @@ int pntr_test_painted_rows(pntr_image* image, int top, int bottom) {
 }
 
 /**
+ * Every drawing call that another one has to agree with, pixel for pixel.
+ *
+ * @details pntr is full of entry points that exist only to reach another one: a `_vec`
+ * form that unpacks a vector into coordinates, a `_rec` form that unpacks a rectangle, a
+ * `_thick` form that is the plain primitive when the thickness is one, a whole-image draw
+ * that is a sub-rectangle draw of the whole image. None of those can be right or wrong on
+ * their own; each one is right exactly when it paints what the call it delegates to
+ * paints. Naming each call once here and listing the pairs in the test is what lets that
+ * be asserted for all of them at once, instead of a hand-written case per wrapper.
+ *
+ * Every variant draws at the same place, in the same color, on a canvas of the same size,
+ * so any two of them can be compared, not only the pairs the test happens to list.
+ *
+ * @see pntr_test_draw_variant()
+ */
+typedef enum pntr_test_variant {
+    PNTR_TEST_VARIANT_POINT,
+    PNTR_TEST_VARIANT_POINT_VEC,
+    PNTR_TEST_VARIANT_POINT_UNSAFE,
+    PNTR_TEST_VARIANT_LINE,
+    PNTR_TEST_VARIANT_LINE_VEC,
+    PNTR_TEST_VARIANT_LINE_THICK_1,
+    PNTR_TEST_VARIANT_LINE_THICK_3,
+    PNTR_TEST_VARIANT_LINE_THICK_3_VEC,
+    PNTR_TEST_VARIANT_LINE_HORIZONTAL,
+    PNTR_TEST_VARIANT_LINE_HORIZONTAL_THICK_1,
+    PNTR_TEST_VARIANT_LINE_HORIZONTAL_AS_LINE,
+    PNTR_TEST_VARIANT_LINE_HORIZONTAL_UNSAFE,
+    PNTR_TEST_VARIANT_LINE_VERTICAL,
+    PNTR_TEST_VARIANT_LINE_VERTICAL_THICK_1,
+    PNTR_TEST_VARIANT_LINE_VERTICAL_AS_LINE,
+    PNTR_TEST_VARIANT_LINE_CURVE,
+    PNTR_TEST_VARIANT_LINE_CURVE_THICK_1,
+    PNTR_TEST_VARIANT_RECTANGLE,
+    PNTR_TEST_VARIANT_RECTANGLE_REC,
+    PNTR_TEST_VARIANT_RECTANGLE_THICK_1,
+    PNTR_TEST_VARIANT_RECTANGLE_THICK_3,
+    PNTR_TEST_VARIANT_RECTANGLE_THICK_3_REC,
+    PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_0,
+    PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_4,
+    PNTR_TEST_VARIANT_RECTANGLE_THICK_ROUNDED_1,
+    PNTR_TEST_VARIANT_RECTANGLE_FILL,
+    PNTR_TEST_VARIANT_RECTANGLE_FILL_REC,
+    PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_FILL_0,
+    PNTR_TEST_VARIANT_RECTANGLE_GRADIENT,
+    PNTR_TEST_VARIANT_RECTANGLE_GRADIENT_REC,
+    PNTR_TEST_VARIANT_TRIANGLE,
+    PNTR_TEST_VARIANT_TRIANGLE_VEC,
+    PNTR_TEST_VARIANT_TRIANGLE_THICK_1,
+    PNTR_TEST_VARIANT_TRIANGLE_THICK_3,
+    PNTR_TEST_VARIANT_TRIANGLE_THICK_3_VEC,
+    PNTR_TEST_VARIANT_TRIANGLE_FILL,
+    PNTR_TEST_VARIANT_TRIANGLE_FILL_VEC,
+    PNTR_TEST_VARIANT_ELLIPSE,
+    PNTR_TEST_VARIANT_ELLIPSE_THICK_1,
+    PNTR_TEST_VARIANT_CIRCLE,
+    PNTR_TEST_VARIANT_CIRCLE_THICK_1,
+    PNTR_TEST_VARIANT_POLYGON,
+    PNTR_TEST_VARIANT_POLYGON_THICK_1,
+    PNTR_TEST_VARIANT_POLYLINE,
+    PNTR_TEST_VARIANT_POLYLINE_THICK_1,
+    PNTR_TEST_VARIANT_IMAGE,
+    PNTR_TEST_VARIANT_IMAGE_REC,
+    PNTR_TEST_VARIANT_IMAGE_TINT_REC_WHITE,
+    PNTR_TEST_VARIANT_IMAGE_ROTATED_0,
+    PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE,
+    PNTR_TEST_VARIANT_IMAGE_TINT,
+    PNTR_TEST_VARIANT_IMAGE_TINT_REC
+} pntr_test_variant;
+
+/**
+ * The canvas size that every pntr_test_variant() draws onto.
+ *
+ * Big enough that none of the variants is clipped, so a difference between two of them is
+ * a difference in what they drew rather than in what the canvas kept.
+ */
+#define PNTR_TEST_VARIANT_SIZE 48
+
+/**
+ * The tint that the tinted image variants draw with. Deliberately not PNTR_WHITE, which
+ * pntr_draw_image_tint_rec() short circuits into its untinted path.
+ */
+#define PNTR_TEST_VARIANT_TINT pntr_new_color(128, 200, 64, 255)
+
+/**
+ * Makes the given drawing call onto the given canvas.
+ *
+ * @param dst A PNTR_TEST_VARIANT_SIZE square canvas to draw onto.
+ * @param src The source image for the variants that draw an image. Never NULL.
+ * @param variant Which call to make.
+ *
+ * @see pntr_test_variant
+ */
+void pntr_test_draw_variant(pntr_image* dst, pntr_image* src, pntr_test_variant variant) {
+    pntr_vector point = PNTR_CLITERAL(pntr_vector) {11, 13};
+    pntr_vector start = PNTR_CLITERAL(pntr_vector) {7, 9};
+    pntr_vector end = PNTR_CLITERAL(pntr_vector) {31, 22};
+    pntr_vector third = PNTR_CLITERAL(pntr_vector) {13, 37};
+    pntr_vector fourth = PNTR_CLITERAL(pntr_vector) {34, 30};
+    pntr_vector points[4];
+    points[0] = PNTR_CLITERAL(pntr_vector) {8, 6};
+    points[1] = PNTR_CLITERAL(pntr_vector) {34, 11};
+    points[2] = PNTR_CLITERAL(pntr_vector) {29, 34};
+    points[3] = PNTR_CLITERAL(pntr_vector) {6, 28};
+
+    pntr_rectangle rect = PNTR_CLITERAL(pntr_rectangle) {5, 6, 23, 17};
+    pntr_rectangle whole = PNTR_CLITERAL(pntr_rectangle) {0, 0, src->width, src->height};
+    pntr_color color = PNTR_RED;
+    pntr_color tint = PNTR_TEST_VARIANT_TINT;
+    int imageX = 6;
+    int imageY = 7;
+
+    switch (variant) {
+        case PNTR_TEST_VARIANT_POINT:
+            pntr_draw_point(dst, point.x, point.y, color);
+            break;
+        case PNTR_TEST_VARIANT_POINT_VEC:
+            pntr_draw_point_vec(dst, &point, color);
+            break;
+        case PNTR_TEST_VARIANT_POINT_UNSAFE:
+            pntr_draw_point_unsafe(dst, point.x, point.y, color);
+            break;
+
+        case PNTR_TEST_VARIANT_LINE:
+            pntr_draw_line(dst, start.x, start.y, end.x, end.y, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_VEC:
+            pntr_draw_line_vec(dst, start, end, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_THICK_1:
+            pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_THICK_3:
+            pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, 3, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_THICK_3_VEC:
+            pntr_draw_line_thick_vec(dst, start, end, 3, color);
+            break;
+
+        case PNTR_TEST_VARIANT_LINE_HORIZONTAL:
+            pntr_draw_line_horizontal(dst, 6, 14, 20, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_HORIZONTAL_THICK_1:
+            pntr_draw_line_horizontal_thick(dst, 6, 14, 20, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_HORIZONTAL_AS_LINE:
+            // A width of 20 covers the 20 columns that start at 6, so the far endpoint of
+            // the same run is the last of them rather than the one past it.
+            pntr_draw_line(dst, 6, 14, 6 + 20 - 1, 14, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_HORIZONTAL_UNSAFE:
+            pntr_put_horizontal_line_unsafe(dst, 6, 14, 20, color);
+            break;
+
+        case PNTR_TEST_VARIANT_LINE_VERTICAL:
+            pntr_draw_line_vertical(dst, 14, 6, 20, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_VERTICAL_THICK_1:
+            pntr_draw_line_vertical_thick(dst, 14, 6, 20, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_VERTICAL_AS_LINE:
+            pntr_draw_line(dst, 14, 6, 14, 6 + 20 - 1, color);
+            break;
+
+        case PNTR_TEST_VARIANT_LINE_CURVE:
+            pntr_draw_line_curve(dst, start, end, third, fourth, 16, color);
+            break;
+        case PNTR_TEST_VARIANT_LINE_CURVE_THICK_1:
+            pntr_draw_line_curve_thick(dst, start, end, third, fourth, 16, 1, color);
+            break;
+
+        case PNTR_TEST_VARIANT_RECTANGLE:
+            pntr_draw_rectangle(dst, rect.x, rect.y, rect.width, rect.height, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_REC:
+            pntr_draw_rectangle_rec(dst, rect, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_THICK_1:
+            pntr_draw_rectangle_thick(dst, rect.x, rect.y, rect.width, rect.height, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_THICK_3:
+            pntr_draw_rectangle_thick(dst, rect.x, rect.y, rect.width, rect.height, 3, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_THICK_3_REC:
+            pntr_draw_rectangle_thick_rec(dst, rect, 3, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_0:
+            pntr_draw_rectangle_rounded(dst, rect.x, rect.y, rect.width, rect.height, 0, 0, 0, 0, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_4:
+            pntr_draw_rectangle_rounded(dst, rect.x, rect.y, rect.width, rect.height, 4, 4, 4, 4, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_THICK_ROUNDED_1:
+            pntr_draw_rectangle_thick_rounded(dst, rect.x, rect.y, rect.width, rect.height, 4, 4, 4, 4, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_FILL:
+            pntr_draw_rectangle_fill(dst, rect.x, rect.y, rect.width, rect.height, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_FILL_REC:
+            pntr_draw_rectangle_fill_rec(dst, rect, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_FILL_0:
+            pntr_draw_rectangle_rounded_fill(dst, rect.x, rect.y, rect.width, rect.height, 0, color);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_GRADIENT:
+            pntr_draw_rectangle_gradient(dst, rect.x, rect.y, rect.width, rect.height, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_YELLOW);
+            break;
+        case PNTR_TEST_VARIANT_RECTANGLE_GRADIENT_REC:
+            pntr_draw_rectangle_gradient_rec(dst, rect, PNTR_RED, PNTR_GREEN, PNTR_BLUE, PNTR_YELLOW);
+            break;
+
+        case PNTR_TEST_VARIANT_TRIANGLE:
+            pntr_draw_triangle(dst, start.x, start.y, end.x, end.y, third.x, third.y, color);
+            break;
+        case PNTR_TEST_VARIANT_TRIANGLE_VEC:
+            pntr_draw_triangle_vec(dst, start, end, third, color);
+            break;
+        case PNTR_TEST_VARIANT_TRIANGLE_THICK_1:
+            pntr_draw_triangle_thick(dst, start.x, start.y, end.x, end.y, third.x, third.y, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_TRIANGLE_THICK_3:
+            pntr_draw_triangle_thick(dst, start.x, start.y, end.x, end.y, third.x, third.y, 3, color);
+            break;
+        case PNTR_TEST_VARIANT_TRIANGLE_THICK_3_VEC:
+            pntr_draw_triangle_thick_vec(dst, start, end, third, 3, color);
+            break;
+        case PNTR_TEST_VARIANT_TRIANGLE_FILL:
+            pntr_draw_triangle_fill(dst, start.x, start.y, end.x, end.y, third.x, third.y, color);
+            break;
+        case PNTR_TEST_VARIANT_TRIANGLE_FILL_VEC:
+            pntr_draw_triangle_fill_vec(dst, start, end, third, color);
+            break;
+
+        case PNTR_TEST_VARIANT_ELLIPSE:
+            pntr_draw_ellipse(dst, 24, 24, 15, 9, color);
+            break;
+        case PNTR_TEST_VARIANT_ELLIPSE_THICK_1:
+            pntr_draw_ellipse_thick(dst, 24, 24, 15, 9, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_CIRCLE:
+            pntr_draw_circle(dst, 24, 24, 12, color);
+            break;
+        case PNTR_TEST_VARIANT_CIRCLE_THICK_1:
+            pntr_draw_circle_thick(dst, 24, 24, 12, 1, color);
+            break;
+
+        case PNTR_TEST_VARIANT_POLYGON:
+            pntr_draw_polygon(dst, points, 4, color);
+            break;
+        case PNTR_TEST_VARIANT_POLYGON_THICK_1:
+            pntr_draw_polygon_thick(dst, points, 4, 1, color);
+            break;
+        case PNTR_TEST_VARIANT_POLYLINE:
+            pntr_draw_polyline(dst, points, 4, color);
+            break;
+        case PNTR_TEST_VARIANT_POLYLINE_THICK_1:
+            pntr_draw_polyline_thick(dst, points, 4, 1, color);
+            break;
+
+        case PNTR_TEST_VARIANT_IMAGE:
+            pntr_draw_image(dst, src, imageX, imageY);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_REC:
+            pntr_draw_image_rec(dst, src, whole, imageX, imageY);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_TINT_REC_WHITE:
+            pntr_draw_image_tint_rec(dst, src, whole, imageX, imageY, PNTR_WHITE);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_ROTATED_0:
+            pntr_draw_image_rotated(dst, src, imageX, imageY, 0.0f, 0.0f, 0.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE:
+            pntr_draw_image_flipped(dst, src, imageX, imageY, false, false, false);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_TINT:
+            pntr_draw_image_tint(dst, src, imageX, imageY, tint);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_TINT_REC:
+            pntr_draw_image_tint_rec(dst, src, whole, imageX, imageY, tint);
+            break;
+    }
+}
+
+/**
+ * Every whole-image color operation that a per-pixel one has to agree with.
+ *
+ * @details Each pntr_image_color_*() is its matching pntr_color_*() applied to every
+ * pixel inside the image's clip region, and nothing else. Naming the pairs here is what
+ * lets that be asserted for all of them from one loop.
+ *
+ * @see pntr_test_color_op_pixel()
+ * @see pntr_test_image_color_op()
+ */
+typedef enum pntr_test_color_op {
+    PNTR_TEST_COLOR_OP_INVERT,
+    PNTR_TEST_COLOR_OP_GRAYSCALE,
+    PNTR_TEST_COLOR_OP_BRIGHTER,
+    PNTR_TEST_COLOR_OP_DARKER,
+    PNTR_TEST_COLOR_OP_CONTRAST,
+    PNTR_TEST_COLOR_OP_FADE,
+    PNTR_TEST_COLOR_OP_TINT,
+    PNTR_TEST_COLOR_OP_REPLACE
+} pntr_test_color_op;
+
+/**
+ * How many pntr_test_color_op values there are.
+ */
+#define PNTR_TEST_COLOR_OP_LEN (PNTR_TEST_COLOR_OP_REPLACE + 1)
+
+/**
+ * The factors and colors that the color operations are asked for.
+ *
+ * None of them takes a channel to zero, and none of them takes the alpha to zero, so
+ * every pixel of a source image stays distinguishable from every other and from the
+ * background after the operation has run.
+ */
+#define PNTR_TEST_COLOR_OP_FACTOR 0.35f
+#define PNTR_TEST_COLOR_OP_CONTRAST_FACTOR 0.6f
+#define PNTR_TEST_COLOR_OP_FADE_FACTOR (-0.4f)
+#define PNTR_TEST_COLOR_OP_TINT_COLOR pntr_new_color(128, 200, 64, 255)
+#define PNTR_TEST_COLOR_OP_REPLACE_FROM PNTR_RED
+#define PNTR_TEST_COLOR_OP_REPLACE_TO PNTR_BLUE
+
+/**
+ * What the given color becomes under the given operation, a single pixel at a time.
+ *
+ * @param color The color to transform.
+ * @param op Which operation to apply.
+ *
+ * @return The transformed color.
+ *
+ * @see pntr_test_image_color_op()
+ */
+pntr_color pntr_test_color_op_pixel(pntr_color color, pntr_test_color_op op) {
+    switch (op) {
+        case PNTR_TEST_COLOR_OP_INVERT:
+            return pntr_color_invert(color);
+        case PNTR_TEST_COLOR_OP_GRAYSCALE:
+            return pntr_color_grayscale(color);
+        case PNTR_TEST_COLOR_OP_BRIGHTER:
+            return pntr_color_brightness(color, PNTR_TEST_COLOR_OP_FACTOR);
+        case PNTR_TEST_COLOR_OP_DARKER:
+            return pntr_color_brightness(color, -PNTR_TEST_COLOR_OP_FACTOR);
+        case PNTR_TEST_COLOR_OP_CONTRAST:
+            return pntr_color_contrast(color, PNTR_TEST_COLOR_OP_CONTRAST_FACTOR);
+        case PNTR_TEST_COLOR_OP_FADE:
+            return pntr_color_fade(color, PNTR_TEST_COLOR_OP_FADE_FACTOR);
+        case PNTR_TEST_COLOR_OP_TINT:
+            return pntr_color_tint(color, PNTR_TEST_COLOR_OP_TINT_COLOR);
+        case PNTR_TEST_COLOR_OP_REPLACE:
+            // pntr_image_color_replace() has no per-pixel counterpart of its own, so the
+            // expectation is the swap it is documented to make.
+            if (color.value == PNTR_TEST_COLOR_OP_REPLACE_FROM.value) {
+                return PNTR_TEST_COLOR_OP_REPLACE_TO;
+            }
+            return color;
+    }
+
+    return color;
+}
+
+/**
+ * Applies the given operation to a whole image at once.
+ *
+ * @param image The image to transform in place.
+ * @param op Which operation to apply.
+ *
+ * @see pntr_test_color_op_pixel()
+ */
+void pntr_test_image_color_op(pntr_image* image, pntr_test_color_op op) {
+    switch (op) {
+        case PNTR_TEST_COLOR_OP_INVERT:
+            pntr_image_color_invert(image);
+            break;
+        case PNTR_TEST_COLOR_OP_GRAYSCALE:
+            pntr_image_color_grayscale(image);
+            break;
+        case PNTR_TEST_COLOR_OP_BRIGHTER:
+            pntr_image_color_brightness(image, PNTR_TEST_COLOR_OP_FACTOR);
+            break;
+        case PNTR_TEST_COLOR_OP_DARKER:
+            pntr_image_color_brightness(image, -PNTR_TEST_COLOR_OP_FACTOR);
+            break;
+        case PNTR_TEST_COLOR_OP_CONTRAST:
+            pntr_image_color_contrast(image, PNTR_TEST_COLOR_OP_CONTRAST_FACTOR);
+            break;
+        case PNTR_TEST_COLOR_OP_FADE:
+            pntr_image_color_fade(image, PNTR_TEST_COLOR_OP_FADE_FACTOR);
+            break;
+        case PNTR_TEST_COLOR_OP_TINT:
+            pntr_image_color_tint(image, PNTR_TEST_COLOR_OP_TINT_COLOR);
+            break;
+        case PNTR_TEST_COLOR_OP_REPLACE:
+            pntr_image_color_replace(image, PNTR_TEST_COLOR_OP_REPLACE_FROM, PNTR_TEST_COLOR_OP_REPLACE_TO);
+            break;
+    }
+}
+
+/**
+ * A source image for the color operations, holding no two pixels the same.
+ *
+ * @details Every channel varies across the image, including the alpha, so an operation
+ * that treats one channel differently from another, or that reaches a pixel it should
+ * have left alone, shows up as a single mismatched pixel. The pixel at (0, 0) is
+ * PNTR_RED exactly, which is the color pntr_image_color_replace() is asked to swap.
+ */
+pntr_image* pntr_test_color_source(int width, int height) {
+    pntr_image* image = pntr_new_image(width, height);
+    if (image == NULL) {
+        return NULL;
+    }
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            PNTR_PIXEL(image, x, y) = pntr_new_color(
+                (unsigned char)(4 + x * 9),
+                (unsigned char)(250 - y * 11),
+                (unsigned char)(60 + ((x + y) % 7) * 20),
+                (unsigned char)(40 + ((x * 3 + y) % 9) * 24));
+        }
+    }
+
+    PNTR_PIXEL(image, 0, 0) = PNTR_RED;
+
+    return image;
+}
+
+/**
+ * The index of the first pixel at which two images differ, or -1 when they match.
+ *
+ * @details Counted in row-major order, so the index is `y * width + x`. Two images of
+ * different sizes differ at their first pixel. This is what lets a loop over many pairs
+ * of images say which pair went wrong before handing the pair itself to IMAGEEQUALS.
+ */
+int pntr_test_first_difference(pntr_image* a, pntr_image* b) {
+    if (a == NULL || b == NULL || a->width != b->width || a->height != b->height) {
+        return 0;
+    }
+
+    for (int y = 0; y < a->height; y++) {
+        for (int x = 0; x < a->width; x++) {
+            if (pntr_image_get_color(a, x, y).value != pntr_image_get_color(b, x, y).value) {
+                return y * a->width + x;
+            }
+        }
+    }
+
+    return -1;
+}
+
+/**
+ * How many pixels of the given image are neither fully transparent nor fully opaque.
+ *
+ * @details This is what proves that an anti-aliased draw anti-aliased anything: a line
+ * that fell back to plotting whole pixels leaves every pixel it touched at the alpha it
+ * was handed, so the count is zero.
+ */
+int pntr_test_partial_alpha_count(pntr_image* image) {
+    if (image == NULL) {
+        return 0;
+    }
+
+    int count = 0;
+    for (int y = 0; y < image->height; y++) {
+        for (int x = 0; x < image->width; x++) {
+            unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
+            if (alpha > 0 && alpha < 255) {
+                count++;
+            }
+        }
+    }
+
+    return count;
+}
+
+/**
  * Whether a non-opaque source is blended into the destination in this build.
  *
  * Without it, pntr_blend_color() writes a fully opaque source and skips every other one,
@@ -794,6 +1294,42 @@ int pntr_test_blended_count(pntr_image* image) {
     }
 
     return count;
+}
+
+
+/**
+ * Whether pntr_draw_text_ex() is available in this build.
+ *
+ * @see PNTR_ENABLE_VARGS
+ */
+bool pntr_vargs() {
+    #ifdef PNTR_ENABLE_VARGS
+        return true;
+    #else
+        return false;
+    #endif
+}
+
+/**
+ * Draws `n=<number>` through pntr_draw_text_ex(), where the build has it.
+ *
+ * @details pntr_draw_text_ex() only exists under PNTR_ENABLE_VARGS, and a `#ifdef` cannot
+ * live inside the arguments of an IT(), so the call is wrapped here instead.
+ *
+ * @see pntr_vargs()
+ */
+void pntr_test_draw_text_ex(pntr_image* dst, pntr_font* font, int posX, int posY, pntr_color tint, int maxlen, int number) {
+    #ifdef PNTR_ENABLE_VARGS
+        pntr_draw_text_ex(dst, font, posX, posY, tint, maxlen, "n=%d", number);
+    #else
+        (void)dst;
+        (void)font;
+        (void)posX;
+        (void)posY;
+        (void)tint;
+        (void)maxlen;
+        (void)number;
+    #endif
 }
 
 MODULE(pntr_math, {
@@ -1721,6 +2257,73 @@ MODULE(pntr, {
         });
     });
 
+    IT("pntr_draw_image_rec() lands the source rectangle on the position", {
+        // Asserted against the coordinates the rectangle names rather than against
+        // another pntr call. pntr_draw_image_rec() is the oracle the
+        // pntr_draw_image_dest_rec() tests are written against, so a test of it that
+        // asked a second pntr function where a pixel came from would pass just as well
+        // if both of them ignored srcRect.x and srcRect.y.
+        //
+        // Every pixel of the source carries its own position in its red and green
+        // channels, so the color found at a destination pixel says which source pixel was
+        // read for it, and the expectation below is arithmetic on the rectangle.
+        pntr_image* src = pntr_test_coordinate_image(20, 20);
+        pntr_image* dst = pntr_test_canvas(40, 40);
+        NEQUALS(src, NULL);
+        NEQUALS(dst, NULL);
+
+        pntr_rectangle srcRect = PNTR_CLITERAL(pntr_rectangle) {5, 3, 7, 4};
+        int posX = 9;
+        int posY = 11;
+        pntr_draw_image_rec(dst, src, srcRect, posX, posY);
+
+        for (int y = 0; y < srcRect.height; y++) {
+            for (int x = 0; x < srcRect.width; x++) {
+                pntr_color expected = pntr_new_color(
+                    (unsigned char)(10 + (srcRect.x + x) * 9),
+                    (unsigned char)(10 + (srcRect.y + y) * 9),
+                    180, 255);
+                pntr_color actual = pntr_image_get_color(dst, posX + x, posY + y);
+                if (actual.value != expected.value) {
+                    printf("\n\tpntr_draw_image_rec() at (%d, %d)\n", posX + x, posY + y);
+                }
+                COLOREQUALS(actual, expected);
+            }
+        }
+
+        // And the rectangle is the only thing that was drawn: nothing spilled past it,
+        // and no row or column of it was skipped.
+        pntr_rectangle expectedBounds = PNTR_CLITERAL(pntr_rectangle) {posX, posY, srcRect.width, srcRect.height};
+        pntr_rectangle actualBounds = pntr_test_painted_bounds(dst, PNTR_TEST_BACKGROUND);
+        RECTEQUALS(actualBounds, expectedBounds);
+        EQUALS(pntr_test_painted_count(dst), srcRect.width * srcRect.height);
+
+        // The tinted form reads the same source pixels, then multiplies each of them by
+        // the tint.
+        pntr_image* tinted = pntr_test_canvas(40, 40);
+        NEQUALS(tinted, NULL);
+        pntr_color tint = pntr_new_color(128, 200, 64, 255);
+        pntr_draw_image_tint_rec(tinted, src, srcRect, posX, posY, tint);
+
+        for (int y = 0; y < srcRect.height; y++) {
+            for (int x = 0; x < srcRect.width; x++) {
+                pntr_color expected = pntr_color_tint(pntr_new_color(
+                    (unsigned char)(10 + (srcRect.x + x) * 9),
+                    (unsigned char)(10 + (srcRect.y + y) * 9),
+                    180, 255), tint);
+                pntr_color actual = pntr_image_get_color(tinted, posX + x, posY + y);
+                if (actual.value != expected.value) {
+                    printf("\n\tpntr_draw_image_tint_rec() at (%d, %d)\n", posX + x, posY + y);
+                }
+                COLOREQUALS(actual, expected);
+            }
+        }
+
+        pntr_unload_image(tinted);
+        pntr_unload_image(dst);
+        pntr_unload_image(src);
+    });
+
     IT("pntr_draw_image_flipped_rec()", {
         IT("pntr_draw_image_flipped_rec() reads from the source rectangle", {
             // The reproduction from https://github.com/RobLoach/pntr/issues/252. The
@@ -2315,6 +2918,110 @@ MODULE(pntr, {
                 pntr_unload_image(image);
             });
 
+            IT("pntr_draw_line_aa() anti-aliases a diagonal", {
+                // The axis-aligned cases above hand the line straight to
+                // pntr_draw_line_horizontal() or pntr_draw_line_vertical() and return, so
+                // they never reach Xiaolin Wu's algorithm at all. A diagonal does, and the
+                // four below are the shallow and the steep case in both directions, which
+                // is every combination of the two swaps the algorithm opens with.
+                int lines[4][4] = {
+                    { 5, 20, 35, 30}, // shallow, left to right
+                    {35, 30,  5, 20}, // shallow, right to left
+                    {20,  5, 30, 35}, // steep, top to bottom
+                    {30, 35, 20,  5}  // steep, bottom to top
+                };
+
+                for (int i = 0; i < 4; i++) {
+                    int startX = lines[i][0];
+                    int startY = lines[i][1];
+                    int endX = lines[i][2];
+                    int endY = lines[i][3];
+
+                    // Drawn onto a fully transparent canvas, so that the alpha each pixel
+                    // was given survives to be read back rather than being blended into
+                    // an opaque background.
+                    pntr_image* image = pntr_new_image(40, 40);
+                    NEQUALS(image, NULL);
+                    pntr_clear_background(image, PNTR_BLANK);
+
+                    pntr_draw_line_aa(image, startX, startY, endX, endY, PNTR_RED);
+
+                    // Every pixel Xiaolin Wu's algorithm plots is a partial one, and
+                    // pntr_blend_color() skips those outright without alpha blending, so
+                    // the whole line is dropped rather than merely un-anti-aliased.
+                    if (!pntr_alphablend()) {
+                        EQUALS(pntr_test_blended_count(image), 0);
+                        pntr_unload_image(image);
+                        continue;
+                    }
+
+                    // Both endpoints are painted, the same as pntr_draw_line() paints them.
+                    GREATER((int)pntr_color_a(pntr_image_get_color(image, startX, startY)), 0);
+                    GREATER((int)pntr_color_a(pntr_image_get_color(image, endX, endY)), 0);
+
+                    // And nothing is painted outside the box the two endpoints span: the
+                    // partial pixels straddle the line, they do not overhang its ends.
+                    pntr_rectangle expectedBounds = PNTR_CLITERAL(pntr_rectangle) {
+                        startX < endX ? startX : endX,
+                        startY < endY ? startY : endY,
+                        (startX < endX ? endX - startX : startX - endX) + 1,
+                        (startY < endY ? endY - startY : startY - endY) + 1
+                    };
+                    pntr_rectangle actualBounds = pntr_test_painted_bounds(image, PNTR_BLANK);
+                    RECTEQUALS(actualBounds, expectedBounds);
+
+                    // Which is the anti-aliasing: a line that fell through to plotting
+                    // whole pixels leaves every pixel it touched fully opaque.
+                    GREATER(pntr_test_partial_alpha_count(image), 0);
+
+                    pntr_unload_image(image);
+                }
+            });
+
+            IT("pntr_draw_line_aa() covers the same bounds as pntr_draw_line()", {
+                // The same diagonals, against the line that is not anti-aliased. The two
+                // do not paint the same pixels, but they run between the same endpoints,
+                // so they occupy the same area.
+                int lines[4][4] = {
+                    { 5, 20, 35, 30},
+                    {35, 30,  5, 20},
+                    {20,  5, 30, 35},
+                    {30, 35, 20,  5}
+                };
+
+                for (int i = 0; i < 4; i++) {
+                    pntr_image* aa = pntr_test_canvas(40, 40);
+                    pntr_image* plain = pntr_test_canvas(40, 40);
+                    NEQUALS(aa, NULL);
+                    NEQUALS(plain, NULL);
+
+                    pntr_draw_line_aa(aa, lines[i][0], lines[i][1], lines[i][2], lines[i][3], PNTR_RED);
+                    pntr_draw_line(plain, lines[i][0], lines[i][1], lines[i][2], lines[i][3], PNTR_RED);
+
+                    // Without blending the anti-aliased line paints nothing at all, since
+                    // every pixel it plots is a partial one, while the plain line is
+                    // unaffected because the colour it writes is opaque.
+                    if (!pntr_alphablend()) {
+                        EQUALS(pntr_test_painted_count(aa), 0);
+                        GREATER(pntr_test_painted_count(plain), 0);
+                        pntr_unload_image(aa);
+                        pntr_unload_image(plain);
+                        continue;
+                    }
+
+                    pntr_rectangle aaBounds = pntr_test_painted_bounds(aa, PNTR_TEST_BACKGROUND);
+                    pntr_rectangle plainBounds = pntr_test_painted_bounds(plain, PNTR_TEST_BACKGROUND);
+                    RECTEQUALS(aaBounds, plainBounds);
+
+                    // The anti-aliased line paints the pixels on both sides of the one the
+                    // plain line stepped onto, so it covers strictly more of them.
+                    GREATER(pntr_test_painted_count(aa), pntr_test_painted_count(plain));
+
+                    pntr_unload_image(aa);
+                    pntr_unload_image(plain);
+                }
+            });
+
             IT("pntr_draw_polyline() covers its first and last point", {
                 pntr_image* image = pntr_test_canvas(40, 40);
                 NEQUALS(image, NULL);
@@ -2460,8 +3167,17 @@ MODULE(pntr, {
             pntr_draw_polygon(outline, points, 4, PNTR_RED);
             pntr_draw_polygon_fill(fill, points, 4, PNTR_RED);
 
+            // Stated first, because the loop below says nothing at all about an outline
+            // that painted nothing.
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 5, 21, 21};
+            pntr_rectangle outlineBounds = pntr_test_painted_bounds(outline, PNTR_TEST_BACKGROUND);
+            pntr_rectangle fillBounds = pntr_test_painted_bounds(fill, PNTR_TEST_BACKGROUND);
+            RECTEQUALS(outlineBounds, expected);
+            RECTEQUALS(fillBounds, expected);
+
             // An axis-aligned square has no shallow edges to round out, so here the fill
             // does cover every single pixel of the outline.
+            EQUALS(pntr_test_uncovered(outline, fill), 0);
             for (int y = 0; y < 40; y++) {
                 for (int x = 0; x < 40; x++) {
                     if (pntr_test_painted(outline, x, y)) {
@@ -2651,6 +3367,64 @@ MODULE(pntr, {
                 GREATER(painted[thickness], painted[thickness - 1]);
                 GREATER(width[thickness], width[thickness - 1]);
             }
+        });
+
+        IT("pntr_draw_ellipse_thick() grows with its thickness", {
+            // The same shape as the circle: the brush straddles the outline, so each
+            // extra pixel of thickness reaches one pixel further out on both axes. A
+            // thickness of one is pntr_draw_ellipse() itself, which the differential
+            // tests pin, so this is about what the thicknesses above one do.
+            int painted[4] = {0};
+            int width[4] = {0};
+            int height[4] = {0};
+
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                pntr_image* image = pntr_test_canvas(60, 40);
+                NEQUALS(image, NULL);
+
+                pntr_draw_ellipse_thick(image, 30, 20, 16, 9, thickness, PNTR_RED);
+
+                pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+                painted[thickness] = pntr_test_painted_count(image);
+                width[thickness] = bounds.width;
+                height[thickness] = bounds.height;
+
+                pntr_unload_image(image);
+            }
+
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                EQUALS(width[thickness], 16 * 2 + thickness);
+                EQUALS(height[thickness], 9 * 2 + thickness);
+            }
+
+            GREATER(painted[1], 0);
+            for (int thickness = 2; thickness <= 3; thickness++) {
+                GREATER(painted[thickness], painted[thickness - 1]);
+            }
+
+            // A negative radius is the same ellipse as the positive one it mirrors, on
+            // both axes and at every thickness.
+            for (int thickness = 1; thickness <= 3; thickness++) {
+                pntr_image* positive = pntr_test_canvas(60, 40);
+                pntr_image* negative = pntr_test_canvas(60, 40);
+                NEQUALS(positive, NULL);
+                NEQUALS(negative, NULL);
+
+                pntr_draw_ellipse_thick(positive, 30, 20, 16, 9, thickness, PNTR_RED);
+                pntr_draw_ellipse_thick(negative, 30, 20, -16, -9, thickness, PNTR_RED);
+                IMAGEEQUALS(negative, positive);
+
+                pntr_unload_image(negative);
+                pntr_unload_image(positive);
+            }
+
+            // And an ellipse that is nowhere near the canvas draws nothing at all.
+            pntr_image* offscreen = pntr_test_canvas(60, 40);
+            NEQUALS(offscreen, NULL);
+            pntr_draw_ellipse_thick(offscreen, 400, 400, 16, 9, 3, PNTR_RED);
+            pntr_draw_circle_thick(offscreen, 400, 400, 12, 3, PNTR_RED);
+            EQUALS(pntr_test_painted_count(offscreen), 0);
+            pntr_unload_image(offscreen);
         });
 
         IT("pntr_draw_line_thick() keeps its brush at a thickness of two and three", {
@@ -2853,7 +3627,10 @@ MODULE(pntr, {
             EQUALS(pntr_test_painted(rounded, 28, 13), true);
             EQUALS(pntr_test_painted(rounded, 17, 20), true);
 
-            // The fill reaches every pixel of the outline of the same rectangle.
+            // The fill reaches every pixel of the outline of the same rectangle. Stated
+            // through pntr_test_uncovered() as well as the loop, because the loop on its
+            // own says nothing about an outline that painted nothing.
+            EQUALS(pntr_test_uncovered(outline, rounded), 0);
             for (int y = 0; y < 40; y++) {
                 for (int x = 0; x < 40; x++) {
                     if (pntr_test_painted(outline, x, y)) {
@@ -3044,20 +3821,22 @@ MODULE(pntr, {
                 pntr_clear_background(image, PNTR_BLANK);
 
                 pntr_draw_ellipse_fill(image, 20, 20, 15, 9, semi);
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
 
                 // Something was painted, which is what makes the alpha above worth
                 // checking. Without pntr_alphablend() nothing is, and the fill is skipped.
-                int painted = pntr_test_blended_count(image);
                 if (pntr_alphablend()) {
                     GREATER(painted, 0);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 20)), 128);
                 }
                 else {
                     EQUALS(painted, 0);
@@ -3075,20 +3854,25 @@ MODULE(pntr, {
                 // the cardinal and diagonal points are where that mirroring folds over
                 // onto itself.
                 pntr_draw_circle(image, 20, 20, 12, semi);
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
 
                 // Something was painted, which is what makes the alpha above worth
                 // checking. Without pntr_alphablend() nothing is, and the outline is skipped.
-                int painted = pntr_test_blended_count(image);
                 if (pntr_alphablend()) {
                     GREATER(painted, 0);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 8, 20)), 128);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 32, 20)), 128);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 8)), 128);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 32)), 128);
                 }
                 else {
                     EQUALS(painted, 0);
@@ -3155,20 +3939,22 @@ MODULE(pntr, {
                 points[3] = PNTR_CLITERAL(pntr_vector) {6, 20};
                 pntr_draw_polygon_fill(image, points, 4, semi);
 
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
 
                 // Something was painted, which is what makes the alpha above worth
                 // checking. Without pntr_alphablend() nothing is, and the fill is skipped.
-                int painted = pntr_test_blended_count(image);
                 if (pntr_alphablend()) {
                     GREATER(painted, 0);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 20, 20)), 128);
                 }
                 else {
                     EQUALS(painted, 0);
@@ -3183,20 +3969,23 @@ MODULE(pntr, {
                 pntr_clear_background(image, PNTR_BLANK);
 
                 pntr_draw_rectangle_rounded_fill(image, 5, 5, 24, 16, 4, semi);
+                int painted = 0;
                 for (int y = 0; y < 40; y++) {
                     for (int x = 0; x < 40; x++) {
                         unsigned char alpha = pntr_color_a(pntr_image_get_color(image, x, y));
                         if (alpha != 0) {
                             EQUALS((int)alpha, 128);
+                            painted++;
                         }
                     }
                 }
 
                 // Something was painted, which is what makes the alpha above worth
                 // checking. Without pntr_alphablend() nothing is, and the fill is skipped.
-                int painted = pntr_test_blended_count(image);
                 if (pntr_alphablend()) {
                     GREATER(painted, 0);
+                    EQUALS(painted, 24 * 16 - 4 * 8);
+                    EQUALS((int)pntr_color_a(pntr_image_get_color(image, 17, 13)), 128);
                 }
                 else {
                     EQUALS(painted, 0);
@@ -3216,6 +4005,358 @@ MODULE(pntr, {
             EQUALS(pntr_test_painted_count(image), 0);
 
             pntr_unload_image(image);
+        });
+
+        IT("pntr_test_uncovered() refuses an outline that painted nothing", {
+            // Every caller compares this against zero, so reporting zero for a blank
+            // image would be a pass for a primitive that stopped drawing entirely. The
+            // sweeps of pntr_test_unfilled_circle() and pntr_test_unfilled_ellipse()
+            // are the tests that rest on this.
+            pntr_image* blank = pntr_test_canvas(10, 10);
+            pntr_image* cover = pntr_test_canvas(10, 10);
+            NEQUALS(blank, NULL);
+            NEQUALS(cover, NULL);
+
+            pntr_draw_rectangle_fill(cover, 0, 0, 10, 10, PNTR_RED);
+            EQUALS(pntr_test_uncovered(blank, cover), -1);
+
+            // A single painted pixel is enough for the answer to mean something.
+            pntr_draw_point(blank, 4, 4, PNTR_RED);
+            EQUALS(pntr_test_uncovered(blank, cover), 0);
+
+            // And an uncovered pixel is still counted.
+            pntr_image* empty = pntr_test_canvas(10, 10);
+            NEQUALS(empty, NULL);
+            EQUALS(pntr_test_uncovered(blank, empty), 1);
+
+            // A mismatched or missing image says nothing either.
+            EQUALS(pntr_test_uncovered(blank, NULL), -1);
+            EQUALS(pntr_test_uncovered(NULL, cover), -1);
+
+            pntr_unload_image(empty);
+            pntr_unload_image(cover);
+            pntr_unload_image(blank);
+        });
+    });
+
+    /**
+     * Holds each entry point against the one it is built out of.
+     *
+     * Nothing in here knows what a circle or a rounded corner is supposed to look like.
+     * Each test says only that two ways of asking for the same drawing produce the same
+     * drawing, which is a property that holds by construction and so can be asserted for
+     * a whole table of calls at once. Walking the API surface this way is what reaches the
+     * wrappers that no test had ever called.
+     *
+     * @see pntr_test_draw_variant()
+     */
+    IT("differential", {
+        IT("every wrapper draws what the call it delegates to draws", {
+            // The source for the image variants. Its pixels are all different and all
+            // opaque, so a blit that read from the wrong place shows up as a mismatch
+            // rather than as the same flat color in the wrong position.
+            pntr_image* src = pntr_test_coordinate_image(16, 16);
+            NEQUALS(src, NULL);
+
+            struct {
+                const char* name;
+                pntr_test_variant actual;
+                pntr_test_variant expected;
+            } pairs[] = {
+                // The _vec forms against the coordinates they unpack into.
+                {"pntr_draw_point_vec() == pntr_draw_point()", PNTR_TEST_VARIANT_POINT_VEC, PNTR_TEST_VARIANT_POINT},
+                {"pntr_draw_line_vec() == pntr_draw_line()", PNTR_TEST_VARIANT_LINE_VEC, PNTR_TEST_VARIANT_LINE},
+                {"pntr_draw_line_thick_vec() == pntr_draw_line_thick()", PNTR_TEST_VARIANT_LINE_THICK_3_VEC, PNTR_TEST_VARIANT_LINE_THICK_3},
+                {"pntr_draw_triangle_vec() == pntr_draw_triangle()", PNTR_TEST_VARIANT_TRIANGLE_VEC, PNTR_TEST_VARIANT_TRIANGLE},
+                {"pntr_draw_triangle_thick_vec() == pntr_draw_triangle_thick()", PNTR_TEST_VARIANT_TRIANGLE_THICK_3_VEC, PNTR_TEST_VARIANT_TRIANGLE_THICK_3},
+                {"pntr_draw_triangle_fill_vec() == pntr_draw_triangle_fill()", PNTR_TEST_VARIANT_TRIANGLE_FILL_VEC, PNTR_TEST_VARIANT_TRIANGLE_FILL},
+
+                // The _rec forms against the coordinate forms they unpack into.
+                {"pntr_draw_rectangle_rec() == pntr_draw_rectangle()", PNTR_TEST_VARIANT_RECTANGLE_REC, PNTR_TEST_VARIANT_RECTANGLE},
+                {"pntr_draw_rectangle_fill_rec() == pntr_draw_rectangle_fill()", PNTR_TEST_VARIANT_RECTANGLE_FILL_REC, PNTR_TEST_VARIANT_RECTANGLE_FILL},
+                {"pntr_draw_rectangle_thick_rec() == pntr_draw_rectangle_thick()", PNTR_TEST_VARIANT_RECTANGLE_THICK_3_REC, PNTR_TEST_VARIANT_RECTANGLE_THICK_3},
+                {"pntr_draw_rectangle_gradient_rec() == pntr_draw_rectangle_gradient()", PNTR_TEST_VARIANT_RECTANGLE_GRADIENT_REC, PNTR_TEST_VARIANT_RECTANGLE_GRADIENT},
+
+                // A thickness of one is the plain primitive.
+                {"pntr_draw_line_thick(1) == pntr_draw_line()", PNTR_TEST_VARIANT_LINE_THICK_1, PNTR_TEST_VARIANT_LINE},
+                {"pntr_draw_line_horizontal_thick(1) == pntr_draw_line_horizontal()", PNTR_TEST_VARIANT_LINE_HORIZONTAL_THICK_1, PNTR_TEST_VARIANT_LINE_HORIZONTAL},
+                {"pntr_draw_line_vertical_thick(1) == pntr_draw_line_vertical()", PNTR_TEST_VARIANT_LINE_VERTICAL_THICK_1, PNTR_TEST_VARIANT_LINE_VERTICAL},
+                {"pntr_draw_line_curve_thick(1) == pntr_draw_line_curve()", PNTR_TEST_VARIANT_LINE_CURVE_THICK_1, PNTR_TEST_VARIANT_LINE_CURVE},
+                {"pntr_draw_rectangle_thick(1) == pntr_draw_rectangle()", PNTR_TEST_VARIANT_RECTANGLE_THICK_1, PNTR_TEST_VARIANT_RECTANGLE},
+                {"pntr_draw_rectangle_thick_rounded(1) == pntr_draw_rectangle_rounded()", PNTR_TEST_VARIANT_RECTANGLE_THICK_ROUNDED_1, PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_4},
+                {"pntr_draw_triangle_thick(1) == pntr_draw_triangle()", PNTR_TEST_VARIANT_TRIANGLE_THICK_1, PNTR_TEST_VARIANT_TRIANGLE},
+                {"pntr_draw_ellipse_thick(1) == pntr_draw_ellipse()", PNTR_TEST_VARIANT_ELLIPSE_THICK_1, PNTR_TEST_VARIANT_ELLIPSE},
+                {"pntr_draw_circle_thick(1) == pntr_draw_circle()", PNTR_TEST_VARIANT_CIRCLE_THICK_1, PNTR_TEST_VARIANT_CIRCLE},
+                {"pntr_draw_polygon_thick(1) == pntr_draw_polygon()", PNTR_TEST_VARIANT_POLYGON_THICK_1, PNTR_TEST_VARIANT_POLYGON},
+                {"pntr_draw_polyline_thick(1) == pntr_draw_polyline()", PNTR_TEST_VARIANT_POLYLINE_THICK_1, PNTR_TEST_VARIANT_POLYLINE},
+
+                // A corner radius of zero is the square-cornered rectangle.
+                {"pntr_draw_rectangle_rounded(0) == pntr_draw_rectangle()", PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_0, PNTR_TEST_VARIANT_RECTANGLE},
+                {"pntr_draw_rectangle_rounded_fill(0) == pntr_draw_rectangle_fill()", PNTR_TEST_VARIANT_RECTANGLE_ROUNDED_FILL_0, PNTR_TEST_VARIANT_RECTANGLE_FILL},
+
+                // An axis-aligned run is the same run that pntr_draw_line() walks, and
+                // the unsafe form is the same run again without the clipping.
+                {"pntr_draw_line_horizontal() == pntr_draw_line() along a row", PNTR_TEST_VARIANT_LINE_HORIZONTAL, PNTR_TEST_VARIANT_LINE_HORIZONTAL_AS_LINE},
+                {"pntr_draw_line_vertical() == pntr_draw_line() down a column", PNTR_TEST_VARIANT_LINE_VERTICAL, PNTR_TEST_VARIANT_LINE_VERTICAL_AS_LINE},
+                {"pntr_put_horizontal_line_unsafe() == pntr_draw_line_horizontal()", PNTR_TEST_VARIANT_LINE_HORIZONTAL_UNSAFE, PNTR_TEST_VARIANT_LINE_HORIZONTAL},
+                {"pntr_draw_point_unsafe() == pntr_draw_point()", PNTR_TEST_VARIANT_POINT_UNSAFE, PNTR_TEST_VARIANT_POINT},
+
+                // A whole-image draw is a sub-rectangle draw of the whole image, and the
+                // untinted draws are the tinted draw with a tint of PNTR_WHITE.
+                {"pntr_draw_image() == pntr_draw_image_rec() of the whole image", PNTR_TEST_VARIANT_IMAGE, PNTR_TEST_VARIANT_IMAGE_REC},
+                {"pntr_draw_image_rec() == pntr_draw_image_tint_rec(PNTR_WHITE)", PNTR_TEST_VARIANT_IMAGE_REC, PNTR_TEST_VARIANT_IMAGE_TINT_REC_WHITE},
+                {"pntr_draw_image_tint() == pntr_draw_image_tint_rec() of the whole image", PNTR_TEST_VARIANT_IMAGE_TINT, PNTR_TEST_VARIANT_IMAGE_TINT_REC},
+                {"pntr_draw_image_rotated(0) == pntr_draw_image()", PNTR_TEST_VARIANT_IMAGE_ROTATED_0, PNTR_TEST_VARIANT_IMAGE},
+                {"pntr_draw_image_flipped(no flips) == pntr_draw_image()", PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE, PNTR_TEST_VARIANT_IMAGE}
+            };
+            int pairsLen = (int)(sizeof(pairs) / sizeof(pairs[0]));
+
+            for (int i = 0; i < pairsLen; i++) {
+                pntr_image* actual = pntr_test_canvas(PNTR_TEST_VARIANT_SIZE, PNTR_TEST_VARIANT_SIZE);
+                pntr_image* expected = pntr_test_canvas(PNTR_TEST_VARIANT_SIZE, PNTR_TEST_VARIANT_SIZE);
+                if (actual == NULL || expected == NULL) {
+                    pntr_unload_image(actual);
+                    pntr_unload_image(expected);
+                    EQUALS(0, 1);
+                    break;
+                }
+
+                pntr_test_draw_variant(actual, src, pairs[i].actual);
+                pntr_test_draw_variant(expected, src, pairs[i].expected);
+
+                // Both of them drew something, so that matching is not two blank canvases
+                // agreeing with each other.
+                int painted = pntr_test_painted_count(expected);
+                int difference = pntr_test_first_difference(actual, expected);
+                if (painted == 0 || difference >= 0) {
+                    printf("\n\tdifferential pair %d: %s\n", i, pairs[i].name);
+                }
+
+                GREATER(painted, 0);
+                IMAGEEQUALS(actual, expected);
+
+                pntr_unload_image(actual);
+                pntr_unload_image(expected);
+            }
+
+            pntr_unload_image(src);
+        });
+
+        IT("every pntr_image_color_*() is pntr_color_*() on each pixel", {
+            for (int op = 0; op < PNTR_TEST_COLOR_OP_LEN; op++) {
+                pntr_image* source = pntr_test_color_source(24, 18);
+                pntr_image* actual = pntr_image_copy(source);
+                NEQUALS(source, NULL);
+                NEQUALS(actual, NULL);
+
+                pntr_test_image_color_op(actual, (pntr_test_color_op)op);
+
+                for (int y = 0; y < 18; y++) {
+                    for (int x = 0; x < 24; x++) {
+                        pntr_color was = pntr_image_get_color(source, x, y);
+                        pntr_color is = pntr_image_get_color(actual, x, y);
+                        pntr_color should = pntr_test_color_op_pixel(was, (pntr_test_color_op)op);
+                        if (is.value != should.value) {
+                            printf("\n\tcolor operation %d at (%d, %d)\n", op, x, y);
+                        }
+                        COLOREQUALS(is, should);
+                    }
+                }
+
+                pntr_unload_image(actual);
+                pntr_unload_image(source);
+            }
+        });
+
+        IT("every pntr_image_color_*() stays inside the clip region", {
+            // The whole-image operations walk the clip region rather than the image, so
+            // the pixels outside of it have to come back untouched. Only one of them had
+            // ever been asked.
+            pntr_rectangle clip = PNTR_CLITERAL(pntr_rectangle) {4, 3, 11, 8};
+
+            for (int op = 0; op < PNTR_TEST_COLOR_OP_LEN; op++) {
+                pntr_image* source = pntr_test_color_source(24, 18);
+                pntr_image* actual = pntr_image_copy(source);
+                NEQUALS(source, NULL);
+                NEQUALS(actual, NULL);
+
+                pntr_image_set_clip_rec(actual, clip);
+                RECTEQUALS(pntr_image_get_clip(actual), clip);
+                pntr_test_image_color_op(actual, (pntr_test_color_op)op);
+                pntr_image_reset_clip(actual);
+
+                for (int y = 0; y < 18; y++) {
+                    for (int x = 0; x < 24; x++) {
+                        bool inside = x >= clip.x && x < clip.x + clip.width && y >= clip.y && y < clip.y + clip.height;
+                        pntr_color was = pntr_image_get_color(source, x, y);
+                        pntr_color is = pntr_image_get_color(actual, x, y);
+                        pntr_color should = was;
+                        if (inside) {
+                            should = pntr_test_color_op_pixel(was, (pntr_test_color_op)op);
+                        }
+                        if (is.value != should.value) {
+                            printf("\n\tclipped color operation %d at (%d, %d)\n", op, x, y);
+                        }
+                        COLOREQUALS(is, should);
+                    }
+                }
+
+                pntr_unload_image(actual);
+                pntr_unload_image(source);
+            }
+        });
+
+        IT("an axis-aligned line read backwards covers the same run", {
+            // Both of these normalize a negative extent into a run that starts where it
+            // would have ended, so the same pixels come out either way round. The
+            // pntr_draw_rectangle_rounded() corner arithmetic relies on it.
+            struct {
+                const char* name;
+                int posX;
+                int posY;
+                int extent;
+            } runs[] = {
+                {"inside the canvas", 10, 14, 20},
+                {"starting at the first pixel", 0, 0, 12},
+                {"overhanging the far edge", 30, 30, 20},
+                {"starting outside the canvas", -6, 7, 14},
+                {"spanning the whole canvas", -4, 9, 48},
+                {"entirely outside the canvas", -30, 5, 10},
+                {"a single pixel", 20, 20, 1}
+            };
+            int runsLen = (int)(sizeof(runs) / sizeof(runs[0]));
+
+            for (int i = 0; i < runsLen; i++) {
+                int posX = runs[i].posX;
+                int posY = runs[i].posY;
+                int extent = runs[i].extent;
+
+                pntr_image* forwards = pntr_test_canvas(40, 40);
+                pntr_image* backwards = pntr_test_canvas(40, 40);
+                NEQUALS(forwards, NULL);
+                NEQUALS(backwards, NULL);
+
+                // A negative width starts at the far end of the same run.
+                pntr_draw_line_horizontal(forwards, posX, posY, extent, PNTR_RED);
+                pntr_draw_line_horizontal(backwards, posX + extent, posY, -extent, PNTR_RED);
+                if (pntr_test_first_difference(forwards, backwards) >= 0) {
+                    printf("\n\thorizontal run %d: %s\n", i, runs[i].name);
+                }
+                IMAGEEQUALS(backwards, forwards);
+
+                pntr_clear_background(forwards, PNTR_TEST_BACKGROUND);
+                pntr_clear_background(backwards, PNTR_TEST_BACKGROUND);
+                pntr_draw_line_vertical(forwards, posY, posX, extent, PNTR_RED);
+                pntr_draw_line_vertical(backwards, posY, posX + extent, -extent, PNTR_RED);
+                if (pntr_test_first_difference(forwards, backwards) >= 0) {
+                    printf("\n\tvertical run %d: %s\n", i, runs[i].name);
+                }
+                IMAGEEQUALS(backwards, forwards);
+
+                pntr_unload_image(backwards);
+                pntr_unload_image(forwards);
+            }
+        });
+
+        IT("an axis-aligned line is clipped, not shifted", {
+            // A run that reaches outside the clip region draws the part of itself that is
+            // inside it, in the place that part belongs. Asserted against the same run
+            // trimmed to the clip region by hand, which is an answer that does not go
+            // through the clipping arithmetic being tested.
+            pntr_rectangle clip = PNTR_CLITERAL(pntr_rectangle) {8, 6, 20, 24};
+
+            for (int i = 0; i < 5; i++) {
+                // Left of the clip, through it, past its right edge, inside it, and
+                // entirely outside of it.
+                int starts[5] = {0, -10, 20, 12, 32};
+                int extents[5] = {40, 60, 30, 6, 10};
+
+                pntr_image* clipped = pntr_test_canvas(40, 40);
+                pntr_image* trimmed = pntr_test_canvas(40, 40);
+                NEQUALS(clipped, NULL);
+                NEQUALS(trimmed, NULL);
+
+                pntr_image_set_clip_rec(clipped, clip);
+                pntr_draw_line_horizontal(clipped, starts[i], 14, extents[i], PNTR_RED);
+                pntr_image_reset_clip(clipped);
+
+                for (int x = starts[i]; x < starts[i] + extents[i]; x++) {
+                    if (x < clip.x || x >= clip.x + clip.width) {
+                        continue;
+                    }
+                    pntr_draw_point(trimmed, x, 14, PNTR_RED);
+                }
+
+                if (pntr_test_first_difference(clipped, trimmed) >= 0) {
+                    printf("\n\thorizontal clip case %d\n", i);
+                }
+                IMAGEEQUALS(clipped, trimmed);
+
+                pntr_clear_background(clipped, PNTR_TEST_BACKGROUND);
+                pntr_clear_background(trimmed, PNTR_TEST_BACKGROUND);
+
+                pntr_image_set_clip_rec(clipped, clip);
+                pntr_draw_line_vertical(clipped, 14, starts[i], extents[i], PNTR_RED);
+                pntr_image_reset_clip(clipped);
+
+                for (int y = starts[i]; y < starts[i] + extents[i]; y++) {
+                    if (y < clip.y || y >= clip.y + clip.height) {
+                        continue;
+                    }
+                    pntr_draw_point(trimmed, 14, y, PNTR_RED);
+                }
+
+                if (pntr_test_first_difference(clipped, trimmed) >= 0) {
+                    printf("\n\tvertical clip case %d\n", i);
+                }
+                IMAGEEQUALS(clipped, trimmed);
+
+                pntr_unload_image(trimmed);
+                pntr_unload_image(clipped);
+            }
+        });
+
+        IT("pntr_image_set_clip_rec() sets the clip that pntr_image_set_clip() sets", {
+            pntr_image* fromRect = pntr_test_canvas(40, 30);
+            pntr_image* fromCoordinates = pntr_test_canvas(40, 30);
+            NEQUALS(fromRect, NULL);
+            NEQUALS(fromCoordinates, NULL);
+
+            pntr_rectangle clip = PNTR_CLITERAL(pntr_rectangle) {5, 6, 12, 9};
+            pntr_image_set_clip_rec(fromRect, clip);
+            pntr_image_set_clip(fromCoordinates, 5, 6, 12, 9);
+
+            pntr_rectangle actual = pntr_image_get_clip(fromRect);
+            pntr_rectangle expected = pntr_image_get_clip(fromCoordinates);
+            RECTEQUALS(actual, expected);
+            RECTEQUALS(actual, clip);
+
+            // And both confine a draw the same way, rather than only reporting the same
+            // numbers.
+            pntr_draw_rectangle_fill(fromRect, 0, 0, 40, 30, PNTR_RED);
+            pntr_draw_rectangle_fill(fromCoordinates, 0, 0, 40, 30, PNTR_RED);
+            IMAGEEQUALS(fromRect, fromCoordinates);
+            RECTEQUALS(pntr_test_painted_bounds(fromRect, PNTR_TEST_BACKGROUND), clip);
+
+            pntr_unload_image(fromRect);
+            pntr_unload_image(fromCoordinates);
+        });
+
+        IT("pntr_memory_copy() copies the bytes it is given", {
+            unsigned char source[8] = {11, 22, 33, 44, 55, 66, 77, 88};
+            unsigned char target[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+            void* result = pntr_memory_copy((void*)target, (void*)source, sizeof(target));
+            EQUALS(result, (void*)target);
+            for (int i = 0; i < 8; i++) {
+                EQUALS((int)target[i], (int)source[i]);
+            }
+
+            // A size of zero leaves the destination alone.
+            unsigned char untouched[2] = {7, 9};
+            pntr_memory_copy((void*)untouched, (void*)source, 0);
+            EQUALS((int)untouched[0], 7);
+            EQUALS((int)untouched[1], 9);
         });
     });
 
@@ -3960,6 +5101,216 @@ MODULE(pntr, {
         GREATER(font->charactersLen, 10);
         pntr_unload_font(font);
     });
+
+    IT("pntr_draw_text() paints the default font's glyphs where it says", {
+        // Every other pixel-level assertion about text in this suite is a negative one:
+        // that a row was left blank, or that two draws agree with each other. None of
+        // them would notice a glyph landing a pixel off, or the wrong glyph being picked
+        // out of the atlas, or the whole string being drawn upside down.
+        //
+        // The default font is font8x8, so its glyphs are exactly known. Each row below is
+        // one row of a glyph, with bit 0 the leftmost pixel, copied from
+        // external/font8x8_basic.h. These are the expectation; nothing in pntr is asked
+        // where the pixels should be.
+        struct {
+            char character;
+            unsigned char rows[8];
+        } glyphs[] = {
+            {'_', {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF}},
+            {'-', {0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x00}},
+            {'|', {0x18, 0x18, 0x18, 0x00, 0x18, 0x18, 0x18, 0x00}},
+            {'+', {0x00, 0x0C, 0x0C, 0x3F, 0x0C, 0x0C, 0x00, 0x00}},
+            {'A', {0x0C, 0x1E, 0x33, 0x33, 0x3F, 0x33, 0x33, 0x00}},
+            {'H', {0x33, 0x33, 0x33, 0x3F, 0x33, 0x33, 0x33, 0x00}},
+            {'L', {0x0F, 0x06, 0x06, 0x06, 0x46, 0x66, 0x7F, 0x00}},
+            {'T', {0x3F, 0x2D, 0x0C, 0x0C, 0x0C, 0x0C, 0x1E, 0x00}},
+            {'0', {0x3E, 0x63, 0x73, 0x7B, 0x6F, 0x67, 0x3E, 0x00}},
+            {' ', {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}}
+        };
+        int glyphsLen = (int)(sizeof(glyphs) / sizeof(glyphs[0]));
+
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        // Drawn away from the origin on both axes, so that a draw that ignored the
+        // position would land somewhere else entirely.
+        int posX = 6;
+        int posY = 5;
+
+        for (int i = 0; i < glyphsLen; i++) {
+            pntr_image* canvas = pntr_test_canvas(32, 24);
+            NEQUALS(canvas, NULL);
+
+            char text[2];
+            text[0] = glyphs[i].character;
+            text[1] = '\0';
+            pntr_draw_text(canvas, font, text, posX, posY, PNTR_BLACK);
+
+            int painted = 0;
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    bool expected = ((glyphs[i].rows[y] >> x) & 1) != 0;
+                    bool actual = pntr_test_painted(canvas, posX + x, posY + y);
+                    if (actual != expected) {
+                        printf("\n\tglyph '%c' at (%d, %d): %d, expected %d\n",
+                            glyphs[i].character, x, y, (int)actual, (int)expected);
+                    }
+                    EQUALS(actual, expected);
+                    if (expected) {
+                        painted++;
+                    }
+                }
+            }
+
+            // The glyph is the only thing on the canvas, so nothing was drawn outside of
+            // its eight by eight cell either.
+            EQUALS(pntr_test_painted_count(canvas), painted);
+
+            pntr_unload_image(canvas);
+        }
+
+        // The tint is the color the glyph is painted in, not a filter over the atlas.
+        pntr_image* tinted = pntr_test_canvas(32, 24);
+        NEQUALS(tinted, NULL);
+        pntr_draw_text(tinted, font, "_", posX, posY, PNTR_BLUE);
+        for (int x = 0; x < 8; x++) {
+            COLOREQUALS(pntr_image_get_color(tinted, posX + x, posY + 7), PNTR_BLUE);
+        }
+        EQUALS(pntr_test_painted_count(tinted), 8);
+        pntr_unload_image(tinted);
+
+        // A glyph in a string sits one glyph width to the right of the one before it, and
+        // the space between them is left alone rather than being drawn over.
+        pntr_image* word = pntr_test_canvas(40, 24);
+        NEQUALS(word, NULL);
+        pntr_draw_text(word, font, "_ _", posX, posY, PNTR_BLACK);
+        for (int x = 0; x < 8; x++) {
+            EQUALS(pntr_test_painted(word, posX + x, posY + 7), true);
+            EQUALS(pntr_test_painted(word, posX + 8 + x, posY + 7), false);
+            EQUALS(pntr_test_painted(word, posX + 16 + x, posY + 7), true);
+        }
+        EQUALS(pntr_test_painted_count(word), 16);
+        pntr_unload_image(word);
+
+        pntr_unload_font(font);
+    });
+
+    IT("pntr_draw_text_wrapped() with nothing to wrap is pntr_draw_text()", {
+        // pntr_draw_text_wrapped() had one call in this suite and no assertion at all
+        // against it. These are the cases where it has nothing to decide, so they say
+        // only that it draws the text it was handed in the place it was handed.
+        pntr_font* font = pntr_load_font_default();
+        NEQUALS(font, NULL);
+
+        int lineHeight = pntr_test_line_height(font);
+        EQUALS(lineHeight, 8);
+
+        // A width that nothing can exceed.
+        pntr_image* wrapped = pntr_test_canvas(160, 40);
+        pntr_image* plain = pntr_test_canvas(160, 40);
+        NEQUALS(wrapped, NULL);
+        NEQUALS(plain, NULL);
+        pntr_draw_text_wrapped(wrapped, font, "Hello world", 5, 4, 1000, PNTR_BLACK);
+        pntr_draw_text(plain, font, "Hello world", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(wrapped, plain);
+        GREATER(pntr_test_painted_count(plain), 0);
+
+        // Including when the text breaks its own lines.
+        pntr_image* newlines = pntr_test_canvas(160, 40);
+        pntr_image* plainNewlines = pntr_test_canvas(160, 40);
+        NEQUALS(newlines, NULL);
+        NEQUALS(plainNewlines, NULL);
+        pntr_draw_text_wrapped(newlines, font, "Hello\nworld", 5, 4, 1000, PNTR_BLACK);
+        pntr_draw_text(plainNewlines, font, "Hello\nworld", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(newlines, plainNewlines);
+
+        // A single word wider than the maximum has no space to break at, so it is drawn
+        // as it is rather than being dropped.
+        pntr_image* unbreakable = pntr_test_canvas(160, 40);
+        pntr_image* word = pntr_test_canvas(160, 40);
+        NEQUALS(unbreakable, NULL);
+        NEQUALS(word, NULL);
+        pntr_draw_text_wrapped(unbreakable, font, "Hello", 5, 4, 10, PNTR_BLACK);
+        pntr_draw_text(word, font, "Hello", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(unbreakable, word);
+
+        // Two words that do not fit on one line are the two of them on their own lines,
+        // which is the one wrap that comes out right.
+        pntr_image* twoWords = pntr_test_canvas(160, 40);
+        pntr_image* twoLines = pntr_test_canvas(160, 40);
+        NEQUALS(twoWords, NULL);
+        NEQUALS(twoLines, NULL);
+        pntr_draw_text_wrapped(twoWords, font, "Hello world", 5, 4, 50, PNTR_BLACK);
+        pntr_draw_text(twoLines, font, "Hello\nworld", 5, 4, PNTR_BLACK);
+        IMAGEEQUALS(twoWords, twoLines);
+
+        // NOT ASSERTED: three or more words that need more than one line come out wrong,
+        // and the test for it is left out rather than weakened. pntr_draw_text_wrapped()
+        // never clears lastSpace when it wraps at a space, so after the first wrap the
+        // stale pointer is behind lineStart, the trailing-line fixup computes a negative
+        // length, pntr_draw_text_len() reads a non-positive length as "all of it", and
+        // the remainder of the string is drawn once by the fixup and then again by the
+        // final pntr_draw_text() one line lower. With the default font and a maxWidth of
+        // 20, "aa bb cc" draws "aa", then "bb cc" twice, on three lines, two of which are
+        // 38 pixels wide. Expected: "aa", "bb", "cc". Enable this once that is fixed:
+        //
+        //     pntr_draw_text_wrapped(a, font, "aa bb cc", 5, 4, 20, PNTR_BLACK);
+        //     pntr_draw_text(b, font, "aa\nbb\ncc", 5, 4, PNTR_BLACK);
+        //     IMAGEEQUALS(a, b);
+
+        pntr_unload_image(twoLines);
+        pntr_unload_image(twoWords);
+        pntr_unload_image(word);
+        pntr_unload_image(unbreakable);
+        pntr_unload_image(plainNewlines);
+        pntr_unload_image(newlines);
+        pntr_unload_image(plain);
+        pntr_unload_image(wrapped);
+        pntr_unload_font(font);
+    });
+
+    if (pntr_vargs()) {
+        IT("pntr_draw_text_ex() draws what pntr_draw_text() draws of the same string", {
+            // pntr_draw_text_ex() formats its arguments and hands the result to
+            // pntr_draw_text(), so the only thing it can get wrong is the formatting.
+            pntr_font* font = pntr_load_font_default();
+            NEQUALS(font, NULL);
+
+            pntr_image* formatted = pntr_test_canvas(120, 24);
+            pntr_image* expected = pntr_test_canvas(120, 24);
+            NEQUALS(formatted, NULL);
+            NEQUALS(expected, NULL);
+
+            pntr_test_draw_text_ex(formatted, font, 4, 6, PNTR_BLACK, 0, 42);
+            pntr_draw_text(expected, font, "n=42", 4, 6, PNTR_BLACK);
+            IMAGEEQUALS(formatted, expected);
+            GREATER(pntr_test_painted_count(expected), 0);
+
+            // A maximum length truncates the formatted string, counting its terminator.
+            pntr_image* truncated = pntr_test_canvas(120, 24);
+            pntr_image* shorter = pntr_test_canvas(120, 24);
+            NEQUALS(truncated, NULL);
+            NEQUALS(shorter, NULL);
+
+            pntr_test_draw_text_ex(truncated, font, 4, 6, PNTR_BLACK, 4, 42);
+            pntr_draw_text(shorter, font, "n=4", 4, 6, PNTR_BLACK);
+            IMAGEEQUALS(truncated, shorter);
+            NEQUALS(pntr_test_painted_count(truncated), pntr_test_painted_count(formatted));
+
+            pntr_unload_image(shorter);
+            pntr_unload_image(truncated);
+            pntr_unload_image(expected);
+            pntr_unload_image(formatted);
+            pntr_unload_font(font);
+        });
+    }
+    else {
+        IT("pntr_draw_text_ex() draws what pntr_draw_text() draws of the same string", {
+            // pntr_draw_text_ex() needs variadic arguments, so without PNTR_ENABLE_VARGS
+            // there is no formatted draw to compare.
+            SKIP();
+        });
+    }
 
     IT("pntr_draw_text_len(): with a length", {
         // A length counts characters of the text, where zero means all of them.
