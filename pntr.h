@@ -7752,6 +7752,45 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
 }
 
 /**
+ * Weigh one channel of the four samples of a bilinear interpolation.
+ *
+ * @details Rounds to the nearest value rather than truncating. The four weights sum to
+ * exactly one in exact arithmetic but not in float, so truncating let four identical
+ * samples interpolate to one less than the value they all held: a scaled draw of a fully
+ * opaque image came out at an alpha of 254, which PNTR_NO_ALPHABLEND then discarded
+ * outright. Rounding makes the identical case exact for every fractional coordinate.
+ *
+ * @param sample00 The channel of the sample at the top left.
+ * @param sample01 The channel of the sample at the bottom left.
+ * @param sample10 The channel of the sample at the top right.
+ * @param sample11 The channel of the sample at the bottom right.
+ * @param weight00 The weight of the sample at the top left.
+ * @param weight01 The weight of the sample at the bottom left.
+ * @param weight10 The weight of the sample at the top right.
+ * @param weight11 The weight of the sample at the bottom right.
+ *
+ * @return The weighted channel, rounded to the nearest whole value.
+ *
+ * @see pntr_color_bilinear_interpolate()
+ *
+ * @internal
+ */
+static uint8_t _pntr_bilinear_channel(uint8_t sample00, uint8_t sample01, uint8_t sample10, uint8_t sample11, float weight00, float weight01, float weight10, float weight11) {
+    float value = (float)sample00 * weight00 + (float)sample01 * weight01 + (float)sample10 * weight10 + (float)sample11 * weight11 + 0.5f;
+
+    // The rounding can carry the result past the end of the channel, and a weight that is
+    // barely negative can carry it below the start of it.
+    if (value <= 0.0f) {
+        return (uint8_t)0;
+    }
+    if (value >= 255.0f) {
+        return (uint8_t)255;
+    }
+
+    return (uint8_t)value;
+}
+
+/**
  * Bilinear interpolate the given colors, in the sequence below, based on their given 0-1 coordinates.
  *
  * The colors appear in the following order:
@@ -7768,12 +7807,19 @@ PNTR_API pntr_image* pntr_image_rotate(pntr_image* image, float degrees, pntr_fi
  *
  * @return The bilinear interpolated color.
  */
+
 PNTR_API pntr_color pntr_color_bilinear_interpolate(pntr_color color00, pntr_color color01, pntr_color color10, pntr_color color11, float coordinateX, float coordinateY) {
+    // Weighed once and shared by the four channels, rather than recomputed sixteen times.
+    float weight00 = (1.0f - coordinateX) * (1.0f - coordinateY);
+    float weight01 = (1.0f - coordinateX) * coordinateY;
+    float weight10 = coordinateX * (1.0f - coordinateY);
+    float weight11 = coordinateX * coordinateY;
+
     return PNTR_NEW_COLOR(
-        (uint8_t)(color00.rgba.r * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.r * (1 - coordinateX) * coordinateY + color10.rgba.r * coordinateX * (1 - coordinateY) + color11.rgba.r * coordinateX * coordinateY),
-        (uint8_t)(color00.rgba.g * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.g * (1 - coordinateX) * coordinateY + color10.rgba.g * coordinateX * (1 - coordinateY) + color11.rgba.g * coordinateX * coordinateY),
-        (uint8_t)(color00.rgba.b * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.b * (1 - coordinateX) * coordinateY + color10.rgba.b * coordinateX * (1 - coordinateY) + color11.rgba.b * coordinateX * coordinateY),
-        (uint8_t)(color00.rgba.a * (1 - coordinateX) * (1 - coordinateY) + color01.rgba.a * (1 - coordinateX) * coordinateY + color10.rgba.a * coordinateX * (1 - coordinateY) + color11.rgba.a * coordinateX * coordinateY)
+        _pntr_bilinear_channel(color00.rgba.r, color01.rgba.r, color10.rgba.r, color11.rgba.r, weight00, weight01, weight10, weight11),
+        _pntr_bilinear_channel(color00.rgba.g, color01.rgba.g, color10.rgba.g, color11.rgba.g, weight00, weight01, weight10, weight11),
+        _pntr_bilinear_channel(color00.rgba.b, color01.rgba.b, color10.rgba.b, color11.rgba.b, weight00, weight01, weight10, weight11),
+        _pntr_bilinear_channel(color00.rgba.a, color01.rgba.a, color10.rgba.a, color11.rgba.a, weight00, weight01, weight10, weight11)
     );
 }
 

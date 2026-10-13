@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- **Bilinear interpolation rounds instead of truncating** ([#263]). Interpolating between four copies of the same color now returns that color exactly, on every channel and at every fractional coordinate. The four weights sum to one in exact arithmetic but not in float, so truncating the result shaved a unit off: a bilinear-scaled draw of a fully opaque image produced pixels at an alpha of 254, which `PNTR_NO_ALPHABLEND` then discarded outright and left holes in the fill. Red, green and blue were losing the same unit in the same places.
+
+  **What to do:** rendered output changes by at most one unit per channel for anything scaled, resized or rotated with `PNTR_FILTER_BILINEAR`, so pixel-exact baselines against bilinear output need regenerating. `pntr_draw_image_dest_rec()` with a bilinear filter now fills its destination rectangle completely under `PNTR_NO_ALPHABLEND`, matching nearest neighbor.
+
 ## [0.1.0] - 2026-10-12
 
 The first tagged release of *pntr*. Since there was no previous tag, the entries below are written against the untagged `master` history, so they are aimed at anyone who has been vendoring `pntr.h` directly or shipping one of the integrations.
@@ -104,3 +110,4 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 [pntr_tiled]: https://github.com/RobLoach/pntr_tiled
 [Unreleased]: https://github.com/RobLoach/pntr/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/RobLoach/pntr/releases/tag/v0.1.0
+[#263]: https://github.com/RobLoach/pntr/issues/263
