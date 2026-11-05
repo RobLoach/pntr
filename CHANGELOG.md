@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
+
 ## [0.1.0] - 2026-10-13
 
 The first tagged release of *pntr*. Since there was no previous tag, the entries below are written against the untagged `master` history, so they are aimed at anyone who has been vendoring `pntr.h` directly or shipping one of the integrations.

@@ -873,7 +873,12 @@ typedef enum pntr_test_variant {
     PNTR_TEST_VARIANT_IMAGE_ROTATED_0,
     PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE,
     PNTR_TEST_VARIANT_IMAGE_TINT,
-    PNTR_TEST_VARIANT_IMAGE_TINT_REC
+    PNTR_TEST_VARIANT_IMAGE_TINT_REC,
+    PNTR_TEST_VARIANT_IMAGE_FLIPPED_REC,
+    PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC_WHITE,
+    PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT,
+    PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC,
+    PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_NONE
 } pntr_test_variant;
 
 /**
@@ -1085,6 +1090,24 @@ void pntr_test_draw_variant(pntr_image* dst, pntr_image* src, pntr_test_variant 
             break;
         case PNTR_TEST_VARIANT_IMAGE_TINT_REC:
             pntr_draw_image_tint_rec(dst, src, whole, imageX, imageY, tint);
+            break;
+
+        // The flipped variants mirror horizontally and transpose, a quarter turn, so that
+        // every flip coordinate path is taken rather than the no-flip shortcut.
+        case PNTR_TEST_VARIANT_IMAGE_FLIPPED_REC:
+            pntr_draw_image_flipped_rec(dst, src, whole, imageX, imageY, true, false, true);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC_WHITE:
+            pntr_draw_image_flipped_tint_rec(dst, src, whole, imageX, imageY, true, false, true, PNTR_WHITE);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT:
+            pntr_draw_image_flipped_tint(dst, src, imageX, imageY, true, false, true, tint);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC:
+            pntr_draw_image_flipped_tint_rec(dst, src, whole, imageX, imageY, true, false, true, tint);
+            break;
+        case PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_NONE:
+            pntr_draw_image_flipped_tint(dst, src, imageX, imageY, false, false, false, tint);
             break;
     }
 }
@@ -2821,6 +2844,64 @@ MODULE(pntr, {
         pntr_unload_image(src);
     });
 
+    IT("pntr_draw_image_flipped_tint_rec()", {
+        // Every orientation of a sub-rectangle, against the same region cropped and
+        // flipped on its own and then tinted pixel by pixel with pntr_color_tint(), which
+        // shares no arithmetic with the drawing path.
+        pntr_image* src = pntr_test_coordinate_image(8, 6);
+        NEQUALS(src, NULL);
+        pntr_color tint = pntr_new_color(128, 200, 64, 255);
+
+        pntr_rectangle rects[3] = {
+            {0, 0, 8, 6},
+            {2, 1, 4, 3},
+            {5, 3, 3, 3}
+        };
+
+        for (int i = 0; i < 3; i++) {
+            for (int flips = 0; flips < 8; flips++) {
+                bool flipHorizontal = (flips & 1) != 0;
+                bool flipVertical = (flips & 2) != 0;
+                bool flipDiagonal = (flips & 4) != 0;
+
+                pntr_image* region = pntr_test_flipped_region(src, rects[i], flipHorizontal, flipVertical, flipDiagonal);
+                NEQUALS(region, NULL);
+                pntr_image_color_tint(region, tint);
+
+                pntr_image* expected = pntr_test_canvas(20, 20);
+                NEQUALS(expected, NULL);
+                pntr_draw_image(expected, region, 3, 4);
+
+                pntr_image* dst = pntr_test_canvas(20, 20);
+                NEQUALS(dst, NULL);
+                pntr_draw_image_flipped_tint_rec(dst, src, rects[i], 3, 4, flipHorizontal, flipVertical, flipDiagonal, tint);
+                IMAGEEQUALS(dst, expected);
+
+
+                pntr_unload_image(dst);
+                pntr_unload_image(expected);
+                pntr_unload_image(region);
+            }
+        }
+
+        // NULL images do not crash, and draw nothing.
+        pntr_image* dst = pntr_test_canvas(20, 20);
+        NEQUALS(dst, NULL);
+        pntr_image* blank = pntr_test_canvas(20, 20);
+        NEQUALS(blank, NULL);
+        pntr_draw_image_flipped_tint(NULL, src, 0, 0, true, true, true, tint);
+        pntr_draw_image_flipped_tint(dst, NULL, 0, 0, true, true, true, tint);
+        pntr_draw_image_flipped_tint(dst, NULL, 0, 0, false, false, false, tint);
+        pntr_draw_image_flipped_tint_rec(NULL, src, rects[1], 0, 0, true, true, true, tint);
+        pntr_draw_image_flipped_tint_rec(dst, NULL, rects[1], 0, 0, true, true, true, tint);
+        pntr_draw_image_flipped_tint_rec(dst, NULL, rects[1], 0, 0, false, false, false, tint);
+        IMAGEEQUALS(dst, blank);
+
+        pntr_unload_image(blank);
+        pntr_unload_image(dst);
+        pntr_unload_image(src);
+    });
+
     IT("pntr_image_rotate(PNTR_FILTER_BILINEAR) draws a single pixel source", {
         pntr_image* image = pntr_gen_image_color(1, 1, PNTR_RED);
         NEQUALS(image, NULL);
@@ -4364,7 +4445,10 @@ MODULE(pntr, {
                 {"pntr_draw_image_rec() == pntr_draw_image_tint_rec(PNTR_WHITE)", PNTR_TEST_VARIANT_IMAGE_REC, PNTR_TEST_VARIANT_IMAGE_TINT_REC_WHITE},
                 {"pntr_draw_image_tint() == pntr_draw_image_tint_rec() of the whole image", PNTR_TEST_VARIANT_IMAGE_TINT, PNTR_TEST_VARIANT_IMAGE_TINT_REC},
                 {"pntr_draw_image_rotated(0) == pntr_draw_image()", PNTR_TEST_VARIANT_IMAGE_ROTATED_0, PNTR_TEST_VARIANT_IMAGE},
-                {"pntr_draw_image_flipped(no flips) == pntr_draw_image()", PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE, PNTR_TEST_VARIANT_IMAGE}
+                {"pntr_draw_image_flipped(no flips) == pntr_draw_image()", PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE, PNTR_TEST_VARIANT_IMAGE},
+                {"pntr_draw_image_flipped_rec() == pntr_draw_image_flipped_tint_rec(PNTR_WHITE)", PNTR_TEST_VARIANT_IMAGE_FLIPPED_REC, PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC_WHITE},
+                {"pntr_draw_image_flipped_tint() == pntr_draw_image_flipped_tint_rec() of the whole image", PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT, PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC},
+                {"pntr_draw_image_flipped_tint(no flips) == pntr_draw_image_tint()", PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_NONE, PNTR_TEST_VARIANT_IMAGE_TINT}
             };
             int pairsLen = (int)(sizeof(pairs) / sizeof(pairs[0]));
 
