@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass. The untinted flipped draws are now the tinted ones with a tint of `PNTR_WHITE`.
+- `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
 
 ## [0.1.0] - 2026-10-13
 

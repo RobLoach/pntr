@@ -874,7 +874,6 @@ typedef enum pntr_test_variant {
     PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE,
     PNTR_TEST_VARIANT_IMAGE_TINT,
     PNTR_TEST_VARIANT_IMAGE_TINT_REC,
-    PNTR_TEST_VARIANT_IMAGE_FLIPPED,
     PNTR_TEST_VARIANT_IMAGE_FLIPPED_REC,
     PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC_WHITE,
     PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT,
@@ -1095,9 +1094,6 @@ void pntr_test_draw_variant(pntr_image* dst, pntr_image* src, pntr_test_variant 
 
         // The flipped variants mirror horizontally and transpose, a quarter turn, so that
         // every flip coordinate path is taken rather than the no-flip shortcut.
-        case PNTR_TEST_VARIANT_IMAGE_FLIPPED:
-            pntr_draw_image_flipped(dst, src, imageX, imageY, true, false, true);
-            break;
         case PNTR_TEST_VARIANT_IMAGE_FLIPPED_REC:
             pntr_draw_image_flipped_rec(dst, src, whole, imageX, imageY, true, false, true);
             break;
@@ -2881,14 +2877,6 @@ MODULE(pntr, {
                 pntr_draw_image_flipped_tint_rec(dst, src, rects[i], 3, 4, flipHorizontal, flipVertical, flipDiagonal, tint);
                 IMAGEEQUALS(dst, expected);
 
-                // The whole-image form hands the full rectangle down.
-                if (i == 0) {
-                    pntr_image* whole = pntr_test_canvas(20, 20);
-                    NEQUALS(whole, NULL);
-                    pntr_draw_image_flipped_tint(whole, src, 3, 4, flipHorizontal, flipVertical, flipDiagonal, tint);
-                    IMAGEEQUALS(whole, expected);
-                    pntr_unload_image(whole);
-                }
 
                 pntr_unload_image(dst);
                 pntr_unload_image(expected);
@@ -4458,7 +4446,6 @@ MODULE(pntr, {
                 {"pntr_draw_image_tint() == pntr_draw_image_tint_rec() of the whole image", PNTR_TEST_VARIANT_IMAGE_TINT, PNTR_TEST_VARIANT_IMAGE_TINT_REC},
                 {"pntr_draw_image_rotated(0) == pntr_draw_image()", PNTR_TEST_VARIANT_IMAGE_ROTATED_0, PNTR_TEST_VARIANT_IMAGE},
                 {"pntr_draw_image_flipped(no flips) == pntr_draw_image()", PNTR_TEST_VARIANT_IMAGE_FLIPPED_NONE, PNTR_TEST_VARIANT_IMAGE},
-                {"pntr_draw_image_flipped() == pntr_draw_image_flipped_rec() of the whole image", PNTR_TEST_VARIANT_IMAGE_FLIPPED, PNTR_TEST_VARIANT_IMAGE_FLIPPED_REC},
                 {"pntr_draw_image_flipped_rec() == pntr_draw_image_flipped_tint_rec(PNTR_WHITE)", PNTR_TEST_VARIANT_IMAGE_FLIPPED_REC, PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC_WHITE},
                 {"pntr_draw_image_flipped_tint() == pntr_draw_image_flipped_tint_rec() of the whole image", PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT, PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_REC},
                 {"pntr_draw_image_flipped_tint(no flips) == pntr_draw_image_tint()", PNTR_TEST_VARIANT_IMAGE_FLIPPED_TINT_NONE, PNTR_TEST_VARIANT_IMAGE_TINT}

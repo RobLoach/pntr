@@ -7279,14 +7279,8 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
 /**
  * Draw an image onto a destination image, flipped on either axis, or transposed, with tint.
  *
- * @details The three flips are applied to the whole source image, and the result is drawn
- * with its top left corner at (posX, posY), each pixel tinted by `tint` the way
- * pntr_draw_image_tint() tints it. See pntr_draw_image_flipped() for how the flips
- * combine.
- *
- * Passing no flips at all draws the image exactly as pntr_draw_image_tint() would. Pixels
- * are alpha blended into the destination, and anything outside the destination's clip
- * region is skipped. A NULL source or destination draws nothing and reports no error.
+ * @details Behaves exactly like pntr_draw_image_flipped(), with each pixel tinted by
+ * `tint` through pntr_color_tint().
  *
  * @param dst The destination image where the source image will be drawn.
  * @param src The source image to be drawn.
@@ -7361,25 +7355,12 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * Draw a portion of an image onto a destination image, flipped on either axis, or
  * transposed, with tint.
  *
- * @details This is the draw that every other flipped draw goes through. The three flips
- * are applied to the source rectangle, and the result is drawn with its top left corner at
- * (posX, posY), each pixel tinted by `tint` through pntr_color_tint(). See
- * pntr_draw_image_flipped_rec() for how the flips combine.
- *
- * Passing no flips at all draws the region exactly as pntr_draw_image_tint_rec() would,
- * which is the path it delegates to.
- *
- * @warning Unlike the unflipped path, which reads a width or height of zero or less as the
- * full source dimension, a flipped draw treats it as an empty region and paints nothing.
- *
- * Pixels are alpha blended into the destination, and anything outside the destination's
- * clip region is skipped. A NULL source or destination draws nothing and reports no error.
+ * @details Behaves exactly like pntr_draw_image_flipped_rec(), with each pixel tinted by
+ * `tint` through pntr_color_tint().
  *
  * @param dst The destination image where the source image will be drawn.
  * @param src The source image to be drawn.
- * @param srcRec The portion of the source image to draw, clamped to the source image. When
- * the width or height are less than or equal to 0, nothing is drawn, unless no flips are
- * requested; see the warning above.
+ * @param srcRec The portion of the source image to draw. See pntr_draw_image_flipped_rec().
  * @param posX The x-coordinate of the position where the source image will be drawn.
  * @param posY The y-coordinate of the position where the source image will be drawn.
  * @param flipHorizontal Whether to mirror the region left to right.
