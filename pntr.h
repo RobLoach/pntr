@@ -582,6 +582,8 @@ PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX
 PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter);
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
+PNTR_API void pntr_draw_image_flipped_tint(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint);
+PNTR_API void pntr_draw_image_flipped_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint);
 PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
 PNTR_API void pntr_draw_image_dest_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, pntr_rectangle dstRect, pntr_filter filter, pntr_color tint);
@@ -7267,19 +7269,52 @@ PNTR_API bool pntr_image_resize_canvas(pntr_image* image, int newWidth, int newH
  *
  * @see pntr_draw_image()
  * @see pntr_draw_image_flipped_rec()
+ * @see pntr_draw_image_flipped_tint()
  * @see pntr_image_flip()
  */
 PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
+    pntr_draw_image_flipped_tint(dst, src, posX, posY, flipHorizontal, flipVertical, flipDiagonal, PNTR_WHITE);
+}
+
+/**
+ * Draw an image onto a destination image, flipped on either axis, or transposed, with tint.
+ *
+ * @details The three flips are applied to the whole source image, and the result is drawn
+ * with its top left corner at (posX, posY), each pixel tinted by `tint` the way
+ * pntr_draw_image_tint() tints it. See pntr_draw_image_flipped() for how the flips
+ * combine.
+ *
+ * Passing no flips at all draws the image exactly as pntr_draw_image_tint() would. Pixels
+ * are alpha blended into the destination, and anything outside the destination's clip
+ * region is skipped. A NULL source or destination draws nothing and reports no error.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param flipHorizontal Whether to mirror the image left to right.
+ * @param flipVertical Whether to mirror the image top to bottom.
+ * @param flipDiagonal Whether to transpose the image, swapping its rows and columns.
+ * @param tint The color to tint the image when drawing. Use PNTR_WHITE to not change the
+ * source color.
+ *
+ * @see pntr_draw_image_flipped()
+ * @see pntr_draw_image_flipped_tint_rec()
+ * @see pntr_draw_image_tint()
+ * @see pntr_color_tint()
+ */
+PNTR_API void pntr_draw_image_flipped_tint(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint) {
     if (dst == NULL || src == NULL) {
         return;
     }
 
-    pntr_draw_image_flipped_rec(dst, src,
+    pntr_draw_image_flipped_tint_rec(dst, src,
         PNTR_CLITERAL(pntr_rectangle) { .x = 0, .y = 0, .width = src->width, .height = src->height },
         posX, posY,
         flipHorizontal,
         flipVertical,
-        flipDiagonal
+        flipDiagonal,
+        tint
     );
 }
 
@@ -7314,13 +7349,54 @@ PNTR_API void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX
  * @param flipDiagonal Whether to transpose the region, swapping its rows and columns.
  *
  * @see pntr_draw_image_flipped()
+ * @see pntr_draw_image_flipped_tint_rec()
  * @see pntr_draw_image_rec()
  * @see pntr_image_flip()
  */
 PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal) {
+    pntr_draw_image_flipped_tint_rec(dst, src, srcRec, posX, posY, flipHorizontal, flipVertical, flipDiagonal, PNTR_WHITE);
+}
+
+/**
+ * Draw a portion of an image onto a destination image, flipped on either axis, or
+ * transposed, with tint.
+ *
+ * @details This is the draw that every other flipped draw goes through. The three flips
+ * are applied to the source rectangle, and the result is drawn with its top left corner at
+ * (posX, posY), each pixel tinted by `tint` through pntr_color_tint(). See
+ * pntr_draw_image_flipped_rec() for how the flips combine.
+ *
+ * Passing no flips at all draws the region exactly as pntr_draw_image_tint_rec() would,
+ * which is the path it delegates to.
+ *
+ * @warning Unlike the unflipped path, which reads a width or height of zero or less as the
+ * full source dimension, a flipped draw treats it as an empty region and paints nothing.
+ *
+ * Pixels are alpha blended into the destination, and anything outside the destination's
+ * clip region is skipped. A NULL source or destination draws nothing and reports no error.
+ *
+ * @param dst The destination image where the source image will be drawn.
+ * @param src The source image to be drawn.
+ * @param srcRec The portion of the source image to draw, clamped to the source image. When
+ * the width or height are less than or equal to 0, nothing is drawn, unless no flips are
+ * requested; see the warning above.
+ * @param posX The x-coordinate of the position where the source image will be drawn.
+ * @param posY The y-coordinate of the position where the source image will be drawn.
+ * @param flipHorizontal Whether to mirror the region left to right.
+ * @param flipVertical Whether to mirror the region top to bottom.
+ * @param flipDiagonal Whether to transpose the region, swapping its rows and columns.
+ * @param tint The color to tint the image when drawing. Use PNTR_WHITE to not change the
+ * source color.
+ *
+ * @see pntr_draw_image_flipped_rec()
+ * @see pntr_draw_image_flipped_tint()
+ * @see pntr_draw_image_tint_rec()
+ * @see pntr_color_tint()
+ */
+PNTR_API void pntr_draw_image_flipped_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint) {
     // If we are not flipping at all, use the simpler draw function.
     if (!flipHorizontal && !flipVertical && !flipDiagonal) {
-        pntr_draw_image_tint_rec(dst, src, srcRec, posX, posY, PNTR_WHITE);
+        pntr_draw_image_tint_rec(dst, src, srcRec, posX, posY, tint);
         return;
     }
 
@@ -7345,8 +7421,9 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
                 dstX = flipHorizontal ? srcRec.width - x - 1 : x;
             }
 
+            // pntr_color_tint() returns the color untouched when the tint is PNTR_WHITE.
             pntr_draw_point(dst, posX + dstX, posY + dstY,
-                pntr_image_get_color(src, srcRec.x + x, srcRec.y + y)
+                pntr_color_tint(pntr_image_get_color(src, srcRec.x + x, srcRec.y + y), tint)
             );
         }
     }

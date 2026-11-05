@@ -188,6 +188,8 @@ void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX, int pos
 void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter);
 void pntr_draw_image_flipped(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
 void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal);
+void pntr_draw_image_flipped_tint(pntr_image* dst, pntr_image* src, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint);
+void pntr_draw_image_flipped_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint);
 void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
 void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint);
 void pntr_draw_image_dest_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, pntr_rectangle dstRect, pntr_filter filter, pntr_color tint);
