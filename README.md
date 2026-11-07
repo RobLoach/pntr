@@ -1,6 +1,6 @@
 # pntr <a href="https://github.com/robloach/pntr"><img src="examples/resources/logo-55x55.png" align=left width=55 height=55 /></a>
 
-Header-only CPU graphics library for [C99](https://en.wikipedia.org/wiki/C99_(C_standard_revision)) or C++, with a focus on ease-of-use.
+Header-only CPU graphics library for [C99](https://en.wikipedia.org/wiki/C99_(C_standard_revision)) or [C++20](https://en.wikipedia.org/wiki/C%2B%2B20), with a focus on ease-of-use.
 
 ## Usage
 
