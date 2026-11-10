@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
 
+### Fixed
+
+- **Fills and lines are clipped before they are walked** ([#270]). `pntr_draw_polygon_fill()`, and `pntr_draw_triangle_fill()` through it, scanned every row of the polygon and left each span to be clipped by `pntr_draw_line_horizontal()`, and every line stepped through all of its points before any of them were clipped, which is what `pntr_draw_line_curve()` and the outlines build on. A shape reaching across the int range therefore cost billions of steps however little of it was on the canvas. The fill now scans only the rows and columns of the clip, and a line solves for the first and last of its points that can reach the clip and walks only those, with the same error term the full walk would have had at that point. Edge crossings and curve points too far out for an int are clamped rather than converted with undefined behavior.
+
+  On a 20x20 image, `pntr_draw_triangle_fill(image, INT_MAX - 1, 0, 0, INT_MAX - 1, 0, 0, color)` took 94 seconds, a single line between those corners took 10, and a 16 segment curve through them did not finish in 15 minutes; all three return immediately. Rendered output is byte-identical, verified by hashing over 200,000 random lines, thick lines up to 300 pixels wide, triangle and polygon fills, outlines and curves against the previous implementation, with coordinates straddling each clip edge and corner, under the default clip, narrowed clips and clips a few pixels wide.
+
 ## [0.1.0] - 2026-10-13
 
 The first tagged release of *pntr*. Since there was no previous tag, the entries below are written against the untagged `master` history, so they are aimed at anyone who has been vendoring `pntr.h` directly or shipping one of the integrations.
@@ -135,6 +141,7 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 [#263]: https://github.com/RobLoach/pntr/issues/263
 [#267]: https://github.com/RobLoach/pntr/pull/267
 [#268]: https://github.com/RobLoach/pntr/issues/268
+[#270]: https://github.com/RobLoach/pntr/issues/270
 [#269]: https://github.com/RobLoach/pntr/issues/269
 [0.1.0]: https://github.com/RobLoach/pntr/releases/tag/v0.1.0
 [@JesseTG]: https://github.com/JesseTG
