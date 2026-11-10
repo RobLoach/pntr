@@ -7281,6 +7281,7 @@ MODULE(pntr, {
         EQUALS(pntr_get_pixel_data_size(2, 3, PNTR_PIXELFORMAT_RGBA8888), 24);
         EQUALS(pntr_get_pixel_data_size(3, 2, PNTR_PIXELFORMAT_ARGB8888), 24);
         EQUALS(pntr_get_pixel_data_size(4, 4, PNTR_PIXELFORMAT_GRAYSCALE), 16);
+        EQUALS(pntr_get_pixel_data_size(2, 2, PNTR_PIXELFORMAT_RGB565), 8);
     });
 
     IT("pntr_set_pixel_color(), pntr_get_pixel_color()", {
@@ -7407,6 +7408,48 @@ MODULE(pntr, {
         pntr_unload_image(grayResult);
         pntr_unload_memory(grayData);
         pntr_unload_image(white);
+        pntr_unload_image(image);
+    });
+
+    IT("PNTR_PIXELFORMAT_RGB565", {
+        // A known value: all five red bits set is opaque red, with the 5 bits expanded to 255.
+        uint16_t red565 = 0xF800;
+        COLOREQUALS(pntr_get_pixel_color(&red565, PNTR_PIXELFORMAT_RGB565), pntr_new_color(255, 0, 0, 255));
+
+        uint16_t value = 0;
+        pntr_set_pixel_color(&value, PNTR_PIXELFORMAT_RGB565, pntr_new_color(0, 255, 0, 128));
+        EQUALS((int)value, 0x07E0);
+
+        // Pure colors survive the 5/6/5 bits exactly, and alpha comes back opaque.
+        pntr_color colors[5];
+        colors[0] = pntr_new_color(255, 0, 0, 255);
+        colors[1] = pntr_new_color(0, 255, 0, 255);
+        colors[2] = pntr_new_color(0, 0, 255, 255);
+        colors[3] = pntr_new_color(255, 255, 255, 255);
+        colors[4] = pntr_new_color(0, 0, 0, 255);
+
+        pntr_image* image = pntr_gen_image_color(5, 2, PNTR_BLACK);
+        NEQUALS(image, NULL);
+        for (int i = 0; i < 5; i++) {
+            PNTR_PIXEL(image, i, 0) = colors[i];
+            PNTR_PIXEL(image, i, 1) = colors[i];
+        }
+
+        unsigned int dataSize = 0;
+        void* data = pntr_image_to_pixelformat(image, &dataSize, PNTR_PIXELFORMAT_RGB565);
+        NEQUALS(data, NULL);
+        EQUALS((int)dataSize, 5 * 2 * 2);
+        EQUALS((int)((uint16_t*)data)[0], 0xF800);
+        EQUALS((int)((uint16_t*)data)[1], 0x07E0);
+        EQUALS((int)((uint16_t*)data)[2], 0x001F);
+        EQUALS((int)((uint16_t*)data)[3], 0xFFFF);
+        EQUALS((int)((uint16_t*)data)[4], 0x0000);
+
+        pntr_image* result = pntr_image_from_pixelformat(data, image->width, image->height, PNTR_PIXELFORMAT_RGB565);
+        IMAGEEQUALS(result, image);
+
+        pntr_unload_image(result);
+        pntr_unload_memory(data);
         pntr_unload_image(image);
     });
 

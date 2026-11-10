@@ -480,7 +480,8 @@ typedef struct pntr_font {
 typedef enum pntr_pixelformat {
     PNTR_PIXELFORMAT_RGBA8888 = 0, /**< RGBA, with 8 bytes for each component. */
     PNTR_PIXELFORMAT_ARGB8888, /**< ARGB, with 8 bytes for each component. */
-    PNTR_PIXELFORMAT_GRAYSCALE /**< Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
+    PNTR_PIXELFORMAT_GRAYSCALE, /**< Grayscale, with one byte for each pixel, 0 - 255. 0 being disabled, 255 being enabled. */
+    PNTR_PIXELFORMAT_RGB565 /**< RGB565, with one host-endian `uint16_t` for each pixel: 5 bits red (high bits), 6 bits green, 5 bits blue. Alpha is dropped on export, and is 255 on import. */
 } pntr_pixelformat;
 
 /**
@@ -4963,6 +4964,20 @@ PNTR_API pntr_image* pntr_image_from_pixelformat(const void* imageData, int widt
             return output;
         }
 
+        case PNTR_PIXELFORMAT_RGB565: {
+            pntr_image* output = pntr_new_image(width, height);
+            if (output == NULL) {
+                return NULL;
+            }
+
+            uint16_t* source = (uint16_t*)imageData;
+            for (size_t i = 0; i < (size_t)width * (size_t)height; i++) {
+                output->data[i] = pntr_get_pixel_color((void*)(source + i), pixelFormat);
+            }
+
+            return output;
+        }
+
         case PNTR_PIXELFORMAT_ARGB8888:
         case PNTR_PIXELFORMAT_RGBA8888: {
             pntr_image* output = pntr_new_image(width, height);
@@ -5269,6 +5284,11 @@ PNTR_API void pntr_set_pixel_color(void* dstPtr, pntr_pixelformat dstPixelFormat
             ((unsigned char *)dstPtr)[0] = (unsigned char)((r * 0.299f + g * 0.587f + b * 0.114f) * 255.0f);
         }
         break;
+        case PNTR_PIXELFORMAT_RGB565: {
+            uint16_t value = (uint16_t)(((color.rgba.r >> 3) << 11) | ((color.rgba.g >> 2) << 5) | (color.rgba.b >> 3));
+            PNTR_MEMCPY(dstPtr, &value, sizeof(value));
+        }
+        break;
     }
 }
 
@@ -5299,6 +5319,19 @@ PNTR_API pntr_color pntr_get_pixel_color(void* srcPtr, pntr_pixelformat srcPixel
         case PNTR_PIXELFORMAT_GRAYSCALE:
             // White, with alpha determining grayscale value. Use tint to change color afterwards.
             return PNTR_NEW_COLOR(255, 255, 255, ((unsigned char*)srcPtr)[0]);
+        case PNTR_PIXELFORMAT_RGB565: {
+            uint16_t value;
+            PNTR_MEMCPY(&value, srcPtr, sizeof(value));
+            unsigned char r = (unsigned char)((value >> 11) & 0x1F);
+            unsigned char g = (unsigned char)((value >> 5) & 0x3F);
+            unsigned char b = (unsigned char)(value & 0x1F);
+            return PNTR_NEW_COLOR(
+                (unsigned char)((r << 3) | (r >> 2)),
+                (unsigned char)((g << 2) | (g >> 4)),
+                (unsigned char)((b << 3) | (b >> 2)),
+                255
+            );
+        }
     }
 
     return PNTR_BLANK;
@@ -6854,6 +6887,9 @@ PNTR_API int pntr_get_pixel_data_size(int width, int height, pntr_pixelformat pi
             break;
         case PNTR_PIXELFORMAT_GRAYSCALE:
             bitsPerPixel = (int)sizeof(unsigned char) * bitsPerByte;
+            break;
+        case PNTR_PIXELFORMAT_RGB565:
+            bitsPerPixel = (int)sizeof(uint16_t) * bitsPerByte;
             break;
         default:
             bitsPerPixel = (int)sizeof(pntr_color) * bitsPerByte;
