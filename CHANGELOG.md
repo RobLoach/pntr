@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
+- `PNTR_PIXELFORMAT_RGB565`, a 16-bit pixel format with one `uint16_t` per pixel, for `pntr_image_to_pixelformat()` and `pntr_image_from_pixelformat()` ([#167]).
 
 ## [0.1.0] - 2026-10-13
 
@@ -102,6 +103,7 @@ The first tagged release of *pntr*. Since there was no previous tag, the entries
 - `vsnprintf()` is used when formatting text to prevent buffer overflows (thanks [@konsumer]).
 - An off-by-one error in image drawing (thanks [@JesseTG]).
 
+[#167]: https://github.com/RobLoach/pntr/issues/167
 [#121]: https://github.com/RobLoach/pntr/pull/121
 [#211]: https://github.com/RobLoach/pntr/pull/211
 [#212]: https://github.com/RobLoach/pntr/pull/212
