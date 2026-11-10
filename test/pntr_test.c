@@ -3896,6 +3896,73 @@ MODULE(pntr, {
             pntr_unload_image(thick);
         });
 
+        IT("Fills and lines far larger than the canvas finish", {
+            // The polygon fill walked every row of the polygon and each line every one of
+            // its points before clipping either of them, so a shape reaching across the
+            // int range cost billions of steps however little of it was on the canvas.
+            // These did not finish in minutes; a test that hangs is a test that failed.
+            pntr_vector points[3] = {{INT_MAX - 1, 0}, {0, INT_MAX - 1}, {0, 0}};
+
+            pntr_image* image = pntr_test_canvas(20, 20);
+            NEQUALS(image, NULL);
+
+            pntr_draw_triangle_fill(image, INT_MAX - 1, 0, 0, INT_MAX - 1, 0, 0, PNTR_RED);
+            EQUALS(pntr_test_painted_count(image), 20 * 20);
+
+            pntr_unload_image(image);
+
+            image = pntr_test_canvas(20, 20);
+            NEQUALS(image, NULL);
+
+            pntr_draw_polygon_fill(image, points, 3, PNTR_RED);
+            EQUALS(pntr_test_painted_count(image), 20 * 20);
+
+            pntr_unload_image(image);
+
+            // This curve never comes back near the canvas, so none of it lands there.
+            image = pntr_test_canvas(20, 20);
+            NEQUALS(image, NULL);
+
+            pntr_draw_line_curve(image, points[0], points[1], points[2], points[0], 16, PNTR_RED);
+            EQUALS(pntr_test_painted_count(image), 0);
+
+            // A diagonal crosses the canvas once, one pixel per row.
+            pntr_draw_line(image, 0, 0, INT_MAX - 1, INT_MAX - 1, PNTR_RED);
+            EQUALS(pntr_test_painted_count(image), 20);
+
+            pntr_unload_image(image);
+
+            // The scan is limited to the clip rather than to the image, so a narrowed clip
+            // has to come out the same as it does for a shape that fits.
+            image = pntr_test_canvas(20, 20);
+            NEQUALS(image, NULL);
+
+            pntr_image_set_clip(image, 5, 6, 8, 7);
+            pntr_draw_triangle_fill(image, INT_MAX - 1, 0, 0, INT_MAX - 1, 0, 0, PNTR_RED);
+            pntr_image_reset_clip(image);
+
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            pntr_rectangle expected = PNTR_CLITERAL(pntr_rectangle) {5, 6, 8, 7};
+            RECTEQUALS(bounds, expected);
+            EQUALS(pntr_test_painted_count(image), 8 * 7);
+
+            pntr_unload_image(image);
+
+            image = pntr_test_canvas(20, 20);
+            NEQUALS(image, NULL);
+
+            pntr_image_set_clip(image, 5, 6, 8, 7);
+            pntr_draw_line(image, 0, 0, INT_MAX - 1, INT_MAX - 1, PNTR_RED);
+            pntr_image_reset_clip(image);
+
+            // The diagonal is inside the clip from 6, 6 through 12, 12.
+            EQUALS(pntr_test_painted_count(image), 7);
+            EQUALS(pntr_test_painted(image, 6, 6), true);
+            EQUALS(pntr_test_painted(image, 12, 12), true);
+
+            pntr_unload_image(image);
+        });
+
         IT("pntr_draw_rectangle() stops short of its width and height", {
             pntr_image* image = pntr_test_canvas(40, 40);
             NEQUALS(image, NULL);

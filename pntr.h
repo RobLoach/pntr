@@ -1849,6 +1849,35 @@ static int _pntr_add_clamped(int a, int b) {
 }
 
 /**
+ * Convert a float to an int without overflowing it.
+ *
+ * @details Converting a float outside the int range is undefined behavior, and platforms
+ * disagree on the result: some saturate, others wrap to the opposite end, which turns a
+ * far off coordinate into one on the other side of the image. The value is clamped
+ * instead, which is what the saturating platforms already did.
+ *
+ * @param value The value to convert.
+ *
+ * @return The value truncated toward zero, clamped to the range of an int, or zero for
+ * a value that is not a number.
+ *
+ * @internal
+ */
+static int _pntr_float_to_int_clamped(float value) {
+    if (value != value) {
+        return 0;
+    }
+    if (value >= -(float)INT_MIN) {
+        return INT_MAX;
+    }
+    if (value <= (float)INT_MIN) {
+        return INT_MIN;
+    }
+
+    return (int)value;
+}
+
+/**
  * Get a new rectangle representing the intersection of the two given rectangles.
  *
  * @code
@@ -2486,8 +2515,6 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
         }
 
         stepV = (changeInY < 0) ? -1 : 1;
-
-        _pntr_draw_thick_point(dst, startU, startV, thickness, color);
     }
     else {
         A = (int64_t)2 * absChangeInX;
@@ -2509,7 +2536,67 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
         }
 
         stepV = (changeInX < 0) ? -1 : 1;
+    }
 
+    // Only the steps that can reach the clip are worth walking. Without this a line costs
+    // its full length however little of it lands on the image, so a line between two far
+    // off coordinates walked billions of points to paint none of them. The clip is
+    // widened by how far the brush reaches past each point, so a thick line keeps the
+    // points whose brush only overlaps the edge.
+    int64_t brushLow = (thickness <= 1) ? 0 : -(int64_t)(thickness / 2);
+    int64_t brushHigh = (thickness <= 1) ? 0 : (int64_t)thickness - 1 + brushLow;
+    int64_t clipFirstX = (int64_t)dst->clip.x - brushHigh;
+    int64_t clipLastX = (int64_t)dst->clip.x + (int64_t)dst->clip.width - 1 - brushLow;
+    int64_t clipFirstY = (int64_t)dst->clip.y - brushHigh;
+    int64_t clipLastY = (int64_t)dst->clip.y + (int64_t)dst->clip.height - 1 - brushLow;
+    int64_t firstU = reversedXY ? clipFirstX : clipFirstY;
+    int64_t lastU = reversedXY ? clipLastX : clipLastY;
+    int64_t firstV = reversedXY ? clipFirstY : clipFirstX;
+    int64_t lastV = reversedXY ? clipLastY : clipLastX;
+
+    // The walk takes `major` steps along U and `minor` of them also step V. After k steps
+    // V has moved floor((2 * minor * k + major) / (2 * major)) times, which is what lets
+    // both ends of the visible part be solved for rather than walked to. None of these
+    // products overflow, since both spans fit in an int and k never exceeds `major`.
+    int64_t major = (int64_t)endU - (int64_t)startU;
+    int64_t minor = reversedXY ? (int64_t)absChangeInY : (int64_t)absChangeInX;
+    int64_t firstStep = (firstU > (int64_t)startU) ? firstU - (int64_t)startU : 0;
+    int64_t lastStep = (lastU < (int64_t)endU) ? lastU - (int64_t)startU : major;
+
+    // How many times V has to move to reach the clip, and how many it may move before it
+    // leaves it again.
+    int64_t enterV = (stepV > 0) ? firstV - (int64_t)startV : (int64_t)startV - lastV;
+    int64_t leaveV = (stepV > 0) ? lastV - (int64_t)startV : (int64_t)startV - firstV;
+    if (leaveV < 0 || enterV > minor) {
+        return;
+    }
+    if (enterV > 0) {
+        int64_t step = (2 * major * enterV - major + 2 * minor - 1) / (2 * minor);
+        if (step > firstStep) {
+            firstStep = step;
+        }
+    }
+    if (leaveV < minor) {
+        int64_t step = (2 * major * leaveV + major - 1) / (2 * minor);
+        if (step < lastStep) {
+            lastStep = step;
+        }
+    }
+    if (firstStep > lastStep) {
+        return;
+    }
+
+    // Pick the walk up at the first visible step, with the error term it would have had.
+    int64_t moved = (2 * minor * firstStep + major) / (2 * major);
+    P = (2 * minor * firstStep + major) % (2 * major) + B;
+    startV = (int)((int64_t)startV + (int64_t)stepV * moved);
+    startU = (int)((int64_t)startU + firstStep);
+    endU = (int)((int64_t)startU + lastStep - firstStep);
+
+    if (reversedXY) {
+        _pntr_draw_thick_point(dst, startU, startV, thickness, color);
+    }
+    else {
         _pntr_draw_thick_point(dst, startV, startU, thickness, color);
     }
 
@@ -2740,9 +2827,9 @@ PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pn
         float w4 = t * t * t;
         float x = w1 * (float)point1.x + w2 * (float)point2.x + w3 * (float)point3.x + w4 * (float)point4.x;
         float y = w1 * (float)point1.y + w2 * (float)point2.y + w3 * (float)point3.y + w4 * (float)point4.y;
-        pntr_draw_line_thick(dst, last.x, last.y, (int)x, (int)y, thickness, color);
-        last.x = (int)x;
-        last.y = (int)y;
+        pntr_draw_line_thick(dst, last.x, last.y, _pntr_float_to_int_clamped(x), _pntr_float_to_int_clamped(y), thickness, color);
+        last.x = _pntr_float_to_int_clamped(x);
+        last.y = _pntr_float_to_int_clamped(y);
     }
 }
 
@@ -3865,9 +3952,17 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
     int* spanStart = nodeX + numPoints;
     int* spanEnd = spanStart + numPoints * 2;
 
+    // Only the rows and columns inside the clip can be painted, so the scan is limited to
+    // them. Walking every row of the polygon instead cost its full height however little
+    // of it was on the image, which for far off corners was billions of rows.
+    int firstRow = (top > dst->clip.y) ? top : dst->clip.y;
+    int lastRow = (bottom < dst->clip.y + dst->clip.height - 1) ? bottom : dst->clip.y + dst->clip.height - 1;
+    int firstColumn = (left > dst->clip.x) ? left : dst->clip.x;
+    int lastColumn = (right < dst->clip.x + dst->clip.width - 1) ? right : dst->clip.x + dst->clip.width - 1;
+
     // Polygon scanline algorithm released under public-domain by Darel Rex Finley, 2007.
     // Loop through the rows of the polygon, including the row of its lowest point.
-    for (pixelY = top; pixelY <= bottom; pixelY++) {
+    for (pixelY = firstRow; pixelY <= lastRow; pixelY++) {
         spans = 0;
 
         // A horizontal edge lies along the row rather than crossing it, so it never
@@ -3899,7 +3994,7 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
                     ? (((points[i].y <= pixelY) && (points[j].y > pixelY)) || ((points[j].y <= pixelY) && (points[i].y > pixelY)))
                     : (((points[i].y < pixelY) && (points[j].y >= pixelY)) || ((points[j].y < pixelY) && (points[i].y >= pixelY)));
                 if (crosses) {
-                    nodeX[nodes++]= (int)((float)points[i].x
+                    nodeX[nodes++] = _pntr_float_to_int_clamped((float)points[i].x
                          + ((float)pixelY - (float)points[i].y) / ((float)points[j].y - (float)points[i].y)
                          * ((float)points[j].x - (float)points[i].x));
                 }
@@ -3953,11 +4048,11 @@ PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int n
                 i++;
             }
 
-            if (spanLeft < left) {
-                spanLeft = left;
+            if (spanLeft < firstColumn) {
+                spanLeft = firstColumn;
             }
-            if (spanRight > right) {
-                spanRight = right;
+            if (spanRight > lastColumn) {
+                spanRight = lastColumn;
             }
             if (spanRight >= spanLeft) {
                 pntr_draw_line_horizontal(dst, spanLeft, pixelY, spanRight - spanLeft + 1, color);
