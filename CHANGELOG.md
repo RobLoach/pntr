@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
 - `PNTR_PIXELFORMAT_RGB565`, a 16-bit pixel format with one `uint16_t` per pixel, for `pntr_image_to_pixelformat()` and `pntr_image_from_pixelformat()` ([#167]).
+- `PNTR_MAX_ARC_SEGMENTS`, the most segments an arc picks for itself. Defaults to `64`.
+
+### Changed
+
+- **`pntr_draw_arc_thick()` and `pntr_draw_arc_fill()` reach their end angle.** `segments` is now the number of line segments: the thick arc draws `segments` lines through `segments + 1` points from `startAngle` to `endAngle` inclusive, and the fill's polygon is those points plus the center. A thick `0` to `360` sweep now closes, and a `segments` of 1 draws one line from the start to the end, or fills the triangle between them and the center, where it used to paint nothing. `pntr_draw_arc()` keeps its half-open sweep, so a full circle of points still never paints the same point twice.
+- **A `segments` of zero or less picks a count** in `pntr_draw_arc()`, `pntr_draw_arc_thick()` and `pntr_draw_arc_fill()`, rather than painting nothing: about one segment for every two pixels of arc length, `(int)(radius * |sweep in radians| / 2) + 1`, capped at `PNTR_MAX_ARC_SEGMENTS`.
+
+  **What to do:** a thick arc or arc fill with the same arguments now covers one more segment's worth of the sweep, out to `endAngle`. Code that added a segment to reach the end itself, such as pntr_nuklear's arc workaround, can pass its angles and count straight through instead.
 
 ### Fixed
 
