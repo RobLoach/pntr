@@ -4796,11 +4796,11 @@ MODULE(pntr, {
             pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
             NEQUALS(image, NULL);
 
-            // One segment is a single arc point plus the center, which is a
-            // degenerate line rather than a fillable shape, so nothing is drawn.
+            // One segment fills the triangle between the center and both ends.
             pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 1, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 40, 40), PNTR_WHITE);
             COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
-            COLOREQUALS(pntr_image_get_color(image, 45, 45), PNTR_WHITE);
 
             pntr_unload_image(image);
         });
@@ -4862,6 +4862,19 @@ MODULE(pntr, {
             pntr_unload_image(image);
         });
 
+        IT("pntr_draw_arc_fill() reaches the edge at its end angle", {
+            pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
+            NEQUALS(image, NULL);
+
+            // The end edge at 90 degrees runs straight down the center column.
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 8, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 25, 40), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 26, 43), PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 24, 40), PNTR_WHITE);
+
+            pntr_unload_image(image);
+        });
+
         IT("pntr_draw_arc_fill() with a zero or negative radius", {
             pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
             NEQUALS(image, NULL);
@@ -4884,11 +4897,14 @@ MODULE(pntr, {
             pntr_image* image = pntr_gen_image_color(50, 50, PNTR_WHITE);
             NEQUALS(image, NULL);
 
+            // Zero or fewer segments picks a count.
             pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, 0, PNTR_RED);
-            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, -4, PNTR_RED);
-            COLOREQUALS(pntr_image_get_color(image, 25, 25), PNTR_WHITE);
-            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_WHITE);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
             COLOREQUALS(pntr_image_get_color(image, 10, 10), PNTR_WHITE);
+
+            pntr_clear_background(image, PNTR_WHITE);
+            pntr_draw_arc_fill(image, 25, 25, 20.0f, 0.0f, 90.0f, -4, PNTR_RED);
+            COLOREQUALS(pntr_image_get_color(image, 30, 30), PNTR_RED);
 
             pntr_unload_image(image);
         });
@@ -4984,9 +5000,20 @@ MODULE(pntr, {
             pntr_image* image = pntr_test_canvas(60, 60);
             NEQUALS(image, NULL);
 
+            // Zero or fewer segments picks about one point per two pixels of arc.
             pntr_draw_arc(image, 30, 30, 20.0f, 0.0f, 90.0f, 0, PNTR_RED);
+            int automatic = pntr_test_painted_count(image);
+            GREATER(automatic, 10);
+            LESSER(automatic, 17);
+
+            pntr_clear_background(image, PNTR_TEST_BACKGROUND);
             pntr_draw_arc(image, 30, 30, 20.0f, 0.0f, 90.0f, -8, PNTR_RED);
-            EQUALS(pntr_test_painted_count(image), 0);
+            EQUALS(pntr_test_painted_count(image), automatic);
+
+            // A huge radius is capped at PNTR_MAX_ARC_SEGMENTS points.
+            pntr_clear_background(image, PNTR_TEST_BACKGROUND);
+            pntr_draw_arc(image, 30, 30, 1.0e30f, 0.0f, 360.0f, 0, PNTR_RED);
+            LESSER(pntr_test_painted_count(image), PNTR_MAX_ARC_SEGMENTS + 1);
 
             pntr_unload_image(image);
         });
@@ -5005,6 +5032,39 @@ MODULE(pntr, {
 
             GREATER(thin, 0);
             GREATER(thick, thin);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_thick() reaches its end angle", {
+            pntr_image* image = pntr_test_canvas(60, 60);
+            NEQUALS(image, NULL);
+
+            // Ends to the right of the center at (50, 30), not a segment short at 315.
+            pntr_draw_arc_thick(image, 30, 30, 20.0f, 270.0f, 360.0f, 2, 1, PNTR_RED);
+            pntr_rectangle bounds = pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND);
+            GREATER(bounds.x + bounds.width, 49);
+            GREATER(bounds.y + bounds.height, 29);
+            EQUALS(pntr_test_painted(image, 30, 10), true);
+
+            pntr_unload_image(image);
+        });
+
+        IT("pntr_draw_arc_thick() closes a full circle", {
+            pntr_image* image = pntr_test_canvas(60, 60);
+            NEQUALS(image, NULL);
+
+            // A diamond whose closing side runs from the top back to the right.
+            pntr_draw_arc_thick(image, 30, 30, 10.0f, 0.0f, 360.0f, 4, 1, PNTR_RED);
+            int closing = 0;
+            for (int y = 21; y < 29; y++) {
+                for (int x = 32; x < 39; x++) {
+                    if (pntr_test_painted(image, x, y)) {
+                        closing++;
+                    }
+                }
+            }
+            GREATER(closing, 4);
 
             pntr_unload_image(image);
         });

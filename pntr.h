@@ -1139,6 +1139,17 @@ extern "C" {
     #define PNTR_ROTATION_EPSILON 0.015625f
 #endif
 
+#ifndef PNTR_MAX_ARC_SEGMENTS
+    /**
+     * The most segments an arc picks for itself when given a `segments` of zero or less.
+     *
+     * @see pntr_draw_arc()
+     * @see pntr_draw_arc_thick()
+     * @see pntr_draw_arc_fill()
+     */
+    #define PNTR_MAX_ARC_SEGMENTS 64
+#endif
+
 #if !defined(PNTR_ENABLE_MATH) || defined(_DOXYGEN_)
     #if !defined(PNTR_SINF) || !defined(PNTR_COSF)
         /**
@@ -4082,6 +4093,22 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
 }
 
 /**
+ * Returns `segments` if positive, otherwise about one segment for every two pixels of arc
+ * length, capped at PNTR_MAX_ARC_SEGMENTS.
+ *
+ * @internal
+ */
+static int _pntr_arc_segments(float radius, float startAngle, float endAngle, int segments) {
+    if (segments > 0) {
+        return segments;
+    }
+
+    // Clamped before the cast, so a huge radius cannot overflow it.
+    float halfLength = radius * PNTR_FABSF(endAngle - startAngle) * PNTR_DEG2RAD / 2.0f;
+    return (int)PNTR_MIN(halfLength, (float)(PNTR_MAX_ARC_SEGMENTS - 1)) + 1;
+}
+
+/**
  * Draws an arc as a series of points along a circle.
  *
  * @details Angles are in degrees, measured from the positive X axis, and turn towards
@@ -4093,26 +4120,28 @@ PNTR_API void pntr_draw_triangle_fill_vec(pntr_image* dst, pntr_vector point1, p
  * the sweep rather than the last point sampled. That is what lets a full `0` to `360`
  * sweep close without painting the same point at both ends.
  *
+ * A `segments` of zero or less picks a count, capped at PNTR_MAX_ARC_SEGMENTS. A radius
+ * of zero or less paints the center as a single point.
+ *
  * @param dst The image to draw the arc onto.
  * @param centerX The center of the arc's circle at the X coordinate.
  * @param centerY The center of the arc's circle at the Y coordinate.
  * @param radius The radius of the arc's circle.
  * @param startAngle The angle, in degrees, that the sweep starts at.
  * @param endAngle The angle, in degrees, that the sweep ends at.
- * @param segments How many points to sample along the sweep.
+ * @param segments How many points to sample along the sweep, or zero or less to pick a count.
  * @param color The color of the arc.
  *
  * @see pntr_draw_arc_thick()
  * @see pntr_draw_arc_fill()
+ * @see PNTR_MAX_ARC_SEGMENTS
  */
 PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments <= 0) {
-        return;
-    }
+    segments = _pntr_arc_segments(radius, startAngle, endAngle, segments);
 
     float startAngleRad = startAngle * PNTR_PI / 180.0f;
     float endAngleRad = endAngle * PNTR_PI / 180.0f;
@@ -4133,20 +4162,12 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
 /**
  * Draws an arc as a chain of thick line segments along a circle.
  *
- * @details Uses the same angles and the same half-open sweep as pntr_draw_arc(): angles
- * are in degrees, measured from the positive X axis, turning clockwise on screen, and
- * `segments` points are sampled starting at `startAngle` and stepping by
- * `(endAngle - startAngle) / segments`, so `endAngle` itself is never sampled.
+ * @details Uses the same angles as pntr_draw_arc(), but unlike it reaches `endAngle`:
+ * `segments` lines join `segments + 1` points from `startAngle` to `endAngle` inclusive,
+ * so a full `0` to `360` sweep closes.
  *
- * Unlike pntr_draw_arc(), which paints those sampled points, this joins them with lines,
- * which has two consequences worth knowing. The chain of lines runs between the first and
- * the last sampled point only, so a full `0` to `360` sweep leaves a gap rather than
- * closing: use pntr_draw_circle_thick() for a closed circle. And a sweep of a single
- * segment has no second point to draw a line to, so `segments` of 1 paints nothing at
- * all, where pntr_draw_arc() paints one point.
- *
- * A radius of zero or less paints the center as a single point, ignoring the thickness.
- * A count of zero or fewer segments paints nothing.
+ * A `segments` of zero or less picks a count, capped at PNTR_MAX_ARC_SEGMENTS. A radius
+ * of zero or less paints the center as a single point, ignoring the thickness.
  *
  * @param dst The image to draw the arc onto.
  * @param centerX The center of the arc's circle at the X coordinate.
@@ -4154,22 +4175,21 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
  * @param radius The radius of the arc's circle.
  * @param startAngle The angle, in degrees, that the sweep starts at.
  * @param endAngle The angle, in degrees, that the sweep ends at.
- * @param segments How many points to sample along the sweep.
+ * @param segments How many lines to draw, or zero or less to pick a count.
  * @param thickness How many pixels wide the arc should be.
  * @param color The color of the arc.
  *
  * @see pntr_draw_arc()
  * @see pntr_draw_arc_fill()
  * @see pntr_draw_circle_thick()
+ * @see PNTR_MAX_ARC_SEGMENTS
  */
 PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments <= 0) {
-        return;
-    }
+    segments = _pntr_arc_segments(radius, startAngle, endAngle, segments);
 
     float startAngleRad = startAngle * PNTR_PI / 180.0f;
     float endAngleRad = endAngle * PNTR_PI / 180.0f;
@@ -4178,13 +4198,13 @@ PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, flo
     float stepAngle = (endAngleRad - startAngleRad) / (float)(segments);
 
     // Draw the arc with line segments
-    int x1 = centerX + (int)((float)radius * PNTR_COSF(startAngleRad));
-    int y1 = centerY + (int)((float)radius * PNTR_SINF(startAngleRad));
+    int x1 = _pntr_add_clamped(centerX, (int)(radius * PNTR_COSF(startAngleRad)));
+    int y1 = _pntr_add_clamped(centerY, (int)(radius * PNTR_SINF(startAngleRad)));
     float angle;
-    for (int i = 1; i < segments; i++) {
+    for (int i = 1; i <= segments; i++) {
         angle = startAngleRad + (float)i * stepAngle;
-        int x2 = centerX + (int)((float)radius * PNTR_COSF(angle));
-        int y2 = centerY + (int)((float)radius * PNTR_SINF(angle));
+        int x2 = _pntr_add_clamped(centerX, (int)(radius * PNTR_COSF(angle)));
+        int y2 = _pntr_add_clamped(centerY, (int)(radius * PNTR_SINF(angle)));
         pntr_draw_line_thick(dst, x1, y1, x2, y2, thickness, color);
         x1 = x2;
         y1 = y2;
@@ -4194,10 +4214,12 @@ PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, flo
 /**
  * Fills the wedge between the center of an arc and the arc itself.
  *
- * @details Uses the same angles and the same half-open sweep as pntr_draw_arc(). The
- * wedge is filled as the polygon through the sampled arc points plus the center, so a
- * sweep with few segments is visibly straight-edged, and one that sweeps a full circle
- * leaves a seam along the edge that runs back to the center.
+ * @details Fills the polygon through the center and the same `segments + 1` points as
+ * pntr_draw_arc_thick(), so the wedge reaches `endAngle`. Few segments are visibly
+ * straight-edged.
+ *
+ * A `segments` of zero or less picks a count, capped at PNTR_MAX_ARC_SEGMENTS. A radius
+ * of zero or less paints the center as a single point.
  *
  * @param dst The image to fill the wedge onto.
  * @param centerX The center of the arc's circle at the X coordinate.
@@ -4205,40 +4227,42 @@ PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, flo
  * @param radius The radius of the arc's circle.
  * @param startAngle The angle, in degrees, that the sweep starts at.
  * @param endAngle The angle, in degrees, that the sweep ends at.
- * @param segments How many points to sample along the sweep.
+ * @param segments How many segments to fill the sweep with, or zero or less to pick a count.
  * @param color The fill color.
  *
  * @see pntr_draw_arc()
+ * @see pntr_draw_arc_thick()
  * @see pntr_draw_polygon_fill()
+ * @see PNTR_MAX_ARC_SEGMENTS
  */
 PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
     }
-    if (segments <= 0) {
-        return;
-    }
+    segments = _pntr_arc_segments(radius, startAngle, endAngle, segments);
+
     float startAngleRad = startAngle * PNTR_PI / 180.0f;
     float endAngleRad = endAngle * PNTR_PI / 180.0f;
 
     // Calculate how much distance between each segment
     float stepAngle = (endAngleRad - startAngleRad) / (float)segments;
-    pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)(segments + 1));
+    pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * ((size_t)segments + 2));
     if (points == NULL) {
         return;
     }
 
-    for (int i = 0; i < segments; i++) {
-        endAngleRad = startAngleRad + (float)i * stepAngle;
-        points[i].x = _pntr_add_clamped(centerX, (int)(radius * PNTR_COSF(endAngleRad)));
-        points[i].y = _pntr_add_clamped(centerY, (int)(radius * PNTR_SINF(endAngleRad)));
+    float angle;
+    for (int i = 0; i <= segments; i++) {
+        angle = startAngleRad + (float)i * stepAngle;
+        points[i].x = _pntr_add_clamped(centerX, (int)(radius * PNTR_COSF(angle)));
+        points[i].y = _pntr_add_clamped(centerY, (int)(radius * PNTR_SINF(angle)));
     }
 
-    points[segments].x = centerX;
-    points[segments].y = centerY;
+    points[segments + 1].x = centerX;
+    points[segments + 1].y = centerY;
 
-    pntr_draw_polygon_fill(dst, points, segments + 1, color);
+    pntr_draw_polygon_fill(dst, points, segments + 2, color);
     pntr_unload_memory((void*)points);
 }
 

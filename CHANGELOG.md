@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
 - `PNTR_PIXELFORMAT_RGB565`, a 16-bit pixel format with one `uint16_t` per pixel, for `pntr_image_to_pixelformat()` and `pntr_image_from_pixelformat()` ([#167]).
+- `PNTR_MAX_ARC_SEGMENTS`, the most segments an arc picks for itself. Defaults to `64`.
+
+### Changed
+
+- **`pntr_draw_arc_thick()` and `pntr_draw_arc_fill()` reach `endAngle`.** `segments` is now the number of lines, through `segments + 1` points, so a thick `0` to `360` arc closes. `pntr_draw_arc()` stays half-open.
+- **A `segments` of zero or less picks a count** in all three arc functions, capped at `PNTR_MAX_ARC_SEGMENTS`, rather than drawing nothing.
+
+  **What to do:** drop any extra segment you added to reach the end angle.
 
 ### Fixed
 
