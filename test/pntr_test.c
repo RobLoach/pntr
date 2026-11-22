@@ -5579,6 +5579,13 @@ MODULE(pntr, {
             pntr_image* withoutLookup = pntr_gen_image_text(font, "ABCA", PNTR_WHITE, PNTR_BLANK);
             NEQUALS(withoutLookup, NULL);
             IMAGEEQUALS(withLookup, withoutLookup);
+
+            // Copying and scaling it keeps it without the lookup.
+            pntr_font* scaled = pntr_font_scale(font, 1.0f, 1.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+            NEQUALS(scaled, NULL);
+            EQUALS(scaled->glyphs, NULL);
+            EQUALS(pntr_measure_text(scaled, "ABCA"), 32);
+            pntr_unload_font(scaled);
             font->glyphs = glyphs;
 
             pntr_unload_image(withoutLookup);
@@ -6881,6 +6888,14 @@ MODULE(pntr, {
 
             // A and V are kerned closer together than they are apart.
             LESSER(pntr_measure_text(font, "AV"), pntr_measure_text(font, "A") + pntr_measure_text(font, "V"));
+
+            // Only pairs of the first PNTR_FONT_TTF_KERNING_GLYPHS glyphs are kerned, in order.
+            GREATER(font->glyphs->kerningLen, 0);
+            for (int i = 0; i < font->glyphs->kerningLen; i++) {
+                LESSER((int)(font->glyphs->kerning[i] >> 16), PNTR_FONT_TTF_KERNING_GLYPHS);
+                LESSER((int)(font->glyphs->kerning[i] & 0xFFFF), PNTR_FONT_TTF_KERNING_GLYPHS);
+                GREATER(font->glyphs->kerning[i], (i > 0) ? font->glyphs->kerning[i - 1] : 0);
+            }
 
             // What is measured is what is drawn.
             pntr_image* image = pntr_gen_image_text(font, "AVATAR WAVE To", PNTR_BLACK, PNTR_BLANK);

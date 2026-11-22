@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
 - `PNTR_PIXELFORMAT_RGB565`, a 16-bit pixel format with one `uint16_t` per pixel, for `pntr_image_to_pixelformat()` and `pntr_image_from_pixelformat()` ([#167]).
 - `PNTR_MAX_ARC_SEGMENTS`, the most segments an arc picks for itself. Defaults to `64`.
-- **TrueType kerning.** `pntr_load_font_ttf()` reads the font's `kern` table, or asks `GPOS` about every pair of ASCII glyphs, and text is spaced by it. In Tuffy at 32 pixels, `AV` is 3 pixels narrower than `A` and `V` measured apart.
+- **TrueType kerning.** `pntr_load_font_ttf()` asks the font's `GPOS` or `kern` table about every pair of its first `PNTR_FONT_TTF_KERNING_GLYPHS` glyphs, which defaults to the `95` ASCII ones, and text is spaced by it. In Tuffy at 32 pixels, `AV` is 3 pixels narrower than `A` and `V` measured apart.
 - `pntr_font.lineHeight`, how far a newline moves down. TrueType fonts set it from their ascent, descent and line gap, and bitmap fonts from their tallest glyph, as before.
 
 ### Changed
