@@ -9039,9 +9039,247 @@ MODULE(pntr, {
     });
 })
 
+#ifdef PNTR_ENABLE_TRANSFORM
+/**
+ * Whether two floats are within a rounding error of each other.
+ */
+bool pntr_test_near(float a, float b) {
+    return PNTR_FABSF(a - b) < 0.0001f;
+}
+
+/**
+ * A rectangle, built by a function so that RECTEQUALS() can take one as an argument.
+ */
+pntr_rectangle pntr_test_rect(int x, int y, int width, int height) {
+    return PNTR_CLITERAL(pntr_rectangle) { x, y, width, height };
+}
+
+/**
+ * Whether a transform maps the given point onto the given result.
+ */
+bool pntr_test_maps(pntr_transform transform, float x, float y, float expectedX, float expectedY) {
+    pntr_transform_point(transform, &x, &y);
+    return pntr_test_near(x, expectedX) && pntr_test_near(y, expectedY);
+}
+
+MODULE(pntr_transform, {
+    IT("pntr_transform_identity(), pntr_transform_point()", {
+        pntr_transform identity = pntr_transform_identity();
+        EQUALS(pntr_test_maps(identity, 3.0f, -4.0f, 3.0f, -4.0f), true);
+
+        // A NULL coordinate maps nothing rather than crashing.
+        float x = 1.0f;
+        pntr_transform_point(identity, &x, NULL);
+        pntr_transform_point(identity, NULL, &x);
+        EQUALS(pntr_test_near(x, 1.0f), true);
+    });
+
+    IT("pntr_transform_translate(), pntr_transform_scale(), pntr_transform_rotate()", {
+        pntr_transform transform = pntr_transform_translate(pntr_transform_identity(), 10.0f, 20.0f);
+        EQUALS(pntr_test_maps(transform, 1.0f, 2.0f, 11.0f, 22.0f), true);
+
+        // Each operation applies in the space the transform has already set up, so the
+        // scale here is around the translated origin.
+        transform = pntr_transform_scale(transform, 2.0f, 3.0f);
+        EQUALS(pntr_test_maps(transform, 1.0f, 2.0f, 12.0f, 26.0f), true);
+
+        // A quarter turn is exact, and turns the same way as pntr_draw_image_rotated():
+        // the X axis ends up pointing up the screen.
+        pntr_transform rotated = pntr_transform_rotate(pntr_transform_identity(), 90.0f);
+        FEQUALS(rotated.a, 0.0f);
+        FEQUALS(rotated.d, 0.0f);
+        EQUALS(pntr_test_maps(rotated, 1.0f, 0.0f, 0.0f, -1.0f), true);
+        EQUALS(pntr_test_maps(rotated, 0.0f, 1.0f, 1.0f, 0.0f), true);
+        EQUALS(pntr_test_maps(pntr_transform_rotate(pntr_transform_identity(), -270.0f), 1.0f, 0.0f, 0.0f, -1.0f), true);
+        EQUALS(pntr_test_maps(pntr_transform_rotate(pntr_transform_identity(), 45.0f), 1.0f, 0.0f, 0.70710678f, -0.70710678f), true);
+        EQUALS(pntr_test_maps(pntr_transform_rotate(rotated, 270.0f), 5.0f, 7.0f, 5.0f, 7.0f), true);
+    });
+
+    IT("pntr_transform_multiply() applies the second transform first", {
+        pntr_transform translate = pntr_transform_translate(pntr_transform_identity(), 5.0f, 0.0f);
+        pntr_transform scale = pntr_transform_scale(pntr_transform_identity(), 2.0f, 2.0f);
+        EQUALS(pntr_test_maps(pntr_transform_multiply(translate, scale), 1.0f, 1.0f, 7.0f, 2.0f), true);
+        EQUALS(pntr_test_maps(pntr_transform_multiply(scale, translate), 1.0f, 1.0f, 12.0f, 2.0f), true);
+    });
+
+    IT("pntr_image_push_transform(), pntr_image_pop_transform()", {
+        pntr_image* image = pntr_new_image(10, 10);
+        NEQUALS(image, NULL);
+
+        // Popping an empty stack is refused, and leaves the transform alone.
+        pntr_image_translate_transform(image, 3.0f, 4.0f);
+        EQUALS(pntr_image_pop_transform(image), false);
+        EQUALS(pntr_test_near(pntr_image_get_transform(image).tx, 3.0f), true);
+
+        // The stack fills up, refuses one more, and unwinds in order.
+        for (int i = 0; i < PNTR_TRANSFORM_STACK_SIZE; i++) {
+            EQUALS(pntr_image_push_transform(image), true);
+            pntr_image_translate_transform(image, 1.0f, 0.0f);
+        }
+        EQUALS(pntr_image_push_transform(image), false);
+        EQUALS(image->transformStackSize, PNTR_TRANSFORM_STACK_SIZE);
+        EQUALS(pntr_test_near(pntr_image_get_transform(image).tx, 3.0f + (float)PNTR_TRANSFORM_STACK_SIZE), true);
+
+        EQUALS(pntr_image_pop_transform(image), true);
+        EQUALS(pntr_test_near(pntr_image_get_transform(image).tx, 2.0f + (float)PNTR_TRANSFORM_STACK_SIZE), true);
+        int popped = 1;
+        while (pntr_image_pop_transform(image)) {
+            popped++;
+        }
+        EQUALS(popped, PNTR_TRANSFORM_STACK_SIZE);
+        EQUALS(pntr_test_near(pntr_image_get_transform(image).tx, 3.0f), true);
+
+        // origin() resets the current transform, not the stack.
+        EQUALS(pntr_image_push_transform(image), true);
+        pntr_image_reset_transform(image);
+        EQUALS(pntr_test_near(pntr_image_get_transform(image).tx, 0.0f), true);
+        EQUALS(pntr_image_pop_transform(image), true);
+        EQUALS(pntr_test_near(pntr_image_get_transform(image).tx, 3.0f), true);
+
+        // NULL images are refused or ignored.
+        EQUALS(pntr_image_push_transform(NULL), false);
+        EQUALS(pntr_image_pop_transform(NULL), false);
+        pntr_image_translate_transform(NULL, 1.0f, 1.0f);
+        pntr_image_rotate_transform(NULL, 1.0f);
+        pntr_image_scale_transform(NULL, 1.0f, 1.0f);
+        pntr_image_reset_transform(NULL);
+        pntr_image_set_transform(NULL, pntr_transform_identity());
+        EQUALS(pntr_test_near(pntr_image_get_transform(NULL).a, 1.0f), true);
+
+        pntr_unload_image(image);
+    });
+
+    IT("subimages start untransformed, and copies keep the transform", {
+        pntr_image* image = pntr_new_image(10, 10);
+        pntr_image_translate_transform(image, 2.0f, 0.0f);
+        EQUALS(pntr_image_push_transform(image), true);
+
+        pntr_image* subimage = pntr_image_subimage(image, 1, 1, 5, 5);
+        EQUALS(pntr_test_near(pntr_image_get_transform(subimage).tx, 0.0f), true);
+        EQUALS(subimage->transformStackSize, 0);
+
+        pntr_image* copy = pntr_image_copy(image);
+        EQUALS(pntr_test_near(pntr_image_get_transform(copy).tx, 2.0f), true);
+        EQUALS(copy->transformStackSize, 1);
+
+        pntr_unload_image(copy);
+        pntr_unload_image(subimage);
+        pntr_unload_image(image);
+    });
+
+    IT("a translation moves a rectangle, a line and an image by whole pixels", {
+        pntr_image* src = pntr_test_coordinate_image(4, 3);
+        pntr_image* expected = pntr_test_canvas(40, 40);
+        pntr_image* actual = pntr_test_canvas(40, 40);
+
+        pntr_draw_rectangle_fill(expected, 12, 23, 5, 4, PNTR_RED);
+        pntr_draw_line(expected, 10, 20, 30, 35, PNTR_BLUE);
+        pntr_draw_image(expected, src, 25, 21);
+        pntr_draw_image_rotated(expected, src, 20, 30, 33.0f, 1.0f, 1.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+
+        // A fractional offset rounds, the same for every primitive.
+        pntr_image_translate_transform(actual, 10.4f, 20.0f);
+        pntr_draw_rectangle_fill(actual, 2, 3, 5, 4, PNTR_RED);
+        pntr_draw_line(actual, 0, 0, 20, 15, PNTR_BLUE);
+        pntr_draw_image(actual, src, 15, 1);
+        pntr_draw_image_rotated(actual, src, 10, 10, 33.0f, 1.0f, 1.0f, PNTR_FILTER_NEARESTNEIGHBOR);
+
+        IMAGEEQUALS(actual, expected);
+
+        // The identity transform draws exactly as without one.
+        pntr_image_reset_transform(actual);
+        pntr_draw_circle(actual, 20, 20, 9, PNTR_GREEN);
+        pntr_draw_circle(expected, 20, 20, 9, PNTR_GREEN);
+        IMAGEEQUALS(actual, expected);
+
+        pntr_unload_image(actual);
+        pntr_unload_image(expected);
+        pntr_unload_image(src);
+    });
+
+    IT("a scale scales a rectangle, its outline, and a line's thickness", {
+        pntr_image* image = pntr_test_canvas(40, 40);
+        pntr_image_translate_transform(image, 10.0f, 5.0f);
+        pntr_image_scale_transform(image, 2.0f, 3.0f);
+
+        pntr_draw_rectangle_fill(image, 1, 1, 4, 3, PNTR_RED);
+        RECTEQUALS(pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND), pntr_test_rect(12, 8, 8, 9));
+        EQUALS(pntr_test_painted_count(image), 8 * 9);
+
+        // The outline is the band around the fill, two pixels wide and three tall.
+        pntr_clear_background(image, PNTR_TEST_BACKGROUND);
+        pntr_draw_rectangle(image, 1, 1, 4, 3, PNTR_RED);
+        RECTEQUALS(pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND), pntr_test_rect(12, 8, 8, 9));
+        EQUALS(pntr_test_painted_count(image), 8 * 9 - 4 * 3);
+        EQUALS(pntr_test_painted(image, 15, 12), false);
+
+        // A line keeps its endpoints mapped, and is drawn as wide as the scale.
+        pntr_image_reset_transform(image);
+        pntr_image_scale_transform(image, 3.0f, 3.0f);
+        pntr_clear_background(image, PNTR_TEST_BACKGROUND);
+        pntr_draw_line(image, 2, 4, 10, 4, PNTR_BLUE);
+        RECTEQUALS(pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND), pntr_test_rect(5, 11, 27, 3));
+
+        pntr_unload_image(image);
+    });
+
+    IT("a scaled and turned image lands where the transform maps it", {
+        pntr_image* src = pntr_test_coordinate_image(4, 3);
+        pntr_image* image = pntr_gen_image_color(40, 40, PNTR_BLANK);
+
+        // Doubled, every source pixel covers a two by two block.
+        pntr_image_translate_transform(image, 10.0f, 10.0f);
+        pntr_image_scale_transform(image, 2.0f, 2.0f);
+        pntr_draw_image(image, src, 0, 0);
+        RECTEQUALS(pntr_test_painted_bounds(image, PNTR_BLANK), pntr_test_rect(10, 10, 8, 6));
+        for (int y = 0; y < 6; y++) {
+            for (int x = 0; x < 8; x++) {
+                COLOREQUALS(pntr_image_get_color(image, 10 + x, 10 + y), pntr_image_get_color(src, x / 2, y / 2));
+            }
+        }
+
+        // A quarter turn is exact: the top row of the source becomes the left column,
+        // read from the bottom up.
+        pntr_clear_background(image, PNTR_BLANK);
+        pntr_image_reset_transform(image);
+        pntr_image_translate_transform(image, 20.0f, 20.0f);
+        pntr_image_rotate_transform(image, 90.0f);
+        pntr_draw_image(image, src, 0, 0);
+        RECTEQUALS(pntr_test_painted_bounds(image, PNTR_BLANK), pntr_test_rect(20, 16, 3, 4));
+        for (int x = 0; x < 4; x++) {
+            COLOREQUALS(pntr_image_get_color(image, 20, 19 - x), pntr_image_get_color(src, x, 0));
+        }
+
+        // A filled rectangle under the same quarter turn covers the same pixels.
+        pntr_image* rect = pntr_gen_image_color(40, 40, PNTR_BLANK);
+        pntr_image_set_transform(rect, pntr_image_get_transform(image));
+        pntr_draw_rectangle_fill(rect, 0, 0, 4, 3, PNTR_RED);
+        RECTEQUALS(pntr_test_painted_bounds(rect, PNTR_BLANK), pntr_test_rect(20, 16, 3, 4));
+
+        pntr_unload_image(rect);
+        pntr_unload_image(image);
+        pntr_unload_image(src);
+    });
+
+    IT("the clip stays in destination pixels", {
+        pntr_image* image = pntr_test_canvas(20, 20);
+        pntr_image_set_clip(image, 0, 0, 10, 10);
+        pntr_image_translate_transform(image, 5.0f, 5.0f);
+        pntr_image_rotate_transform(image, 30.0f);
+        pntr_draw_rectangle_fill(image, -20, -20, 40, 40, PNTR_RED);
+        pntr_draw_circle_fill(image, 0, 0, 30, PNTR_RED);
+        RECTEQUALS(pntr_test_painted_bounds(image, PNTR_TEST_BACKGROUND), pntr_test_rect(0, 0, 10, 10));
+        pntr_unload_image(image);
+    });
+})
+#endif
+
 int main() {
     UNIT_CREATE("pntr");
     UNIT_MODULE(pntr);
     UNIT_MODULE(pntr_math);
+    #ifdef PNTR_ENABLE_TRANSFORM
+    UNIT_MODULE(pntr_transform);
+    #endif
     return UNIT_RUN();
 }

@@ -114,6 +114,7 @@ jobs:
           "PNTR_PIXELFORMAT_ARGB"
           "PNTR_ENABLE_DEFAULT_FONT"
           "PNTR_ENABLE_JPEG"
+          "PNTR_ENABLE_TRANSFORM"
           "PNTR_ENABLE_TTF"
           "PNTR_ENABLE_UTF8"
           "PNTR_ENABLE_VARGS"

@@ -33,6 +33,7 @@ int main() {
 - Clipping
 - Load and save images (PNG, BMP, and JPEG with `PNTR_ENABLE_JPEG`)
 - Draw sprites with scaling and rotation
+- Transform stack to translate, rotate and scale drawing, with `PNTR_ENABLE_TRANSFORM`
 - Alpha-blending, alpha masks, invert, brightness, etc
 - Font rendering (TTF, BMF, TTY)
 - UTF-8
@@ -93,6 +94,8 @@ You can modify how *pntr* functions based on the following defines:
 | `PNTR_ENABLE_DEFAULT_FONT` | Enables the default 8x8 pixel font |
 | `PNTR_ENABLE_JPEG` | Enables JPEG image loading, when the active image backend supports it |
 | `PNTR_ENABLE_MATH` | Enables use of C's standard [`math.h`](https://en.cppreference.com/w/c/numeric/math) linked library, rather than using the built in math functions |
+| `PNTR_ENABLE_TRANSFORM` | Gives every image a transform stack that the drawing functions honor. See [Transforms](#transforms) |
+| `PNTR_TRANSFORM_STACK_SIZE` | How many transforms an image can push with `PNTR_ENABLE_TRANSFORM`. Defaults to `16` |
 | `PNTR_ENABLE_TTF` | Enables support for loading [TrueType fonts](https://en.wikipedia.org/wiki/TrueType_fonts) |
 | `PNTR_ENABLE_UTF8` | Enables [UTF-8](https://en.wikipedia.org/wiki/UTF-8) support for font loading and text rendering |
 | `PNTR_ENABLE_VARGS` | Adds support for functions that require variadic arguments, like `pntr_draw_text_ex()` |
@@ -213,6 +216,29 @@ Whether a shape covers its far edge depends on how you describe the shape, not o
 - **Shapes described by an extent stop short of the far edge.** `pntr_draw_rectangle(image, x, y, width, height, color)` paints columns `x` through `x + width - 1` and rows `y` through `y + height - 1`, so `width` and `height` are a count of pixels rather than a second coordinate. `pntr_draw_rectangle_fill()`, `pntr_draw_rectangle_rounded()`, `pntr_draw_line_horizontal()`, `pntr_draw_line_vertical()`, and the clip region of `pntr_image_set_clip()` all read their sizes the same way.
 
 A rounded rectangle therefore occupies exactly the same pixels as a plain rectangle of the same `x`, `y`, `width` and `height`, and a thick line is the same length as the thin line through the same two endpoints.
+
+### Transforms
+
+With `PNTR_ENABLE_TRANSFORM` defined, every image carries a transform that its drawing goes through, and a stack to push and pop it with:
+
+``` c
+pntr_transform pntr_transform_identity(void);
+pntr_transform pntr_transform_multiply(pntr_transform transform, pntr_transform other);
+pntr_transform pntr_transform_translate(pntr_transform transform, float x, float y);
+pntr_transform pntr_transform_rotate(pntr_transform transform, float degrees);
+pntr_transform pntr_transform_scale(pntr_transform transform, float scaleX, float scaleY);
+void pntr_transform_point(pntr_transform transform, float* x, float* y);
+bool pntr_image_push_transform(pntr_image* image);
+bool pntr_image_pop_transform(pntr_image* image);
+void pntr_image_translate_transform(pntr_image* image, float x, float y);
+void pntr_image_rotate_transform(pntr_image* image, float degrees);
+void pntr_image_scale_transform(pntr_image* image, float scaleX, float scaleY);
+void pntr_image_reset_transform(pntr_image* image);
+pntr_transform pntr_image_get_transform(pntr_image* image);
+void pntr_image_set_transform(pntr_image* image, pntr_transform transform);
+```
+
+Points, lines and polygons have their points mapped, and their thickness scaled. Rectangles, gradients, images and text follow any rotation, scale or skew exactly. Circles, ellipses and rounded rectangles keep their own algorithm unless rotated, and become 64 point polygons when they are. The clip stays in destination pixels. Rotations turn counter-clockwise on screen, the same as `pntr_draw_image_rotated()`. The details are under [`PNTR_ENABLE_TRANSFORM`](https://robloach.github.io/pntr/).
 
 ### Colors
 
