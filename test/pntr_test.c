@@ -5525,21 +5525,64 @@ MODULE(pntr, {
 
     if (pntr_image_from_file()) {
         IT("pntr_draw_text(): unknown characters", {
-            // Characters that aren't in the font are skipped rather than indexed.
+            // Characters that aren't in the font are shown as the font's question mark.
             pntr_font* font = pntr_load_font_bmf("resources/font.png", PNTR_TEST_BMF_CHARACTERS);
             NEQUALS(font, NULL);
 
-            EQUALS(pntr_measure_text(font, "~~~"), 0);
+            EQUALS(pntr_measure_text(font, "~~~"), pntr_measure_text(font, "???"));
+            GREATER(pntr_measure_text(font, "~~~"), 0);
 
             pntr_image* image = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
             NEQUALS(image, NULL);
             pntr_image* expected = pntr_gen_image_color(40, 40, PNTR_DARKBROWN);
             NEQUALS(expected, NULL);
             pntr_draw_text(image, font, "~~~", 0, 0, PNTR_WHITE);
+            pntr_draw_text(expected, font, "???", 0, 0, PNTR_WHITE);
             IMAGEEQUALS(image, expected);
+
+            // Control characters have nothing to stand in for, and are skipped.
+            EQUALS(pntr_measure_text(font, "a\r\tb"), pntr_measure_text(font, "ab"));
 
             pntr_unload_image(expected);
             pntr_unload_image(image);
+            pntr_unload_font(font);
+
+            // Without a question mark either, the characters are skipped.
+            font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, "ABC");
+            NEQUALS(font, NULL);
+            EQUALS(pntr_measure_text(font, "~~~"), 0);
+            EQUALS(pntr_measure_text(font, "A~B"), 16);
+            pntr_unload_font(font);
+        });
+
+        IT("pntr_draw_text(): glyph lookup", {
+            // Characters given out of order, or more than once, still find their glyph,
+            // and a repeated character keeps the first glyph it was given.
+            pntr_font* font = pntr_load_font_tty("resources/font-tty-8x8.png", 8, 8, "CBAA");
+            NEQUALS(font, NULL);
+
+            pntr_image* image = pntr_gen_image_text(font, "A", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(image, NULL);
+            pntr_image* expected = pntr_gen_image_color(8, 8, PNTR_BLANK);
+            NEQUALS(expected, NULL);
+            pntr_draw_image_rec(expected, font->atlas, font->srcRects[2], 0, 0);
+            IMAGEEQUALS(image, expected);
+            pntr_unload_image(expected);
+            pntr_unload_image(image);
+
+            // A font without the lookup, as one put together by hand would be, searches
+            // its characters instead and lands on the same glyphs.
+            pntr_image* withLookup = pntr_gen_image_text(font, "ABCA", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(withLookup, NULL);
+            struct pntr_font_glyphs* glyphs = font->glyphs;
+            font->glyphs = NULL;
+            pntr_image* withoutLookup = pntr_gen_image_text(font, "ABCA", PNTR_WHITE, PNTR_BLANK);
+            NEQUALS(withoutLookup, NULL);
+            IMAGEEQUALS(withLookup, withoutLookup);
+            font->glyphs = glyphs;
+
+            pntr_unload_image(withoutLookup);
+            pntr_unload_image(withLookup);
             pntr_unload_font(font);
         });
     }
@@ -6819,6 +6862,50 @@ MODULE(pntr, {
             });
 
             pntr_unload_image(canvas);
+            pntr_unload_font(font);
+        });
+
+        IT("pntr_load_font_ttf(): spacing", {
+            pntr_font* font = pntr_load_font_ttf("resources/tuffy.ttf", 32);
+            NEQUALS(font, NULL);
+
+            // Lines are spaced by the font's ascent, descent and line gap.
+            EQUALS(font->lineHeight, 32);
+            pntr_vector oneLine = pntr_measure_text_ex(font, "A", 0);
+            pntr_vector twoLines = pntr_measure_text_ex(font, "A\nA", 0);
+            EQUALS(twoLines.y, oneLine.y + 32);
+
+            // The pen moves on by the exact advances and kerning, which come to 198.70
+            // pixels for this text, rather than by each glyph's rounded advance and offset.
+            EQUALS(pntr_measure_text(font, "AVATAR WAVE To"), 199);
+
+            // A and V are kerned closer together than they are apart.
+            LESSER(pntr_measure_text(font, "AV"), pntr_measure_text(font, "A") + pntr_measure_text(font, "V"));
+
+            // What is measured is what is drawn.
+            pntr_image* image = pntr_gen_image_text(font, "AVATAR WAVE To", PNTR_BLACK, PNTR_BLANK);
+            NEQUALS(image, NULL);
+            EQUALS(image->width, 199);
+            pntr_rectangle border = pntr_image_alpha_border(image, 0.0f);
+            LESSEREQ(border.x + border.width, image->width);
+            GREATER(border.x + border.width, image->width - 4);
+            pntr_unload_image(image);
+
+            // A copy keeps the spacing.
+            pntr_font* copy = pntr_font_copy(font);
+            NEQUALS(copy, NULL);
+            EQUALS(copy->lineHeight, font->lineHeight);
+            EQUALS(pntr_measure_text(copy, "AVATAR WAVE To"), 199);
+            EQUALS(pntr_measure_text(copy, "AV"), pntr_measure_text(font, "AV"));
+            pntr_unload_font(copy);
+
+            // A scaled font scales its spacing along with its glyphs.
+            pntr_font* scaled = pntr_font_scale(font, 2.0f, 2.0f, PNTR_FILTER_BILINEAR);
+            NEQUALS(scaled, NULL);
+            EQUALS(scaled->lineHeight, 64);
+            EQUALS(pntr_measure_text(scaled, "AVATAR WAVE To"), 397);
+            pntr_unload_font(scaled);
+
             pntr_unload_font(font);
         });
     }
@@ -9008,7 +9095,8 @@ MODULE(pntr, {
                 pntr_set_error(PNTR_ERROR_NONE);
             }
 
-            EQUALS(image->width, 190);
+            // The sum of the glyphs' advances, and their kerning, of 183.16 pixels.
+            EQUALS(image->width, 183);
             EQUALS(image->height, 37);
 
             pntr_unload_font(font);

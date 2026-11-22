@@ -468,10 +468,12 @@ typedef struct pntr_vector {
 typedef struct pntr_font {
     pntr_image* atlas; /**< The image used for the character atlas for the font. */
     pntr_rectangle* srcRects; /**< The glyph source rectangles on the atlas. */
-    pntr_rectangle* glyphRects; /**< How the glyph appears when rendering. */
+    pntr_rectangle* glyphRects; /**< How the glyph appears when rendering: x and y offset the glyph from the pen, and width is how far the pen moves on after it. */
     char* characters; /**< An array of characters that are available in the font's atlas. */
     int charactersLen; /**< The number of characters that the font implements. */
     void* user_data; /**< General extra user data that can be referenced to by the font. */
+    int lineHeight; /**< How far a newline moves down, in pixels. 0 to use the tallest glyph the font holds. */
+    struct pntr_font_glyphs* glyphs; /**< Glyph lookup, fractional advances and kerning, built and owned by pntr. Rebuilt by the loaders only, so changing `characters` afterwards leaves it stale. NULL falls back to searching `characters`. */
 } pntr_font;
 
 /**
@@ -5494,8 +5496,255 @@ static pntr_font* _pntr_new_font(int numCharacters, size_t characterByteSize, pn
     font->characters[0] = '\0';
     font->charactersLen = numCharacters;
     font->atlas = atlas;
+    font->user_data = NULL;
+    font->lineHeight = 0;
+    font->glyphs = NULL;
 
     return font;
+}
+
+/**
+ * A pair of glyphs that the font spaces closer together, or further apart, than their
+ * advances alone would.
+ *
+ * @internal
+ */
+typedef struct _pntr_font_kerning {
+    int first; /**< The glyph index of the glyph on the left. */
+    int second; /**< The glyph index of the glyph on the right. */
+    float amount; /**< How many pixels to move the pen between the two. */
+} _pntr_font_kerning;
+
+/**
+ * The glyph data that pntr builds for a font when loading it.
+ *
+ * @internal
+ */
+struct pntr_font_glyphs {
+    pntr_codepoint_t* codepoints; /**< Every codepoint the font has a glyph for, sorted, for a binary search. */
+    int* indices; /**< The glyph index of each of the sorted codepoints. */
+    int lookupLen; /**< How many codepoints are in the lookup. */
+    float* advances; /**< The exact advance of every glyph, or NULL to use the glyphRects widths. */
+    _pntr_font_kerning* kerning; /**< The kerning pairs, sorted by the first glyph and then the second. */
+    int kerningLen; /**< How many kerning pairs there are. */
+};
+
+/**
+ * Unloads the glyph data built for a font.
+ *
+ * @internal
+ */
+static void _pntr_unload_font_glyphs(struct pntr_font_glyphs* glyphs) {
+    if (glyphs == NULL) {
+        return;
+    }
+
+    PNTR_FREE(glyphs->codepoints);
+    PNTR_FREE(glyphs->indices);
+    PNTR_FREE(glyphs->advances);
+    PNTR_FREE(glyphs->kerning);
+    PNTR_FREE(glyphs);
+}
+
+/**
+ * Rounds a pen position to the nearest pixel.
+ *
+ * @internal
+ */
+static int _pntr_font_round(float value) {
+    return (value >= 0.0f) ? (int)(value + 0.5f) : -(int)(0.5f - value);
+}
+
+/**
+ * Builds the codepoint lookup of a font from its characters, and settles its line height.
+ *
+ * @details Called by every loader once the font's characters and rectangles are in
+ * place. Drawing then finds each glyph with a binary search, rather than walking the
+ * whole character string for every character of text.
+ *
+ * @return True on success, false if the memory couldn't be allocated.
+ *
+ * @internal
+ */
+static bool _pntr_font_build_glyphs(pntr_font* font) {
+    struct pntr_font_glyphs* glyphs = (struct pntr_font_glyphs*)PNTR_MALLOC(sizeof(struct pntr_font_glyphs));
+    if (glyphs == NULL) {
+        pntr_set_error(PNTR_ERROR_NO_MEMORY);
+        return false;
+    }
+
+    PNTR_MEMSET((void*)glyphs, 0, sizeof(struct pntr_font_glyphs));
+    glyphs->codepoints = (pntr_codepoint_t*)PNTR_MALLOC(sizeof(pntr_codepoint_t) * (size_t)font->charactersLen);
+    glyphs->indices = (int*)PNTR_MALLOC(sizeof(int) * (size_t)font->charactersLen);
+    if (glyphs->codepoints == NULL || glyphs->indices == NULL) {
+        _pntr_unload_font_glyphs(glyphs);
+        pntr_set_error(PNTR_ERROR_NO_MEMORY);
+        return false;
+    }
+
+    // Each character's position in the string is its glyph index. Insertion sort keeps
+    // the first of any repeated character in front, which is the one a search of the
+    // string would have found, and is close to linear on the ordered character sets
+    // fonts are usually given.
+    pntr_codepoint_t codepoint;
+    for (const char* v = PNTR_STRCODEPOINT(font->characters, &codepoint); codepoint && glyphs->lookupLen < font->charactersLen; v = PNTR_STRCODEPOINT(v, &codepoint)) {
+        int j = glyphs->lookupLen;
+        while (j > 0 && glyphs->codepoints[j - 1] > codepoint) {
+            glyphs->codepoints[j] = glyphs->codepoints[j - 1];
+            glyphs->indices[j] = glyphs->indices[j - 1];
+            j--;
+        }
+
+        glyphs->codepoints[j] = codepoint;
+        glyphs->indices[j] = glyphs->lookupLen;
+        glyphs->lookupLen++;
+    }
+
+    // Without a line height of its own, the font's tallest glyph sets it.
+    if (font->lineHeight <= 0) {
+        font->lineHeight = 0;
+        for (int i = 0; i < font->charactersLen; i++) {
+            int glyphBottom = font->glyphRects[i].y + font->glyphRects[i].height;
+            if (glyphBottom > font->lineHeight) {
+                font->lineHeight = glyphBottom;
+            }
+        }
+    }
+
+    _pntr_unload_font_glyphs(font->glyphs);
+    font->glyphs = glyphs;
+    return true;
+}
+
+/**
+ * Finds the glyph index of the given codepoint.
+ *
+ * @return The index of the glyph, or -1 when the font has no glyph for it.
+ *
+ * @internal
+ */
+static int _pntr_font_glyph_index(pntr_font* font, pntr_codepoint_t codepoint) {
+    struct pntr_font_glyphs* glyphs = font->glyphs;
+    if (glyphs != NULL) {
+        int low = 0;
+        int high = glyphs->lookupLen;
+        while (low < high) {
+            int middle = low + (high - low) / 2;
+            if (glyphs->codepoints[middle] < codepoint) {
+                low = middle + 1;
+            }
+            else {
+                high = middle;
+            }
+        }
+
+        if (low < glyphs->lookupLen && glyphs->codepoints[low] == codepoint) {
+            return glyphs->indices[low];
+        }
+
+        return -1;
+    }
+
+    // A font that was put together by hand has no lookup, so search its characters.
+    char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
+    if (foundCharacter == NULL) {
+        return -1;
+    }
+
+    #ifdef PNTR_ENABLE_UTF8
+    int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
+    #else
+    int i = (int)(foundCharacter - font->characters);
+    #endif
+
+    // Make sure the glyph actually exists in the font.
+    if (i < 0 || i >= font->charactersLen) {
+        return -1;
+    }
+
+    return i;
+}
+
+/**
+ * How much the font moves the pen between the two given glyphs, besides their advance.
+ *
+ * @internal
+ */
+static float _pntr_font_kerning_amount(pntr_font* font, int first, int second) {
+    struct pntr_font_glyphs* glyphs = font->glyphs;
+    if (glyphs == NULL || glyphs->kerningLen == 0) {
+        return 0.0f;
+    }
+
+    int low = 0;
+    int high = glyphs->kerningLen - 1;
+    while (low <= high) {
+        int middle = low + (high - low) / 2;
+        _pntr_font_kerning* pair = &glyphs->kerning[middle];
+        if (pair->first < first || (pair->first == first && pair->second < second)) {
+            low = middle + 1;
+        }
+        else if (pair->first == first && pair->second == second) {
+            return pair->amount;
+        }
+        else {
+            high = middle - 1;
+        }
+    }
+
+    return 0.0f;
+}
+
+/**
+ * Places the next codepoint of a line of text, and moves the pen on past it.
+ *
+ * @details This is the one place that decides where glyphs go, so that
+ * pntr_measure_text_ex() measures exactly what pntr_draw_text_len() draws. The pen keeps
+ * the fractional part of every advance and kerning pair, and is only rounded to a pixel
+ * where a glyph is placed, so a long line doesn't drift by the rounding of each glyph.
+ *
+ * A character the font has no glyph for is shown as a `?`, when the font has one, so
+ * that missing text is visible rather than silently closing up. Control characters,
+ * such as a carriage return or a tab, have no glyph to stand in for and are skipped.
+ *
+ * @param font The font to place the glyph with.
+ * @param codepoint The character to place.
+ * @param previous The glyph placed before this one on the line, or -1 at the start of a line. Updated to this glyph.
+ * @param pen Where the pen is on the line, in pixels. Moved on past this glyph.
+ * @param glyphX Where on the line the glyph's pen position lands, rounded to a pixel.
+ *
+ * @return The index of the glyph to draw at glyphX, or -1 when there is nothing to place.
+ *
+ * @internal
+ */
+static int _pntr_font_place_glyph(pntr_font* font, pntr_codepoint_t codepoint, int* previous, float* pen, int* glyphX) {
+    int i = _pntr_font_glyph_index(font, codepoint);
+    if (i < 0) {
+        // Cast, since a plain char codepoint is signed on some platforms and not others.
+        if ((unsigned int)codepoint < (unsigned int)' ') {
+            return -1;
+        }
+
+        i = _pntr_font_glyph_index(font, '?');
+        if (i < 0) {
+            return -1;
+        }
+    }
+
+    if (*previous >= 0) {
+        *pen += _pntr_font_kerning_amount(font, *previous, i);
+    }
+
+    *glyphX = _pntr_font_round(*pen);
+    if (font->glyphs != NULL && font->glyphs->advances != NULL) {
+        *pen += font->glyphs->advances[i];
+    }
+    else {
+        *pen += (float)font->glyphRects[i].width;
+    }
+
+    *previous = i;
+    return i;
 }
 
 /**
@@ -5576,6 +5825,13 @@ PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char*
     }
 
     PNTR_MEMCPY(font->characters, characters, charactersSize);
+
+    // A font that can't be finished doesn't take the image, which stays the caller's.
+    if (!_pntr_font_build_glyphs(font)) {
+        font->atlas = NULL;
+        pntr_unload_font(font);
+        return NULL;
+    }
 
     return font;
 }
@@ -5728,6 +5984,13 @@ PNTR_API pntr_font* pntr_load_font_tty_from_image(pntr_image* image, int glyphWi
 
     PNTR_MEMCPY(font->characters, characters, charactersSize);
 
+    // A font that can't be finished doesn't take the image, which stays the caller's.
+    if (!_pntr_font_build_glyphs(font)) {
+        font->atlas = NULL;
+        pntr_unload_font(font);
+        return NULL;
+    }
+
     return font;
 }
 
@@ -5753,6 +6016,7 @@ PNTR_API void pntr_unload_font(pntr_font* font) {
     pntr_unload_memory(font->srcRects);
     pntr_unload_memory(font->glyphRects);
     pntr_unload_memory(font->characters);
+    _pntr_unload_font_glyphs(font->glyphs);
     PNTR_FREE(font);
 }
 
@@ -5783,6 +6047,37 @@ PNTR_API pntr_font* pntr_font_copy(pntr_font* font) {
     PNTR_MEMCPY(output->srcRects, font->srcRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
     PNTR_MEMCPY(output->glyphRects, font->glyphRects, sizeof(pntr_rectangle) * (size_t)output->charactersLen);
     PNTR_MEMCPY(output->characters, font->characters, charactersSize);
+    output->lineHeight = font->lineHeight;
+
+    if (!_pntr_font_build_glyphs(output)) {
+        pntr_unload_font(output);
+        return NULL;
+    }
+
+    // Carry over the exact advances and the kerning, which can't be rebuilt from the
+    // characters alone.
+    struct pntr_font_glyphs* source = font->glyphs;
+    struct pntr_font_glyphs* destination = output->glyphs;
+    if (source != NULL && source->advances != NULL) {
+        destination->advances = (float*)PNTR_MALLOC(sizeof(float) * (size_t)output->charactersLen);
+        if (destination->advances == NULL) {
+            pntr_unload_font(output);
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
+        }
+
+        PNTR_MEMCPY(destination->advances, source->advances, sizeof(float) * (size_t)output->charactersLen);
+    }
+
+    if (source != NULL && source->kerningLen > 0) {
+        destination->kerning = (_pntr_font_kerning*)PNTR_MALLOC(sizeof(_pntr_font_kerning) * (size_t)source->kerningLen);
+        if (destination->kerning == NULL) {
+            pntr_unload_font(output);
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
+        }
+
+        PNTR_MEMCPY(destination->kerning, source->kerning, sizeof(_pntr_font_kerning) * (size_t)source->kerningLen);
+        destination->kerningLen = source->kerningLen;
+    }
 
     return output;
 }
@@ -5833,17 +6128,32 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
         output->glyphRects[i].height = (int)((float)output->glyphRects[i].height * scaleY);
     }
 
+    // Resize the spacing, the same way as the rectangles.
+    output->lineHeight = (int)((float)output->lineHeight * scaleY);
+    struct pntr_font_glyphs* glyphs = output->glyphs;
+    if (glyphs->advances != NULL) {
+        for (int i = 0; i < output->charactersLen; i++) {
+            glyphs->advances[i] *= scaleX;
+        }
+    }
+
+    for (int i = 0; i < glyphs->kerningLen; i++) {
+        glyphs->kerning[i].amount *= scaleX;
+    }
+
     return output;
 }
 
 /**
  * How far a newline moves down the page with the given font.
  *
- * @details The tallest glyph the whole font holds, measured from the top of the line to
- * the bottom of the glyph, so that every glyph in the font fits inside one line. This is
- * deliberately not derived from the text being drawn: a line height that came from the
- * glyphs that happen to appear would make an empty line shorter than a full one, and
- * would let pntr_measure_text_ex() disagree with what pntr_draw_text() paints.
+ * @details The font's own lineHeight, which the loaders set: a TrueType font's line
+ * spacing, or the tallest glyph of a bitmap font. A font without one falls back to the
+ * tallest glyph the whole font holds, measured from the top of the line to the bottom of
+ * the glyph, so that every glyph in the font fits inside one line. This is deliberately
+ * not derived from the text being drawn: a line height that came from the glyphs that
+ * happen to appear would make an empty line shorter than a full one, and would let
+ * pntr_measure_text_ex() disagree with what pntr_draw_text() paints.
  *
  * @param font The font to find the line height of.
  *
@@ -5854,6 +6164,10 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
 static int _pntr_font_line_height(pntr_font* font) {
     if (font == NULL) {
         return 0;
+    }
+
+    if (font->lineHeight > 0) {
+        return font->lineHeight;
     }
 
     int lineHeight = 0;
@@ -5870,8 +6184,10 @@ static int _pntr_font_line_height(pntr_font* font) {
 /**
  * Prints text on the given image, provided the length of the string.
  *
- * @details A newline moves down by the font's line height, which is the tallest glyph
- * the font holds, so an empty line takes up as much room as a full one.
+ * @details A newline moves down by the font's line height, so an empty line takes up as
+ * much room as a full one. Glyphs are spaced by their advances, along with the font's
+ * kerning when it has any. A character the font has no glyph for is drawn as a `?` when
+ * the font has one, and control characters other than a newline are skipped.
  *
  * @param dst The image of which to print the text on.
  * @param font The font to use when rendering the text.
@@ -5888,12 +6204,10 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
         return;
     }
 
-    int x = posX;
     int y = posY;
-
-    // Resolved from the font the first time a line ends, since text without a newline in
-    // it never needs it, and finding it walks every glyph of the font.
-    int lineHeight = 0;
+    float pen = 0.0f;
+    int previous = -1;
+    int glyphX = 0;
 
     // Iterate through each character.
     pntr_codepoint_t codepoint;
@@ -5908,40 +6222,21 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
 
         // If the character is a newline, move to the next line.
         if (codepoint == '\n') {
-            // TODO: pntr_draw_text(): Allow for center/right alignment
-            if (lineHeight == 0) {
-                lineHeight = _pntr_font_line_height(font);
-            }
-
-            x = posX;
-            y += lineHeight;
+            y += _pntr_font_line_height(font);
+            pen = 0.0f;
+            previous = -1;
             continue;
         }
 
-        // Find the character in the font's character index.
-        char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
-        if (!foundCharacter) {
-            continue;
-        }
-
-        // Find the index of the character in the string.
-        #ifdef PNTR_ENABLE_UTF8
-        int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
-        #else
-        int i = (int)(foundCharacter - font->characters);
-        #endif
-
-        // Make sure the glyph actually exists in the font.
-        if (i < 0 || i >= font->charactersLen) {
+        int i = _pntr_font_place_glyph(font, codepoint, &previous, &pen, &glyphX);
+        if (i < 0) {
             continue;
         }
 
         // Draw the character, unless it's a space.
         if (codepoint != ' ')  {
-            pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], x + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
+            pntr_draw_image_tint_rec(dst, font->atlas, font->srcRects[i], posX + glyphX + font->glyphRects[i].x, y + font->glyphRects[i].y, tint);
         }
-
-        x += font->glyphRects[i].x + font->glyphRects[i].width;
     }
 }
 
@@ -6187,7 +6482,8 @@ PNTR_API int pntr_measure_text(pntr_font* font, const char* text) {
  * @details The height is one line height for every newline in the text, plus the height
  * of the tallest glyph on the last line, which is exactly the area pntr_draw_text()
  * paints on. Every newline moves down by the same amount, whether the line it ends holds
- * any glyphs or not, so an empty line is as tall as a full one.
+ * any glyphs or not, so an empty line is as tall as a full one. The width places every
+ * glyph exactly as pntr_draw_text() does, kerning and missing characters included.
  *
  * @param font The font to use when rendering the text.
  * @param text The text to measure the length of.
@@ -6203,13 +6499,11 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
     }
 
     pntr_vector output = PNTR_CLITERAL(pntr_vector) { .x = 0, .y = 0 };
-    int currentX = 0;
     int tallestCharacter = 0;
     int index = 0;
-
-    // Resolved from the font the first time a line ends, the same way
-    // pntr_draw_text_len() resolves it, since text without a newline never needs it.
-    int lineHeight = 0;
+    float pen = 0.0f;
+    int previous = -1;
+    int glyphX = 0;
 
     pntr_codepoint_t codepoint;
     for (const char* v = PNTR_STRCODEPOINT(text, &codepoint); codepoint; v = PNTR_STRCODEPOINT(v, &codepoint)) {
@@ -6220,40 +6514,27 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
 
         // Consider any newlines
         if (codepoint == '\n') {
-            if (lineHeight == 0) {
-                lineHeight = _pntr_font_line_height(font);
-            }
-
-            output.y += lineHeight;
-            currentX = 0;
+            output.y += _pntr_font_line_height(font);
+            pen = 0.0f;
+            previous = -1;
             tallestCharacter = 0;
             continue;
         }
 
-        // Find the index of the character in the font atlas.
-        char* foundCharacter = PNTR_STRCHR(font->characters, codepoint);
-        if (foundCharacter != NULL) {
-            // Find the index of the character in the string.
-            #ifdef PNTR_ENABLE_UTF8
-            int i = (int)utf8nlen(font->characters, (size_t)(foundCharacter - font->characters));
-            #else
-            int i = (int)(foundCharacter - font->characters);
-            #endif
+        // Place the glyph exactly as pntr_draw_text_len() does.
+        int i = _pntr_font_place_glyph(font, codepoint, &previous, &pen, &glyphX);
+        if (i < 0) {
+            continue;
+        }
 
-            // Make sure the glyph actually exists in the font.
-            if (i < 0 || i >= font->charactersLen) {
-                continue;
-            }
+        int lineWidth = _pntr_font_round(pen);
+        if (lineWidth > output.x) {
+            output.x = lineWidth;
+        }
 
-            currentX += font->glyphRects[i].x + font->glyphRects[i].width;
-            if (currentX > output.x) {
-                output.x = currentX;
-            }
-
-            // Find the tallest character on this line.
-            if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
-                tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
-            }
+        // Find the tallest character on this line.
+        if (tallestCharacter < font->glyphRects[i].y + font->glyphRects[i].height) {
+            tallestCharacter = font->glyphRects[i].y + font->glyphRects[i].height;
         }
     }
 
@@ -6399,6 +6680,139 @@ PNTR_API pntr_font* pntr_load_font_ttf(const char* fileName, int fontSize) {
     #endif
 }
 
+#ifdef PNTR_ENABLE_TTF
+/**
+ * Adds a kerning pair to the font's glyph data, growing the list as needed.
+ *
+ * @internal
+ */
+static bool _pntr_font_add_kerning(struct pntr_font_glyphs* glyphs, int* capacity, int first, int second, float amount) {
+    if (glyphs->kerningLen >= *capacity) {
+        int newCapacity = (*capacity > 0) ? *capacity * 2 : 64;
+        _pntr_font_kerning* kerning = (_pntr_font_kerning*)PNTR_REALLOC(glyphs->kerning, sizeof(_pntr_font_kerning) * (size_t)newCapacity);
+        if (kerning == NULL) {
+            return false;
+        }
+
+        glyphs->kerning = kerning;
+        *capacity = newCapacity;
+    }
+
+    glyphs->kerning[glyphs->kerningLen].first = first;
+    glyphs->kerning[glyphs->kerningLen].second = second;
+    glyphs->kerning[glyphs->kerningLen].amount = amount;
+    glyphs->kerningLen++;
+    return true;
+}
+
+/**
+ * Loads the kerning of a TrueType font, for the glyphs the font has been baked with.
+ *
+ * @details The whole `kern` table is read when the font has one. A font that only kerns
+ * through `GPOS` is asked about every pair of its ASCII glyphs instead, since asking
+ * about every pair of a larger character set would take too long.
+ *
+ * @param font The font being loaded, whose glyph data already exists.
+ * @param fontInfo The font's data, as stb_truetype sees it.
+ * @param scale The scale from font units to pixels.
+ * @param firstCodepoint The codepoint of the font's first glyph, with the rest following on in order.
+ *
+ * @return True on success, even when the font has no kerning, or false if the memory couldn't be allocated.
+ *
+ * @internal
+ */
+static bool _pntr_font_load_ttf_kerning(pntr_font* font, const stbtt_fontinfo* fontInfo, float scale, int firstCodepoint) {
+    struct pntr_font_glyphs* glyphs = font->glyphs;
+    int capacity = 0;
+
+    // The TrueType glyph that each of the font's glyphs was baked from.
+    int* ttfGlyphs = (int*)PNTR_MALLOC(sizeof(int) * (size_t)font->charactersLen);
+    if (ttfGlyphs == NULL) {
+        pntr_set_error(PNTR_ERROR_NO_MEMORY);
+        return false;
+    }
+
+    for (int i = 0; i < font->charactersLen; i++) {
+        ttfGlyphs[i] = stbtt_FindGlyphIndex(fontInfo, firstCodepoint + i);
+    }
+
+    bool success = true;
+    int tableLength = stbtt_GetKerningTableLength(fontInfo);
+    if (tableLength > 0 && fontInfo->numGlyphs > 0) {
+        // Map every TrueType glyph back to the font's glyph for it, if it has one.
+        stbtt_kerningentry* table = (stbtt_kerningentry*)PNTR_MALLOC(sizeof(stbtt_kerningentry) * (size_t)tableLength);
+        int* fontGlyphs = (int*)PNTR_MALLOC(sizeof(int) * (size_t)fontInfo->numGlyphs);
+        success = table != NULL && fontGlyphs != NULL;
+        if (success) {
+            for (int i = 0; i < fontInfo->numGlyphs; i++) {
+                fontGlyphs[i] = -1;
+            }
+
+            // Glyph 0 is the one shown for missing characters, which is never kerned.
+            for (int i = 0; i < font->charactersLen; i++) {
+                if (ttfGlyphs[i] > 0 && ttfGlyphs[i] < fontInfo->numGlyphs && fontGlyphs[ttfGlyphs[i]] < 0) {
+                    fontGlyphs[ttfGlyphs[i]] = i;
+                }
+            }
+
+            tableLength = stbtt_GetKerningTable(fontInfo, table, tableLength);
+            for (int i = 0; i < tableLength && success; i++) {
+                if (table[i].glyph1 < 0 || table[i].glyph1 >= fontInfo->numGlyphs || table[i].glyph2 < 0 || table[i].glyph2 >= fontInfo->numGlyphs) {
+                    continue;
+                }
+
+                int first = fontGlyphs[table[i].glyph1];
+                int second = fontGlyphs[table[i].glyph2];
+                if (first >= 0 && second >= 0 && table[i].advance != 0) {
+                    success = _pntr_font_add_kerning(glyphs, &capacity, first, second, (float)table[i].advance * scale);
+                }
+            }
+        }
+
+        PNTR_FREE(table);
+        PNTR_FREE(fontGlyphs);
+
+        // The pairs follow the TrueType glyph order, so sort them into the font's own, a
+        // shell sort being plenty for the size of a kerning table.
+        for (int gap = glyphs->kerningLen / 2; success && gap > 0; gap /= 2) {
+            for (int i = gap; i < glyphs->kerningLen; i++) {
+                _pntr_font_kerning pair = glyphs->kerning[i];
+                int j = i;
+                while (j >= gap && (glyphs->kerning[j - gap].first > pair.first || (glyphs->kerning[j - gap].first == pair.first && glyphs->kerning[j - gap].second > pair.second))) {
+                    glyphs->kerning[j] = glyphs->kerning[j - gap];
+                    j -= gap;
+                }
+                glyphs->kerning[j] = pair;
+            }
+        }
+    }
+    else if (fontInfo->gpos != 0) {
+        // Asked for in order, so the pairs come out sorted.
+        int asciiGlyphs = (font->charactersLen < 127 - firstCodepoint) ? font->charactersLen : 127 - firstCodepoint;
+        for (int first = 0; first < asciiGlyphs && success; first++) {
+            for (int second = 0; second < asciiGlyphs && success; second++) {
+                if (ttfGlyphs[first] <= 0 || ttfGlyphs[second] <= 0) {
+                    continue;
+                }
+
+                int advance = stbtt_GetGlyphKernAdvance(fontInfo, ttfGlyphs[first], ttfGlyphs[second]);
+                if (advance != 0) {
+                    success = _pntr_font_add_kerning(glyphs, &capacity, first, second, (float)advance * scale);
+                }
+            }
+        }
+    }
+
+    PNTR_FREE(ttfGlyphs);
+
+    if (!success) {
+        pntr_set_error(PNTR_ERROR_NO_MEMORY);
+    }
+
+    return success;
+}
+#endif
+
 /**
  * Load a truetype font from memory.
  *
@@ -6480,8 +6894,8 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         }
 
         float scale = stbtt_ScaleForPixelHeight(&fontInfo, (float)fontSize);
-        int ascent;
-        stbtt_GetFontVMetrics(&fontInfo, &ascent, NULL, NULL);
+        int ascent, descent, lineGap;
+        stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
         int ascentPixels = (int)((float)ascent * scale);
 
         // Port the bitmap to a pntr_image as the font atlas
@@ -6522,7 +6936,7 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
             font->glyphRects[i] = PNTR_CLITERAL(pntr_rectangle) {
                 .x = (int)characterData[i].xoff,
                 .y = ascentPixels + (int)characterData[i].yoff,
-                .width = (int)characterData[i].xadvance,
+                .width = _pntr_font_round(characterData[i].xadvance),
                 .height = characterData[i].y1 - characterData[i].y0
             };
 
@@ -6550,6 +6964,30 @@ PNTR_API pntr_font* pntr_load_font_ttf_from_memory(const unsigned char* fileData
         #else
             font->characters[PNTR_FONT_TTF_GLYPH_NUM] = '\0';
         #endif
+
+        // Space lines by the font's own line spacing, rather than its tallest glyph.
+        font->lineHeight = _pntr_font_round((float)(ascent - descent + lineGap) * scale);
+        if (!_pntr_font_build_glyphs(font)) {
+            pntr_unload_font(font);
+            return NULL;
+        }
+
+        // Keep the exact advances, so that the pen doesn't drift by the rounding of
+        // every glyph along a line.
+        font->glyphs->advances = (float*)PNTR_MALLOC(sizeof(float) * (size_t)PNTR_FONT_TTF_GLYPH_NUM);
+        if (font->glyphs->advances == NULL) {
+            pntr_unload_font(font);
+            return (pntr_font*)pntr_set_error(PNTR_ERROR_NO_MEMORY);
+        }
+
+        for (int i = 0; i < PNTR_FONT_TTF_GLYPH_NUM; i++) {
+            font->glyphs->advances[i] = characterData[i].xadvance;
+        }
+
+        if (!_pntr_font_load_ttf_kerning(font, &fontInfo, scale, PNTR_FONT_TTF_GLYPH_START)) {
+            pntr_unload_font(font);
+            return NULL;
+        }
 
         return font;
     #endif
