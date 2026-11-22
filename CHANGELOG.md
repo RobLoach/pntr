@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
 - `PNTR_PIXELFORMAT_RGB565`, a 16-bit pixel format with one `uint16_t` per pixel, for `pntr_image_to_pixelformat()` and `pntr_image_from_pixelformat()` ([#167]).
 - `PNTR_MAX_ARC_SEGMENTS`, the most segments an arc picks for itself. Defaults to `64`.
+- **TrueType kerning.** `pntr_load_font_ttf()` asks the font's `GPOS` or `kern` table about every pair of its first `PNTR_FONT_TTF_KERNING_GLYPHS` glyphs, which defaults to the `95` ASCII ones, and text is spaced by it. In Tuffy at 32 pixels, `AV` is 3 pixels narrower than `A` and `V` measured apart.
+- `pntr_font.lineHeight`, how far a newline moves down. TrueType fonts set it from their ascent, descent and line gap, and bitmap fonts from their tallest glyph, as before.
 
 ### Changed
 
@@ -18,12 +20,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **A `segments` of zero or less picks a count** in all three arc functions, capped at `PNTR_MAX_ARC_SEGMENTS`, rather than drawing nothing.
 
   **What to do:** drop any extra segment you added to reach the end angle.
+- **Characters a font has no glyph for are drawn as `?`**, when the font has one, rather than disappearing without a trace. Control characters, such as `\r` and `\t`, are still skipped.
+- **Glyphs are found with a binary search** of a lookup built when the font is loaded, rather than by walking the font's characters for every character of text. Drawing Cyrillic text with a UTF-8 TrueType font is 4.7 times faster. `pntr_font` gains a `glyphs` member that holds it, which is rebuilt by the loaders only, so changing `characters` on a loaded font leaves it stale.
 
 ### Fixed
 
 - **Fills and lines are clipped before they are walked** ([#270]). `pntr_draw_polygon_fill()`, and `pntr_draw_triangle_fill()` through it, scanned every row of the polygon and left each span to be clipped by `pntr_draw_line_horizontal()`, and every line stepped through all of its points before any of them were clipped, which is what `pntr_draw_line_curve()` and the outlines build on. A shape reaching across the int range therefore cost billions of steps however little of it was on the canvas. The fill now scans only the rows and columns of the clip, and a line solves for the first and last of its points that can reach the clip and walks only those, with the same error term the full walk would have had at that point. Edge crossings and curve points too far out for an int are clamped rather than converted with undefined behavior.
 
   On a 20x20 image, `pntr_draw_triangle_fill(image, INT_MAX - 1, 0, 0, INT_MAX - 1, 0, 0, color)` took 94 seconds, a single line between those corners took 10, and a 16 segment curve through them did not finish in 15 minutes; all three return immediately. Rendered output is byte-identical, verified by hashing over 200,000 random lines, thick lines up to 300 pixels wide, triangle and polygon fills, outlines and curves against the previous implementation, with coordinates straddling each clip edge and corner, under the default clip, narrowed clips and clips a few pixels wide.
+
+- **TrueType text is no longer too wide.** The pen moved on by each glyph's left offset as well as its advance, and dropped the fraction of every advance, so `Добрий день!` at 38 pixels measured 190 pixels rather than 183. The pen now moves by the exact advance, and is only rounded where a glyph is placed.
 
 ## [0.1.0] - 2026-10-13
 
