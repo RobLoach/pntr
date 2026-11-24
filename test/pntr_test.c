@@ -6818,6 +6818,15 @@ MODULE(pntr, {
                 GREATER(size.y, 5);
             });
 
+            IT("pntr_font_line_height()", {
+                // A newline moves down by the line height, which fits glyphs taller than "A".
+                int lineHeight = pntr_font_line_height(font);
+                int oneLine = pntr_measure_text_ex(font, "A", 0).y;
+                EQUALS(pntr_measure_text_ex(font, "A\nA", 0).y - oneLine, lineHeight);
+                GREATER(lineHeight, oneLine);
+                EQUALS(pntr_font_line_height(NULL), 0);
+            });
+
             pntr_unload_image(canvas);
             pntr_unload_font(font);
         });

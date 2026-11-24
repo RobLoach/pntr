@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `pntr_font_line_height()`, how far a newline moves down with the given font, which is the spacing `pntr_draw_text()` uses.
 - `pntr_draw_image_flipped_tint()` and `pntr_draw_image_flipped_tint_rec()`, which draw an image flipped or transposed and tinted in one pass.
 - `PNTR_PIXELFORMAT_RGB565`, a 16-bit pixel format with one `uint16_t` per pixel, for `pntr_image_to_pixelformat()` and `pntr_image_from_pixelformat()` ([#167]).
 - `PNTR_MAX_ARC_SEGMENTS`, the most segments an arc picks for itself. Defaults to `64`.

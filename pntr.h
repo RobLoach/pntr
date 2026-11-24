@@ -637,6 +637,7 @@ PNTR_API pntr_font* pntr_load_font_bmf(const char* fileName, const char* charact
 PNTR_API pntr_font* pntr_load_font_bmf_from_image(pntr_image* image, const char* characters);
 PNTR_API pntr_font* pntr_load_font_bmf_from_memory(const unsigned char* fileData, unsigned int dataSize, const char* characters);
 PNTR_API int pntr_measure_text(pntr_font* font, const char* text);
+PNTR_API int pntr_font_line_height(pntr_font* font);
 PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength);
 PNTR_API pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor);
 PNTR_API pntr_font* pntr_load_font_tty(const char* fileName, int glyphWidth, int glyphHeight, const char* characters);
@@ -5847,11 +5848,9 @@ PNTR_API pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY,
  *
  * @param font The font to find the line height of.
  *
- * @return The height of a single line of text, in pixels.
- *
- * @internal
+ * @return The height of a single line of text, in pixels, or 0 if the font is NULL.
  */
-static int _pntr_font_line_height(pntr_font* font) {
+PNTR_API int pntr_font_line_height(pntr_font* font) {
     if (font == NULL) {
         return 0;
     }
@@ -5910,7 +5909,7 @@ PNTR_API void pntr_draw_text_len(pntr_image* dst, pntr_font* font, const char* t
         if (codepoint == '\n') {
             // TODO: pntr_draw_text(): Allow for center/right alignment
             if (lineHeight == 0) {
-                lineHeight = _pntr_font_line_height(font);
+                lineHeight = pntr_font_line_height(font);
             }
 
             x = posX;
@@ -5992,7 +5991,7 @@ PNTR_API void pntr_draw_text_aligned(pntr_image* dst, pntr_font* font, const cha
 
     const char* lineStart = text;
     int currentY = posY;
-    int lineHeight = _pntr_font_line_height(font);
+    int lineHeight = pntr_font_line_height(font);
 
     while (lineStart != NULL) {
         const char* lineEnd = PNTR_STRCHR(lineStart, '\n');
@@ -6059,7 +6058,7 @@ PNTR_API void pntr_draw_text_wrapped(pntr_image* dst, pntr_font* font, const cha
         return;
     }
 
-    int lineHeight = _pntr_font_line_height(font);
+    int lineHeight = pntr_font_line_height(font);
     int currentY = posY;
     const char* lineStart = text;
 
@@ -6221,7 +6220,7 @@ PNTR_API pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int
         // Consider any newlines
         if (codepoint == '\n') {
             if (lineHeight == 0) {
-                lineHeight = _pntr_font_line_height(font);
+                lineHeight = pntr_font_line_height(font);
             }
 
             output.y += lineHeight;
