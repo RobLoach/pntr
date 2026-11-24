@@ -265,6 +265,7 @@ pntr_font* pntr_font_scale(pntr_font* font, float scaleX, float scaleY, pntr_fil
 void pntr_unload_font(pntr_font* font);
 int pntr_measure_text(pntr_font* font, const char* text);
 pntr_vector pntr_measure_text_ex(pntr_font* font, const char* text, int textLength);
+int pntr_font_line_height(pntr_font* font);
 pntr_image* pntr_gen_image_text(pntr_font* font, const char* text, pntr_color tint, pntr_color backgroundColor);
 ```
 
