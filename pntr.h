@@ -11,9 +11,11 @@
  * - PNTR_ENABLE_DEFAULT_FONT: Enables the default font
  * - PNTR_ENABLE_JPEG: When available, support JPEG image loading
  * - PNTR_ENABLE_MATH: When enabled, will use C's math.h library, rather than internal implementations
+ * - PNTR_ENABLE_TRANSFORM: Gives every image a transform stack that the drawing functions honor, for translating, rotating and scaling what is drawn.
  * - PNTR_ENABLE_TTF: Enables support for loading TrueType fonts
  * - PNTR_ENABLE_UTF8: Enables support for UTF-8 text rendering
  * - PNTR_ENABLE_VARGS: Adds support for functions that require variadic arguments.
+ * - PNTR_TRANSFORM_STACK_SIZE: How many transforms an image can push with PNTR_ENABLE_TRANSFORM. Defaults to 16.
  * - PNTR_ERROR_STORAGE: The storage class holding the last reported error. Defaults to `static`, which every thread shares. Define it as a thread-local storage class, like `static _Thread_local`, to give each thread its own.
  * - PNTR_LOAD_FILE: Callback used to load a file in pntr_load_file(). By default, will use stdio.h.
  * - PNTR_LOAD_IMAGE_FROM_MEMORY: Callback to load an image from memory in pntr_load_image_from_memory(). By default, will use cute_png.
@@ -190,6 +192,57 @@
      * @see https://github.com/sheredom/utf8.h
      */
     #define PNTR_ENABLE_UTF8
+
+    /**
+     * Gives every image a transform, and a stack to push and pop it with, that the drawing
+     * functions honor. This is what love.graphics.push(), pop(), translate(), rotate(),
+     * scale() and origin() map onto.
+     *
+     * @details Without it, pntr_image keeps its layout and no drawing function pays for the
+     * check. With it, every drawing function first tests whether its destination's
+     * transform is the identity, and draws exactly as it would without the define when it
+     * is. A transform that is only a translation moves each draw by the rounded offset and
+     * then draws it the usual way, so the pixels are the same as drawing at the offset
+     * position by hand.
+     *
+     * Anything else is mapped as follows:
+     * - **Points, lines, polylines, polygons, triangles, curves and arcs** have each of
+     *   their points mapped, so they follow any rotation, scale or skew. A single point stays
+     *   a single pixel. The thickness of a line, and the outline of every shape, is scaled by
+     *   the square root of the transform's determinant, so a scale of two draws a thin line
+     *   two pixels wide. pntr_draw_line_aa() stays anti-aliased only while that comes to
+     *   one pixel, and is drawn as a thick line past it.
+     * - **Rectangles, gradients and images** are filled by mapping each destination pixel
+     *   center back into the shape, so they follow any rotation, scale or skew exactly,
+     *   flips and pivots included. A rectangle outline is drawn as the four bands of its
+     *   border, which scale with it. Images are sampled with the filter they were drawn
+     *   with, or nearest neighbor for the draws that do not take one. Text is drawn glyph
+     *   by glyph through the image path, so it rotates and scales too.
+     * - **Circles, ellipses and rounded rectangles** keep their own algorithm when the
+     *   transform has no rotation, or when a circle is turned with an even scale, with the
+     *   center mapped and the radii scaled. Otherwise they are drawn as a polygon of 64
+     *   points around the edge. A thick rounded rectangle is then stroked along a path inset
+     *   by half its thickness, rather than grown inwards ring by ring, so it can differ from
+     *   the unrotated draw by a pixel.
+     * - pntr_draw_arc() plots points, so an arc scaled up becomes dotted. Use
+     *   pntr_draw_arc_thick() for a continuous one.
+     *
+     * The clip region stays in destination pixels and is not transformed, the same as
+     * love.graphics.setScissor(). pntr_clear_background(), pntr_draw_point_unsafe() and
+     * pntr_put_horizontal_line_unsafe() ignore the transform, as they ignore the clip. A
+     * subimage starts with its own identity transform rather than its parent's, and
+     * pntr_image_copy() copies the transform and its stack along with the clip.
+     *
+     * @note Rotations follow pntr_draw_image_rotated(), which turns counter-clockwise on
+     * screen for a positive angle. love.graphics.rotate() turns clockwise, so negate the
+     * angle when mapping onto it.
+     *
+     * @see pntr_transform
+     * @see pntr_image_push_transform()
+     * @see pntr_image_pop_transform()
+     * @see PNTR_TRANSFORM_STACK_SIZE
+     */
+    #define PNTR_ENABLE_TRANSFORM
 
     /**
      * Callback to use when saving an image to memory. By default, will use stb_image_write.
@@ -419,6 +472,40 @@ typedef struct pntr_rectangle {
     int height; /**< The height of the rectangle. */
 } pntr_rectangle;
 
+#if defined(PNTR_ENABLE_TRANSFORM) || defined(_DOXYGEN_)
+#ifndef PNTR_TRANSFORM_STACK_SIZE
+    /**
+     * How many transforms an image can push with pntr_image_push_transform() before it
+     * refuses another.
+     *
+     * @details The stack lives inside pntr_image, so this changes the size of every image,
+     * and has to be the same in every file that includes pntr.h.
+     *
+     * @see PNTR_ENABLE_TRANSFORM
+     */
+    #define PNTR_TRANSFORM_STACK_SIZE 16
+#endif
+
+/**
+ * A 2D affine transform, held as a 2x3 matrix.
+ *
+ * @details A point is mapped as `x' = a * x + c * y + tx` and `y' = b * x + d * y + ty`.
+ * Requires `PNTR_ENABLE_TRANSFORM`.
+ *
+ * @see pntr_transform_identity()
+ * @see pntr_transform_point()
+ * @see PNTR_ENABLE_TRANSFORM
+ */
+typedef struct pntr_transform {
+    float a; /**< How far X moves for each step along X. */
+    float b; /**< How far Y moves for each step along X. */
+    float c; /**< How far X moves for each step along Y. */
+    float d; /**< How far Y moves for each step along Y. */
+    float tx; /**< The translation along X. */
+    float ty; /**< The translation along Y. */
+} pntr_transform;
+#endif
+
 /**
  * An image, represented by pixel data.
  *
@@ -446,6 +533,26 @@ typedef struct pntr_image {
      * @see pntr_image_get_clip()
      */
     pntr_rectangle clip;
+
+    #if defined(PNTR_ENABLE_TRANSFORM) || defined(_DOXYGEN_)
+    /**
+     * The transform that drawing onto the image goes through. Requires `PNTR_ENABLE_TRANSFORM`.
+     *
+     * @see pntr_image_set_transform()
+     * @see pntr_image_get_transform()
+     */
+    pntr_transform transform;
+
+    /**
+     * The transforms saved by pntr_image_push_transform(). Requires `PNTR_ENABLE_TRANSFORM`.
+     */
+    pntr_transform transformStack[PNTR_TRANSFORM_STACK_SIZE];
+
+    /**
+     * How many transforms are on the stack. Requires `PNTR_ENABLE_TRANSFORM`.
+     */
+    int transformStackSize;
+    #endif
 } pntr_image;
 
 /**
@@ -687,6 +794,23 @@ PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, i
 PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color);
 PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color);
 PNTR_API void pntr_draw_line_curve_thick(pntr_image* dst, pntr_vector point1, pntr_vector point2, pntr_vector point3, pntr_vector point4, int segments, int thickness, pntr_color color);
+
+#if defined(PNTR_ENABLE_TRANSFORM) || defined(_DOXYGEN_)
+PNTR_API pntr_transform pntr_transform_identity(void);
+PNTR_API pntr_transform pntr_transform_multiply(pntr_transform transform, pntr_transform other);
+PNTR_API pntr_transform pntr_transform_translate(pntr_transform transform, float x, float y);
+PNTR_API pntr_transform pntr_transform_rotate(pntr_transform transform, float degrees);
+PNTR_API pntr_transform pntr_transform_scale(pntr_transform transform, float scaleX, float scaleY);
+PNTR_API void pntr_transform_point(pntr_transform transform, float* x, float* y);
+PNTR_API bool pntr_image_push_transform(pntr_image* image);
+PNTR_API bool pntr_image_pop_transform(pntr_image* image);
+PNTR_API void pntr_image_translate_transform(pntr_image* image, float x, float y);
+PNTR_API void pntr_image_rotate_transform(pntr_image* image, float degrees);
+PNTR_API void pntr_image_scale_transform(pntr_image* image, float scaleX, float scaleY);
+PNTR_API void pntr_image_reset_transform(pntr_image* image);
+PNTR_API pntr_transform pntr_image_get_transform(pntr_image* image);
+PNTR_API void pntr_image_set_transform(pntr_image* image, pntr_transform transform);
+#endif
 
 // Internal
 PNTR_API void pntr_put_horizontal_line_unsafe(pntr_image* dst, int posX, int posY, int width, pntr_color color);
@@ -1727,6 +1851,10 @@ PNTR_API pntr_image* pntr_new_image(int width, int height) {
     image->height = height;
     pntr_image_reset_clip(image);
     image->subimage = false;
+    #ifdef PNTR_ENABLE_TRANSFORM
+    pntr_image_reset_transform(image);
+    image->transformStackSize = 0;
+    #endif
     image->data = (pntr_color*)PNTR_MALLOC((size_t)image->pitch * (size_t)height);
     if (image->data == NULL) {
         PNTR_FREE(image);
@@ -1784,6 +1912,11 @@ PNTR_API pntr_image* pntr_image_copy(pntr_image* image) {
     }
 
     newImage->clip = image->clip;
+    #ifdef PNTR_ENABLE_TRANSFORM
+    newImage->transform = image->transform;
+    newImage->transformStackSize = image->transformStackSize;
+    PNTR_MEMCPY(newImage->transformStack, image->transformStack, sizeof(image->transformStack));
+    #endif
 
     return newImage;
 }
@@ -2030,6 +2163,10 @@ PNTR_API pntr_image* pntr_image_subimage(pntr_image* image, int x, int y, int wi
     subimage->height = dstRect.height;
     subimage->subimage = true;
     pntr_image_reset_clip(subimage);
+    #ifdef PNTR_ENABLE_TRANSFORM
+    pntr_image_reset_transform(subimage);
+    subimage->transformStackSize = 0;
+    #endif
     subimage->data = &PNTR_PIXEL(image, dstRect.x, dstRect.y);
 
     return subimage;
@@ -2260,6 +2397,1085 @@ PNTR_API void pntr_color_set_a(pntr_color* color, unsigned char a) {
     color->rgba.a = a;
 }
 
+#ifdef PNTR_ENABLE_TRANSFORM
+    /**
+     * Hands a drawing function over to a transform helper when its destination has a
+     * transform other than the identity.
+     *
+     * @details The helper is called with the destination, its transform, and the rest of
+     * the arguments, and the drawing function returns once it is done. The destination's
+     * transform is the identity while the helper runs, so the drawing functions it calls
+     * with the coordinates it has mapped draw them where they are, rather than mapping them
+     * a second time. Without PNTR_ENABLE_TRANSFORM this expands to nothing.
+     *
+     * @internal
+     */
+    #define _PNTR_TRANSFORM_HOOK(image, helper, ...) do { \
+            if (_pntr_transform_active(image)) { \
+                pntr_transform _pntr_hook_transform = (image)->transform; \
+                (image)->transform = pntr_transform_identity(); \
+                helper((image), _pntr_hook_transform, __VA_ARGS__); \
+                (image)->transform = _pntr_hook_transform; \
+                return; \
+            } \
+        } while (0)
+#else
+    #define _PNTR_TRANSFORM_HOOK(image, helper, ...) do { } while (0)
+#endif
+
+#if defined(PNTR_ENABLE_TRANSFORM) || defined(_DOXYGEN_)
+
+/**
+ * How many points the transformed circles, ellipses and rounded rectangles are drawn with
+ * once they have to become polygons.
+ *
+ * @internal
+ */
+#define _PNTR_TRANSFORM_SEGMENTS 64
+
+// Defined further down, alongside the drawing functions they belong to.
+static int _pntr_arc_segments(float radius, float startAngle, float endAngle, int segments);
+static int _pntr_rectangle_rounded_radius(int radius, int width, int height);
+static pntr_color _pntr_image_get_color_bilinear_rec(pntr_image* image, pntr_rectangle srcRect, float x, float y);
+static float _pntr_normalize_degrees(float degrees);
+
+/**
+ * The transform that leaves every point where it is.
+ *
+ * @return The identity transform.
+ *
+ * @see pntr_image_reset_transform()
+ * @see PNTR_ENABLE_TRANSFORM
+ */
+PNTR_API pntr_transform pntr_transform_identity(void) {
+    return PNTR_CLITERAL(pntr_transform) { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
+}
+
+/**
+ * Combines two transforms into one.
+ *
+ * @details The result maps a point through `other` first and through `transform` second.
+ * That is how pntr_transform_translate(), pntr_transform_rotate() and pntr_transform_scale()
+ * add to a transform: in the coordinate space it has already set up, the same as
+ * love.graphics.translate(), rotate() and scale().
+ *
+ * @param transform The transform to apply second.
+ * @param other The transform to apply first.
+ *
+ * @return The combined transform.
+ */
+PNTR_API pntr_transform pntr_transform_multiply(pntr_transform transform, pntr_transform other) {
+    return PNTR_CLITERAL(pntr_transform) {
+        transform.a * other.a + transform.c * other.b,
+        transform.b * other.a + transform.d * other.b,
+        transform.a * other.c + transform.c * other.d,
+        transform.b * other.c + transform.d * other.d,
+        transform.a * other.tx + transform.c * other.ty + transform.tx,
+        transform.b * other.tx + transform.d * other.ty + transform.ty
+    };
+}
+
+/**
+ * Moves the origin of a transform.
+ *
+ * @param transform The transform to add the translation to.
+ * @param x How far to move along the transform's X axis.
+ * @param y How far to move along the transform's Y axis.
+ *
+ * @return The transform, followed by the translation.
+ *
+ * @see pntr_image_translate_transform()
+ */
+PNTR_API pntr_transform pntr_transform_translate(pntr_transform transform, float x, float y) {
+    return pntr_transform_multiply(transform, PNTR_CLITERAL(pntr_transform) { 1.0f, 0.0f, 0.0f, 1.0f, x, y });
+}
+
+/**
+ * Turns a transform around its origin.
+ *
+ * @details Turns the same way pntr_draw_image_rotated() turns an image, which is
+ * counter-clockwise on screen for a positive angle. The quarter turns are exact, so a
+ * transform turned by 90 degrees still maps rectangles onto rectangles.
+ *
+ * @param transform The transform to add the rotation to.
+ * @param degrees The angle to turn by, in degrees.
+ *
+ * @return The transform, followed by the rotation.
+ *
+ * @see pntr_image_rotate_transform()
+ */
+PNTR_API pntr_transform pntr_transform_rotate(pntr_transform transform, float degrees) {
+    degrees = _pntr_normalize_degrees(degrees);
+
+    float cosTheta = 1.0f;
+    float sinTheta = 0.0f;
+    if (degrees == 90.0f) {
+        cosTheta = 0.0f;
+        sinTheta = 1.0f;
+    }
+    else if (degrees == 180.0f) {
+        cosTheta = -1.0f;
+    }
+    else if (degrees == 270.0f) {
+        cosTheta = 0.0f;
+        sinTheta = -1.0f;
+    }
+    else if (degrees != 0.0f) {
+        cosTheta = PNTR_COSF(degrees * PNTR_DEG2RAD);
+        sinTheta = PNTR_SINF(degrees * PNTR_DEG2RAD);
+    }
+
+    return pntr_transform_multiply(transform, PNTR_CLITERAL(pntr_transform) { cosTheta, -sinTheta, sinTheta, cosTheta, 0.0f, 0.0f });
+}
+
+/**
+ * Scales a transform from its origin.
+ *
+ * @param transform The transform to add the scale to.
+ * @param scaleX The scale along the transform's X axis. A negative scale mirrors it.
+ * @param scaleY The scale along the transform's Y axis. A negative scale mirrors it.
+ *
+ * @return The transform, followed by the scale.
+ *
+ * @see pntr_image_scale_transform()
+ */
+PNTR_API pntr_transform pntr_transform_scale(pntr_transform transform, float scaleX, float scaleY) {
+    return pntr_transform_multiply(transform, PNTR_CLITERAL(pntr_transform) { scaleX, 0.0f, 0.0f, scaleY, 0.0f, 0.0f });
+}
+
+/**
+ * Maps a point through a transform, in place.
+ *
+ * @param transform The transform to map the point through.
+ * @param x The X coordinate to map, which is replaced with the result. A NULL pointer maps nothing.
+ * @param y The Y coordinate to map, which is replaced with the result. A NULL pointer maps nothing.
+ */
+PNTR_API void pntr_transform_point(pntr_transform transform, float* x, float* y) {
+    if (x == NULL || y == NULL) {
+        return;
+    }
+
+    float originalX = *x;
+    *x = transform.a * originalX + transform.c * *y + transform.tx;
+    *y = transform.b * originalX + transform.d * *y + transform.ty;
+}
+
+/**
+ * Saves the image's current transform, so that pntr_image_pop_transform() can return to it.
+ *
+ * @details The current transform is left as it is. The stack holds up to
+ * PNTR_TRANSFORM_STACK_SIZE transforms, and refuses any more rather than overwriting one.
+ *
+ * @param image The image whose transform to save.
+ *
+ * @return True when the transform was saved, or false when the image is NULL or its stack
+ * is full.
+ *
+ * @see pntr_image_pop_transform()
+ */
+PNTR_API bool pntr_image_push_transform(pntr_image* image) {
+    if (image == NULL || image->transformStackSize < 0 || image->transformStackSize >= PNTR_TRANSFORM_STACK_SIZE) {
+        return false;
+    }
+
+    image->transformStack[image->transformStackSize++] = image->transform;
+
+    return true;
+}
+
+/**
+ * Returns the image to the transform it had at the matching pntr_image_push_transform().
+ *
+ * @details To unwind the whole stack, pop until this returns false.
+ *
+ * @code
+ * while (pntr_image_pop_transform(image));
+ * @endcode
+ *
+ * @param image The image whose transform to restore.
+ *
+ * @return True when a transform was restored, or false when the image is NULL or nothing
+ * was pushed, in which case the current transform is left alone.
+ *
+ * @see pntr_image_push_transform()
+ */
+PNTR_API bool pntr_image_pop_transform(pntr_image* image) {
+    if (image == NULL || image->transformStackSize <= 0 || image->transformStackSize > PNTR_TRANSFORM_STACK_SIZE) {
+        return false;
+    }
+
+    image->transform = image->transformStack[--image->transformStackSize];
+
+    return true;
+}
+
+/**
+ * Moves the origin of everything drawn onto the image from here on.
+ *
+ * @param image The image to translate. A NULL image is ignored.
+ * @param x How far to move along the current X axis.
+ * @param y How far to move along the current Y axis.
+ *
+ * @see pntr_transform_translate()
+ */
+PNTR_API void pntr_image_translate_transform(pntr_image* image, float x, float y) {
+    if (image != NULL) {
+        image->transform = pntr_transform_translate(image->transform, x, y);
+    }
+}
+
+/**
+ * Turns everything drawn onto the image from here on around the current origin.
+ *
+ * @param image The image to rotate. A NULL image is ignored.
+ * @param degrees The angle to turn by, in degrees, in the direction of pntr_transform_rotate().
+ *
+ * @see pntr_transform_rotate()
+ */
+PNTR_API void pntr_image_rotate_transform(pntr_image* image, float degrees) {
+    if (image != NULL) {
+        image->transform = pntr_transform_rotate(image->transform, degrees);
+    }
+}
+
+/**
+ * Scales everything drawn onto the image from here on, from the current origin.
+ *
+ * @param image The image to scale. A NULL image is ignored.
+ * @param scaleX The scale along the current X axis.
+ * @param scaleY The scale along the current Y axis.
+ *
+ * @see pntr_transform_scale()
+ */
+PNTR_API void pntr_image_scale_transform(pntr_image* image, float scaleX, float scaleY) {
+    if (image != NULL) {
+        image->transform = pntr_transform_scale(image->transform, scaleX, scaleY);
+    }
+}
+
+/**
+ * Resets the image's current transform to the identity, the same as love.graphics.origin().
+ *
+ * @details The stack is left as it is.
+ *
+ * @param image The image to reset. A NULL image is ignored.
+ *
+ * @see pntr_transform_identity()
+ */
+PNTR_API void pntr_image_reset_transform(pntr_image* image) {
+    if (image != NULL) {
+        image->transform = pntr_transform_identity();
+    }
+}
+
+/**
+ * Gets the image's current transform.
+ *
+ * @param image The image to get the transform of.
+ *
+ * @return The current transform, or the identity for a NULL image.
+ */
+PNTR_API pntr_transform pntr_image_get_transform(pntr_image* image) {
+    if (image == NULL) {
+        return pntr_transform_identity();
+    }
+
+    return image->transform;
+}
+
+/**
+ * Replaces the image's current transform.
+ *
+ * @param image The image to set the transform of. A NULL image is ignored.
+ * @param transform The new transform.
+ */
+PNTR_API void pntr_image_set_transform(pntr_image* image, pntr_transform transform) {
+    if (image != NULL) {
+        image->transform = transform;
+    }
+}
+
+/**
+ * Whether drawing onto the image has to go through its transform.
+ *
+ * @details This is the fast path every drawing function checks first. An image whose
+ * transform is the identity draws exactly as it would without PNTR_ENABLE_TRANSFORM.
+ *
+ * @internal
+ */
+static bool _pntr_transform_active(pntr_image* image) {
+    return image != NULL && (
+        image->transform.a != 1.0f || image->transform.b != 0.0f ||
+        image->transform.c != 0.0f || image->transform.d != 1.0f ||
+        image->transform.tx != 0.0f || image->transform.ty != 0.0f);
+}
+
+/**
+ * Rounds a mapped coordinate to the pixel whose center it is nearest to.
+ *
+ * @details Halves round down, which is what makes a mapped point land on the same pixel as
+ * a mapped edge: a pixel is covered when its center is at or past the edge. Clamped to the
+ * range of an int.
+ *
+ * @internal
+ */
+static int _pntr_transform_round(float value) {
+    value -= 0.5f;
+    int result = _pntr_float_to_int_clamped(value);
+    if ((float)result < value && result != INT_MAX) {
+        result++;
+    }
+
+    return result;
+}
+
+/**
+ * Maps a point through a transform, onto the pixel it lands on.
+ *
+ * @internal
+ */
+static pntr_vector _pntr_transform_vector(pntr_transform transform, float x, float y) {
+    pntr_transform_point(transform, &x, &y);
+
+    return PNTR_CLITERAL(pntr_vector) { _pntr_transform_round(x), _pntr_transform_round(y) };
+}
+
+/**
+ * Whether a transform is only a translation, and if so, by how many whole pixels.
+ *
+ * @details A translation moves every pixel of a draw by the same rounded offset, so the
+ * drawing functions take it as an offset on their position and draw the usual way.
+ *
+ * @internal
+ */
+static bool _pntr_transform_translation(pntr_transform transform, int* x, int* y) {
+    if (transform.a != 1.0f || transform.b != 0.0f || transform.c != 0.0f || transform.d != 1.0f) {
+        return false;
+    }
+
+    *x = _pntr_transform_round(transform.tx);
+    *y = _pntr_transform_round(transform.ty);
+
+    return true;
+}
+
+/**
+ * How much a transform scales lengths, on average: the square root of its determinant.
+ *
+ * @details Found with Newton's method, as math.h is optional.
+ *
+ * @internal
+ */
+static float _pntr_transform_scale(pntr_transform transform) {
+    float area = PNTR_FABSF(transform.a * transform.d - transform.b * transform.c);
+    if (!(area > 0.0f) || area > 3.0e38f) {
+        return area;
+    }
+
+    // Starting at or above the root, every step lands closer to it, from above.
+    float root = (area > 1.0f) ? area : 1.0f;
+    for (int i = 0; i < 128; i++) {
+        float next = 0.5f * (root + area / root);
+        if (next >= root) {
+            break;
+        }
+        root = next;
+    }
+
+    return root;
+}
+
+/**
+ * Scales a thickness by _pntr_transform_scale().
+ *
+ * @details A thickness below one is returned as it is, so it still paints nothing, and any
+ * other comes out at least one pixel wide.
+ *
+ * @internal
+ */
+static int _pntr_transform_thickness(pntr_transform transform, int thickness) {
+    if (thickness < 1) {
+        return thickness;
+    }
+
+    int scaled = _pntr_transform_round((float)thickness * _pntr_transform_scale(transform));
+
+    return (scaled < 1) ? 1 : scaled;
+}
+
+/**
+ * Fills a quad: a rectangle in its own space, mapped onto the destination by a transform.
+ *
+ * @details This is the one place a transformed rectangle, gradient or image is drawn. Each
+ * destination pixel whose center the mapped quad holds is mapped back into it, and colored
+ * from what it lands on. The quad is half-open, so two quads that share an edge cover every
+ * pixel along it exactly once. An axis-aligned solid quad is a plain rectangle fill.
+ *
+ * Must be called while the destination's transform is the identity.
+ *
+ * @param dst The image to draw onto.
+ * @param matrix Maps the quad's own space, from (0, 0) to (srcRect.width, srcRect.height), onto the destination.
+ * @param src The image to sample from, or NULL to fill with the colors.
+ * @param srcRect The size of the quad, and the region of the source to sample, which must already be clamped to the source.
+ * @param filter How to sample the source.
+ * @param colors The top left, top right, bottom left and bottom right colors to fill with, or for a source, the tint in the first.
+ *
+ * @internal
+ */
+static void _pntr_transform_quad(pntr_image* dst, pntr_transform matrix, pntr_image* src, pntr_rectangle srcRect, pntr_filter filter, const pntr_color* colors) {
+    if (srcRect.width <= 0 || srcRect.height <= 0) {
+        return;
+    }
+
+    bool solid = src == NULL && colors[0].value == colors[1].value && colors[0].value == colors[2].value && colors[0].value == colors[3].value;
+    if (solid && colors[0].rgba.a == 0) {
+        return;
+    }
+
+    float width = (float)srcRect.width;
+    float height = (float)srcRect.height;
+
+    // The bounds of the four mapped corners, as the pixels whose centers they hold.
+    float cornersX[4] = { 0.0f, width, 0.0f, width };
+    float cornersY[4] = { 0.0f, 0.0f, height, height };
+    float minX = 0.0f, maxX = 0.0f, minY = 0.0f, maxY = 0.0f;
+    for (int i = 0; i < 4; i++) {
+        pntr_transform_point(matrix, &cornersX[i], &cornersY[i]);
+        if (i == 0 || cornersX[i] < minX) minX = cornersX[i];
+        if (i == 0 || cornersX[i] > maxX) maxX = cornersX[i];
+        if (i == 0 || cornersY[i] < minY) minY = cornersY[i];
+        if (i == 0 || cornersY[i] > maxY) maxY = cornersY[i];
+    }
+
+    int left = _pntr_transform_round(minX);
+    int top = _pntr_transform_round(minY);
+    int right = _pntr_transform_round(maxX);
+    int bottom = _pntr_transform_round(maxY);
+    left = PNTR_MAX(left, dst->clip.x);
+    top = PNTR_MAX(top, dst->clip.y);
+    right = PNTR_MIN(right, dst->clip.x + dst->clip.width);
+    bottom = PNTR_MIN(bottom, dst->clip.y + dst->clip.height);
+    if (left >= right || top >= bottom) {
+        return;
+    }
+
+    if (solid && matrix.b == 0.0f && matrix.c == 0.0f) {
+        pntr_draw_rectangle_fill_rec(dst, PNTR_CLITERAL(pntr_rectangle) { left, top, right - left, bottom - top }, colors[0]);
+        return;
+    }
+
+    float det = matrix.a * matrix.d - matrix.b * matrix.c;
+    if (det == 0.0f || det != det) {
+        return;
+    }
+    float inverseA = matrix.d / det;
+    float inverseB = -matrix.b / det;
+    float inverseC = -matrix.c / det;
+    float inverseD = matrix.a / det;
+
+    for (int y = top; y < bottom; y++) {
+        float centerY = (float)y + 0.5f - matrix.ty;
+        for (int x = left; x < right; x++) {
+            float centerX = (float)x + 0.5f - matrix.tx;
+            float u = inverseA * centerX + inverseC * centerY;
+            float v = inverseB * centerX + inverseD * centerY;
+
+            // Written so that a coordinate that is not a number is outside too.
+            if (!(u >= 0.0f && u < width && v >= 0.0f && v < height)) {
+                continue;
+            }
+
+            pntr_color color;
+            if (src != NULL) {
+                if (filter == PNTR_FILTER_BILINEAR) {
+                    color = _pntr_image_get_color_bilinear_rec(src, srcRect, u - 0.5f, v - 0.5f);
+                }
+                else {
+                    color = PNTR_PIXEL(src, srcRect.x + (int)u, srcRect.y + (int)v);
+                }
+                if (colors[0].value != PNTR_WHITE_VALUE) {
+                    color = pntr_color_tint(color, colors[0]);
+                }
+            }
+            else if (solid) {
+                color = colors[0];
+            }
+            else {
+                // Sampled the same way pntr_draw_rectangle_gradient_rec() samples, from zero
+                // at the first pixel up to (width - 1) / width at the last.
+                color = pntr_color_bilinear_interpolate(colors[0], colors[2], colors[1], colors[3],
+                    PNTR_MAX((u - 0.5f) / width, 0.0f),
+                    PNTR_MAX((v - 0.5f) / height, 0.0f));
+            }
+
+            pntr_draw_point_unsafe(dst, x, y, color);
+        }
+    }
+}
+
+/**
+ * Draws a point through a transform. The point stays a single pixel.
+ *
+ * @internal
+ */
+static void _pntr_transform_point(pntr_image* dst, pntr_transform transform, int x, int y, pntr_color color) {
+    pntr_vector point = _pntr_transform_vector(transform, (float)x, (float)y);
+    pntr_draw_point(dst, point.x, point.y, color);
+}
+
+/**
+ * Draws points through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_points(pntr_image* dst, pntr_transform transform, pntr_vector* points, int pointsCount, pntr_color color) {
+    if (points == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < pointsCount; i++) {
+        _pntr_transform_point(dst, transform, points[i].x, points[i].y, color);
+    }
+}
+
+/**
+ * Draws a line through a transform, with its endpoints mapped and its thickness scaled.
+ *
+ * @details An anti-aliased line stays anti-aliased while its thickness scales to one pixel,
+ * and is drawn as a thick line once it scales past that.
+ *
+ * @internal
+ */
+static void _pntr_transform_line(pntr_image* dst, pntr_transform transform, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, bool antialias, pntr_color color) {
+    pntr_vector start = _pntr_transform_vector(transform, (float)startPosX, (float)startPosY);
+    pntr_vector end = _pntr_transform_vector(transform, (float)endPosX, (float)endPosY);
+    thickness = _pntr_transform_thickness(transform, thickness);
+
+    if (antialias && thickness == 1) {
+        pntr_draw_line_aa(dst, start.x, start.y, end.x, end.y, color);
+    }
+    else {
+        pntr_draw_line_thick(dst, start.x, start.y, end.x, end.y, thickness, color);
+    }
+}
+
+/**
+ * Draws a filled rectangle through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_rectangle_fill(pntr_image* dst, pntr_transform transform, pntr_rectangle rect, pntr_color color) {
+    pntr_color colors[4] = { color, color, color, color };
+    _pntr_transform_quad(dst, pntr_transform_translate(transform, (float)rect.x, (float)rect.y), NULL,
+        PNTR_CLITERAL(pntr_rectangle) { 0, 0, rect.width, rect.height },
+        PNTR_FILTER_NEARESTNEIGHBOR, colors);
+}
+
+/**
+ * Draws a horizontal or vertical line through a transform.
+ *
+ * @details A thin line is a rectangle one pixel across, as its length is a count of pixels,
+ * so it scales into a band. A thick one is the line between its first and last pixel, drawn
+ * with the same round brush pntr_draw_line_horizontal_thick() uses.
+ *
+ * @internal
+ */
+static void _pntr_transform_line_straight(pntr_image* dst, pntr_transform transform, int posX, int posY, int length, int thickness, bool vertical, pntr_color color) {
+    if (length < 0) {
+        if (vertical) {
+            posY += length;
+        }
+        else {
+            posX += length;
+        }
+        length = -length;
+    }
+    if (length == 0) {
+        return;
+    }
+
+    if (thickness == 1) {
+        _pntr_transform_rectangle_fill(dst, transform, PNTR_CLITERAL(pntr_rectangle) { posX, posY, vertical ? 1 : length, vertical ? length : 1 }, color);
+        return;
+    }
+
+    _pntr_transform_line(dst, transform, posX, posY,
+        vertical ? posX : _pntr_add_clamped(posX, length - 1),
+        vertical ? _pntr_add_clamped(posY, length - 1) : posY,
+        thickness, false, color);
+}
+
+/**
+ * Draws a rectangle outline through a transform, as the four bands of its border.
+ *
+ * @details The bands are filled rather than stroked, so the border scales with the
+ * rectangle and meets its fill exactly, and they do not overlap, so a semi-transparent
+ * color is blended once.
+ *
+ * @internal
+ */
+static void _pntr_transform_rectangle(pntr_image* dst, pntr_transform transform, int posX, int posY, int width, int height, pntr_color color) {
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    // Two pixels or less across, the border is the whole rectangle.
+    if (width <= 2 || height <= 2) {
+        _pntr_transform_rectangle_fill(dst, transform, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, height }, color);
+        return;
+    }
+
+    int right = _pntr_add_clamped(posX, width - 1);
+    int bottom = _pntr_add_clamped(posY, height - 1);
+    int inner = _pntr_add_clamped(posY, 1);
+    _pntr_transform_rectangle_fill(dst, transform, PNTR_CLITERAL(pntr_rectangle) { posX, posY, width, 1 }, color);
+    _pntr_transform_rectangle_fill(dst, transform, PNTR_CLITERAL(pntr_rectangle) { posX, bottom, width, 1 }, color);
+    _pntr_transform_rectangle_fill(dst, transform, PNTR_CLITERAL(pntr_rectangle) { posX, inner, 1, height - 2 }, color);
+    _pntr_transform_rectangle_fill(dst, transform, PNTR_CLITERAL(pntr_rectangle) { right, inner, 1, height - 2 }, color);
+}
+
+/**
+ * Draws a gradient rectangle through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_rectangle_gradient(pntr_image* dst, pntr_transform transform, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
+    int offsetX, offsetY;
+    if (_pntr_transform_translation(transform, &offsetX, &offsetY)) {
+        rect.x = _pntr_add_clamped(rect.x, offsetX);
+        rect.y = _pntr_add_clamped(rect.y, offsetY);
+        pntr_draw_rectangle_gradient_rec(dst, rect, topLeft, topRight, bottomLeft, bottomRight);
+        return;
+    }
+
+    pntr_color colors[4] = { topLeft, topRight, bottomLeft, bottomRight };
+    _pntr_transform_quad(dst, pntr_transform_translate(transform, (float)rect.x, (float)rect.y), NULL,
+        PNTR_CLITERAL(pntr_rectangle) { 0, 0, rect.width, rect.height },
+        PNTR_FILTER_NEARESTNEIGHBOR, colors);
+}
+
+/**
+ * Maps the points along an elliptical arc through a transform.
+ *
+ * @param points Where to write the `segments + 1` points, from the start angle to the end angle inclusive.
+ *
+ * @internal
+ */
+static void _pntr_transform_arc_points(pntr_transform transform, float centerX, float centerY, float radiusX, float radiusY, float startAngle, float endAngle, int segments, pntr_vector* points) {
+    float start = startAngle * PNTR_DEG2RAD;
+    float step = (endAngle - startAngle) * PNTR_DEG2RAD / (float)segments;
+    for (int i = 0; i <= segments; i++) {
+        float angle = start + (float)i * step;
+        points[i] = _pntr_transform_vector(transform, centerX + radiusX * PNTR_COSF(angle), centerY + radiusY * PNTR_SINF(angle));
+    }
+}
+
+/**
+ * Draws a circle or an ellipse through a transform.
+ *
+ * @details Without a rotation, or for a circle turned with an even scale, the center is
+ * mapped and the radii scaled, and the shape keeps its own algorithm. Anything else is a
+ * polygon of _PNTR_TRANSFORM_SEGMENTS points around its edge.
+ *
+ * @internal
+ */
+static void _pntr_transform_ellipse(pntr_image* dst, pntr_transform transform, int centerX, int centerY, int radiusX, int radiusY, int thickness, bool fill, bool circle, pntr_color color) {
+    if (color.rgba.a == 0 || (!fill && thickness < 1)) {
+        return;
+    }
+    if (radiusX < 0) radiusX = -radiusX;
+    if (radiusY < 0) radiusY = -radiusY;
+
+    thickness = _pntr_transform_thickness(transform, thickness);
+
+    bool aligned = false;
+    float scaleX = 0.0f, scaleY = 0.0f;
+    if (transform.b == 0.0f && transform.c == 0.0f) {
+        aligned = true;
+        scaleX = PNTR_FABSF(transform.a);
+        scaleY = PNTR_FABSF(transform.d);
+    }
+    else if (circle && ((PNTR_FABSF(transform.a - transform.d) < 0.001f && PNTR_FABSF(transform.b + transform.c) < 0.001f) ||
+            (PNTR_FABSF(transform.a + transform.d) < 0.001f && PNTR_FABSF(transform.b - transform.c) < 0.001f))) {
+        // A rotation, or a reflection, with the same scale on both axes keeps a circle round.
+        aligned = true;
+        scaleX = scaleY = _pntr_transform_scale(transform);
+    }
+
+    if (aligned) {
+        pntr_vector center = _pntr_transform_vector(transform, (float)centerX, (float)centerY);
+        int newRadiusX = _pntr_transform_round((float)radiusX * scaleX);
+        int newRadiusY = _pntr_transform_round((float)radiusY * scaleY);
+        if (circle && newRadiusX == newRadiusY) {
+            if (fill) {
+                pntr_draw_circle_fill(dst, center.x, center.y, newRadiusX, color);
+            }
+            else {
+                pntr_draw_circle_thick(dst, center.x, center.y, newRadiusX, thickness, color);
+            }
+        }
+        else if (fill) {
+            pntr_draw_ellipse_fill(dst, center.x, center.y, newRadiusX, newRadiusY, color);
+        }
+        else {
+            pntr_draw_ellipse_thick(dst, center.x, center.y, newRadiusX, newRadiusY, thickness, color);
+        }
+        return;
+    }
+
+    pntr_vector points[_PNTR_TRANSFORM_SEGMENTS + 1];
+    _pntr_transform_arc_points(transform, (float)centerX, (float)centerY, (float)radiusX, (float)radiusY, 0.0f, 360.0f, _PNTR_TRANSFORM_SEGMENTS, points);
+    if (fill) {
+        pntr_draw_polygon_fill(dst, points, _PNTR_TRANSFORM_SEGMENTS, color);
+    }
+    else {
+        pntr_draw_polygon_thick(dst, points, _PNTR_TRANSFORM_SEGMENTS, thickness, color);
+    }
+}
+
+/**
+ * Draws a polygon fill through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_polygon_fill(pntr_image* dst, pntr_transform transform, pntr_vector* points, int numPoints, pntr_color color) {
+    if (points == NULL || numPoints <= 0) {
+        return;
+    }
+
+    // Triangles and small polygons are mapped without allocating.
+    pntr_vector stackPoints[16];
+    pntr_vector* mapped = stackPoints;
+    if (numPoints > 16) {
+        mapped = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * (size_t)numPoints);
+        if (mapped == NULL) {
+            return;
+        }
+    }
+
+    for (int i = 0; i < numPoints; i++) {
+        mapped[i] = _pntr_transform_vector(transform, (float)points[i].x, (float)points[i].y);
+    }
+
+    pntr_draw_polygon_fill(dst, mapped, numPoints, color);
+
+    if (mapped != stackPoints) {
+        PNTR_FREE(mapped);
+    }
+}
+
+/**
+ * Draws a thick or filled arc through a transform, from points mapped before they are
+ * rounded, so that a scaled arc stays smooth.
+ *
+ * @internal
+ */
+static void _pntr_transform_arc(pntr_image* dst, pntr_transform transform, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, bool fill, pntr_color color) {
+    int offsetX, offsetY;
+    if (_pntr_transform_translation(transform, &offsetX, &offsetY)) {
+        centerX = _pntr_add_clamped(centerX, offsetX);
+        centerY = _pntr_add_clamped(centerY, offsetY);
+        if (fill) {
+            pntr_draw_arc_fill(dst, centerX, centerY, radius, startAngle, endAngle, segments, color);
+        }
+        else {
+            pntr_draw_arc_thick(dst, centerX, centerY, radius, startAngle, endAngle, segments, thickness, color);
+        }
+        return;
+    }
+
+    if (radius <= 0.0f) {
+        _pntr_transform_point(dst, transform, centerX, centerY, color);
+        return;
+    }
+    if (!fill && thickness < 1) {
+        return;
+    }
+
+    // An arc picking its own segments picks them for the size it is drawn at.
+    segments = _pntr_arc_segments(radius * _pntr_transform_scale(transform), startAngle, endAngle, segments);
+
+    pntr_vector* points = (pntr_vector*)PNTR_MALLOC(sizeof(pntr_vector) * ((size_t)segments + 2));
+    if (points == NULL) {
+        return;
+    }
+
+    _pntr_transform_arc_points(transform, (float)centerX, (float)centerY, radius, radius, startAngle, endAngle, segments, points);
+    if (fill) {
+        points[segments + 1] = _pntr_transform_vector(transform, (float)centerX, (float)centerY);
+        pntr_draw_polygon_fill(dst, points, segments + 2, color);
+    }
+    else {
+        pntr_draw_polyline_thick(dst, points, segments + 1, _pntr_transform_thickness(transform, thickness), color);
+    }
+
+    PNTR_FREE(points);
+}
+
+/**
+ * Draws a rounded rectangle, filled or outlined, through a transform.
+ *
+ * @details An axis-aligned transform with the same scale on both axes maps the edges and
+ * scales the radii and thickness, keeping the rounded rectangle's own algorithm. Anything
+ * else is a polygon of four quarter arcs. Its outline is stroked along a path inset by half
+ * the thickness, so the stroke grows inwards from the edge as the untransformed one does.
+ *
+ * @internal
+ */
+static void _pntr_transform_rectangle_rounded(pntr_image* dst, pntr_transform transform, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, bool fill, pntr_color color) {
+    if (color.rgba.a == 0 || width <= 0 || height <= 0 || (!fill && thickness < 1)) {
+        return;
+    }
+
+    if (transform.b == 0.0f && transform.c == 0.0f && PNTR_FABSF(transform.a) == PNTR_FABSF(transform.d)) {
+        float scale = PNTR_FABSF(transform.a);
+        float left = transform.a * (float)x + transform.tx;
+        float right = transform.a * ((float)x + (float)width) + transform.tx;
+        float top = transform.d * (float)y + transform.ty;
+        float bottom = transform.d * ((float)y + (float)height) + transform.ty;
+        int swap;
+
+        // A mirrored axis swaps the corners along it.
+        if (transform.a < 0.0f) {
+            float edge = left; left = right; right = edge;
+            swap = topLeftRadius; topLeftRadius = topRightRadius; topRightRadius = swap;
+            swap = bottomLeftRadius; bottomLeftRadius = bottomRightRadius; bottomRightRadius = swap;
+        }
+        if (transform.d < 0.0f) {
+            float edge = top; top = bottom; bottom = edge;
+            swap = topLeftRadius; topLeftRadius = bottomLeftRadius; bottomLeftRadius = swap;
+            swap = topRightRadius; topRightRadius = bottomRightRadius; bottomRightRadius = swap;
+        }
+
+        int newX = _pntr_transform_round(left);
+        int newY = _pntr_transform_round(top);
+        int newWidth = _pntr_transform_round(right) - newX;
+        int newHeight = _pntr_transform_round(bottom) - newY;
+        if (fill) {
+            pntr_draw_rectangle_rounded_fill(dst, newX, newY, newWidth, newHeight, _pntr_transform_round((float)topLeftRadius * scale), color);
+        }
+        else {
+            pntr_draw_rectangle_thick_rounded(dst, newX, newY, newWidth, newHeight,
+                _pntr_transform_round((float)topLeftRadius * scale),
+                _pntr_transform_round((float)topRightRadius * scale),
+                _pntr_transform_round((float)bottomLeftRadius * scale),
+                _pntr_transform_round((float)bottomRightRadius * scale),
+                _pntr_transform_thickness(transform, thickness), color);
+        }
+        return;
+    }
+
+    float inset = fill ? 0.0f : (float)(thickness - 1) / 2.0f;
+    float left = (float)x + inset;
+    float top = (float)y + inset;
+    float right = PNTR_MAX((float)x + (float)width - 1.0f - inset, left);
+    float bottom = PNTR_MAX((float)y + (float)height - 1.0f - inset, top);
+    float topLeft = PNTR_MAX((float)_pntr_rectangle_rounded_radius(topLeftRadius, width, height) - inset, 0.0f);
+    float topRight = PNTR_MAX((float)_pntr_rectangle_rounded_radius(topRightRadius, width, height) - inset, 0.0f);
+    float bottomLeft = PNTR_MAX((float)_pntr_rectangle_rounded_radius(bottomLeftRadius, width, height) - inset, 0.0f);
+    float bottomRight = PNTR_MAX((float)_pntr_rectangle_rounded_radius(bottomRightRadius, width, height) - inset, 0.0f);
+
+    #define _PNTR_TRANSFORM_CORNER (_PNTR_TRANSFORM_SEGMENTS / 4)
+    pntr_vector points[4 * (_PNTR_TRANSFORM_CORNER + 1)];
+    _pntr_transform_arc_points(transform, left + topLeft, top + topLeft, topLeft, topLeft, 180.0f, 270.0f, _PNTR_TRANSFORM_CORNER, points);
+    _pntr_transform_arc_points(transform, right - topRight, top + topRight, topRight, topRight, 270.0f, 360.0f, _PNTR_TRANSFORM_CORNER, points + (_PNTR_TRANSFORM_CORNER + 1));
+    _pntr_transform_arc_points(transform, right - bottomRight, bottom - bottomRight, bottomRight, bottomRight, 0.0f, 90.0f, _PNTR_TRANSFORM_CORNER, points + 2 * (_PNTR_TRANSFORM_CORNER + 1));
+    _pntr_transform_arc_points(transform, left + bottomLeft, bottom - bottomLeft, bottomLeft, bottomLeft, 90.0f, 180.0f, _PNTR_TRANSFORM_CORNER, points + 3 * (_PNTR_TRANSFORM_CORNER + 1));
+
+    if (fill) {
+        pntr_draw_polygon_fill(dst, points, 4 * (_PNTR_TRANSFORM_CORNER + 1), color);
+    }
+    else {
+        pntr_draw_polygon_thick(dst, points, 4 * (_PNTR_TRANSFORM_CORNER + 1), _pntr_transform_thickness(transform, thickness), color);
+    }
+    #undef _PNTR_TRANSFORM_CORNER
+}
+
+/**
+ * Draws a region of an image through a transform, placed by its own local transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_image(pntr_image* dst, pntr_transform transform, pntr_image* src, pntr_rectangle srcRect, pntr_transform local, pntr_filter filter, pntr_color tint) {
+    pntr_color colors[4] = { tint, tint, tint, tint };
+    _pntr_transform_quad(dst, pntr_transform_multiply(transform, local), src, srcRect, filter, colors);
+}
+
+/**
+ * The local transform of the rotated draws: the center of the source pixel at the origin
+ * lands on the center of the destination pixel at the position.
+ *
+ * @internal
+ */
+static pntr_transform _pntr_transform_pivot(int posX, int posY, float degrees, float scaleX, float scaleY, float originX, float originY) {
+    pntr_transform local = pntr_transform_translate(pntr_transform_identity(), (float)posX + 0.5f, (float)posY + 0.5f);
+    local = pntr_transform_rotate(local, degrees);
+    local = pntr_transform_scale(local, scaleX, scaleY);
+
+    return pntr_transform_translate(local, -(originX + 0.5f), -(originY + 0.5f));
+}
+
+/**
+ * Clamps a source rectangle to its image, reading a width or height of zero or less as the
+ * full image, the way pntr_draw_image_tint_rec() and the rotated draws do.
+ *
+ * @internal
+ */
+static bool _pntr_transform_source(pntr_image* src, pntr_rectangle* srcRect) {
+    return src != NULL && _pntr_rectangle_intersect(srcRect->x, srcRect->y,
+        srcRect->width <= 0 ? src->width : srcRect->width,
+        srcRect->height <= 0 ? src->height : srcRect->height,
+        0, 0, src->width, src->height, srcRect);
+}
+
+/**
+ * pntr_draw_image_tint_rec() through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_image_tint_rec(pntr_image* dst, pntr_transform transform, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
+    int offsetX, offsetY;
+    if (_pntr_transform_translation(transform, &offsetX, &offsetY)) {
+        pntr_draw_image_tint_rec(dst, src, srcRect, _pntr_add_clamped(posX, offsetX), _pntr_add_clamped(posY, offsetY), tint);
+        return;
+    }
+
+    if (_pntr_transform_source(src, &srcRect)) {
+        _pntr_transform_image(dst, transform, src, srcRect,
+            pntr_transform_translate(pntr_transform_identity(), (float)posX, (float)posY),
+            PNTR_FILTER_NEARESTNEIGHBOR, tint);
+    }
+}
+
+/**
+ * pntr_draw_image_flipped_tint_rec() through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_image_flipped(pntr_image* dst, pntr_transform transform, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint) {
+    int offsetX, offsetY;
+    if (_pntr_transform_translation(transform, &offsetX, &offsetY)) {
+        pntr_draw_image_flipped_tint_rec(dst, src, srcRec, _pntr_add_clamped(posX, offsetX), _pntr_add_clamped(posY, offsetY), flipHorizontal, flipVertical, flipDiagonal, tint);
+        return;
+    }
+
+    if (!flipHorizontal && !flipVertical && !flipDiagonal) {
+        _pntr_transform_image_tint_rec(dst, transform, src, srcRec, posX, posY, tint);
+        return;
+    }
+
+    if (src == NULL || !_pntr_rectangle_intersect(srcRec.x, srcRec.y, srcRec.width, srcRec.height, 0, 0, src->width, src->height, &srcRec)) {
+        return;
+    }
+
+    // The flips as a matrix: each mirror runs an axis backwards from the far edge, and the
+    // diagonal swaps the axes before the other two mirror the result.
+    float width = (float)srcRec.width;
+    float height = (float)srcRec.height;
+    pntr_transform local;
+    if (flipDiagonal) {
+        local = PNTR_CLITERAL(pntr_transform) {
+            0.0f, flipVertical ? -1.0f : 1.0f,
+            flipHorizontal ? -1.0f : 1.0f, 0.0f,
+            (float)posX + (flipHorizontal ? height : 0.0f),
+            (float)posY + (flipVertical ? width : 0.0f)
+        };
+    }
+    else {
+        local = PNTR_CLITERAL(pntr_transform) {
+            flipHorizontal ? -1.0f : 1.0f, 0.0f,
+            0.0f, flipVertical ? -1.0f : 1.0f,
+            (float)posX + (flipHorizontal ? width : 0.0f),
+            (float)posY + (flipVertical ? height : 0.0f)
+        };
+    }
+
+    _pntr_transform_image(dst, transform, src, srcRec, local, PNTR_FILTER_NEARESTNEIGHBOR, tint);
+}
+
+/**
+ * pntr_draw_image_scaled_rec() through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_image_scaled(pntr_image* dst, pntr_transform transform, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
+    int translateX, translateY;
+    if (_pntr_transform_translation(transform, &translateX, &translateY)) {
+        pntr_draw_image_scaled_rec(dst, src, srcRect, _pntr_add_clamped(posX, translateX), _pntr_add_clamped(posY, translateY), scaleX, scaleY, offsetX, offsetY, filter, tint);
+        return;
+    }
+
+    if (src == NULL || scaleX <= 0.0f || scaleY <= 0.0f ||
+            !_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
+        return;
+    }
+
+    pntr_transform local = pntr_transform_translate(pntr_transform_identity(), (float)posX, (float)posY);
+    local = pntr_transform_scale(local, scaleX, scaleY);
+    local = pntr_transform_translate(local, -offsetX, -offsetY);
+    _pntr_transform_image(dst, transform, src, srcRect, local, filter, tint);
+}
+
+/**
+ * pntr_draw_image_dest_rec() through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_image_dest_rec(pntr_image* dst, pntr_transform transform, pntr_image* src, pntr_rectangle srcRect, pntr_rectangle dstRect, pntr_filter filter, pntr_color tint) {
+    int offsetX, offsetY;
+    if (_pntr_transform_translation(transform, &offsetX, &offsetY)) {
+        dstRect.x = _pntr_add_clamped(dstRect.x, offsetX);
+        dstRect.y = _pntr_add_clamped(dstRect.y, offsetY);
+        pntr_draw_image_dest_rec(dst, src, srcRect, dstRect, filter, tint);
+        return;
+    }
+
+    if (src == NULL || srcRect.width <= 0 || srcRect.height <= 0 || dstRect.width <= 0 || dstRect.height <= 0 ||
+            !_pntr_rectangle_intersect(srcRect.x, srcRect.y, srcRect.width, srcRect.height, 0, 0, src->width, src->height, &srcRect)) {
+        return;
+    }
+
+    pntr_transform local = pntr_transform_translate(pntr_transform_identity(), (float)dstRect.x, (float)dstRect.y);
+    local = pntr_transform_scale(local, (float)dstRect.width / (float)srcRect.width, (float)dstRect.height / (float)srcRect.height);
+    _pntr_transform_image(dst, transform, src, srcRect, local, filter, tint);
+}
+
+/**
+ * pntr_draw_image_rotated_rec() through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_image_rotated(pntr_image* dst, pntr_transform transform, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter) {
+    int translateX, translateY;
+    if (_pntr_transform_translation(transform, &translateX, &translateY)) {
+        pntr_draw_image_rotated_rec(dst, src, srcRect, _pntr_add_clamped(posX, translateX), _pntr_add_clamped(posY, translateY), degrees, offsetX, offsetY, filter);
+        return;
+    }
+
+    if (_pntr_transform_source(src, &srcRect)) {
+        _pntr_transform_image(dst, transform, src, srcRect, _pntr_transform_pivot(posX, posY, degrees, 1.0f, 1.0f, offsetX, offsetY), filter, PNTR_WHITE);
+    }
+}
+
+/**
+ * pntr_draw_image_rotozoom() through a transform.
+ *
+ * @internal
+ */
+static void _pntr_transform_image_rotozoom(pntr_image* dst, pntr_transform transform, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint) {
+    int offsetX, offsetY;
+    if (_pntr_transform_translation(transform, &offsetX, &offsetY)) {
+        pntr_draw_image_rotozoom(dst, src, srcRect, _pntr_add_clamped(posX, offsetX), _pntr_add_clamped(posY, offsetY), rotation, scaleX, scaleY, originX, originY, filter, tint);
+        return;
+    }
+
+    if (scaleX != 0.0f && scaleY != 0.0f && _pntr_transform_source(src, &srcRect)) {
+        _pntr_transform_image(dst, transform, src, srcRect, _pntr_transform_pivot(posX, posY, rotation, scaleX, scaleY, originX, originY), filter, tint);
+    }
+}
+
+#endif  // PNTR_ENABLE_TRANSFORM
+
 /**
  * Draws a point on the given image, without safety checks.
  *
@@ -2296,6 +3512,7 @@ PNTR_API void pntr_draw_point_unsafe(pntr_image* dst, int x, int y, pntr_color c
  * @see pntr_draw_points()
  */
 PNTR_API void pntr_draw_point(pntr_image* dst, int x, int y, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_point, x, y, color);
    if ((color.rgba.a == 0) || (dst == NULL) || (x < dst->clip.x) || (x >= dst->clip.x + dst->clip.width) || (y < dst->clip.y) || (y >= dst->clip.y + dst->clip.height)) {
         return;
     }
@@ -2334,6 +3551,7 @@ PNTR_API void pntr_draw_point_vec(pntr_image* dst, pntr_vector* point, pntr_colo
  * @see pntr_draw_point()
  */
 PNTR_API void pntr_draw_points(pntr_image* dst, pntr_vector* points, int pointsCount, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_points, points, pointsCount, color);
     if (dst == NULL || color.rgba.a == 0 || points == NULL || pointsCount <= 0) {
         return;
     }
@@ -2649,6 +3867,7 @@ static void _pntr_draw_line_core(pntr_image *dst, int startPosX, int startPosY, 
  * @see pntr_draw_line_vertical()
  */
 PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_line, startPosX, startPosY, endPosX, endPosY, 1, false, color);
     _pntr_draw_line_core(dst, startPosX, startPosY, endPosX, endPosY, 1, color);
 }
 
@@ -2667,6 +3886,7 @@ PNTR_API void pntr_draw_line(pntr_image *dst, int startPosX, int startPosY, int 
  * @see pntr_draw_line()
  */
 PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, int endPosX, int endPosY, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_line, startPosX, startPosY, endPosX, endPosY, 1, true, color);
     if (dst == NULL || color.rgba.a == 0) {
         return;
     }
@@ -2775,6 +3995,7 @@ PNTR_API void pntr_draw_line_aa(pntr_image* dst, int startPosX, int startPosY, i
  * @see pntr_draw_line()
  */
 PNTR_API void pntr_draw_line_thick(pntr_image *dst, int startPosX, int startPosY, int endPosX, int endPosY, int thickness, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_line, startPosX, startPosY, endPosX, endPosY, thickness, false, color);
     if (thickness < 1) {
         return;
     }
@@ -2910,6 +4131,7 @@ PNTR_API void pntr_draw_polyline_thick(pntr_image* dst, pntr_vector* points, int
  *
  */
 PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int width, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_line_straight, posX, posY, width, 1, false, color);
     if (width < 0) {
         posX += width;
         width = -width;
@@ -2962,6 +4184,7 @@ PNTR_API void pntr_draw_line_horizontal(pntr_image* dst, int posX, int posY, int
  * @see pntr_draw_line_thick()
  */
 PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int posY, int width, int thickness, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_line_straight, posX, posY, width, thickness, false, color);
     if (thickness == 0) {
         return;
     }
@@ -2992,6 +4215,7 @@ PNTR_API void pntr_draw_line_horizontal_thick(pntr_image* dst, int posX, int pos
  *
  */
 PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int height, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_line_straight, posX, posY, height, 1, true, color);
     if (height < 0) {
         posY += height;
         height = -height;
@@ -3045,6 +4269,7 @@ PNTR_API void pntr_draw_line_vertical(pntr_image* dst, int posX, int posY, int h
  * @see pntr_draw_line_thick()
  */
 PNTR_API void pntr_draw_line_vertical_thick(pntr_image* dst, int posX, int posY, int height, int thickness, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_line_straight, posX, posY, height, thickness, true, color);
     if (thickness == 0) {
         return;
     }
@@ -3089,6 +4314,7 @@ PNTR_API void pntr_draw_rectangle_rec(pntr_image* dst, pntr_rectangle rec, pntr_
  * @see pntr_draw_rectangle_fill()
  */
 PNTR_API void pntr_draw_rectangle(pntr_image* dst, int posX, int posY, int width, int height, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_rectangle, posX, posY, width, height, color);
     if (color.rgba.a == 0 || dst == NULL || width <= 0 || height <= 0) {
         return;
     }
@@ -3184,6 +4410,7 @@ PNTR_API void pntr_draw_rectangle_fill(pntr_image* dst, int posX, int posY, int 
  * @see pntr_draw_rectangle_fill()
  */
 PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_rectangle_fill, rect, color);
     if (color.rgba.a == 0 || dst == NULL) {
         return;
     }
@@ -3240,6 +4467,7 @@ PNTR_API void pntr_draw_rectangle_fill_rec(pntr_image* dst, pntr_rectangle rect,
  * @see pntr_color_bilinear_interpolate()
  */
 PNTR_API void pntr_draw_rectangle_gradient_rec(pntr_image* dst, pntr_rectangle rect, pntr_color topLeft, pntr_color topRight, pntr_color bottomLeft, pntr_color bottomRight) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_rectangle_gradient, rect, topLeft, topRight, bottomLeft, bottomRight);
     if (dst == NULL) {
         return;
     }
@@ -3366,6 +4594,7 @@ static void _pntr_draw_circle_points(pntr_image* dst, int centerX, int centerY, 
  * @see pntr_draw_circle_fill()
  */
 PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_ellipse, centerX, centerY, radius, radius, 1, false, true, color);
     if (dst == NULL || color.rgba.a == 0) {
         return;
     }
@@ -3401,6 +4630,7 @@ PNTR_API void pntr_draw_circle(pntr_image* dst, int centerX, int centerY, int ra
  * @see pntr_draw_circle()
  */
 PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, int radius, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_ellipse, centerX, centerY, radius, radius, 1, true, true, color);
     if (radius < 0) {
         radius = -radius;
     }
@@ -3452,6 +4682,7 @@ PNTR_API void pntr_draw_circle_fill(pntr_image* dst, int centerX, int centerY, i
  * @see pntr_draw_circle_fill()
  */
 PNTR_API void pntr_draw_circle_thick(pntr_image* dst, int centerX, int centerY, int radius, int thickness, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_ellipse, centerX, centerY, radius, radius, thickness, false, true, color);
     if (thickness < 1) {
         return;
     }
@@ -3671,6 +4902,7 @@ static void _pntr_draw_ellipse_spans(pntr_image* dst, int centerX, int centerY, 
  * @see pntr_draw_ellipse_fill()
  */
 PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_ellipse, centerX, centerY, radiusX, radiusY, 1, false, false, color);
     if (dst == NULL || color.rgba.a == 0) {
         return;
     }
@@ -3699,6 +4931,7 @@ PNTR_API void pntr_draw_ellipse(pntr_image* dst, int centerX, int centerY, int r
  * @see pntr_draw_ellipse()
  */
 PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_ellipse, centerX, centerY, radiusX, radiusY, 1, true, false, color);
     if (radiusX < 0) radiusX = -radiusX;
     if (radiusY < 0) radiusY = -radiusY;
 
@@ -3723,6 +4956,7 @@ PNTR_API void pntr_draw_ellipse_fill(pntr_image* dst, int centerX, int centerY, 
  *
  */
 PNTR_API void pntr_draw_ellipse_thick(pntr_image* dst, int centerX, int centerY, int radiusX, int radiusY, int thickness, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_ellipse, centerX, centerY, radiusX, radiusY, thickness, false, false, color);
     if (thickness < 1) {
         return;
     }
@@ -3933,6 +5167,7 @@ PNTR_API void pntr_draw_polygon_thick(pntr_image* dst, pntr_vector* points, int 
  * @see pntr_draw_polygon()
  */
 PNTR_API void pntr_draw_polygon_fill(pntr_image* dst, pntr_vector* points, int numPoints, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_polygon_fill, points, numPoints, color);
     if (dst == NULL || points == NULL || numPoints <= 0 || color.rgba.a == 0) {
         return;
     }
@@ -4186,6 +5421,7 @@ PNTR_API void pntr_draw_arc(pntr_image* dst, int centerX, int centerY, float rad
  * @see PNTR_MAX_ARC_SEGMENTS
  */
 PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, int thickness, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_arc, centerX, centerY, radius, startAngle, endAngle, segments, thickness, false, color);
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
@@ -4237,6 +5473,7 @@ PNTR_API void pntr_draw_arc_thick(pntr_image* dst, int centerX, int centerY, flo
  * @see PNTR_MAX_ARC_SEGMENTS
  */
 PNTR_API void pntr_draw_arc_fill(pntr_image* dst, int centerX, int centerY, float radius, float startAngle, float endAngle, int segments, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_arc, centerX, centerY, radius, startAngle, endAngle, segments, 1, true, color);
     if (radius <= 0.0f) {
         pntr_draw_point(dst, centerX, centerY, color);
         return;
@@ -4340,6 +5577,7 @@ static void _pntr_draw_quarter_disc_fill(pntr_image* dst, int centerX, int cente
  * @see pntr_draw_rectangle_rounded_fill()
  */
 PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_rectangle_rounded, x, y, width, height, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, 1, false, color);
     if (dst == NULL || color.rgba.a == 0 || width <= 0 || height <= 0) {
         return;
     }
@@ -4404,6 +5642,7 @@ PNTR_API void pntr_draw_rectangle_rounded(pntr_image* dst, int x, int y, int wid
  * @see pntr_draw_rectangle_rounded_fill()
  */
 PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, int width, int height, int topLeftRadius, int topRightRadius, int bottomLeftRadius, int bottomRightRadius, int thickness, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_rectangle_rounded, x, y, width, height, topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, thickness, false, color);
     if (thickness < 1) {
         return;
     }
@@ -4436,6 +5675,7 @@ PNTR_API void pntr_draw_rectangle_thick_rounded(pntr_image* dst, int x, int y, i
  * @see pntr_draw_rectangle_rounded()
  */
 PNTR_API void pntr_draw_rectangle_rounded_fill(pntr_image* dst, int x, int y, int width, int height, int cornerRadius, pntr_color color) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_rectangle_rounded, x, y, width, height, cornerRadius, cornerRadius, cornerRadius, cornerRadius, 1, true, color);
     if (dst == NULL || color.rgba.a == 0 || width <= 0 || height <= 0) {
         return;
     }
@@ -4891,6 +6131,7 @@ PNTR_API void pntr_draw_image_rec(pntr_image* dst, pntr_image* src, pntr_rectang
  * @see pntr_color_tint()
  */
 PNTR_API void pntr_draw_image_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, pntr_color tint) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_image_tint_rec, src, srcRect, posX, posY, tint);
     if (dst == NULL || src == NULL || posX >= dst->clip.x + dst->clip.width || posY >= dst->clip.y + dst->clip.height) {
         return;
     }
@@ -7529,6 +8770,7 @@ PNTR_API void pntr_draw_image_flipped_rec(pntr_image* dst, pntr_image* src, pntr
  * @see pntr_color_tint()
  */
 PNTR_API void pntr_draw_image_flipped_tint_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRec, int posX, int posY, bool flipHorizontal, bool flipVertical, bool flipDiagonal, pntr_color tint) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_image_flipped, src, srcRec, posX, posY, flipHorizontal, flipVertical, flipDiagonal, tint);
     // If we are not flipping at all, use the simpler draw function.
     if (!flipHorizontal && !flipVertical && !flipDiagonal) {
         pntr_draw_image_tint_rec(dst, src, srcRec, posX, posY, tint);
@@ -7636,6 +8878,7 @@ PNTR_API void pntr_draw_image_scaled(pntr_image* dst, pntr_image* src, int posX,
  * @see pntr_draw_image_rotozoom()
  */
 PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float scaleX, float scaleY, float offsetX, float offsetY, pntr_filter filter, pntr_color tint) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_image_scaled, src, srcRect, posX, posY, scaleX, scaleY, offsetX, offsetY, filter, tint);
     if (dst == NULL || src == NULL || scaleX <= 0.0f || scaleY <= 0.0f) {
         return;
     }
@@ -7736,6 +8979,7 @@ PNTR_API void pntr_draw_image_scaled_rec(pntr_image* dst, pntr_image* src, pntr_
  * @see pntr_draw_image_rotozoom()
  */
 PNTR_API void pntr_draw_image_dest_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, pntr_rectangle dstRect, pntr_filter filter, pntr_color tint) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_image_dest_rec, src, srcRect, dstRect, filter, tint);
     if (dst == NULL || src == NULL ||
             srcRect.width <= 0 || srcRect.height <= 0 ||
             dstRect.width <= 0 || dstRect.height <= 0) {
@@ -7928,6 +9172,7 @@ static void _pntr_draw_image_quarter_turn(pntr_image* dst, pntr_image* src, pntr
  * @see pntr_draw_image_scaled_rec()
  */
 PNTR_API void pntr_draw_image_rotozoom(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float rotation, float scaleX, float scaleY, float originX, float originY, pntr_filter filter, pntr_color tint) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_image_rotozoom, src, srcRect, posX, posY, rotation, scaleX, scaleY, originX, originY, filter, tint);
     if (dst == NULL || src == NULL) {
         return;
     }
@@ -8242,6 +9487,7 @@ PNTR_API void pntr_draw_image_rotated(pntr_image* dst, pntr_image* src, int posX
  * @see pntr_draw_image_rotated()
  */
 PNTR_API void pntr_draw_image_rotated_rec(pntr_image* dst, pntr_image* src, pntr_rectangle srcRect, int posX, int posY, float degrees, float offsetX, float offsetY, pntr_filter filter) {
+    _PNTR_TRANSFORM_HOOK(dst, _pntr_transform_image_rotated, src, srcRect, posX, posY, degrees, offsetX, offsetY, filter);
     if (dst == NULL || src == NULL) {
         return;
     }
